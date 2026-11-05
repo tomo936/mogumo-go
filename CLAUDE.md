@@ -23,7 +23,7 @@
 - 型チェックのみ: `npx tsc -b`
 - Lint: `npm run lint`（Oxlint。ESLint ではない）
 - プレビュー: `npm run preview`
-- テスト: 未導入（導入したらここに追記）
+- テスト: `npm test`（Vitest＋Testing Library、jsdom。対象は `src/**/*.test.{ts,tsx}`）
 
 ## ツールチェーンの注意（コードの書き方に効く）
 - React 19 / Vite 8 / TypeScript 7。tsconfig はプロジェクトリファレンス方式（`tsconfig.app.json` が `src/`、`tsconfig.node.json` が `vite.config.ts`）。

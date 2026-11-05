@@ -25,3 +25,6 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# superpowers の作業用フォルダ
+.superpowers/
