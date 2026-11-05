@@ -137,6 +137,10 @@
 - 位置の計算・測位の判定・状態の切り替え・「歩いたふり」・地図画面を、テストを先に書くやり方で実装（ブランチ `cycle1-map`）
 - 本番と開発を分けると決定（SPEC §9）。localhost と `mogumo-go-dev.vercel.app` は開発用 Supabase、本番は今の Supabase。`dev` ブランチを作成。ダッシュボードの作業はシロに依頼
 
+- シロが開発環境を構築（開発用 Supabase `mogumo-go-dev`、`mogumo-go-dev.vercel.app`）。本人が `.env.local` を開発用に書き換え（最初は本番のキーを貼ってしまい、確認で気づいて直した）
+- `dev` に取り込み、本人が iPhone で `mogumo-go-dev.vercel.app` を歩いて確認 → `main` に取り込み本番へ
+- 進捗ボード（claude.ai のダッシュボード）を作成。ログイン方法の追加（メール・X）を N-25 に記録
+
 **詰まった所**
 - maplibre-gl 6 は default export が無く、import の書き方を変えた
 - Oxlint の React 用ルールが、effect の中での変数の書き換えに警告を出した → 値をオブジェクトにまとめて解決
@@ -145,8 +149,6 @@
 - 本人の提案で Playwright を使い、Claude Code が自分でスクショを撮って確認できるようにした（WSL にブラウザ用の部品を本人が sudo で導入）
 
 **次回どうするか**
-- シロの環境分離の作業のあと、`.env.local` を開発用の値に書き換える（本人）
-- `dev` に取り込み、`mogumo-go-dev.vercel.app` で iPhone を持って歩いて確認
 - 3b（アバターの歩行）はシロのスプライトが届いてから
 
 （本人の感想：ここに自分の言葉で追記する）
