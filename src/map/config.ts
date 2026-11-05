@@ -7,6 +7,8 @@ export const MAX_ZOOM = 18
 export const INITIAL_ZOOM = 17
 export const CIRCLE_RADIUS_M = 50
 export const MAX_ACCURACY_M = 50
+// 最初の1回だけはこの精度まで受け入れて地図を出す（屋内・PC の Wi-Fi 測位は 50m より粗いことが多い）
+export const FIRST_FIX_MAX_ACCURACY_M = 2000
 export const MAX_SPEED_MPS = 30
 export const SNAP_GAP_MS = 10000
 export const FOLLOW_TAU_MS = 400

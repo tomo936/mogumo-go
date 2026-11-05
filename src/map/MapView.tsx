@@ -12,7 +12,7 @@ import type { LatLng } from './geo.ts'
 import { watchLocation } from './location.ts'
 import type { LocationEvent } from './locationStatus.ts'
 import { nextBearing } from './rotate.ts'
-import { judgeFix, stepToward } from './smoothing.ts'
+import { isStale, judgeFix, shouldMoveCamera, stepToward } from './smoothing.ts'
 import type { Fix } from './smoothing.ts'
 
 type Props = { onStatus: (event: LocationEvent) => void }
@@ -49,9 +49,10 @@ export function MapView({ onStatus }: Props) {
     map.touchZoomRotate.disableRotation()
 
     // 位置: target が最新の目標、current が画面に出している位置、drawn がサークルを描いた位置
-    const s: { loaded: boolean; target: LatLng | null; current: LatLng | null; lastFix: Fix | null; drawn: LatLng | null } = {
-      loaded: false, target: null, current: null, lastFix: null, drawn: null,
-    }
+    const s: {
+      loaded: boolean; target: LatLng | null; current: LatLng | null; lastFix: Fix | null
+      drawn: LatLng | null; shown: LatLng | null; acceptedAt: number
+    } = { loaded: false, target: null, current: null, lastFix: null, drawn: null, shown: null, acceptedAt: 0 }
     map.on('load', () => {
       map.addSource('me-circle', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addSource('me-shadow', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
@@ -65,15 +66,19 @@ export function MapView({ onStatus }: Props) {
       s.drawn = null
     })
 
-
     const firstFixTimer = setTimeout(() => {
       if (!s.lastFix) onStatusRef.current({ type: 'firstFixTimeout' })
     }, FIRST_FIX_TIMEOUT_MS)
+    // 測位が届いていても、使える測位が SNAP_GAP_MS 来なければ「待っています」の帯を出す
+    const staleTimer = setInterval(() => {
+      if (s.lastFix && isStale(s.acceptedAt, Date.now())) onStatusRef.current({ type: 'failure', failure: 'timeout' })
+    }, 1000)
 
     const onFix = (fix: Fix) => {
       const verdict = judgeFix(fix, s.lastFix)
       if (verdict === 'reject') return
       s.lastFix = fix
+      s.acceptedAt = Date.now()
       s.target = { lat: fix.lat, lng: fix.lng }
       if (verdict === 'snap' || !s.current) s.current = s.target
       container.style.visibility = 'visible'
@@ -82,25 +87,6 @@ export function MapView({ onStatus }: Props) {
     const stopWatch = isFakeWalkEnabled(window.location.search, import.meta.env.DEV)
       ? startFakeWalk(onFix)
       : watchLocation(onFix, (failure) => onStatusRef.current({ type: 'failure', failure }))
-
-    // 毎コマ、表示位置を目標へ寄せてカメラを動かす
-    const loop = { frame: 0, prevTime: performance.now() }
-    const tick = (now: number) => {
-      const dt = now - loop.prevTime
-      loop.prevTime = now
-      if (s.current && s.target) {
-        const c = stepToward(s.current, s.target, dt)
-        s.current = c
-        map.jumpTo({ center: [c.lng, c.lat] })
-        if (s.loaded && (!s.drawn || distanceMeters(s.drawn, c) > 0.01)) {
-          ;(map.getSource('me-circle') as GeoJSONSource).setData(circlePolygon(c, CIRCLE_RADIUS_M))
-          ;(map.getSource('me-shadow') as GeoJSONSource).setData({ type: 'Point', coordinates: [c.lng, c.lat] })
-          s.drawn = c
-        }
-      }
-      loop.frame = requestAnimationFrame(tick)
-    }
-    loop.frame = requestAnimationFrame(tick)
 
     // 1本指の横なぞりで回す（2本指のときはピンチのズームに任せる）
     const pointers = new Map<number, number>()
@@ -112,6 +98,28 @@ export function MapView({ onStatus }: Props) {
       if (pointers.size === 1) map.setBearing(nextBearing(map.getBearing(), e.clientX - prevX))
     }
     const onUp = (e: PointerEvent) => pointers.delete(e.pointerId)
+    // 毎コマ、表示位置を目標へ寄せてカメラを動かす
+    const loop = { frame: 0, prevTime: performance.now() }
+    const tick = (now: number) => {
+      const dt = now - loop.prevTime
+      loop.prevTime = now
+      if (s.current && s.target) {
+        const c = stepToward(s.current, s.target, dt)
+        s.current = c
+        if (shouldMoveCamera(s.shown, c, pointers.size >= 2 || map.isZooming())) {
+          map.jumpTo({ center: [c.lng, c.lat] })
+          s.shown = c
+        }
+        if (s.loaded && (!s.drawn || distanceMeters(s.drawn, c) > 0.01)) {
+          ;(map.getSource('me-circle') as GeoJSONSource).setData(circlePolygon(c, CIRCLE_RADIUS_M))
+          ;(map.getSource('me-shadow') as GeoJSONSource).setData({ type: 'Point', coordinates: [c.lng, c.lat] })
+          s.drawn = c
+        }
+      }
+      loop.frame = requestAnimationFrame(tick)
+    }
+    loop.frame = requestAnimationFrame(tick)
+
     container.addEventListener('pointerdown', onDown)
     container.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
@@ -120,6 +128,7 @@ export function MapView({ onStatus }: Props) {
     return () => {
       cancelAnimationFrame(loop.frame)
       clearTimeout(firstFixTimer)
+      clearInterval(staleTimer)
       stopWatch()
       container.removeEventListener('pointerdown', onDown)
       container.removeEventListener('pointermove', onMove)
