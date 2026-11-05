@@ -111,6 +111,8 @@
 - テスト役の最終レビューで「環境変数が無いと真っ白になる」問題が見つかり、画面に文言を出すよう修正
 - WSL の Git に Windows のサインインツールを設定し、GitHub へ push できるようにした
 - 本人が WSL で `npm run dev` を起動し、Google ログインとログアウトが実際にできることを確認（`localhost:5173` は Windows 側の古い開発サーバーが応答していたため `127.0.0.1:5173` で確認）
+- Vercel に接続（本番 URL `https://mogumo-go.vercel.app`、環境変数2つ）。URL を Supabase の Redirect URLs と Google の JavaScript 生成元に追加し、iPhone の Safari でログイン・ログアウト・`/setup` の直接表示を本人が確認
+- 独自ドメインは今は買わず `.vercel.app` のまま。買うときの引っ越し方針を基本設計 N-23 に記録
 
 **詰まった所**
 - WSL の Git に GitHub のログイン情報が無く push できなかった → Windows 側の git-credential-manager を使う設定で解決
@@ -118,7 +120,7 @@
 - react-router は計画の 7 ではなく 8.5.1 が入った（必要な部品はあり、テストも通過）
 
 **次回どうするか**
-- Vercel 接続（環境変数2つ）、Vercel の URL を Supabase の Redirect URLs と Google の JavaScript 生成元に追加、iPhone で確認
+- PLAN「3. 地図表示」へ進む（MapLibre＋OpenFreeMap、傾け、現在地追従、アバター）
 - レビューで出た小さな指摘（ログイン失敗時の表示、`index.html` の言語とタイトルなど）は後回しにして記録済み
 
 （本人の感想：ここに自分の言葉で追記する）
