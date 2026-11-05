@@ -8,7 +8,7 @@ import {
   CIRCLE_RADIUS_M, FIRST_FIX_TIMEOUT_MS, INITIAL_ZOOM, MAP_THEME, MAX_ZOOM, MIN_ZOOM, PITCH, STYLE_URL,
 } from '../config.ts'
 import { themeStyle } from '../infra/theme.ts'
-import { THEMES } from '../infra/themes.ts'
+import { pickTheme, THEMES } from '../infra/themes.ts'
 import type { ThemeName } from '../infra/themes.ts'
 import { isFakeWalkEnabled, startFakeWalk } from '../infra/fakeWalk.ts'
 import { circlePolygon, distanceMeters } from '../domain/geo.ts'
@@ -23,7 +23,7 @@ type Props = { onStatus: (event: LocationEvent) => void; theme?: ThemeName }
 
 // 地図・カメラ・位置は MapLibre と ref だけで持ち、React の再描画を起こさない。
 // React に上げるのは位置情報の出来事（onStatus）だけ。
-export function MapView({ onStatus, theme = MAP_THEME }: Props) {
+export function MapView({ onStatus, theme = pickTheme(window.location.search, MAP_THEME) }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const onStatusRef = useRef(onStatus)
   useLayoutEffect(() => {

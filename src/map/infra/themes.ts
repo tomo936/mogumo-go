@@ -23,3 +23,9 @@ export const THEMES = {
 } satisfies Record<string, MapTheme>
 
 export type ThemeName = keyof typeof THEMES
+
+// 見比べ用: URL の ?theme=sky|mint|pop で色の案を選ぶ（知らない名前なら標準）
+export function pickTheme(search: string, fallback: ThemeName): ThemeName {
+  const name = new URLSearchParams(search).get('theme')
+  return name !== null && Object.hasOwn(THEMES, name) ? (name as ThemeName) : fallback
+}
