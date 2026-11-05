@@ -1,0 +1,4 @@
+#!/bin/sh
+# pre-commit フック: キー混入チェックを呼ぶ
+# 有効化: git config core.hooksPath scripts/hooks
+exec "$(git rev-parse --show-toplevel)/scripts/check-secrets.sh"
