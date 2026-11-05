@@ -98,6 +98,10 @@
   border-radius: 14px;
 }
 
+.setup-card img.is-mirrored {
+  transform: scaleX(-1);
+}
+
 .setup-home .setup-map {
   position: relative;
   flex: 1;

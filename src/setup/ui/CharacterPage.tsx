@@ -7,9 +7,10 @@ import type { StarterId } from '../infra/profileRepo.ts'
 import './setup.css'
 
 // 101＝男の子、102＝女の子（DB 詳細設計 D-09）
-const STARTERS: { id: StarterId; name: string; image: string }[] = [
+// mirrored: 2人が向かい合うように、女の子の絵は左右反転して並べる（本人の希望 2026-11-06）
+const STARTERS: { id: StarterId; name: string; image: string; mirrored?: boolean }[] = [
   { id: 101, name: '男の子', image: boy },
-  { id: 102, name: '女の子', image: girl },
+  { id: 102, name: '女の子', image: girl, mirrored: true },
 ]
 
 export function CharacterPage() {
@@ -37,7 +38,7 @@ export function CharacterPage() {
             aria-pressed={picked === s.id}
             onClick={() => setPicked(s.id)}
           >
-            <img src={s.image} alt="" />
+            <img src={s.image} alt="" className={s.mirrored ? 'is-mirrored' : undefined} />
             <span>{s.name}</span>
           </button>
         ))}
