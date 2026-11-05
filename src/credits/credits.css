@@ -20,10 +20,14 @@
 }
 
 .splash-credit {
+  position: absolute;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 14px;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 13px;
 }
 
 .credits-button {
