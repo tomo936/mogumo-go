@@ -14,6 +14,8 @@ export type MapTheme = {
   roadCasing: string
   path: string
   rail: string
+  majorRoad: string
+  majorRoadCasing: string
   label: string
   labelHalo: string
   showPlaceLabels: boolean
@@ -45,9 +47,10 @@ function themeLayer(l: AnyLayer, t: MapTheme) {
     if (src === 'transportation' || src === 'aeroway') {
       // 線路は「色の線＋白い破線」の2枚重ねで模様を作っているので、破線は道路の中身の色にする
       if (/rail/.test(id)) return paint(l, { 'line-color': /dashline|hatching/.test(id) ? t.road : t.rail })
-      if (/casing|subtle/.test(id)) return paint(l, { 'line-color': t.roadCasing })
+      const major = /major|motorway|trunk|primary/.test(id)
+      if (/casing|subtle/.test(id)) return paint(l, { 'line-color': major ? t.majorRoadCasing : t.roadCasing })
       if (/path|pier/.test(id)) return paint(l, { 'line-color': t.path })
-      return paint(l, { 'line-color': t.road })
+      return paint(l, { 'line-color': major ? t.majorRoad : t.road })
     }
     return
   }

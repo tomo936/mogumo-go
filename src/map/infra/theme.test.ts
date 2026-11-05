@@ -6,7 +6,7 @@ import type { MapTheme } from './theme.ts'
 const theme: MapTheme = {
   ground: '#000001', residential: '#000002', park: '#000003', wood: '#000004', water: '#000005',
   waterLine: '#000006', building: '#000007', buildingLine: '#000008', road: '#000009', roadCasing: '#00000a',
-  path: '#00000b', rail: '#00000c', label: '#00000d', labelHalo: '#00000e', showPlaceLabels: true, showRoadLabels: true,
+  path: '#00000b', rail: '#00000c', majorRoad: '#00000f', majorRoadCasing: '#000010', label: '#00000d', labelHalo: '#00000e', showPlaceLabels: true, showRoadLabels: true,
 }
 
 const base = (): StyleSpecification => ({
@@ -20,6 +20,9 @@ const base = (): StyleSpecification => ({
     { id: 'building', type: 'fill', source: 'x', 'source-layer': 'building', paint: { 'fill-color': '#123' } },
     { id: 'highway_major_casing', type: 'line', source: 'x', 'source-layer': 'transportation', paint: { 'line-color': '#123' } },
     { id: 'highway_major_inner', type: 'line', source: 'x', 'source-layer': 'transportation', paint: { 'line-color': '#123' } },
+    { id: 'highway_motorway_inner', type: 'line', source: 'x', 'source-layer': 'transportation', paint: { 'line-color': '#123' } },
+    { id: 'highway_motorway_bridge_casing', type: 'line', source: 'x', 'source-layer': 'transportation', paint: { 'line-color': '#123' } },
+    { id: 'highway_minor', type: 'line', source: 'x', 'source-layer': 'transportation', paint: { 'line-color': '#123' } },
     { id: 'highway_path', type: 'line', source: 'x', 'source-layer': 'transportation', paint: { 'line-color': '#123' } },
     { id: 'railway', type: 'line', source: 'x', 'source-layer': 'transportation', paint: { 'line-color': '#123' } },
     { id: 'railway_dashline', type: 'line', source: 'x', 'source-layer': 'transportation', paint: { 'line-color': '#fff', 'line-opacity': 0.5 } },
@@ -44,10 +47,13 @@ test('地面・水・公園・森・建物の色を変える', () => {
   expect(layer(s, 'building').paint?.['fill-outline-color']).toBe(theme.buildingLine)
 })
 
-test('道路はふちと中身、歩道、線路で色を分ける', () => {
+test('道路は大きい道・ふつうの道・歩道・線路で色を分ける', () => {
   const s = themeStyle(base(), theme)
-  expect(layer(s, 'highway_major_casing').paint?.['line-color']).toBe(theme.roadCasing)
-  expect(layer(s, 'highway_major_inner').paint?.['line-color']).toBe(theme.road)
+  expect(layer(s, 'highway_minor').paint?.['line-color']).toBe(theme.road)
+  expect(layer(s, 'highway_major_casing').paint?.['line-color']).toBe(theme.majorRoadCasing)
+  expect(layer(s, 'highway_major_inner').paint?.['line-color']).toBe(theme.majorRoad)
+  expect(layer(s, 'highway_motorway_inner').paint?.['line-color']).toBe(theme.majorRoad)
+  expect(layer(s, 'highway_motorway_bridge_casing').paint?.['line-color']).toBe(theme.majorRoadCasing)
   expect(layer(s, 'highway_path').paint?.['line-color']).toBe(theme.path)
   expect(layer(s, 'railway').paint?.['line-color']).toBe(theme.rail)
 })
