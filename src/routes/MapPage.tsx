@@ -1,5 +1,6 @@
 import { useReducer, useState } from 'react'
 import { useAuth } from '../auth/AuthContext.ts'
+import { CreditsButton } from '../credits/CreditsButton.tsx'
 import { LocationOverlay } from '../map/LocationOverlay.tsx'
 import { MapView } from '../map/MapView.tsx'
 import { nextStatus } from '../map/locationStatus.ts'
@@ -19,9 +20,12 @@ export function MapPage() {
       <MapView key={attempt} onStatus={dispatch} />
       <div className="map-overlay">
         <LocationOverlay status={status} onRetry={retry} onReload={() => window.location.reload()} />
-        <button type="button" className="logout-button" onClick={() => void signOut()}>
-          ログアウト
-        </button>
+        <div className="map-actions">
+          <CreditsButton />
+          <button type="button" onClick={() => void signOut()}>
+            ログアウト
+          </button>
+        </div>
       </div>
     </>
   )

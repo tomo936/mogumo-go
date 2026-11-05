@@ -12,6 +12,7 @@
 }
 
 .map-overlay button,
+.map-overlay .credits-panel,
 .map-overlay .location-screen {
   pointer-events: auto;
 }
@@ -41,8 +42,10 @@
   text-align: center;
 }
 
-.logout-button {
+.map-actions {
   position: absolute;
   top: 16px;
   right: 16px;
+  display: flex;
+  gap: 8px;
 }

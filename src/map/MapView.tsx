@@ -45,7 +45,7 @@ export function MapView({ onStatus }: Props) {
       pitchWithRotate: false,
       scrollZoom: { around: 'center' },
       touchZoomRotate: { around: 'center' },
-      attributionControl: { compact: false },
+      attributionControl: false, // 出典は起動時のスプラッシュと「出典」ボタンで示す
     })
     map.touchZoomRotate.disableRotation()
 
