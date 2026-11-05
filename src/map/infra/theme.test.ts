@@ -22,6 +22,7 @@ const base = (): StyleSpecification => ({
     { id: 'highway_major_inner', type: 'line', source: 'x', 'source-layer': 'transportation', paint: { 'line-color': '#123' } },
     { id: 'highway_path', type: 'line', source: 'x', 'source-layer': 'transportation', paint: { 'line-color': '#123' } },
     { id: 'railway', type: 'line', source: 'x', 'source-layer': 'transportation', paint: { 'line-color': '#123' } },
+    { id: 'railway_dashline', type: 'line', source: 'x', 'source-layer': 'transportation', paint: { 'line-color': '#fff', 'line-opacity': 0.5 } },
     { id: 'boundary_2', type: 'line', source: 'x', 'source-layer': 'boundary', paint: { 'line-color': '#123' } },
     { id: 'highway-shield-non-us', type: 'symbol', source: 'x', 'source-layer': 'transportation_name' },
     { id: 'highway-name-major', type: 'symbol', source: 'x', 'source-layer': 'transportation_name', paint: { 'text-color': '#123' } },
@@ -49,6 +50,12 @@ test('道路はふちと中身、歩道、線路で色を分ける', () => {
   expect(layer(s, 'highway_major_inner').paint?.['line-color']).toBe(theme.road)
   expect(layer(s, 'highway_path').paint?.['line-color']).toBe(theme.path)
   expect(layer(s, 'railway').paint?.['line-color']).toBe(theme.rail)
+})
+
+test('線路の破線は道路の中身の色にして、線路の模様を残す。ほかの paint はそのまま', () => {
+  const s = themeStyle(base(), theme)
+  expect(layer(s, 'railway_dashline').paint?.['line-color']).toBe(theme.road)
+  expect(layer(s, 'railway_dashline').paint?.['line-opacity']).toBe(0.5)
 })
 
 test('境界線と道路番号の看板は消し、文字は色をそろえる', () => {

@@ -9,7 +9,6 @@ import {
 } from '../config.ts'
 import { themeStyle } from '../infra/theme.ts'
 import { pickTheme, THEMES } from '../infra/themes.ts'
-import type { ThemeName } from '../infra/themes.ts'
 import { isFakeWalkEnabled, startFakeWalk } from '../infra/fakeWalk.ts'
 import { circlePolygon, distanceMeters } from '../domain/geo.ts'
 import type { LatLng } from '../domain/geo.ts'
@@ -19,11 +18,11 @@ import { nextBearing } from '../domain/rotate.ts'
 import { isStale, judgeFix, shouldMoveCamera, stepToward } from '../domain/smoothing.ts'
 import type { Fix } from '../domain/smoothing.ts'
 
-type Props = { onStatus: (event: LocationEvent) => void; theme?: ThemeName }
+type Props = { onStatus: (event: LocationEvent) => void }
 
 // 地図・カメラ・位置は MapLibre と ref だけで持ち、React の再描画を起こさない。
 // React に上げるのは位置情報の出来事（onStatus）だけ。
-export function MapView({ onStatus, theme = pickTheme(window.location.search, MAP_THEME) }: Props) {
+export function MapView({ onStatus }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const onStatusRef = useRef(onStatus)
   useLayoutEffect(() => {
@@ -32,11 +31,13 @@ export function MapView({ onStatus, theme = pickTheme(window.location.search, MA
 
   useEffect(() => {
     const container = containerRef.current!
+    // 色の案は標準（MAP_THEME）。見比べたいときだけ URL の ?theme= で選ぶ
+    const theme = THEMES[pickTheme(window.location.search, MAP_THEME)]
     container.style.visibility = 'hidden' // 最初の位置が取れるまで地図は見せない
     const map = new MapLibreMap({
       container,
       style: STYLE_URL,
-      transformStyle: (_prev, next) => themeStyle(next, THEMES[theme]),
+      transformStyle: (_prev, next) => themeStyle(next, theme),
       pitch: PITCH,
       zoom: INITIAL_ZOOM,
       minZoom: MIN_ZOOM,
@@ -144,7 +145,7 @@ export function MapView({ onStatus, theme = pickTheme(window.location.search, MA
       window.removeEventListener('pointercancel', onUp)
       map.remove()
     }
-  }, [theme])
+  }, [])
 
   return <div ref={containerRef} data-testid="map-view" className="map-view" />
 }

@@ -19,7 +19,7 @@
 
 .location-banner {
   position: absolute;
-  top: 16px;
+  top: calc(16px + env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
   margin: 0;
@@ -37,15 +37,15 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
-  padding: 0 24px;
+  padding: env(safe-area-inset-top) calc(24px + env(safe-area-inset-right)) env(safe-area-inset-bottom) calc(24px + env(safe-area-inset-left));
   background: #ffffff;
   text-align: center;
 }
 
 .map-actions {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: calc(16px + env(safe-area-inset-top));
+  right: calc(16px + env(safe-area-inset-right));
   display: flex;
   gap: 8px;
 }

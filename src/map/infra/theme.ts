@@ -43,7 +43,8 @@ function themeLayer(l: AnyLayer, t: MapTheme) {
     if (src === 'boundary') return hide(l)
     if (src === 'waterway') return paint(l, { 'line-color': t.waterLine })
     if (src === 'transportation' || src === 'aeroway') {
-      if (/rail/.test(id)) return paint(l, { 'line-color': t.rail })
+      // 線路は「色の線＋白い破線」の2枚重ねで模様を作っているので、破線は道路の中身の色にする
+      if (/rail/.test(id)) return paint(l, { 'line-color': /dashline|hatching/.test(id) ? t.road : t.rail })
       if (/casing|subtle/.test(id)) return paint(l, { 'line-color': t.roadCasing })
       if (/path|pier/.test(id)) return paint(l, { 'line-color': t.path })
       return paint(l, { 'line-color': t.road })

@@ -213,7 +213,8 @@ erDiagram
 
 ### 4.2 OpenFreeMap（地図タイル。SPEC §3.1）
 - 呼び出し元: ブラウザ（MapLibre）から直接。登録・キー・カード不要。
-- 義務: 出典表示（OpenFreeMap／OpenMapTiles／OpenStreetMap）を地図上に常時出す。
+- 義務: 出典表示（OpenFreeMap／OpenMapTiles／OpenStreetMap）。**【変更 2026-11-06】地図の上には常時出さず、起動時のスプラッシュの右下と「出典」ボタン（後でマイページ）で示す**（SPEC §9、OSMF Attribution Guidelines）。
+- 見た目: 【2026-11-06】土台は文字やお店の印が少ない positron。色は `src/map/infra/themes.ts` の案（sky／mint／pop）を上から当てる。標準は sky（空色パステル。本人確認待ち）。URL の `?theme=` で見比べられる。
 - 障害時: 無保証・予告なく止まる可能性があるため、**タイルの出どころは設定1か所で差し替え可能**にする（逃げ先＝Protomaps 自前配布）。スタイルは自前 JSON で「明るい昼のグルメ」に寄せる。
 
 ### 4.3 OSRM（FOSSGIS 版。ルート。SPEC §3.1、S2 ②）
