@@ -100,3 +100,25 @@
 - 残りの未決定事項（日の区切り時刻 N-08、町の境界データ N-09、ホットペッパーの規約 N-10 など）
 
 （本人の感想：ここに自分の言葉で追記する）
+
+---
+
+## 5件目 2026-11-05 実装ステップ1 土台作り（Claude Code の下書き）
+
+**やったこと**
+- 設計メモ（`docs/superpowers/specs/2026-11-05-foundation-design.md`）と計画（`docs/superpowers/plans/2026-11-05-foundation.md`）を作成。画面の切り替えは本人が React Router（案 A）を選択
+- テストの仕組み（Vitest）、ログイン状態の管理（Supabase Auth の Google ログイン）、画面 `/login`・`/setup`（仮）・`/`（仮の地図）、`vercel.json` を、テストを先に書くやり方で実装。テスト18件・ビルド・Lint すべて成功
+- テスト役の最終レビューで「環境変数が無いと真っ白になる」問題が見つかり、画面に文言を出すよう修正
+- WSL の Git に Windows のサインインツールを設定し、GitHub へ push できるようにした
+
+**詰まった所**
+- WSL の Git に GitHub のログイン情報が無く push できなかった → Windows 側の git-credential-manager を使う設定で解決
+- プロジェクト外の `inspect-tmp/` のテストまで拾ってしまった → テスト対象を `src/` に限定
+- react-router は計画の 7 ではなく 8.5.1 が入った（必要な部品はあり、テストも通過）
+
+**次回どうするか**
+- localhost で実際に Google ログインを試す（`npm run dev`）
+- Vercel 接続（環境変数2つ）、Vercel の URL を Supabase の Redirect URLs と Google の JavaScript 生成元に追加、iPhone で確認
+- レビューで出た小さな指摘（ログイン失敗時の表示、`index.html` の言語とタイトルなど）は後回しにして記録済み
+
+（本人の感想：ここに自分の言葉で追記する）
