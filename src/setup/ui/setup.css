@@ -1,0 +1,138 @@
+.setup-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100svh;
+  box-sizing: border-box;
+  padding: calc(24px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right))
+    calc(24px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left));
+  background: #ffffff;
+}
+
+.setup-page h1 {
+  margin: 8px 0 0;
+  font-size: 24px;
+}
+
+.setup-note {
+  margin: 0;
+  font-size: 14px;
+  color: #5b6b62;
+}
+
+.setup-error {
+  margin: 0;
+  font-size: 14px;
+  color: #c2410c;
+}
+
+.setup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.setup-field input {
+  font: inherit;
+  font-size: 18px;
+  padding: 12px 14px;
+  border: 2px solid #cfe5c2;
+  border-radius: 14px;
+}
+
+.setup-field input:focus {
+  outline: none;
+  border-color: #4aa8ff;
+}
+
+.setup-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.setup-actions button {
+  flex: 1;
+  padding-inline: 12px;
+  white-space: nowrap;
+}
+
+.setup-page button:disabled {
+  opacity: 0.4;
+}
+
+.setup-back {
+  align-self: flex-start;
+  padding: 6px 14px;
+  font-size: 14px;
+  background: #eef6e8;
+  color: #2f4a3a;
+}
+
+.setup-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.setup-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 3px solid transparent;
+  border-radius: 20px;
+  background: #f6faf2;
+  color: #2f4a3a;
+}
+
+.setup-card[aria-pressed='true'] {
+  border-color: #4aa8ff;
+  background: #eef6ff;
+}
+
+.setup-card img {
+  width: 100%;
+  border-radius: 14px;
+}
+
+.setup-home .setup-map {
+  position: relative;
+  flex: 1;
+  min-height: 320px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #e4f4d8;
+}
+
+.home-picker,
+.home-picker .home-picker-map {
+  /* 地図の部品の CSS（.maplibregl-map の position: relative）より強くして、枠いっぱいに広げる */
+  position: absolute;
+  inset: 0;
+}
+
+/* 家の印（画面中央に固定。先端が中心を指す） */
+.home-pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  transform: translate(-50%, -100%) rotate(45deg);
+  transform-origin: center;
+  border-radius: 50% 50% 0 50%;
+  background: #ff8a65;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+.home-pin::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+}
