@@ -137,7 +137,7 @@ from storage.buckets
 where id = 'review-photos';
 ```
 
-**(8) 自宅に関係する列が無いこと**（0件になるはず）
+**(8) 自宅に関係する列が無いこと**（`checkins.far_from_home` の1件だけになるはず。これは「自宅から遠い店か」の真偽値で、座標ではない【2026-11-05 追記】）
 
 ```sql
 select table_name, column_name

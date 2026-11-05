@@ -82,16 +82,21 @@
 - designer で DB 詳細設計 `docs/detailed-design-db.md`、implementer で `supabase/migrations/0001_init.sql`（18テーブル・RLS・GRANT・Storage）と適用手順書 `docs/sql-apply-guide.md` を作成。**まだ Supabase には適用していない**
 - 要確認事項を1つずつ決定（コイン1日1回、公開範囲、霧の保存先、ガチャ細部、ダブりはレベルと光り方、気配の作り方 など）。SPEC §9 に記録し、PLAN の古い記述を修正
 - CLAUDE.md に「画像・動画素材はシロへの依頼として出す」ルールを追加
+- 決定に合わせて SQL を追記：チェックインに `reward_day`（同じ店のコインは1日1回を一意制約で担保）と `far_from_home`、ガチャの10連は1000コインの制約
+- ブランチ `cycle1-design-db` を作り、ここまでをコミット（3ef838e、19ファイル）。main と push はまだ
+- 本人が SQL Editor で `0001_init.sql` を適用。確認 SELECT は全項目が期待どおり（18テーブル・RLS 無効0・ポリシー27・anon の権限0・キャラ32・バケット1・自宅の列0）。ログインしていない状態の API からは権限エラー（42501）になることも確認
+- Google ログインの設定：既存の Google Cloud プロジェクト mogumo-go のクライアント mogumo-go-web を使い、JavaScript 生成元に `http://localhost:5173` を追加（リダイレクト URI は設定済みだった）。Supabase 側は Google プロバイダの登録が済んでいたので、テストユーザーと URL 設定（Site URL・Redirect URLs）を確認・設定。実際にログインできるかは画面を作ってから試す
 
 **詰まった所**
+- コミット前のキー検査が、設計書の中の「service_role」という単語に反応して止まった（誤検知）→ 本人の判断で、単語ではなく「キーの値」に反応するよう `scripts/check-secrets.sh` のパターンを修正。偽のキー7種は全部検出、普通の文5種は誤検知なしを確かめてからコミットした
+- `.env.example` は Sandbox 内では中身の無いデバイスに見えるため `git add` できなかった → PC の Claude Code から本人が `!` コマンドでコミットして解決（ebf06e7）
 - npm のキャッシュが Sandbox 内で読み取り専用 → キャッシュを一時フォルダに変えて Sandbox 内のまま解決
 - `.env.*` は設定で読み書きが禁止されているため、Claude Code からは作れなかった。リモート端末から送った `!` コマンドは実行されず、PC の Claude Code から実行して作成できた
 - Sandbox 内の `git status` に .bashrc などの見かけ上のファイルが出る（Sandbox が置いた空のデバイス。Sandbox 外では出ない）
 
 **次回どうするか**
-- `docs/sql-apply-guide.md` の手順で SQL を Supabase に適用し、テーブルと RLS を確認する
-- Google ログインの設定
-- コミット（ここまでの成果は未コミット）
+- ログイン画面を作って、Google ログインを実際に試す（ここから実装工程）
+- ブランチの push と main への取り込み
 - 残りの未決定事項（日の区切り時刻 N-08、町の境界データ N-09、ホットペッパーの規約 N-10 など）
 
 （本人の感想：ここに自分の言葉で追記する）
