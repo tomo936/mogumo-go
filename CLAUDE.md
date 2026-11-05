@@ -3,7 +3,7 @@
 ## このプロジェクトについて
 - スマホ向け Web アプリ「もぐもGO」（霧晴らし × クエストのグルメ探索）。仕様の正本は `docs/SPEC.md`、上司課題の原文は `docs/source-dai2an-20261021.md`、1周目の計画は `docs/PLAN-cycle1.md`。作業前に該当箇所を読むこと。
 - 技術: React + TypeScript + Vite / Supabase（DB・認証・ストレージ・Edge Functions）/ MapLibre GL JS + OpenFreeMap / ホットペッパーグルメAPI（キーはサーバー側のみ）/ OSRM（FOSSGIS）/ Vercel。完全無料の範囲で作る。対象は iPhone 優先。
-- 現状: 土台のみ。React Router（`src/routes/`、`/login`・`/setup`・`/`）、ログイン状態は `src/auth/`（Supabase Auth の Google ログイン）、テストは Vitest。初回設定と地図は仮画面。状態管理ライブラリは未導入。実装が進んだらこの節を更新すること。
+- 現状: 土台のみ。React Router（`src/routes/`、`/login`・`/setup`・`/`）、ログイン状態は `src/auth/`（Supabase Auth の Google ログイン）、テストは Vitest。地図は `src/map/`（MapLibre＋OpenFreeMap、55°傾け、自分は中心固定、GPS を毎コマならして追従、調整値は `src/map/config.ts`、開発中は `?fake` で歩いたふり）。初回設定は仮画面。状態管理ライブラリは未導入。実装が進んだらこの節を更新すること。
 
 ## 工程（上司課題の進め方）
 要件定義 → 基本設計 → 詳細設計 → 実装 → 検証 → 振り返り の順で進める。
