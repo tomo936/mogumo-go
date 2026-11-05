@@ -1,6 +1,8 @@
 // 地図と位置追従の調整値。実機で触って変えるときはここだけを直す。
 // タイルの出どころ（OpenFreeMap）は STYLE_URL の1か所で差し替える（SPEC §3.1）。
-export const STYLE_URL = 'https://tiles.openfreemap.org/styles/bright'
+// 土台は文字やお店の印が少ない positron。色は themes.ts の案を上から当てる
+export const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron'
+export const MAP_THEME: 'sky' | 'mint' | 'pop' = 'sky'
 export const PITCH = 55
 export const MIN_ZOOM = 16
 export const MAX_ZOOM = 18

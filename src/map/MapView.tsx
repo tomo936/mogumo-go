@@ -5,8 +5,11 @@ import type { GeoJSONSource } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './map.css'
 import {
-  CIRCLE_RADIUS_M, FIRST_FIX_TIMEOUT_MS, INITIAL_ZOOM, MAX_ZOOM, MIN_ZOOM, PITCH, STYLE_URL,
+  CIRCLE_RADIUS_M, FIRST_FIX_TIMEOUT_MS, INITIAL_ZOOM, MAP_THEME, MAX_ZOOM, MIN_ZOOM, PITCH, STYLE_URL,
 } from './config.ts'
+import { themeStyle } from './theme.ts'
+import { THEMES } from './themes.ts'
+import type { ThemeName } from './themes.ts'
 import { isFakeWalkEnabled, startFakeWalk } from './fakeWalk.ts'
 import { circlePolygon, distanceMeters } from './geo.ts'
 import type { LatLng } from './geo.ts'
@@ -16,11 +19,11 @@ import { nextBearing } from './rotate.ts'
 import { isStale, judgeFix, shouldMoveCamera, stepToward } from './smoothing.ts'
 import type { Fix } from './smoothing.ts'
 
-type Props = { onStatus: (event: LocationEvent) => void }
+type Props = { onStatus: (event: LocationEvent) => void; theme?: ThemeName }
 
 // 地図・カメラ・位置は MapLibre と ref だけで持ち、React の再描画を起こさない。
 // React に上げるのは位置情報の出来事（onStatus）だけ。
-export function MapView({ onStatus }: Props) {
+export function MapView({ onStatus, theme = MAP_THEME }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const onStatusRef = useRef(onStatus)
   useLayoutEffect(() => {
@@ -33,6 +36,7 @@ export function MapView({ onStatus }: Props) {
     const map = new MapLibreMap({
       container,
       style: STYLE_URL,
+      transformStyle: (_prev, next) => themeStyle(next, THEMES[theme]),
       pitch: PITCH,
       zoom: INITIAL_ZOOM,
       minZoom: MIN_ZOOM,
@@ -140,7 +144,7 @@ export function MapView({ onStatus }: Props) {
       window.removeEventListener('pointercancel', onUp)
       map.remove()
     }
-  }, [])
+  }, [theme])
 
   return <div ref={containerRef} data-testid="map-view" className="map-view" />
 }
