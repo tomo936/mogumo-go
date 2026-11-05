@@ -25,8 +25,10 @@ export function stepToward(current: LatLng, target: LatLng, dtMs: number): LatLn
   }
 }
 
-// 最後に受け入れた測位から SNAP_GAP_MS たったら「途切れ」とみなす（精度の悪い測位が続いている間も含む）
-export function isStale(lastAcceptedAt: number, now: number): boolean {
+// 「途切れ」とみなすか。最後に受け入れたあとに捨てた測位があり（＝精度の悪い測位が届き続けている）、
+// 受け入れから SNAP_GAP_MS たったときだけ。立ち止まって新しい測位が来ないだけなら途切れにしない
+export function isStale(lastAcceptedAt: number, lastRejectedAt: number | null, now: number): boolean {
+  if (lastRejectedAt === null || lastRejectedAt <= lastAcceptedAt) return false
   return now - lastAcceptedAt >= SNAP_GAP_MS
 }
 

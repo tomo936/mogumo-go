@@ -65,9 +65,14 @@ test('粗い測位のあとに精度のよい測位が来たら、誤差の分�
   expect(judgeFix(north(65, 1000, 10), rough)).toBe('accept')
 })
 
-test('最後に受け入れてから SNAP_GAP_MS たつと途切れ扱い', () => {
-  expect(isStale(1000, 1000 + SNAP_GAP_MS - 1)).toBe(false)
-  expect(isStale(1000, 1000 + SNAP_GAP_MS)).toBe(true)
+test('精度の悪い測位だけが届き続けて SNAP_GAP_MS たつと途切れ扱い', () => {
+  expect(isStale(1000, 2000, 1000 + SNAP_GAP_MS - 1)).toBe(false)
+  expect(isStale(1000, 2000, 1000 + SNAP_GAP_MS)).toBe(true)
+})
+
+test('立ち止まって新しい測位が来ないだけなら途切れ扱いにしない', () => {
+  expect(isStale(1000, null, 1000 + SNAP_GAP_MS * 10)).toBe(false)
+  expect(isStale(5000, 1000, 5000 + SNAP_GAP_MS * 10)).toBe(false)
 })
 
 test('指で操作中はカメラを動かさない（ピンチを邪魔しない）', () => {

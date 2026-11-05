@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { Map as MapLibreMap } from 'maplibre-gl'
+import './maplibreWorker.ts'
 import type { GeoJSONSource } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './map.css'
@@ -51,8 +52,8 @@ export function MapView({ onStatus }: Props) {
     // 位置: target が最新の目標、current が画面に出している位置、drawn がサークルを描いた位置
     const s: {
       loaded: boolean; target: LatLng | null; current: LatLng | null; lastFix: Fix | null
-      drawn: LatLng | null; shown: LatLng | null; acceptedAt: number
-    } = { loaded: false, target: null, current: null, lastFix: null, drawn: null, shown: null, acceptedAt: 0 }
+      drawn: LatLng | null; shown: LatLng | null; acceptedAt: number; rejectedAt: number | null
+    } = { loaded: false, target: null, current: null, lastFix: null, drawn: null, shown: null, acceptedAt: 0, rejectedAt: null }
     map.on('load', () => {
       map.addSource('me-circle', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addSource('me-shadow', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
@@ -69,14 +70,17 @@ export function MapView({ onStatus }: Props) {
     const firstFixTimer = setTimeout(() => {
       if (!s.lastFix) onStatusRef.current({ type: 'firstFixTimeout' })
     }, FIRST_FIX_TIMEOUT_MS)
-    // 測位が届いていても、使える測位が SNAP_GAP_MS 来なければ「待っています」の帯を出す
+    // 精度の悪い測位ばかりで、使える測位が SNAP_GAP_MS 来なければ「待っています」の帯を出す
     const staleTimer = setInterval(() => {
-      if (s.lastFix && isStale(s.acceptedAt, Date.now())) onStatusRef.current({ type: 'failure', failure: 'timeout' })
+      if (s.lastFix && isStale(s.acceptedAt, s.rejectedAt, Date.now())) onStatusRef.current({ type: 'failure', failure: 'timeout' })
     }, 1000)
 
     const onFix = (fix: Fix) => {
       const verdict = judgeFix(fix, s.lastFix)
-      if (verdict === 'reject') return
+      if (verdict === 'reject') {
+        s.rejectedAt = Date.now()
+        return
+      }
       s.lastFix = fix
       s.acceptedAt = Date.now()
       s.target = { lat: fix.lat, lng: fix.lng }
