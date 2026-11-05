@@ -1,4 +1,4 @@
-import { FIRST_FIX_MAX_ACCURACY_M, FOLLOW_TAU_MS, MAX_ACCURACY_M, MAX_SPEED_MPS, SNAP_GAP_MS } from './config.ts'
+import { FIRST_FIX_MAX_ACCURACY_M, FOLLOW_TAU_MS, MAX_ACCURACY_M, MAX_SPEED_MPS, SNAP_GAP_MS } from '../config.ts'
 import { distanceMeters } from './geo.ts'
 import type { LatLng } from './geo.ts'
 

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import { LocationOverlay } from './LocationOverlay.tsx'
-import type { LocationStatus } from './locationStatus.ts'
+import type { LocationStatus } from '../domain/locationStatus.ts'
 
 const show = (status: LocationStatus) => {
   const onRetry = vi.fn()

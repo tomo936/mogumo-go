@@ -1,9 +1,9 @@
 import { useReducer, useState } from 'react'
 import { useAuth } from '../auth/AuthContext.ts'
 import { CreditsButton } from '../credits/CreditsButton.tsx'
-import { LocationOverlay } from '../map/LocationOverlay.tsx'
-import { MapView } from '../map/MapView.tsx'
-import { nextStatus } from '../map/locationStatus.ts'
+import { LocationOverlay } from '../map/ui/LocationOverlay.tsx'
+import { MapView } from '../map/ui/MapView.tsx'
+import { nextStatus } from '../map/domain/locationStatus.ts'
 
 export function MapPage() {
   const { signOut } = useAuth()

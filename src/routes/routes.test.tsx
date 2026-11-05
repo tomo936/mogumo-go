@@ -9,7 +9,7 @@ import { routes } from './router.tsx'
 
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }))
 // 地図（WebGL）はテスト環境で描けないので、器だけの偽物にする
-vi.mock('../map/MapView.tsx', () => ({ MapView: () => <div data-testid="map-view" /> }))
+vi.mock('../map/ui/MapView.tsx', () => ({ MapView: () => <div data-testid="map-view" /> }))
 
 const session = { user: { id: 'u1' } } as unknown as Session
 

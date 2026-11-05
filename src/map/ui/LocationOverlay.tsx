@@ -1,4 +1,4 @@
-import type { LocationStatus } from './locationStatus.ts'
+import type { LocationStatus } from '../domain/locationStatus.ts'
 
 type Props = { status: LocationStatus; onRetry: () => void; onReload: () => void }
 

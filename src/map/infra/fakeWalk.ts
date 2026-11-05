@@ -1,5 +1,5 @@
-import type { LatLng } from './geo.ts'
-import type { Fix } from './smoothing.ts'
+import type { LatLng } from '../domain/geo.ts'
+import type { Fix } from '../domain/smoothing.ts'
 
 const TOKYO_STATION: LatLng = { lat: 35.6812, lng: 139.7671 }
 const STEP_M = 1.4

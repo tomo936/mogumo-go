@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { distanceMeters } from './geo.ts'
+import { distanceMeters } from '../domain/geo.ts'
 import { isFakeWalkEnabled, startFakeWalk } from './fakeWalk.ts'
-import type { Fix } from './smoothing.ts'
+import type { Fix } from '../domain/smoothing.ts'
 
 beforeEach(() => vi.useFakeTimers())
 afterEach(() => vi.useRealTimers())

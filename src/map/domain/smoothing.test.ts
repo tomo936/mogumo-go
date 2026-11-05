@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { FOLLOW_TAU_MS, SNAP_GAP_MS } from './config.ts'
+import { FOLLOW_TAU_MS, SNAP_GAP_MS } from '../config.ts'
 import { distanceMeters } from './geo.ts'
 import { judgeFix, stepToward } from './smoothing.ts'
 import type { Fix } from './smoothing.ts'
@@ -49,7 +49,7 @@ test('裏から戻って経過が巨大でも行き過ぎず目標に一致', ()
 })
 
 // --- 最終レビューの指摘への対応 ---
-import { FIRST_FIX_MAX_ACCURACY_M } from './config.ts'
+import { FIRST_FIX_MAX_ACCURACY_M } from '../config.ts'
 import { isStale, shouldMoveCamera } from './smoothing.ts'
 
 test('最初の測位は精度が粗くても（屋内の 65m など）地図を出すために使う', () => {

@@ -3,7 +3,7 @@
 ## このプロジェクトについて
 - スマホ向け Web アプリ「もぐもGO」（霧晴らし × クエストのグルメ探索）。仕様の正本は `docs/SPEC.md`、上司課題の原文は `docs/source-dai2an-20261021.md`、1周目の計画は `docs/PLAN-cycle1.md`。作業前に該当箇所を読むこと。
 - 技術: React + TypeScript + Vite / Supabase（DB・認証・ストレージ・Edge Functions）/ MapLibre GL JS + OpenFreeMap / ホットペッパーグルメAPI（キーはサーバー側のみ）/ OSRM（FOSSGIS）/ Vercel。完全無料の範囲で作る。対象は iPhone 優先。
-- 現状: 土台のみ。React Router（`src/routes/`、`/login`・`/setup`・`/`）、ログイン状態は `src/auth/`（Supabase Auth の Google ログイン）、テストは Vitest。地図は `src/map/`（MapLibre＋OpenFreeMap、55°傾け、自分は中心固定、GPS を毎コマならして追従、調整値は `src/map/config.ts`、開発中は `?fake` で歩いたふり）。初回設定は仮画面。状態管理ライブラリは未導入。実装が進んだらこの節を更新すること。
+- 現状: 土台のみ。React Router（`src/routes/`、`/login`・`/setup`・`/`）、ログイン状態は `src/auth/`（Supabase Auth の Google ログイン）、テストは Vitest。地図は `src/map/`（`domain/` 位置のならし・判定・状態、`infra/` 位置情報・MapLibre の色やワーカー・歩いたふり、`ui/` 地図の画面。調整値は `src/map/config.ts`、色の案は `src/map/infra/themes.ts`、開発中は `?fake` で歩いたふり）。出典は起動時のスプラッシュ（`src/credits/`）。初回設定は仮画面。状態管理ライブラリは未導入。実装が進んだらこの節を更新すること。
 
 ## 工程（上司課題の進め方）
 要件定義 → 基本設計 → 詳細設計 → 実装 → 検証 → 振り返り の順で進める。
@@ -50,6 +50,12 @@
 
 ## 実装の方針
 - コードはシンプルに。不要なラッパーや過度な抽象化をしない。
+- 設計はクリーンアーキテクチャを意識する（本人の指示 2026-11-06）。機能ごとのフォルダ（例 `src/map/`）の中を3つに分ける。
+  - `domain/`: ゲームの決まりと計算。純粋な TypeScript で、React・MapLibre・Supabase・ブラウザの API を import しない。単体テストの中心。
+  - `infra/`: 外の世界とのつなぎ（位置情報、MapLibre、Supabase、Edge Functions 経由の外部 API）。domain の型を使ってよい。
+  - `ui/`: React の画面と部品。domain と infra を組み合わせる。
+  - 依存の向きは ui → infra → domain の一方向。domain はどこにも依存しない。共通の調整値（`config.ts`）は何も import しない。
+  - ただし上の「シンプルに」を優先し、使い道が1つしかない interface やリポジトリ層を先回りで作らない。差し替えの必要が実際にある境界（タイル、位置情報、DB）だけを分ける。
 - 仕様に無い機能を勝手に足さない。迷ったら SPEC を確認し、無ければ人間に聞く。
 - 世界観は「明るい昼のグルメ」（青空色＋パステル、白基調、霧はもこもこの雲、図鑑はシールアルバム風）。UI はフラットに寄せる。
 - 画像・動画素材について： 開発中に画像や動画が必要になったら、外部素材やプレースホルダで勝手に済ませず、必要な素材の仕様（内容・サイズ・用途・画風）を明記して、作業報告の中で Muse（シロ）への依頼として出すこと。素材はシロが生成して渡す。

@@ -2,12 +2,12 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import { AuthContext } from '../auth/AuthContext.ts'
-import type { LocationEvent } from '../map/locationStatus.ts'
+import type { LocationEvent } from '../map/domain/locationStatus.ts'
 import { MapPage } from './MapPage.tsx'
 
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }))
 const mounts: ((e: LocationEvent) => void)[] = []
-vi.mock('../map/MapView.tsx', async () => {
+vi.mock('../map/ui/MapView.tsx', async () => {
   const { useEffect } = await import('react')
   return {
     MapView: ({ onStatus }: { onStatus: (e: LocationEvent) => void }) => {

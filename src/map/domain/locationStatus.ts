@@ -1,4 +1,5 @@
-import type { GeoFailure } from './location.ts'
+// 位置情報が取れなかった理由（ブラウザの API に依存しない言葉で表す）
+export type GeoFailure = 'denied' | 'unavailable' | 'timeout'
 
 export type LocationStatus = 'searching' | 'tracking' | 'waiting' | 'denied' | 'notFound'
 export type LocationEvent =

@@ -1,6 +1,5 @@
-import type { Fix } from './smoothing.ts'
-
-export type GeoFailure = 'denied' | 'unavailable' | 'timeout'
+import type { GeoFailure } from '../domain/locationStatus.ts'
+import type { Fix } from '../domain/smoothing.ts'
 
 const FAILURES: Record<number, GeoFailure> = { 1: 'denied', 2: 'unavailable', 3: 'timeout' }
 
