@@ -36,7 +36,8 @@ export function HomePickerMap({ start, recenter, onCenterChange }: Props) {
     map.touchZoomRotate.disableRotation()
     mapRef.current = map
     onChange.current(start)
-    map.on('moveend', () => {
+    // 動いている途中も中心を知らせる（慣性で動いている間に確定されても、印の位置を保存するため）
+    map.on('move', () => {
       const c = map.getCenter()
       onChange.current({ lat: c.lat, lng: c.lng })
     })

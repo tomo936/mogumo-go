@@ -43,7 +43,7 @@ test('プロフィールはあるが自宅が無ければ自宅の画面', async
   expect(await screen.findByText('自宅の場所を決めよう')).toBeInTheDocument()
 })
 
-test('両方そろっていれば地図。初回設定の画面を開いても地図へ戻る', async () => {
+test('両方そろっていれば地図', async () => {
   repo.exists.mockResolvedValue(true)
   home.value = { lat: 35, lng: 139 }
   renderAt('/')
@@ -63,7 +63,7 @@ test('プロフィールがあって自宅が無い人が /setup/name を開く�
   expect(await screen.findByText('自宅の場所を決めよう')).toBeInTheDocument()
 })
 
-test('読み込み中と、読み込みに失敗したときの再試行', async () => {
+test('読み込み中は「読み込み中…」', async () => {
   repo.exists.mockReturnValueOnce(new Promise(() => {}))
   renderAt('/')
   expect(screen.getByText('読み込み中…')).toBeInTheDocument()

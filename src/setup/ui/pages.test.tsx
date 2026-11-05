@@ -154,3 +154,27 @@ test('自宅: 見つからないときは「もう一度試す」で取り直す
   await userEvent.click(await screen.findByRole('button', { name: 'もう一度試す' }))
   expect(await screen.findByTestId('home-picker')).toBeInTheDocument()
 })
+
+// --- 最終レビューの指摘への対応 ---
+test('自宅: 実はサーバーに作れていたのに通信エラーになったときは、読み直して先へ進む', async () => {
+  saveDraft({ nickname: 'もぐ', starterId: 101 })
+  repo.exists.mockResolvedValueOnce(false).mockResolvedValue(true)
+  repo.create.mockRejectedValue(new Error('duplicate'))
+  renderAt('/setup/home')
+  await userEvent.click(await screen.findByRole('button', { name: 'ここを自宅にする' }))
+  expect(await screen.findByTestId('map-view')).toBeInTheDocument()
+  expect(homeStore.saveHome).toHaveBeenCalledWith('u1', { lat: 35.1, lng: 139.1 })
+})
+
+test('自宅: 保存の通信中にもう一度押しても、作るのは1回だけ', async () => {
+  saveDraft({ nickname: 'もぐ', starterId: 101 })
+  let finish: () => void = () => {}
+  repo.create.mockReturnValue(new Promise<void>((r) => { finish = r }))
+  renderAt('/setup/home')
+  const button = await screen.findByRole('button', { name: 'ここを自宅にする' })
+  await userEvent.click(button)
+  await userEvent.click(screen.getByRole('button', { name: '保存しています…' }))
+  expect(repo.create).toHaveBeenCalledTimes(1)
+  await act(async () => finish())
+  expect(await screen.findByTestId('map-view')).toBeInTheDocument()
+})

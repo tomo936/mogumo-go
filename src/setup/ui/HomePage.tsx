@@ -52,7 +52,12 @@ export function HomePage() {
     setFailed(false)
     try {
       if (!status.hasProfile) {
-        await profileRepo.create({ nickname: draft.nickname!, starterId: draft.starterId! })
+        try {
+          await profileRepo.create({ nickname: draft.nickname!, starterId: draft.starterId! })
+        } catch (e) {
+          // 通信が切れても、サーバーには作れていることがある（再度押すと重複になる）。読み直して確かめる
+          if (!(await profileRepo.exists(userId))) throw e
+        }
         status.markProfileCreated()
       }
       saveHome(userId, home) // 自宅はこの端末の中だけに保存する
