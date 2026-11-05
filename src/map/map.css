@@ -1,0 +1,51 @@
+.map-view {
+  position: fixed;
+  inset: 0;
+  height: 100svh;
+  touch-action: none;
+}
+
+.map-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.map-overlay button,
+.map-overlay .credits-panel,
+.map-overlay .location-screen {
+  pointer-events: auto;
+}
+
+.location-banner {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+}
+
+.location-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 24px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.map-actions {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+}

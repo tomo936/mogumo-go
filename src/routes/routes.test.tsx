@@ -8,6 +8,8 @@ import type { AuthState } from '../auth/AuthContext.ts'
 import { routes } from './router.tsx'
 
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }))
+// 地図（WebGL）はテスト環境で描けないので、器だけの偽物にする
+vi.mock('../map/MapView.tsx', () => ({ MapView: () => <div data-testid="map-view" /> }))
 
 const session = { user: { id: 'u1' } } as unknown as Session
 
@@ -46,9 +48,9 @@ test('読み込み中はログイン画面へ飛ばさない', () => {
   expect(loginButton()).not.toBeInTheDocument()
 })
 
-test('ログイン済みで / を開くと仮の地図とログアウト', () => {
+test('ログイン済みで / を開くと地図とログアウト', () => {
   renderAt('/', { session })
-  expect(screen.getByText('地図（準備中）')).toBeInTheDocument()
+  expect(screen.getByTestId('map-view')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'ログアウト' })).toBeInTheDocument()
 })
 
@@ -59,7 +61,7 @@ test('ログイン済みで /setup を開くと仮の初回設定', () => {
 
 test('ログイン済みで /login を開くと地図へ戻る', () => {
   renderAt('/login', { session })
-  expect(screen.getByText('地図（準備中）')).toBeInTheDocument()
+  expect(screen.getByTestId('map-view')).toBeInTheDocument()
 })
 
 test('ログインボタンで signInWithGoogle が呼ばれる', async () => {
