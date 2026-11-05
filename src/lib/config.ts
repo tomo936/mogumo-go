@@ -1,0 +1,1 @@
+export const CONFIG_ERROR = 'VITE_SUPABASE_URL と VITE_SUPABASE_ANON_KEY を設定してください'

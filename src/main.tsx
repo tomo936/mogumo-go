@@ -1,14 +1,9 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { RouterProvider } from 'react-router'
 import './index.css'
-import { AuthProvider } from './auth/AuthProvider.tsx'
-import { router } from './routes/router.tsx'
+import { boot } from './boot.tsx'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
-  </StrictMode>,
+void boot(
+  createRoot(document.getElementById('root')!),
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
 )
