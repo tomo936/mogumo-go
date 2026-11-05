@@ -110,6 +110,7 @@
 - テストの仕組み（Vitest）、ログイン状態の管理（Supabase Auth の Google ログイン）、画面 `/login`・`/setup`（仮）・`/`（仮の地図）、`vercel.json` を、テストを先に書くやり方で実装。テスト18件・ビルド・Lint すべて成功
 - テスト役の最終レビューで「環境変数が無いと真っ白になる」問題が見つかり、画面に文言を出すよう修正
 - WSL の Git に Windows のサインインツールを設定し、GitHub へ push できるようにした
+- 本人が WSL で `npm run dev` を起動し、Google ログインとログアウトが実際にできることを確認（`localhost:5173` は Windows 側の古い開発サーバーが応答していたため `127.0.0.1:5173` で確認）
 
 **詰まった所**
 - WSL の Git に GitHub のログイン情報が無く push できなかった → Windows 側の git-credential-manager を使う設定で解決
@@ -117,7 +118,6 @@
 - react-router は計画の 7 ではなく 8.5.1 が入った（必要な部品はあり、テストも通過）
 
 **次回どうするか**
-- localhost で実際に Google ログインを試す（`npm run dev`）
 - Vercel 接続（環境変数2つ）、Vercel の URL を Supabase の Redirect URLs と Google の JavaScript 生成元に追加、iPhone で確認
 - レビューで出た小さな指摘（ログイン失敗時の表示、`index.html` の言語とタイトルなど）は後回しにして記録済み
 
