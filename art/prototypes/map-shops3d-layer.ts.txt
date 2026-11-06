@@ -7,7 +7,7 @@ import type { CustomLayerInterface, Map as MapLibreMap } from 'maplibre-gl'
 
 export type Shop3D = { lng: number; lat: number; facingDeg: number } // facingDeg: 正面の向き（北=0、時計回り）
 
-export function shopsLayer(id: string, url: string, shops: Shop3D[], metersPerUnit: number): CustomLayerInterface {
+export function shopsLayer(id: string, url: string, shops: Shop3D[], metersPerUnit: number, matte = false): CustomLayerInterface {
   let renderer: THREE.WebGLRenderer, effect: OutlineEffect, map: MapLibreMap
   const camera = new THREE.Camera()
   const scene = new THREE.Scene()
@@ -19,8 +19,8 @@ export function shopsLayer(id: string, url: string, shops: Shop3D[], metersPerUn
     id, type: 'custom', renderingMode: '3d',
     onAdd(m, gl) {
       map = m
-      scene.add(new THREE.HemisphereLight('#ffffff', '#dfe8ff', 1.4))
-      const sun = new THREE.DirectionalLight('#ffffff', 2.0); sun.position.set(-0.45, 0.75, 0.7); scene.add(sun)
+      scene.add(new THREE.HemisphereLight('#ffffff', '#e6dccf', matte ? 2.2 : 1.4))
+      const sun = new THREE.DirectionalLight('#fff2e4', matte ? 2.4 : 2.0); sun.position.set(-0.6, 0.8, 0.55); scene.add(sun)
       renderer = new THREE.WebGLRenderer({ canvas: m.getCanvas(), context: gl, antialias: true })
       renderer.autoClear = false
       effect = new OutlineEffect(renderer, { defaultThickness: 0.0035, defaultColor: [0.42, 0.29, 0.29], defaultAlpha: 1 })
@@ -29,6 +29,7 @@ export function shopsLayer(id: string, url: string, shops: Shop3D[], metersPerUn
           const mesh = o as THREE.Mesh
           if (!mesh.isMesh) return
           const src = mesh.material as THREE.MeshStandardMaterial
+          if (matte) { src.envMapIntensity = 0; return } // シロの見本の画風: 光の計算をするマットな材質のまま
           const glow = src.emissive && src.emissive.getHex() !== 0
           mesh.material = glow
             ? new THREE.MeshBasicMaterial({ color: src.emissive })
@@ -54,7 +55,7 @@ export function shopsLayer(id: string, url: string, shops: Shop3D[], metersPerUn
         for (const o of items) o.obj.visible = o === it
         camera.projectionMatrix = proj.clone().multiply(l)
         renderer.resetState()
-        effect.render(scene, camera)
+        if (matte) renderer.render(scene, camera); else effect.render(scene, camera)
       }
     },
   }
