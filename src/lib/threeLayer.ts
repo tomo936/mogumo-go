@@ -27,6 +27,13 @@ type Options = {
 // 試作どおり、レイヤーごとに MapLibre の GL を共有するレンダラーを1つ持つ
 export function threeLayer(opts: Options): CustomLayerInterface {
   let renderer: THREE.WebGLRenderer | null = null
+  let map: MapLibreMap | null = null
+  let ctx: WebGLRenderingContext | WebGL2RenderingContext | null = null
+  // 地図の canvas の大きさが変わったら、three の描く範囲も合わせる（回転・アドレスバーの出入りなど）。
+  // 'resize' は地図が canvas を作り直した直後で、次のコマで全部描き直すので、ここで合わせてよい
+  const onResize = () => {
+    if (renderer && ctx) renderer.setSize(ctx.drawingBufferWidth, ctx.drawingBufferHeight, false)
+  }
   const camera = new THREE.Camera()
   const scene = new THREE.Scene()
   const proj = new THREE.Matrix4()
@@ -35,12 +42,18 @@ export function threeLayer(opts: Options): CustomLayerInterface {
     id: opts.id,
     type: 'custom',
     renderingMode: '3d',
-    onAdd(map, gl) {
-      renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true })
+    onAdd(m, gl) {
+      map = m
+      ctx = gl
+      renderer = new THREE.WebGLRenderer({ canvas: m.getCanvas(), context: gl, antialias: true })
       renderer.autoClear = false
-      opts.onAdd(scene, map)
+      m.on('resize', onResize)
+      opts.onAdd(scene, m)
     },
     onRemove() {
+      map?.off('resize', onResize)
+      map = null
+      ctx = null
       opts.onRemove()
       renderer?.dispose()
       renderer = null
