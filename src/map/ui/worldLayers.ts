@@ -1,6 +1,5 @@
 import type { Map as MapLibreMap } from 'maplibre-gl'
-import { FOG_REBUILD_M } from '../../fog/config.ts'
-import { THIN_START_M } from '../../fog/config.ts'
+import { FOG_REBUILD_M, THIN_START_M } from '../../fog/config.ts'
 import { clearedFromHome, isClearedAt } from '../../fog/domain/clearing.ts'
 import { fogClumps } from '../../fog/domain/clumps.ts'
 import type { Clump } from '../../fog/domain/clumps.ts'
@@ -32,6 +31,7 @@ type Deps = {
 const THIN_EASE_PER_S = 3 // 薄さが目標に近づく速さ（1秒あたり）
 const THIN_MAX_SPOTS = 4
 const THIN_EPS = 0.01
+const THIN_RESCAN_M = 3 // 候補の洗い出しをやり直す移動距離
 
 // 霧（雲の塊）とお店の建物を地図に載せ、位置が変わるたびに更新する
 type WorldMap = MapLibreMap
@@ -61,6 +61,10 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const thinShown = new Map<string, number>() // 店ごとの、いま見せている薄さ
   let thinSent: { id: string; amount: number }[] | null = null // 層に最後に渡した薄さ
   let lastTickMs: number | null = null
+  let thinCands: Shop[] = [] // 薄くする候補（洗い出した近い順の最大4軒）
+  let thinScanAt: LatLng | null = null
+  let thinShops: Shop[] | null = null
+  let thinClearedSize = -1
   let fetchCenter: LatLng | null = null
   let fetching = false
   let failedAt: number | null = null
@@ -132,11 +136,21 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     const nowMs = performance.now()
     const dt = lastTickMs === null ? 0 : Math.max(0, (nowMs - lastTickMs) / 1000)
     lastTickMs = nowMs
-    const cands = shops
+    // 候補の洗い出しは、3m 以上動いた・店の一覧や晴れたセルが変わったときだけ。ふだんは候補4軒の距離だけ測り直す
+    if (!thinScanAt || thinShops !== shops || thinClearedSize !== cleared.size || distanceMeters(thinScanAt, p) >= THIN_RESCAN_M) {
+      thinScanAt = p
+      thinShops = shops
+      thinClearedSize = cleared.size
+      thinCands = shops
+        .map((shop) => ({ shop, d: distanceMeters(p, shop) }))
+        .filter(({ shop, d }) => d <= THIN_START_M && !isClearedAt(cleared, shop))
+        .sort((a, b) => a.d - b.d)
+        .slice(0, THIN_MAX_SPOTS)
+        .map(({ shop }) => shop)
+    }
+    const cands = thinCands
       .map((shop) => ({ shop, d: distanceMeters(p, shop) }))
-      .filter(({ shop, d }) => d <= THIN_START_M && !isClearedAt(cleared, shop))
-      .sort((a, b) => a.d - b.d)
-      .slice(0, THIN_MAX_SPOTS)
+      .filter(({ d }) => d <= THIN_START_M)
     const keep = new Set(cands.map((c) => c.shop.id))
     for (const id of thinShown.keys()) if (!keep.has(id)) thinShown.delete(id)
     const k = Math.min(1, THIN_EASE_PER_S * dt)
@@ -146,10 +160,11 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       thinShown.set(shop.id, amount)
       return { id: shop.id, amount, shop }
     })
+    const sent = thinSent
     const same =
-      thinSent !== null &&
-      thinSent.length === next.length &&
-      next.every((n, i) => thinSent![i].id === n.id && Math.abs(thinSent![i].amount - n.amount) <= THIN_EPS)
+      sent !== null &&
+      sent.length === next.length &&
+      next.every((n, i) => sent[i].id === n.id && Math.abs(sent[i].amount - n.amount) <= THIN_EPS)
     if (same || !fogCenter) return
     thinSent = next.map(({ id, amount }) => ({ id, amount }))
     const frame = localFrame(fogCenter)

@@ -11,6 +11,11 @@ const shopLayer = { id: 'shops-3d', setShops: vi.fn() }
 vi.mock('../../fog/infra/fogLayer.ts', () => ({ createFogLayer: () => fogLayer }))
 vi.mock('../../shops/infra/shopLayer.ts', () => ({ createShopLayer: () => shopLayer }))
 
+vi.mock('../domain/geo.ts', async (orig) => {
+  const a = await orig<typeof import('../domain/geo.ts')>()
+  return { ...a, distanceMeters: vi.fn(a.distanceMeters) }
+})
+import { distanceMeters } from '../domain/geo.ts'
 import { attachWorld } from './worldLayers.ts'
 
 const M = 111195 // 1度あたりのm（緯度）
@@ -325,8 +330,118 @@ test('addCleared は新しいセルがあれば波つきで setClumps、空な�
   expect(fogLayer.setClumps).toHaveBeenCalledTimes(1)
   const cs = fogLayer.setClumps.mock.lastCall![1] as { start: number }[]
   expect(cs.length).toBeGreaterThan(0)
-  expect(cs.every((c) => c.start >= 0 || c.start === -1)).toBe(true)
   expect(cs.some((c) => c.start >= 0)).toBe(true)
+})
+
+// 波は from から広がる: 変わる塊のうち from に近いものほど start が早い
+type AC = { x: number; y: number; start: number }
+const waveOrder = (cs: AC[], fx: number, fy: number) => {
+  const moving = cs.filter((c) => c.start >= 0).map((c) => ({ d: Math.hypot(c.x - fx, c.y - fy), start: c.start }))
+  moving.sort((a, b) => a.d - b.d)
+  return { nearest: moving[0], farthest: moving[moving.length - 1] }
+}
+const cellsAround = (c: LatLng): Cell[] => {
+  const o = cellOf(c)
+  const out: Cell[] = []
+  for (let x = -4; x <= 4; x++) for (let y = -4; y <= 4; y++) out.push({ x: o.x + x, y: o.y + y })
+  return out
+}
+
+test('波は from から広がる（近い塊ほど start が小さい）', () => {
+  const { world } = setup()
+  world.onPosition(home)
+  const from = north(300)
+  world.addCleared(cellsAround(from), from)
+  const cs = fogLayer.setClumps.mock.lastCall![1] as AC[]
+  const o = fogLayer.setClumps.mock.lastCall![0] as LatLng
+  const f = { x: (from.lng - o.lng) * LNG_M, y: (from.lat - o.lat) * M }
+  const { nearest, farthest } = waveOrder(cs, f.x, f.y)
+  expect(nearest.d).toBeLessThan(farthest.d)
+  expect(nearest.start).toBeLessThan(farthest.start)
+})
+
+test('雲の塊の原点が変わったあとの addCleared でも、from は新しい原点で換算される', () => {
+  const { world } = setup()
+  world.onPosition(home)
+  world.onPosition(north(720)) // 置き直し
+  const o2 = fogLayer.setClumps.mock.lastCall![0] as LatLng
+  expect(o2.lat).toBeCloseTo(north(720).lat, 6)
+  const from = north(900)
+  world.addCleared(cellsAround(from), from)
+  const cs = fogLayer.setClumps.mock.lastCall![1] as AC[]
+  const f = { x: (from.lng - o2.lng) * LNG_M, y: (from.lat - o2.lat) * M }
+  const { nearest, farthest } = waveOrder(cs, f.x, f.y)
+  expect(nearest.start).toBeLessThan(farthest.start)
+})
+
+// 霧の中の店を北 y m に置き、自分は home の北 0m に立つ（home: null で全部が霧の中）
+const fogShop = (id: string, dy: number, dx = 0): Shop => ({ id, name: id, lat: home.lat + dy / M, lng: home.lng + dx / LNG_M, kind: 'cafe', details: null })
+const withClock = async (shopsIn: Shop[], run: (world: ReturnType<typeof attachWorld>, tick: (ms: number) => void) => void | Promise<void>) => {
+  let now = 1000
+  const spy = vi.spyOn(performance, 'now').mockImplementation(() => now)
+  try {
+    const { world } = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve(shopsIn)) })
+    world.onPosition(home)
+    await flush()
+    await run(world, (ms) => { now += ms })
+  } finally {
+    spy.mockRestore()
+  }
+}
+
+test('薄さは目標へ約3/秒で近づく（100ms で目標の約0.3）', async () => {
+  await withClock([fogShop('a', 30)], (world, tick) => {
+    tick(0)
+    world.onPosition(home) // 距離30m: 目標は最大(1)
+    tick(100)
+    world.onPosition(home)
+    const spots = fogLayer.setThin.mock.lastCall![0] as { amount: number }[]
+    expect(spots[0].amount).toBeGreaterThan(0.25)
+    expect(spots[0].amount).toBeLessThan(0.35)
+  })
+})
+
+test('薄くする店は近い4軒まで', async () => {
+  const list = [10, 15, 20, 25, 30].map((d, i) => fogShop(`n${i}`, d))
+  await withClock(list, (world, tick) => {
+    tick(100)
+    world.onPosition(home)
+    expect(fogLayer.setThin.mock.lastCall![0]).toHaveLength(4)
+  })
+})
+
+test('晴れたセルの店には薄い所を作らない', async () => {
+  const s = fogShop('c', 20)
+  await withClock([s], (world, tick) => {
+    world.addCleared([cellOf(s)], s)
+    tick(100)
+    world.onPosition(home)
+    expect(fogLayer.setThin.mock.lastCall![0]).toEqual([])
+  })
+})
+
+test('変化がなければ setThin を送り直さない', async () => {
+  await withClock([fogShop('a', 20)], (world, tick) => {
+    // 目標に十分近づくまで進める
+    for (let i = 0; i < 20; i++) { tick(500); world.onPosition(home) }
+    fogLayer.setThin.mockClear()
+    tick(16)
+    world.onPosition(home)
+    tick(16)
+    world.onPosition(home)
+    expect(fogLayer.setThin).not.toHaveBeenCalled()
+  })
+})
+
+test('3m 未満の移動では店の全件走査をしない', async () => {
+  const many = Array.from({ length: 50 }, (_, i) => fogShop(`m${i}`, 200 + i))
+  await withClock(many, (world, tick) => {
+    tick(16)
+    world.onPosition(home)
+    const n0 = vi.mocked(distanceMeters).mock.calls.length
+    for (let i = 1; i <= 5; i++) { tick(16); world.onPosition(north(i * 0.5)) }
+    expect(vi.mocked(distanceMeters).mock.calls.length - n0).toBeLessThan(50)
+  })
 })
 
 test('霧の中の店が40mにあれば setThin(amount>0)、70mでは setThin([])', async () => {
