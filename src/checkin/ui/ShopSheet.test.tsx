@@ -76,3 +76,9 @@ test('営業時間の時刻のつなぎ目に区切りを入れる', () => {
   expect(formatOpen('月: 11:00～15:0018:00～翌0:00')).toBe('月: 11:00～15:00 / 18:00～翌0:00')
   expect(formatOpen('（L.O. 15:00）17:00～23:00')).toBe('（L.O. 15:00） 17:00～23:00')
 })
+
+test('今日もうチェックインしたお店は、近くても押せず「今日はチェックイン済み」', () => {
+  setup({ distanceM: 10, doneToday: true })
+  const button = screen.getByRole('button', { name: '今日はチェックイン済み' })
+  expect(button).toBeDisabled()
+})

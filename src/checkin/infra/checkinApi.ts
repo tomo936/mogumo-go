@@ -2,6 +2,7 @@
 // 自動で再送しない（コインの二重取りを避ける）。
 import type { Cell } from '../../fog/domain/grid.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
+import { jstDay } from '../domain/day.ts'
 
 export type CheckinResult =
   | { ok: true; checkinId: string; coins: 30 | 0; newCells: Cell[] }
@@ -98,14 +99,23 @@ async function readAll(c: ProgressClient, table: string, columns: string, order:
 // 自分の行だけが返る（RLS）。失敗したら throw して呼び出し側に任せる
 export async function loadProgress(
   client?: ProgressClient,
-): Promise<{ cells: Cell[]; checkedShopIds: Set<string> }> {
+): Promise<{ cells: Cell[]; checkedShopIds: Set<string>; lastDayByShop: Map<string, string> }> {
   const c = client ?? ((await import('../../lib/supabase.ts')).supabase as unknown as ProgressClient)
   const [cellRows, shopRows] = await Promise.all([
     readAll(c, 'fog_cells', 'cell_x, cell_y', ['cell_x', 'cell_y']),
-    readAll(c, 'checkins', 'shop_id', ['shop_id']),
+    readAll(c, 'checkins', 'shop_id, checked_in_at', ['shop_id', 'checked_in_at']),
   ])
+  // お店ごとの、いちばん新しいチェックインの日（日本時間）。「今日はもう済み」の表示に使う
+  const lastDayByShop = new Map<string, string>()
+  for (const r of shopRows as { shop_id: string; checked_in_at?: string }[]) {
+    if (!r.checked_in_at) continue
+    const day = jstDay(new Date(r.checked_in_at))
+    const prev = lastDayByShop.get(r.shop_id)
+    if (!prev || day > prev) lastDayByShop.set(r.shop_id, day)
+  }
   return {
     cells: (cellRows as { cell_x: number; cell_y: number }[]).map((r) => ({ x: r.cell_x, y: r.cell_y })),
     checkedShopIds: new Set((shopRows as { shop_id: string }[]).map((r) => r.shop_id)),
+    lastDayByShop,
   }
 }

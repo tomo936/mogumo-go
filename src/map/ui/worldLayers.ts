@@ -20,13 +20,14 @@ import { createShopLayer } from '../../shops/infra/shopLayer.ts'
 import type { PlacedShop } from '../../shops/infra/shopLayer.ts'
 import { distanceMeters, localFrame } from '../domain/geo.ts'
 import type { LatLng } from '../domain/geo.ts'
+import { jstDay } from '../../checkin/domain/day.ts'
 
 type Deps = {
   home: LatLng | null
   fetchHotpepper: (center: LatLng) => Promise<Shop[]>
   shopsEnabled: boolean
   onShopsError: () => void
-  loadProgress: () => Promise<{ cells: Cell[]; checkedShopIds: Set<string> }>
+  loadProgress: () => Promise<{ cells: Cell[]; checkedShopIds: Set<string>; lastDayByShop?: Map<string, string> }>
 }
 
 const THIN_EASE_PER_S = 3 // 薄さが目標に近づく速さ（1秒あたり）
@@ -50,6 +51,7 @@ type World = {
   addCleared(cells: Cell[], from: LatLng): void
   markChecked(shopId: string, mapId?: string | null): void
   checked(): ReadonlySet<string> // 済みの店 id（合体した店は、地図の点の id で済みでも含む）
+  checkedToday(shop: { id: string; mapId: string | null }): boolean // 今日（日本時間）もうチェックインした店か
   dispose(): void
 }
 
@@ -62,6 +64,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   let fogCenter: LatLng | null = null // 雲の塊を置いたときの現在地
   let lastClumps: Clump[] = [] // 層に最後に渡した雲の塊（波の「変わる前」）
   const checkedIds = new Set<string>() // サーバーが知っている id と、今回付けた id（hp: と osm: の両方がありうる）
+  const lastDay = new Map<string, string>() // 店 id ごとの、最後にチェックインした日（日本時間）
   // 店の id か、合体前の地図の点の id のどちらかが済みなら、その店は済み
   const checkedNow = (): Set<string> => {
     const s = new Set(checkedIds)
@@ -234,7 +237,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
 
   // 保存済みの晴れたセルを足す（波なし）。失敗したら自宅まわりだけのまま
   deps.loadProgress().then(
-    ({ cells, checkedShopIds }) => {
+    ({ cells, checkedShopIds, lastDayByShop }) => {
+      for (const [id, day] of lastDayByShop ?? []) if (!lastDay.has(id) || day > lastDay.get(id)!) lastDay.set(id, day)
       if (disposed) return
       const before = cleared.size
       for (const c of cells) cleared.add(cellKey(c))
@@ -287,9 +291,16 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     markChecked(shopId, mapId) {
       checkedIds.add(shopId)
       if (mapId) checkedIds.add(mapId)
+      const today = jstDay(new Date())
+      lastDay.set(shopId, today)
+      if (mapId) lastDay.set(mapId, today)
       checkMarks.update(shownPlaced, checkedNow())
     },
     checked: checkedNow,
+    checkedToday(shop) {
+      const today = jstDay(new Date())
+      return lastDay.get(shop.id) === today || (shop.mapId !== null && lastDay.get(shop.mapId) === today)
+    },
     dispose() {
       disposed = true
       checkMarks.dispose()

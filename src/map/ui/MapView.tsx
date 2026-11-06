@@ -24,7 +24,7 @@ import { nextBearing } from '../domain/rotate.ts'
 import { isStale, judgeFix, shouldMoveCamera, stepToward } from '../domain/smoothing.ts'
 import type { Fix } from '../domain/smoothing.ts'
 
-export type MapViewHandle = { checkin(shop: Shop, newCells: Cell[]): void; unfocus(): void }
+export type MapViewHandle = { checkin(shop: Shop, newCells: Cell[]): void; unfocus(): void; isCheckedToday(shop: Shop): boolean }
 
 type Props = {
   onStatus: (event: LocationEvent) => void
@@ -63,6 +63,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onPosition
   const unfocusRef = useRef<() => void>(() => {})
   useImperativeHandle(ref, () => ({
     unfocus: () => unfocusRef.current(),
+    isCheckedToday: (shop) => worldRef.current?.checkedToday(shop) ?? false,
     checkin: (shop, newCells) => {
       const t = setTimeout(() => {
         checkinTimers.current.delete(t)

@@ -27,7 +27,7 @@ vi.mock('../map/ui/MapView.tsx', async () => {
       useEffect(() => { mounts.push(onStatus) }, [onStatus])
       useEffect(() => { shopErrors.push(onShopsError) }, [onShopsError])
       useEffect(() => { handlers.push({ select: onSelectShop, position: onPosition }) }, [onSelectShop, onPosition])
-      useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, unfocus: () => { unfocusCalls.push(1) } }), [])
+      useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false }), [])
       return <div data-testid="map-view" />
     },
   }
