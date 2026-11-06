@@ -45,6 +45,7 @@ type Placed = { main: PlacedShop; free: PlacedShop | null }
 type World = {
   onPosition(p: LatLng): void
   shopsNear(): Shop[]
+  pick(point: { x: number; y: number }): string | null
   addCleared(cells: Cell[], from: LatLng): void
   markChecked(shopId: string): void
   checked(): ReadonlySet<string>
@@ -233,6 +234,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       if (!refreshedAt || distanceMeters(refreshedAt, p) >= SHOP_REFRESH_M) refreshShops(p)
     },
     shopsNear: () => near,
+    pick: (point) => shopLayer.pick(point),
     addCleared(cells, from) {
       if (disposed) return
       let added = false
