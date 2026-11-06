@@ -4,11 +4,13 @@ import { clearedFromHome } from '../../fog/domain/clearing.ts'
 import { fogClumps } from '../../fog/domain/clumps.ts'
 import { createFogLayer } from '../../fog/infra/fogLayer.ts'
 import { SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
+import { mergeShops } from '../../shops/domain/merge.ts'
 import { placeShop } from '../../shops/domain/placement.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
 import { visibleShops } from '../../shops/domain/visibility.ts'
 import { extractFeatures, featuresNear, NEAR_M } from '../../shops/infra/mapFeatures.ts'
 import type { AreaFeatures } from '../../shops/infra/mapFeatures.ts'
+import { extractMapShops } from '../../shops/infra/mapShops.ts'
 import { createShopLayer } from '../../shops/infra/shopLayer.ts'
 import type { PlacedShop } from '../../shops/infra/shopLayer.ts'
 import { distanceMeters, localFrame } from '../domain/geo.ts'
@@ -16,7 +18,7 @@ import type { LatLng } from '../domain/geo.ts'
 
 type Deps = {
   home: LatLng | null
-  fetchShops: (center: LatLng) => Promise<Shop[]>
+  fetchHotpepper: (center: LatLng) => Promise<Shop[]>
   shopsEnabled: boolean
   onShopsError: () => void
 }
@@ -30,7 +32,7 @@ const PLAYER_LAYERS = ['me-circle-fill', 'me-circle-line', 'me-shadow']
 // 店ごとの置き方。main が輪郭に合わせたとき、同じ輪郭を先に使う店があれば free（輪郭なし）を使う
 type Placed = { main: PlacedShop; free: PlacedShop | null }
 
-export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng): void; dispose(): void } {
+export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng): void; shopsNear(): Shop[]; dispose(): void } {
   const cleared = clearedFromHome(deps.home)
   const fogLayer = createFogLayer()
   const shopLayer = createShopLayer()
@@ -39,7 +41,10 @@ export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng):
   let fetching = false
   let failedAt: number | null = null
   let disposed = false
-  let shops: Shop[] = []
+  let hpShops: Shop[] = [] // ホットペッパーの最後に成功した結果
+  let mapShops: Shop[] = [] // 地図タイルのお店（タイルが読めたときだけ更新）
+  let shops: Shop[] = [] // 2つを合わせたもの
+  let near: Shop[] = [] // いま層に渡している店（近い順）
   let last: LatLng | null = null
   let shownKey: string | null = null
   const placed = new Map<string, Placed>() // 店ごとの置き方（一度だけ計算）
@@ -52,10 +57,15 @@ export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng):
   let refreshedAt: LatLng | null = null
   const refreshShops = (p: LatLng) => {
     refreshedAt = p
+    if (map.areTilesLoaded()) {
+      mapShops = extractMapShops(map, p, SHOP_RADIUS_M)
+      shops = mergeShops(mapShops, hpShops)
+    }
     // タイルは1回の更新で1回だけ読む（店ごとに読むと、店の数×タイルの大きさだけ重くなる）
     let area: AreaFeatures | null = null
     const frame = localFrame(p)
     const out: PlacedShop[] = []
+    const shown: Shop[] = []
     const usedFootprints: LatLng[] = [] // 輪郭に合わせて置いた店の中心
     let key = ''
     for (const shop of visibleShops(shops, p, cleared)) { // 近い順
@@ -73,8 +83,10 @@ export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng):
       const s = taken ? hit.free! : main
       if (hit.free && !taken) usedFootprints.push(main)
       out.push(s)
+      shown.push(shop)
       key += `${s.id}${taken ? '*' : ''},`
     }
+    near = shown
     if (key === shownKey) return // 顔ぶれが変わったときだけ層を作り直す
     shownKey = key
     shopLayer.setShops(out)
@@ -83,12 +95,13 @@ export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng):
   const fetchAround = (p: LatLng) => {
     fetching = true
     fetchCenter = p
-    deps.fetchShops(p).then(
+    deps.fetchHotpepper(p).then(
       (list) => {
         fetching = false
         failedAt = null
         if (disposed) return
-        shops = list
+        hpShops = list
+        shops = mergeShops(mapShops, hpShops)
         if (last) refreshShops(last)
       },
       () => {
@@ -127,6 +140,7 @@ export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng):
       if (canFetch(p)) fetchAround(p)
       if (!refreshedAt || distanceMeters(refreshedAt, p) >= SHOP_REFRESH_M) refreshShops(p)
     },
+    shopsNear: () => near,
     dispose() {
       disposed = true
       map.off('idle', onIdle)

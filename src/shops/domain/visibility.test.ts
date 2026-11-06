@@ -21,6 +21,17 @@ describe('visibleShops', () => {
     expect(r.map((s) => s.id)).toEqual(['in'])
   })
 
+  it('霧の中でも 50m 以内の店は出る（40m は出る・60m は出ない）', () => {
+    const cleared = new Set<string>() // 全部霧
+    expect(visibleShops([shop('near', 40), shop('far', 60)], me, cleared).map((s) => s.id)).toEqual(['near'])
+  })
+
+  it('晴れた 900m の店は出る', () => {
+    const s = shop('c', 900)
+    const cleared = new Set(clearedFromHome({ lat: s.lat, lng: s.lng }))
+    expect(visibleShops([s], me, cleared).map((x) => x.id)).toEqual(['c'])
+  })
+
   it('1km より遠い店は出ない', () => {
     const cleared = new Set(clearedFromHome(me))
     const far = shop('far', 1200)

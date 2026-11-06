@@ -14,7 +14,7 @@ import { circlePolygon, distanceMeters } from '../domain/geo.ts'
 import type { LatLng } from '../domain/geo.ts'
 import { watchLocation } from '../infra/location.ts'
 import type { LocationEvent } from '../domain/locationStatus.ts'
-import { fetchHotpepperShops as fetchShops, shopSourceEnabled } from '../../shops/infra/hotpepper.ts'
+import { fetchHotpepperShops, shopSourceEnabled } from '../../shops/infra/hotpepper.ts'
 import { attachWorld } from './worldLayers.ts'
 import { nextBearing } from '../domain/rotate.ts'
 import { isStale, judgeFix, shouldMoveCamera, stepToward } from '../domain/smoothing.ts'
@@ -75,7 +75,7 @@ export function MapView({ onStatus, home, onShopsError }: Props) {
       })
       s.world = attachWorld(map, {
         home,
-        fetchShops,
+        fetchHotpepper: fetchHotpepperShops,
         shopsEnabled: shopSourceEnabled(import.meta.env.DEV, window.location.hostname),
         onShopsError: () => onShopsErrorRef.current(),
       })
