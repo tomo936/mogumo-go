@@ -1,3 +1,4 @@
+import { SHOP_MAX_SIZE_M } from '../config.ts'
 import { expect, test } from 'vitest'
 import { placeShop } from './placement.ts'
 
@@ -19,8 +20,8 @@ test('輪郭あり: 中心・道路向き・小さい辺を切り上げ', () => 
   expect(r.sizeM).toBe(14)
 })
 
-test('大きな輪郭は 30 に切り下げ', () => {
-  expect(placeShop(roadNorth, [rect(0, 0, 60, 50)]).sizeM).toBe(30)
+test('大きな輪郭は上限（SHOP_MAX_SIZE_M）に切り下げ', () => {
+  expect(placeShop(roadNorth, [rect(0, 0, 60, 50)]).sizeM).toBe(SHOP_MAX_SIZE_M)
 })
 
 test('輪郭なし: 東 5m の道路に向き、道路から下がる', () => {

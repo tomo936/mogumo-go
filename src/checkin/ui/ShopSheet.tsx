@@ -3,6 +3,7 @@ import './checkin.css'
 import type { ShopKind } from '../../shops/domain/shop.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
 import { CHECKIN_M } from '../../shops/config.ts'
+import { formatOpen } from '../domain/openHours.ts'
 
 export type CheckinError = 'too_far' | 'network' | 'not_found' | 'no_profile'
 
@@ -41,7 +42,7 @@ export function ShopSheet({ shop, distanceM, busy, error, onCheckin, onClose }: 
         <span className="shop-sheet__badge" style={{ background: BADGE_COLOR[shop.kind] }} aria-hidden="true" />
         <div>
           <h2 className="shop-sheet__name">{shop.name}</h2>
-          {open && <p className="shop-sheet__open">{open}</p>}
+          {open && <p className="shop-sheet__open">{formatOpen(open)}</p>}
           <p className="shop-sheet__distance">{`ここから ${Math.ceil(distanceM)}m`}</p>
         </div>
       </div>

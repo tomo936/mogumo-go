@@ -40,6 +40,13 @@
   margin: 0;
   font-size: 18px;
 }
+.shop-sheet__open {
+  /* 長い営業時間は2行まで */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .shop-sheet__open,
 .shop-sheet__distance {
   margin: 2px 0 0;

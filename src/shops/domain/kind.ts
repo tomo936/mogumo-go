@@ -7,7 +7,22 @@ const SUSHI = ['寿司', '鮨', 'すし']
 const SOBA = ['そば', '蕎麦', 'うどん']
 const CURRY = ['カレー']
 const CAKE = ['ケーキ', 'スイーツ']
-const BAKERY = ['パン', 'ベーカリー', 'ブーランジェリー']
+const BAKERY = ['パン', 'ベーカリー', 'ブーランジェリー', 'bakery', 'boulangerie']
+// 地図の店（ジャンルの情報が無い）を店名から推し量るための言葉。小文字にした店名と比べる
+const GUESS: [ShopKind, string[]][] = [
+  ['yakiniku', ['焼肉', 'ホルモン', '焼き肉', 'yakiniku']],
+  ['chinese', ['中華', '餃子', 'ぎょうざ', '飯店', '担々', '麻婆', '小籠包', '酒家', '菜館']],
+  ['western', ['イタリア', 'トラットリア', 'リストランテ', 'ピッツァ', 'ピザ', 'パスタ', 'ビストロ', '洋食', 'ハンバーグ', 'ステーキ', 'フレンチ', 'オムライス', 'trattoria', 'pizza', 'bistro', 'italian']],
+  ['izakaya', ['居酒屋', '酒場', '焼鳥', '焼き鳥', 'やきとり', '串', '魚民', '和民', '鳥貴族', '大衆', '立ち飲み', '立呑']],
+  ['cake', ['ケーキ', 'スイーツ', 'パティスリー', 'ドーナツ', 'クレープ', 'ジェラート', 'アイス', 'patisserie', 'cake', 'donut']],
+  ['cafe', ['カフェ', '珈琲', 'コーヒー', '喫茶', 'cafe', 'coffee', 'café']],
+  ['washoku', ['定食', 'とんかつ', '天ぷら', '天麩羅', '割烹', '和食', '丼', '牛丼', '食堂', 'おにぎり', '鰻', 'うなぎ']],
+  ['bakery', BAKERY],
+]
+const guess = (name: string): ShopKind | null => {
+  const n = name.toLowerCase()
+  return GUESS.find(([, words]) => has(n, words))?.[0] ?? null
+}
 
 // 店名だけで決まる種類（ラーメン・寿司・そば・カレー）。地図の店はこれを分類より先に見る
 const byName = (name: string): ShopKind | null => {
@@ -34,7 +49,7 @@ export const kindFromHotpepper = (genreCode: string | null, name: string): ShopK
   if (genreCode === 'G014' && has(name, CAKE)) return 'cake'
   if (genreCode === 'G014') return 'cafe'
   if (has(name, BAKERY)) return 'bakery'
-  return 'mystery'
+  return guess(name) ?? 'mystery'
 }
 
 // 地図タイルの POI の分類（subclass）→ 種類。店名の決まりを先に見る
@@ -53,6 +68,6 @@ export const kindFromMap = (subclass: string, name: string): ShopKind => {
     case 'pub':
       return 'izakaya'
     default:
-      return 'mystery'
+      return guess(name) ?? 'mystery'
   }
 }
