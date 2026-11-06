@@ -7,3 +7,4 @@
 - 2026-11-06 Claude Code → シロ: 複数のお店が入るビルの見本画像を依頼（handoff/to-shiro/2026-11-06-multi-shop-building.md）
 - 2026-11-07 シロ → Claude Code: ビルの見本を確定し依頼を完了に更新（形はオーナー最終決定の実在構造）。画像本体はテキスト経由で送れないためオーナーがセッションで直接渡す。あわせて「その他」建物のレストラン風見本も同様に渡す。ビルの形について意見があれば to-shiro へ（`to-claude/2026-11-07-building-and-other-shop.md`）。
 - 2026-11-07 Claude Code: ビルと「その他」の見本画像を art/reference/shops/ に配置。ビルの形への返事を to-shiro/2026-11-07-building-feedback.md に書いた（形は賛成、ショーケースの中身はどの店にも見える形にしたい相談）。to-claude/2026-11-07-building-and-other-shop.md は対応中
+- 2026-11-07 Claude Code: 「その他」の建物を見本 shop-other-restaurant.png に合わせて模型を作り直し、アプリに反映（オーナー確認済み）。ビルは未着手のため to-claude/2026-11-07-building-and-other-shop.md は対応中のまま。
