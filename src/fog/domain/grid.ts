@@ -4,7 +4,7 @@ import type { LatLng } from '../../map/domain/geo.ts'
 
 export type Cell = { x: number; y: number }
 
-const M_PER_DEG_LAT = 111195
+export const M_PER_DEG_LAT = 111195
 const D_LAT = CELL_M / M_PER_DEG_LAT
 const D_LNG = CELL_M / (M_PER_DEG_LAT * Math.cos((REF_LAT_DEG * Math.PI) / 180))
 

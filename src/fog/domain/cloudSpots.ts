@@ -1,9 +1,9 @@
 import { CELL_M, CLOUD_CHUNK_M, CLOUD_CLEAR_MARGIN_M, CLOUD_GAP_M, CLOUD_REACH_M } from '../config.ts'
 import { distanceMeters } from '../../map/domain/geo.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
-import { distanceToCleared } from './clearing.ts'
+import { clearedCenters, nearestCenterDistance } from './clearing.ts'
 import type { Cleared } from './clearing.ts'
-import { cellCenter, cellOf } from './grid.ts'
+import { M_PER_DEG_LAT, cellCenter, cellOf } from './grid.ts'
 
 export type CloudSpot = {
   lat: number
@@ -20,7 +20,6 @@ const u = cellCenter({ x: 1, y: 1 })
 const RATIO = CLOUD_GAP_M / CELL_M
 const STEP_LNG = (u.lng - o.lng) * RATIO
 const STEP_LAT = (u.lat - o.lat) * RATIO
-const M_PER_DEG_LAT = 111195
 
 // 格子番号と salt から [0,1) を作る決まった値のハッシュ
 function hash01(ix: number, iy: number, salt: number): number {
@@ -36,15 +35,20 @@ const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
 export function cloudSpots(center: LatLng, cleared: Cleared): CloudSpot[] {
   const dLat = CLOUD_REACH_M / M_PER_DEG_LAT
   const dLng = CLOUD_REACH_M / (M_PER_DEG_LAT * Math.cos((center.lat * Math.PI) / 180))
+  const centers = clearedCenters(cleared)
+  const ixMin = Math.floor((center.lng - dLng) / STEP_LNG)
+  const ixMax = Math.floor((center.lng + dLng) / STEP_LNG)
+  const iyMin = Math.floor((center.lat - dLat) / STEP_LAT)
+  const iyMax = Math.floor((center.lat + dLat) / STEP_LAT)
   const spots: CloudSpot[] = []
-  for (let ix = Math.floor((center.lng - dLng) / STEP_LNG); ix <= Math.floor((center.lng + dLng) / STEP_LNG); ix++) {
-    for (let iy = Math.floor((center.lat - dLat) / STEP_LAT); iy <= Math.floor((center.lat + dLat) / STEP_LAT); iy++) {
+  for (let ix = ixMin; ix <= ixMax; ix++) {
+    for (let iy = iyMin; iy <= iyMax; iy++) {
       const p = {
         lng: (ix + 0.5 + (hash01(ix, iy, 5) - 0.5) * 0.9) * STEP_LNG,
         lat: (iy + 0.5 + (hash01(ix, iy, 6) - 0.5) * 0.9) * STEP_LAT,
       }
       if (distanceMeters(center, p) > CLOUD_REACH_M) continue
-      const d = distanceToCleared(cleared, p, 400)
+      const d = nearestCenterDistance(centers, p, 400)
       if (d <= CLOUD_CLEAR_MARGIN_M) continue
       const k = clamp01((d - 40) / 320)
       const r1 = hash01(ix, iy, 1)

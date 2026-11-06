@@ -22,6 +22,21 @@ describe('cloudSpots', () => {
     expect(common.length).toBeGreaterThan(1000)
     for (const s of common) expect(bMap.get(key(s))).toEqual(s)
   })
+  it('中心を経度方向に 30m ずらしても共通範囲の雲は同じ', () => {
+    const moved = { lat: home.lat, lng: home.lng + 30 / (111195 * Math.cos((home.lat * Math.PI) / 180)) }
+    const a = cloudSpots(home, cleared)
+    const bMap = new Map(cloudSpots(moved, cleared).map((s) => [`${s.lat},${s.lng}`, s]))
+    const common = a.filter((s) => distanceMeters(home, s) < 1400)
+    for (const s of common) expect(bMap.get(`${s.lat},${s.lng}`)).toEqual(s)
+  })
+  it('晴れがあっても 1 回の計算は 200ms 未満', () => {
+    cloudSpots(home, cleared) // warm up
+    const t0 = performance.now()
+    cloudSpots(home, cleared)
+    const ms = performance.now() - t0
+    console.log(`cloudSpots with cleared: ${ms.toFixed(1)}ms`)
+    expect(ms).toBeLessThan(200)
+  })
   it('晴れから margin 以内に雲は無い', () => {
     for (const s of cloudSpots(home, cleared)) {
       expect(distanceToCleared(cleared, s, 400)).toBeGreaterThan(CLOUD_CLEAR_MARGIN_M)
@@ -54,5 +69,11 @@ describe('chunkOf', () => {
     const a = spot(home.lat, home.lng)
     expect(chunkOf(a)).toBe(chunkOf(spot(home.lat + 5 / 111195, home.lng)))
     expect(chunkOf(a)).not.toBe(chunkOf(spot(home.lat + 600 / 111195, home.lng)))
+  })
+  it('負のセル番号をまたぐ（経度 0 付近）', () => {
+    const w = spot(10, -0.00001)
+    const e = spot(10, 0.00001)
+    expect(chunkOf(w)).not.toBe(chunkOf(e))
+    expect(chunkOf(w)).toBe(chunkOf(spot(10, -0.00002)))
   })
 })
