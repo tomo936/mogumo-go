@@ -12,3 +12,4 @@
 - 2026-11-07 Claude Code: ショーケース中身の返事を受け取った（汎用の中身で作る）。to-claude/2026-11-07-building-showcase-reply.md と to-shiro/2026-11-07-building-feedback.md を完了に。ビルの模型と仕組みはこれから。
 - 2026-11-07 Claude Code → シロ: 大きい施設のピンの絵1種と、施設を立体にしたときの見た目の見本を依頼（`to-shiro/2026-11-07-large-facility-art.md`、状態: 未対応）。
 - 2026-11-07 シロ: 大きい施設の依頼に納品（オーナー承認済み）。施設ピン（クローシュ＋フォーク＋ナイフ、128×128透明PNG）、見本1（L字の大きい施設）、見本2（細くて高い飲食ビル）。画像本体はセッション経由で送付し、配置先は依頼ファイルの納品メモに記載。依頼は完了に更新。
+- 2026-11-07 Claude Code: 大きい施設の素材3点を配置（art/pins/facility.png、art/reference/shops/facility-large.png・facility-large-2.png）。チャット経由で届いたため見本2は 1000×2000 に縮んでいる（元は 1120×2240）。
