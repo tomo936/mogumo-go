@@ -14,19 +14,23 @@ import { circlePolygon, distanceMeters } from '../domain/geo.ts'
 import type { LatLng } from '../domain/geo.ts'
 import { watchLocation } from '../infra/location.ts'
 import type { LocationEvent } from '../domain/locationStatus.ts'
+import { fetchShops, shopSourceEnabled } from '../../shops/infra/overpass.ts'
+import { attachWorld } from './worldLayers.ts'
 import { nextBearing } from '../domain/rotate.ts'
 import { isStale, judgeFix, shouldMoveCamera, stepToward } from '../domain/smoothing.ts'
 import type { Fix } from '../domain/smoothing.ts'
 
-type Props = { onStatus: (event: LocationEvent) => void }
+type Props = { onStatus: (event: LocationEvent) => void; home: LatLng | null; onShopsError: () => void }
 
 // 地図・カメラ・位置は MapLibre と ref だけで持ち、React の再描画を起こさない。
 // React に上げるのは位置情報の出来事（onStatus）だけ。
-export function MapView({ onStatus }: Props) {
+export function MapView({ onStatus, home, onShopsError }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const onStatusRef = useRef(onStatus)
+  const onShopsErrorRef = useRef(onShopsError)
   useLayoutEffect(() => {
     onStatusRef.current = onStatus
+    onShopsErrorRef.current = onShopsError
   })
 
   useEffect(() => {
@@ -58,7 +62,8 @@ export function MapView({ onStatus }: Props) {
     const s: {
       loaded: boolean; target: LatLng | null; current: LatLng | null; lastFix: Fix | null
       drawn: LatLng | null; shown: LatLng | null; acceptedAt: number; rejectedAt: number | null
-    } = { loaded: false, target: null, current: null, lastFix: null, drawn: null, shown: null, acceptedAt: 0, rejectedAt: null }
+      world: ReturnType<typeof attachWorld> | null
+    } = { loaded: false, target: null, current: null, lastFix: null, drawn: null, shown: null, acceptedAt: 0, rejectedAt: null, world: null }
     map.on('load', () => {
       map.addSource('me-circle', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addSource('me-shadow', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
@@ -68,6 +73,13 @@ export function MapView({ onStatus }: Props) {
         id: 'me-shadow', type: 'circle', source: 'me-shadow',
         paint: { 'circle-radius': 10, 'circle-color': '#1f2a37', 'circle-opacity': 0.25, 'circle-pitch-alignment': 'map' },
       })
+      s.world = attachWorld(map, {
+        home,
+        fetchShops,
+        shopsEnabled: shopSourceEnabled(import.meta.env.DEV, window.location.hostname),
+        onShopsError: () => onShopsErrorRef.current(),
+      })
+      if (s.current) s.world.onPosition(s.current)
       s.loaded = true
       s.drawn = null
     })
@@ -94,7 +106,7 @@ export function MapView({ onStatus }: Props) {
       onStatusRef.current({ type: 'fix' })
     }
     const stopWatch = isFakeWalkEnabled(window.location.search, import.meta.env.DEV)
-      ? startFakeWalk(onFix)
+      ? startFakeWalk(onFix, home ?? undefined)
       : watchLocation(onFix, (failure) => onStatusRef.current({ type: 'failure', failure }))
 
     // 1本指の横なぞりで回す（2本指のときはピンチのズームに任せる）
@@ -115,6 +127,7 @@ export function MapView({ onStatus }: Props) {
       if (s.current && s.target) {
         const c = stepToward(s.current, s.target, dt)
         s.current = c
+        s.world?.onPosition(c)
         if (shouldMoveCamera(s.shown, c, pointers.size >= 2 || map.isZooming())) {
           map.jumpTo({ center: [c.lng, c.lat] })
           s.shown = c
@@ -143,9 +156,10 @@ export function MapView({ onStatus }: Props) {
       container.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
+      s.world?.dispose()
       map.remove()
     }
-  }, [])
+  }, [home])
 
   return <div ref={containerRef} data-testid="map-view" className="map-view" />
 }
