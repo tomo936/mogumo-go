@@ -17,7 +17,7 @@ const north = (m: number): LatLng => ({ lat: home.lat + m / M, lng: home.lng })
 const LNG_M = M * Math.cos((home.lat * Math.PI) / 180)
 // 自宅から東 x m・北 y m の [lng, lat]
 const ll = (x: number, y: number): [number, number] => [home.lng + x / LNG_M, home.lat + y / M]
-const shop: Shop = { id: 's1', name: 'a', lat: home.lat + 20 / M, lng: home.lng, kind: 'ramen' }
+const shop: Shop = { id: 's1', name: 'a', lat: home.lat + 20 / M, lng: home.lng, kind: 'ramen', details: null }
 // 店の 5m 北を東西に通る道
 const roadFeature = { geometry: { type: 'LineString', coordinates: [ll(-30, 25), ll(30, 25)] }, properties: { class: 'minor' } }
 const building = (cx: number, cy: number, w: number, h: number) => ({
@@ -69,7 +69,7 @@ test('霧とお店は自分の位置の印より下に入れ、お店は霧よ�
 })
 
 test('店が何軒あっても、1回の更新でタイルを読むのは道路1回・建物1回', async () => {
-  const many = Array.from({ length: 30 }, (_, i): Shop => ({ id: `s${i}`, name: 'a', lat: home.lat + (i * 6) / M, lng: home.lng + 10 / LNG_M, kind: 'cafe' }))
+  const many = Array.from({ length: 30 }, (_, i): Shop => ({ id: `s${i}`, name: 'a', lat: home.lat + (i * 6) / M, lng: home.lng + 10 / LNG_M, kind: 'cafe', details: null }))
   const { world } = setup({ fetchShops: vi.fn((_c: LatLng) => Promise.resolve(many)) })
   world.onPosition(home)
   await flush()
@@ -79,8 +79,8 @@ test('店が何軒あっても、1回の更新でタイルを読むのは道路1
 
 test('同じ建物に2軒あれば、近い方が建物に合わせ、もう1軒は輪郭なしで置く', async () => {
   tiles = { transportation: [roadFeature], building: [building(0, 16, 20, 12)] }
-  const a: Shop = { id: 'a', name: 'a', lat: home.lat + 14 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe' }
-  const b: Shop = { id: 'b', name: 'b', lat: home.lat + 18 / M, lng: home.lng + 5 / LNG_M, kind: 'ramen' }
+  const a: Shop = { id: 'a', name: 'a', lat: home.lat + 14 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe', details: null }
+  const b: Shop = { id: 'b', name: 'b', lat: home.lat + 18 / M, lng: home.lng + 5 / LNG_M, kind: 'ramen', details: null }
   const { world } = setup({ fetchShops: vi.fn((_c: LatLng) => Promise.resolve([b, a])) })
   world.onPosition(home)
   await flush()

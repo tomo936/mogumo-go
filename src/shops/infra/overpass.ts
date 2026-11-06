@@ -42,7 +42,7 @@ export function parseOverpass(json: unknown): Shop[] {
     const tags = Object.fromEntries(
       Object.entries(el.tags).filter((e): e is [string, string] => typeof e[1] === 'string'),
     )
-    shops.push({ id: `osm:${el.type}/${el.id}`, name: el.tags.name, lat, lng, kind: kindOf(tags, el.tags.name) })
+    shops.push({ id: `osm:${el.type}/${el.id}`, name: el.tags.name, lat, lng, kind: kindOf(tags, el.tags.name), details: null })
   }
   return shops
 }

@@ -23,7 +23,7 @@ describe('parseOverpass', () => {
   it('名前なしを捨てて4件、way は center、種類は kindOf', () => {
     const shops = parseOverpass(fixture)
     expect(shops).toHaveLength(4)
-    expect(shops[0]).toEqual({ id: 'osm:node/1001', name: '麺屋いろは', lat: 35.681, lng: 139.767, kind: 'ramen' })
+    expect(shops[0]).toEqual({ id: 'osm:node/1001', name: '麺屋いろは', lat: 35.681, lng: 139.767, kind: 'ramen', details: null })
     expect(shops[1].kind).toBe('cafe')
     expect(shops[2].kind).toBe('bakery')
     expect(shops[3]).toMatchObject({ id: 'osm:way/2001', lat: 35.684, lng: 139.77, kind: 'western' })

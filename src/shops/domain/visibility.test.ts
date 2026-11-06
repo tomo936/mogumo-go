@@ -11,6 +11,7 @@ const shop = (id: string, northM: number): Shop => ({
   lat: me.lat + northM * M,
   lng: me.lng,
   kind: 'cafe',
+  details: null,
 })
 
 describe('visibleShops', () => {
