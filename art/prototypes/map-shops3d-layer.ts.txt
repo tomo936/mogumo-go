@@ -5,13 +5,14 @@ import { OutlineEffect } from 'three/addons/effects/OutlineEffect.js'
 import { MercatorCoordinate } from 'maplibre-gl'
 import type { CustomLayerInterface, Map as MapLibreMap } from 'maplibre-gl'
 
-export type Shop3D = { lng: number; lat: number; facingDeg: number } // facingDeg: 正面の向き（北=0、時計回り）
+export type Shop3D = { lng: number; lat: number; facingDeg: number; sizeM?: number } // facingDeg: 正面の向き（北=0、時計回り）
 
 export function shopsLayer(id: string, url: string, shops: Shop3D[], metersPerUnit: number, matte = false): CustomLayerInterface {
   let renderer: THREE.WebGLRenderer, effect: OutlineEffect, map: MapLibreMap
   const camera = new THREE.Camera()
   const scene = new THREE.Scene()
-  const items: { obj: THREE.Object3D; mc: MercatorCoordinate; rot: number }[] = []
+  const items: { obj: THREE.Object3D; mc: MercatorCoordinate; rot: number; mpu: number }[] = []
+  let unit = 1 // 模型の幅（単位）
   // アニメ調の陰影（3段）
   const grad = new THREE.DataTexture(new Uint8Array([168, 176, 214, 255, 236, 236, 242, 255, 255, 255, 255, 255]), 3, 1)
   grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true
@@ -35,9 +36,10 @@ export function shopsLayer(id: string, url: string, shops: Shop3D[], metersPerUn
             ? new THREE.MeshBasicMaterial({ color: src.emissive })
             : new THREE.MeshToonMaterial({ color: src.color, gradientMap: grad })
         })
+        const box = new THREE.Box3().setFromObject(gltf.scene); unit = Math.max(box.max.x - box.min.x, box.max.z - box.min.z)
         for (const s of shops) {
           const obj = gltf.scene.clone(); scene.add(obj)
-          items.push({ obj, mc: MercatorCoordinate.fromLngLat([s.lng, s.lat], 0), rot: THREE.MathUtils.degToRad(s.facingDeg) })
+          items.push({ obj, mc: MercatorCoordinate.fromLngLat([s.lng, s.lat], 0), rot: THREE.MathUtils.degToRad(s.facingDeg), mpu: s.sizeM ? s.sizeM / unit : metersPerUnit })
         }
         map.triggerRepaint()
       })
@@ -47,7 +49,7 @@ export function shopsLayer(id: string, url: string, shops: Shop3D[], metersPerUn
       const proj = new THREE.Matrix4().fromArray(args.defaultProjectionData.mainMatrix as unknown as number[])
       // 1軒ずつ: 地図の座標へ移して、大きさ（m）と向きを合わせて描く
       for (const it of items) {
-        const s = it.mc.meterInMercatorCoordinateUnits() * metersPerUnit
+        const s = it.mc.meterInMercatorCoordinateUnits() * it.mpu
         const l = new THREE.Matrix4().makeTranslation(it.mc.x, it.mc.y, it.mc.z)
           .scale(new THREE.Vector3(s, -s, s))
           .multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2))
