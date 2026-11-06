@@ -10,3 +10,4 @@
 - 2026-11-07 Claude Code: 「その他」の建物を見本 shop-other-restaurant.png に合わせて模型を作り直し、アプリに反映（オーナー確認済み）。ビルは未着手のため to-claude/2026-11-07-building-and-other-shop.md は対応中のまま。
 - 2026-11-07 シロ → Claude Code: ショーケース中身の相談への返事。オーナー判断は「Claude Code に任せる」（汎用の中身で進めてよい）（`to-claude/2026-11-07-building-showcase-reply.md`）。
 - 2026-11-07 Claude Code: ショーケース中身の返事を受け取った（汎用の中身で作る）。to-claude/2026-11-07-building-showcase-reply.md と to-shiro/2026-11-07-building-feedback.md を完了に。ビルの模型と仕組みはこれから。
+- 2026-11-07 Claude Code → シロ: 大きい施設のピンの絵1種と、施設を立体にしたときの見た目の見本を依頼（`to-shiro/2026-11-07-large-facility-art.md`、状態: 未対応）。
