@@ -691,7 +691,197 @@ def mystery():
         for j in range(2): cube((0.13, 0.26, 0.11), (-0.55 - 0.065 + j * 0.13, 0.35, zt + 0.4 + k * 0.12), GREY, bevel=0.02)
     cyl(0.08, 0.5, (-0.55, 0.45, zt + 0.6), mat('#8e8e95'), verts=16)
 
-{'ramen': ramen, 'sushi': sushi, 'chinese': chinese, 'yakiniku': yakiniku, 'western': western, 'cake': cake, 'bakery': bakery, 'mystery': mystery}[KIND]()
+# ── 横長の切妻屋根（棟が左右＝長い面が正面） ─────────────────
+def side_gable_roof(W, D, z, pitch, ox, oy, roof, roof_d, ridge):
+    half = D / 2 + oy; run = half / math.cos(pitch)
+    for sy in (-1, 1):
+        tile_slope(W + 2 * ox, run, M_at(0, sy * half, z, rz=(0 if sy < 0 else math.pi), rx=pitch), roof, roof_d)
+    rz = z + math.tan(pitch) * half + 0.06
+    cyl(0.07, W + 2 * ox + 0.04, (0, 0, rz), ridge, rot=(0, math.pi / 2, 0), verts=14)
+    for sx in (-1, 1): cyl(0.09, 0.06, (sx * (W / 2 + ox + 0.03), 0, rz), ridge, rot=(0, math.pi / 2, 0), verts=16)
+    return rz
+
+def side_gable_walls(W, D, z, pitch, m):
+    gh = math.tan(pitch) * (D / 2)
+    for sx in (-1, 1):
+        me = bpy.data.meshes.new('g'); bm = bmesh.new()
+        v = [bm.verts.new((0, -D / 2, 0)), bm.verts.new((0, D / 2, 0)), bm.verts.new((0, 0, gh))]
+        bm.faces.new(v if sx > 0 else v[::-1]); bm.to_mesh(me); bm.free()
+        g = bpy.data.objects.new('g', me); col.objects.link(g); g.location = (sx * (W / 2 - 0.02), 0, z); finish(g, m)
+        g.modifiers.new('s', 'SOLIDIFY').thickness = 0.06
+    return gh
+
+def open_counter(x0, x1, fy, depth, H, WOOD, WOOD2, INSIDE, items=None, stools=3, back_shelf=True):
+    """正面のあいた所: 明るい奥の壁・腰板・カウンター・棚・いす（中は大きいものだけ）"""
+    cx = (x0 + x1) / 2; cw = x1 - x0
+    cube((cw, 0.05, H), (cx, fy + depth, H / 2 + 0.06), INSIDE, bevel=0.005)
+    cube((cw, depth, 0.03), (cx, fy + depth / 2, 0.075), WOOD2, bevel=0.005)
+    for k in range(int(cw / 0.1)): cube((0.09, 0.05, 0.42), (x0 + 0.05 + k * 0.1, fy + 0.04, 0.27), WOOD if k % 2 else WOOD2, bevel=0.008)
+    cube((cw + 0.04, 0.28, 0.05), (cx, fy + 0.12, 0.5), WOOD, bevel=0.012)
+    if back_shelf:
+        for z in (0.78, 1.0): cube((cw - 0.12, 0.16, 0.035), (cx, fy + depth - 0.1, z), WOOD, bevel=0.008)
+    for i, (x, z, kind) in enumerate(items or []):
+        if kind == 'bowl': lathe([(0, 0), (0.035, 0), (0.06, 0.025), (0.065, 0.05), (0, 0.045)], (x, fy + depth - 0.1, z + 0.02), mat('#e9e2d6'), steps=14)
+        elif kind == 'jar': cyl(0.045, 0.1, (x, fy + depth - 0.1, z + 0.07), mat('#a77b59'), verts=12, bevel=0.01)
+        elif kind == 'plate': cyl(0.07, 0.015, (x, fy + 0.15, 0.535), mat('#efe9df'), verts=16, bevel=0.004)
+    xs = [x0 + cw * (i + 0.5) / stools for i in range(stools)]
+    for x in xs:
+        cyl(0.085, 0.035, (x, fy - 0.22, 0.34), WOOD, verts=18, bevel=0.01)
+        for a in range(4):
+            ang = a * math.tau / 4 + 0.4
+            cube((0.022, 0.022, 0.32), (x + math.cos(ang) * 0.055, fy - 0.22 + math.sin(ang) * 0.055, 0.17), WOOD2, bevel=0.005)
+
+# ── そば・うどん屋（見本 soba.webp＝ジオラマ版） ─────────────────
+def soba():
+    PL = mat('#f3f1ec'); TIM = mat('#6b4630'); TIM_D = mat('#553724'); ROOF = mat('#4c4f58'); ROOF_D = mat('#3f424a')
+    LINEN = mat('#e9dcc4', 0.9); WOOD = mat('#c08a58'); WOOD2 = mat('#a8774a'); INSIDE = mat('#f2e6d2', 0.8, emit=0.25)
+    STONE = mat('#9b9a98'); STONE_D = mat('#82817f'); SIGN = mat('#7a5136'); WHITE = mat('#f4efe6'); BASKET = mat('#c9a066')
+    W, D, H = 2.8, 1.6, 1.55; FY = -D / 2; HO = 1.15  # HO: 店の開口の上端
+    cube((W + 0.1, D + 0.1, 0.06), (0, 0, 0.03), mat('#cfc8bd'), bevel=0.01)
+    # 壁（左の部分と奥・側面）。右の 0.15〜1.3 は店の中が見える
+    cube((W, 0.06, H), (0, D / 2 - 0.03, H / 2 + 0.06), PL, bevel=0.01)
+    for sx in (-1, 1): cube((0.06, D, H), (sx * (W / 2 - 0.03), 0, H / 2 + 0.06), PL, bevel=0.01)
+    cube((W / 2 + 0.15, 0.06, H), (-(W / 2 - 0.15) / 2 - 0.0, FY + 0.03, H / 2 + 0.06), PL, bevel=0.01)
+    cube((W / 2 - 0.15, 0.06, H - HO), ((W / 2 + 0.15) / 2, FY + 0.03, HO + (H - HO) / 2 + 0.06), PL, bevel=0.01)
+    open_counter(0.18, W / 2 - 0.08, FY, D - 0.2, HO, WOOD, WOOD2, INSIDE,
+                 items=[(0.35, 0.78, 'bowl'), (0.5, 0.78, 'bowl'), (0.8, 1.0, 'jar'), (1.0, 0.78, 'bowl'), (0.45, 0, 'plate'), (0.85, 0, 'plate')], stools=4)
+    # 木組み（柱・梁）
+    for x in (-W / 2, -0.62, -0.05, 0.15, W / 2):
+        cube((0.1, 0.1, H + 0.02), (x, FY - 0.02, H / 2 + 0.06), TIM, bevel=0.015)
+    for z in (0.08, HO + 0.06, H + 0.04): cube((W + 0.05, 0.1, 0.09), (0, FY - 0.02, z), TIM, bevel=0.015)
+    for x in (-1.0, -0.33, 0.55, 1.0): cube((0.08, 0.08, H - HO), (x, FY - 0.02, HO + (H - HO) / 2 + 0.06), TIM, bevel=0.012)
+    for sx in (-1, 1):
+        for y in (-D / 2, 0, D / 2): cube((0.1, 0.1, H + 0.02), (sx * (W / 2 + 0.01), y, H / 2 + 0.06), TIM, bevel=0.015)
+        for z in (0.08, 0.75, H + 0.04): cube((0.09, D + 0.05, 0.09), (sx * (W / 2 + 0.01), 0, z), TIM, bevel=0.015)
+        cube((0.07, 0.07, 0.9), (sx * (W / 2 + 0.02), -0.4, 0.62 + 0.0), TIM, bevel=0.012, rot=(0.55, 0, 0))   # すじかい
+    # 左の側面: 格子の小窓
+    lattice(-W / 2 - 0.03, 0.4, 0.85, 0.3, 0.32, TIM_D, mat('#f4ead8'), 4, 4, rz=-math.pi / 2)
+    # 入口（-0.62〜-0.05）: 戸の奥・瓦の小さなひさし・看板（そばの絵）・麻ののれん
+    cube((0.5, 0.06, 0.85), (-0.34, FY + 0.06, 0.48), mat('#5a3d2a'), bevel=0.01)
+    tile_slope(0.95, 0.38, M_at(-0.34, FY - 0.36, HO - 0.12, rx=0.45), ROOF, ROOF_D)
+    cube((0.64, 0.06, 0.32), (-0.34, FY - 0.06, HO + 0.2), SIGN, bevel=0.04)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.1, minor_radius=0.012, location=(-0.34, FY - 0.1, HO + 0.2), rotation=(math.pi / 2, 0, 0)); o = bpy.context.object; o.scale = (1.3, 1, 0.7); finish(o, WHITE)
+    for k in range(4): cyl(0.006, 0.18, (-0.36 + k * 0.012, FY - 0.1, HO + 0.19 + k * 0.006), WHITE, rot=(0, math.pi / 2, 0.2), verts=6, bevel=0)
+    sphere(0.025, (-0.28, FY - 0.1, HO + 0.24), mat('#7dbb5a'), scale=(1.5, 0.5, 0.7), seg=8)
+    cyl(0.018, 0.62, (-0.34, FY - 0.12, HO - 0.2), TIM_D, rot=(0, math.pi / 2, 0), verts=8, bevel=0)
+    for i in range(3): cube((0.18, 0.02, 0.42), (-0.53 + i * 0.19, FY - 0.12, HO - 0.43), LINEN, bevel=0.012)
+    # 石臼とざる（入口の左前）
+    cyl(0.17, 0.12, (-0.9, FY - 0.3, 0.12), STONE, verts=20, bevel=0.02); cyl(0.15, 0.1, (-0.9, FY - 0.3, 0.24), STONE_D, verts=20, bevel=0.02)
+    cube((0.2, 0.025, 0.025), (-0.8, FY - 0.3, 0.27), mat('#9b7a55'), bevel=0.005, rot=(0, 0, 0.3))
+    cyl(0.19, 0.04, (-1.22, FY - 0.25, 0.22), BASKET, rot=(1.2, 0, 0.3), verts=24, bevel=0.012)
+    # 屋根と妻、石の煙突
+    pitch = math.radians(32); zt = H + 0.06
+    side_gable_walls(W, D, zt, pitch, PL)
+    side_gable_roof(W, D, zt - 0.04, pitch, 0.16, 0.14, ROOF, ROOF_D, ROOF_D)
+    for k in range(3):
+        for j in range(2): cube((0.13, 0.26, 0.11), (0.65 - 0.065 + j * 0.13, 0.25, zt + 0.42 + k * 0.12), STONE if (k + j) % 2 else STONE_D, bevel=0.02)
+
+# ── 居酒屋（見本 izakaya.webp＝ジオラマ版） ─────────────────
+def izakaya():
+    WD = ['#7a4a2e', '#6e4229', '#845033']; FRAME = mat('#5c3822'); ROOF = mat('#7a4632'); ROOF_D = mat('#673a29')
+    NAVY = mat('#2f3f73'); GLOW = mat('#ffcf8a', 0.7, emit=0.55); WOOD = mat('#a8703f'); WOOD2 = mat('#8f5e35')
+    INSIDE = mat('#f3d8a8', 0.8, emit=0.35); BOTTLE = mat('#3d5a3a', 0.3); BOARD = mat('#c99a63'); DARK = mat('#2e211a')
+    W, D, H = 2.6, 1.9, 1.35; FY = -D / 2; HO = 1.0
+    cube((W + 0.1, D + 0.1, 0.07), (0, 0, 0.035), mat('#6b6b6b'), bevel=0.01)
+    # 板壁（たて板）: 奥・左右・正面の左。右側は開いたカウンター
+    def vplanks(ax, fixed, a0, a1, z0, z1):
+        n = max(1, int((a1 - a0) / 0.16))
+        for k in range(n):
+            c = a0 + (a1 - a0) * (k + 0.5) / n
+            size = ((a1 - a0) / n - 0.012, 0.05, z1 - z0) if ax == 'x' else (0.05, (a1 - a0) / n - 0.012, z1 - z0)
+            cube(size, (c, fixed, (z0 + z1) / 2) if ax == 'x' else (fixed, c, (z0 + z1) / 2), mat(WD[k % 3]), bevel=0.012, seg=1)
+    cube((W - 0.06, 0.06, H), (0, D / 2 - 0.03, H / 2 + 0.07), mat(WD[0]))
+    vplanks('y', -W / 2 - 0.0, -D / 2, D / 2, 0.07, H + 0.07); vplanks('y', W / 2 + 0.0, -D / 2, D / 2, 0.07, H + 0.07)
+    vplanks('x', FY, -W / 2, -0.05, 0.07, H + 0.07); vplanks('x', FY, -0.05, W / 2, HO + 0.07, H + 0.07)
+    open_counter(-0.02, W / 2 - 0.08, FY, D - 0.25, HO, WOOD, WOOD2, INSIDE, items=[(0.3, 0, 'plate'), (0.7, 0, 'plate'), (1.0, 0, 'plate')], stools=3)
+    for k in range(9): cyl(0.03, 0.2, (0.08 + k * 0.13, FY + D - 0.35, 0.92), BOTTLE if k % 3 else mat('#e8e0d0'), verts=10, bevel=0.005)  # 奥の酒びん（大きいもの）
+    for x in (-W / 2, -0.05, W / 2):
+        cube((0.1, 0.1, H + 0.02), (x, FY - 0.02, H / 2 + 0.07), FRAME, bevel=0.015)
+    cube((W + 0.05, 0.1, 0.09), (0, FY - 0.02, HO + 0.07), FRAME, bevel=0.015)
+    # 左: 紺ののれんの入口と換気口
+    cube((0.6, 0.06, 0.85), (-0.55, FY + 0.03, 0.5), DARK, bevel=0.01)
+    lattice(-0.55, FY - 0.03, 0.42, 0.5, 0.5, FRAME, GLOW, 3, 1)
+    cyl(0.018, 0.7, (-0.55, FY - 0.1, HO - 0.02), FRAME, rot=(0, math.pi / 2, 0), verts=8, bevel=0)
+    for i in range(3): cube((0.2, 0.025, 0.42), (-0.76 + i * 0.21, FY - 0.1, HO - 0.25), NAVY, bevel=0.012)
+    cube((0.3, 0.04, 0.2), (-1.05, FY - 0.04, 1.15), mat('#5a3a26'), bevel=0.01)
+    for k in range(4): cube((0.26, 0.05, 0.02), (-1.05, FY - 0.06, 1.08 + k * 0.045), DARK, bevel=0)
+    # 右の側面: 明るい格子窓
+    lattice(W / 2 + 0.04, 0.0, 0.85, 1.2, 0.55, FRAME, GLOW, 5, 2, rz=math.pi / 2)
+    # 正面の瓦のひさし＋赤ちょうちん5つ
+    tile_slope(W + 0.2, 0.5, M_at(0, FY - 0.45, HO + 0.18, rx=0.38), ROOF, ROOF_D)
+    for x in (-1.0, -0.5, 0.0, 0.5, 1.0): lantern(x, FY - 0.36, HO - 0.04, mat('#ee5a42', 0.6, emit=0.45), DARK, s=1.05)
+    # 大屋根（妻が正面）・妻のたて板
+    zt = H + 0.07; pitch = math.radians(28); gh = math.tan(pitch) * (W / 2)
+    for sy in (-1, 1): gable_wall(W, sy * (D / 2 - 0.02), zt, gh, mat(WD[1]), sy)
+    for k in range(9):
+        x = -W / 2 + W * (k + 0.5) / 9; h = gh * (1 - abs(x) / (W / 2)) - 0.03
+        if h > 0.05: cube((W / 9 - 0.015, 0.05, h), (x, FY - 0.03, zt + h / 2), mat(WD[k % 3]), bevel=0.012, seg=1)
+    gable_roof(W, D, zt - 0.05, pitch, 0.2, 0.2, ROOF, ROOF_D, ROOF_D)
+    for k in range(3):
+        for j in range(2): cube((0.14, 0.28, 0.12), (0.7 - 0.07 + j * 0.14, 0.3, zt + 0.4 + k * 0.13), mat(['#9a6a4a', '#8a5c3e'][(k + j) % 2]), bevel=0.02)
+    # 立て看板（酒びんと焼き鳥の絵）
+    cube((0.46, 0.04, 0.34), (-1.35, FY - 0.5, 0.42), BOARD, bevel=0.02, rot=(0.12, 0, 0.35))
+    for dx in (-0.18, 0.18): cube((0.03, 0.03, 0.5), (-1.35 + dx * math.cos(0.35), FY - 0.46 + dx * math.sin(0.35), 0.25), WOOD2, bevel=0.006, rot=(0.12, 0, 0.35))
+    cyl(0.03, 0.15, (-1.43, FY - 0.55, 0.43), mat('#4a3a2e'), rot=(math.pi / 2 - 0.12, 0, 0.35), verts=10, bevel=0.005)
+    for k in range(3): sphere(0.025, (-1.27 + k * 0.015, FY - 0.53 + k * 0.005, 0.38 + k * 0.045), mat('#9a5a34'), seg=8)
+
+# ── 和食屋（見本 washoku.webp＝ジオラマ版） ─────────────────
+def square_lantern(x, y, z, frame, glow):
+    cube((0.2, 0.2, 0.24), (x, y, z), glow, bevel=0.01)
+    for sx in (-1, 1):
+        for sy in (-1, 1): cube((0.025, 0.025, 0.26), (x + sx * 0.1, y + sy * 0.1, z), frame, bevel=0.004)
+    cube((0.24, 0.24, 0.03), (x, y, z + 0.13), frame, bevel=0.006); cube((0.24, 0.24, 0.03), (x, y, z - 0.13), frame, bevel=0.006)
+
+def washoku():
+    PL = mat('#f4f1ea'); TIM = mat('#5e3d27'); TIM_D = mat('#4a2f1e'); ROOF = mat('#56596a'); ROOF_D = mat('#474a59')
+    GREEN = mat('#3f7a52'); GLOW = mat('#fff0cf', 0.7, emit=0.5); WOOD = mat('#b98454'); WOOD2 = mat('#9c6c43')
+    INSIDE = mat('#f3e2c2', 0.8, emit=0.3); STONE = mat('#a3a19c'); POT = mat('#3f5a7a'); PINE = mat('#3f7a3a'); SIGN = mat('#8a5a38')
+    W, D, H1, H2 = 2.3, 2.0, 1.15, 0.8; FY = -D / 2; zt = H1 + H2
+    cube((W + 0.1, D + 0.1, 0.07), (0, 0, 0.035), mat('#cfc9bf'), bevel=0.01)
+    # 壁: 奥・左右（2階建て）、正面の左は入口、右は1階が開いたカウンター
+    cube((W - 0.06, 0.06, zt), (0, D / 2 - 0.03, zt / 2 + 0.07), PL)
+    for sx in (-1, 1): cube((0.06, D, zt), (sx * (W / 2 - 0.03), 0, zt / 2 + 0.07), PL)
+    cube((W - 0.06, 0.06, H2), (0, FY + 0.03, H1 + H2 / 2 + 0.07), PL)
+    cube((1.1, 0.06, H1), (-0.6, FY + 0.03, H1 / 2 + 0.07), PL)
+    open_counter(0.08, W / 2 - 0.06, FY, D - 0.2, H1 - 0.05, WOOD, WOOD2, INSIDE,
+                 items=[(0.3, 0.78, 'bowl'), (0.55, 0.78, 'jar'), (0.8, 1.0, 'bowl'), (0.95, 0.78, 'bowl'), (0.35, 0, 'plate'), (0.75, 0, 'plate')], stools=3)
+    # 木組み
+    for x in (-W / 2, -1.0, -0.2, 0.06, W / 2): cube((0.1, 0.1, zt + 0.02), (x, FY - 0.02, zt / 2 + 0.07), TIM, bevel=0.015)
+    for z in (0.1, H1 + 0.07, H1 + 0.45, zt + 0.06): cube((W + 0.05, 0.1, 0.09), (0, FY - 0.02, z), TIM, bevel=0.015)
+    for sx in (-1, 1):
+        for y in (-D / 2, 0, D / 2): cube((0.1, 0.1, zt + 0.02), (sx * (W / 2 + 0.01), y, zt / 2 + 0.07), TIM, bevel=0.015)
+        for z in (0.1, H1 + 0.07, zt + 0.06): cube((0.09, D + 0.05, 0.09), (sx * (W / 2 + 0.01), 0, z), TIM, bevel=0.015)
+    lattice(-1.0 + 0.4, FY - 0.03, 0.42, 0.0001, 0.0001, TIM_D, GLOW, 1, 1) if False else None
+    for x in (-1.06, -0.6): lattice(x + 0.0, FY - 0.03, 0.3, 0.32, 0.36, TIM_D, PL, 3, 3) if x < -1 else None
+    lattice(-1.08, FY - 0.03, 0.32, 0.3, 0.36, TIM_D, PL, 3, 3)
+    # 入口: 格子の戸＋緑ののれん＋両わきの角あんどん
+    cube((0.7, 0.06, 0.9), (-0.6, FY + 0.0, 0.52), mat('#6a4a32'), bevel=0.01)
+    for k in range(1, 6): cube((0.02, 0.07, 0.9), (-0.95 + k * 0.117, FY - 0.01, 0.52), TIM_D, bevel=0)
+    cyl(0.018, 0.78, (-0.6, FY - 0.1, H1 - 0.05), TIM_D, rot=(0, math.pi / 2, 0), verts=8, bevel=0)
+    for i in range(3): cube((0.24, 0.025, 0.5), (-0.85 + i * 0.25, FY - 0.1, H1 - 0.32), GREEN, bevel=0.012)
+    square_lantern(-1.15, FY - 0.25, H1 - 0.15, TIM_D, GLOW); square_lantern(-0.03, FY - 0.25, H1 - 0.15, TIM_D, GLOW)
+    # 1階の正面のひさし（瓦）と看板（魚とお椀）
+    tile_slope(W + 0.3, 0.55, M_at(0, FY - 0.5, H1 + 0.12, rx=0.42), ROOF, ROOF_D)
+    cube((0.7, 0.06, 0.26), (-0.4, FY - 0.06, H1 + 0.5), SIGN, bevel=0.04)
+    sphere(1, (-0.55, FY - 0.1, H1 + 0.5), mat('#f1e6d2'), scale=(0.1, 0.02, 0.045), seg=12)
+    bpy.ops.mesh.primitive_cone_add(radius1=0.04, depth=0.06, location=(-0.43, FY - 0.1, H1 + 0.5), rotation=(0, math.pi / 2, 0)); finish(bpy.context.object, mat('#f1e6d2'))
+    half_disc(-0.22, FY - 0.1, H1 + 0.5, 0.06, mat('#f1e6d2'))
+    # 2階: 白い壁の間に横長の格子
+    lattice(0.5, FY - 0.03, H1 + 0.62, 0.9, 0.22, TIM_D, PL, 7, 1)
+    # 屋根: 大屋根（妻が正面）＋右へのびる下の屋根
+    pitch = math.radians(32); gh = math.tan(pitch) * (W / 2)
+    for sy in (-1, 1): gable_wall(W, sy * (D / 2 - 0.02), zt + 0.07, gh, PL, sy)
+    cube((0.08, 0.06, gh), (0, FY - 0.03, zt + 0.07 + gh / 2), TIM, bevel=0.012)
+    gable_roof(W, D, zt + 0.03, pitch, 0.22, 0.22, ROOF, ROOF_D, ROOF_D)
+    # 石どうろうと盆栽（入口の左前）
+    cube((0.16, 0.16, 0.06), (-1.35, FY - 0.4, 0.03), STONE, bevel=0.01); cyl(0.04, 0.3, (-1.35, FY - 0.4, 0.2), STONE, verts=10)
+    cube((0.2, 0.2, 0.14), (-1.35, FY - 0.4, 0.42), STONE, bevel=0.02); bpy.ops.mesh.primitive_cone_add(radius1=0.18, depth=0.12, location=(-1.35, FY - 0.4, 0.55), vertices=4, rotation=(0, 0, math.pi / 4)); finish(bpy.context.object, STONE, 0.01, 1)
+    sphere(0.035, (-1.35, FY - 0.4, 0.63), STONE, seg=8)
+    cyl(0.12, 0.1, (-1.05, FY - 0.42, 0.05), POT, verts=16, bevel=0.02)
+    cyl(0.025, 0.22, (-1.05, FY - 0.42, 0.2), mat('#6b4a32'), rot=(0.3, 0, 0), verts=8, bevel=0)
+    for (dx, dz) in ((-0.08, 0.3), (0.06, 0.34), (0.0, 0.26)): sphere(0.09, (-1.05 + dx, FY - 0.42, dz), PINE, scale=(1.4, 1.2, 0.5), seg=12)
+
+{'ramen': ramen, 'sushi': sushi, 'chinese': chinese, 'yakiniku': yakiniku, 'western': western, 'cake': cake, 'bakery': bakery, 'mystery': mystery, 'soba': soba, 'izakaya': izakaya, 'washoku': washoku}[KIND]()
 # 曲線（瓦の筋など）は glb に入らないので形に変えておく
 for o in list(bpy.data.objects):
     if o.type == 'CURVE':
