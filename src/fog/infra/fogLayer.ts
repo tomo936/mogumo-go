@@ -24,10 +24,17 @@ const vec2 HI = vec2(1.3, 1.25);
 vec2 px(vec4 c) { return c.xy / c.w * u_viewport * 0.5; }
 void main() {
   vec4 c = u_matrix * vec4(a_clump.xy, 0.0, 1.0);
+  vec4 ex = u_matrix * vec4(a_clump.xy + vec2(a_clump.z, 0.0), 0.0, 1.0);
+  vec4 ny = u_matrix * vec4(a_clump.xy + vec2(0.0, a_clump.z), 0.0, 1.0);
   // 半幅が画面で何 px か（東と北のうち長く見える方。傾けても潰れない）
-  float wpx = max(
-    length(px(u_matrix * vec4(a_clump.xy + vec2(a_clump.z, 0.0), 0.0, 1.0)) - px(c)),
-    length(px(u_matrix * vec4(a_clump.xy + vec2(0.0, a_clump.z), 0.0, 1.0)) - px(c)));
+  float wpx = max(length(px(ex) - px(c)), length(px(ny) - px(c)));
+  // カメラの真下より後ろの塊は、画面に映らないのに何倍も大きく計算される（地図を回すと画面を覆う）。描かない
+  if (c.w <= 0.0 || ex.w <= 0.0 || ny.w <= 0.0 || wpx > u_viewport.y) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    v_uv = vec2(0.0);
+    v_seed = 0.0;
+    return;
+  }
   vec2 uv = mix(LO, HI, a_corner * 0.5 + 0.5);
   gl_Position = c + vec4(uv * wpx / (u_viewport * 0.5) * c.w, 0.0, 0.0);
   v_uv = uv;
