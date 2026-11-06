@@ -24,10 +24,15 @@ class UpstreamError extends Error {}
 
 async function fetchTilePois(x: number, y: number, template: string): Promise<PoiFeature[]> {
   const url = template.replace('{z}', String(Z)).replace('{x}', String(x)).replace('{y}', String(y))
-  const res = await fetch(url, { signal: AbortSignal.timeout(15000) })
-  if (res.status === 404 || res.status === 204) return []
-  if (!res.ok) throw new UpstreamError('tile')
-  const tile = new VectorTile(new Pbf(new Uint8Array(await res.arrayBuffer())))
+  let tile: VectorTile
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) })
+    if (res.status === 404 || res.status === 204) return []
+    if (!res.ok) throw new UpstreamError('tile')
+    tile = new VectorTile(new Pbf(new Uint8Array(await res.arrayBuffer())))
+  } catch {
+    throw new UpstreamError('tile')
+  }
   const layer = tile.layers['poi']
   if (!layer) return []
   const out: PoiFeature[] = []
@@ -49,9 +54,14 @@ async function fetchTilePois(x: number, y: number, template: string): Promise<Po
 
 // 現在地のタイル（端に近ければ隣も）から、アプリが言う番号の点を探す
 async function verifyOsm(shopId: string, lat: number, lng: number) {
-  const meta = await fetch(TILEJSON, { signal: AbortSignal.timeout(15000) })
-  if (!meta.ok) throw new UpstreamError('tilejson')
-  const template = (await meta.json()).tiles?.[0]
+  let template: unknown
+  try {
+    const meta = await fetch(TILEJSON, { signal: AbortSignal.timeout(15000) })
+    if (!meta.ok) throw new UpstreamError('tilejson')
+    template = (await meta.json())?.tiles?.[0]
+  } catch {
+    throw new UpstreamError('tilejson')
+  }
   if (typeof template !== 'string') throw new UpstreamError('tilejson')
   for (const t of tilesToTry(lat, lng, Z, EDGE_M)) {
     const poi = findPoi(await fetchTilePois(t.x, t.y, template), shopId)
@@ -69,7 +79,9 @@ Deno.serve(async (req: Request) => {
 
   let body: Record<string, unknown>
   try {
-    body = await req.json()
+    const parsed = await req.json()
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return fail('bad_request', 400)
+    body = parsed
   } catch {
     return fail('bad_request', 400)
   }
@@ -122,7 +134,7 @@ Deno.serve(async (req: Request) => {
       p_cells: cellsAround(shop.lat, shop.lng, CLEAR_M),
     })
     if (error) {
-      if (error.code === '23503') return fail('profile_missing', 409)
+      if (error.code === '23503' && error.message.includes('profile_missing')) return fail('profile_missing', 409)
       throw new Error('perform_checkin')
     }
     const row = Array.isArray(data) ? data[0] : data

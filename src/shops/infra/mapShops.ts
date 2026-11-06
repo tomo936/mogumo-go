@@ -5,6 +5,7 @@ import type { Shop } from '../domain/shop.ts'
 import { SOURCE } from './mapFeatures.ts'
 import type { FeatureSource } from './mapFeatures.ts'
 
+// supabase/functions/checkin/core.ts の FOOD と同じにしておくこと（keep in sync）
 const FOOD = new Set(['restaurant', 'cafe', 'fast_food', 'bar', 'pub', 'bakery', 'confectionery', 'ice_cream'])
 
 // 地図タイルの poi から飲食店を取り出す（center から radiusM 以内）。タイルの重なりで同じ店が複数回出るので id で1件にする

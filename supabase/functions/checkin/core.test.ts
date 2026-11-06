@@ -43,7 +43,9 @@ describe('tilesToTry', () => {
   it('タイルの真ん中なら1枚だけ', () => {
     // 14549,6451 の中心付近
     const t = tileXY(35.6909, 139.7003, 14)
-    expect(tilesToTry(35.6909, 139.7003, 14, 60)[0]).toEqual(t)
+    const r = tilesToTry(35.6909, 139.7003, 14, 60)
+    expect(r).toHaveLength(1)
+    expect(r[0]).toEqual(t)
   })
   it('西端から 60m 以内なら西隣も試す', () => {
     const lng = (14549 / 2 ** 14) * 360 - 180 // 西端
@@ -74,6 +76,13 @@ describe('findPoi', () => {
   })
   it('飲食店でないものは無視', () => {
     expect(findPoi(fs, 'osm:456')).toBeNull()
+  })
+  it('同じ id の parking は飛ばし、後ろの飲食店を返す', () => {
+    const dup = [
+      { id: 7, name: 'P', subclass: 'parking', lng: 1, lat: 1 },
+      { id: 7, name: '店', subclass: 'cafe', lng: 2, lat: 3 },
+    ]
+    expect(findPoi(dup, 'osm:7')).toEqual({ name: '店', subclass: 'cafe', lng: 2, lat: 3 })
   })
   it('名前なし・未知の id・osm: でない id は null', () => {
     expect(findPoi(fs, 'osm:55')).toBeNull()

@@ -26,7 +26,7 @@ create function public.perform_checkin(
 returns table (checkin_id uuid, coins_awarded int, new_cells jsonb)
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 #variable_conflict use_column
 declare

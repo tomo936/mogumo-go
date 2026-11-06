@@ -75,6 +75,7 @@ export function tilesToTry(lat: number, lng: number, z: number, edgeM: number): 
   return out
 }
 
+// 飲食店の種類。src/shops/infra/mapShops.ts の FOOD と同じにしておくこと（keep in sync）
 const FOOD = new Set(['restaurant', 'cafe', 'fast_food', 'bar', 'pub', 'bakery', 'confectionery', 'ice_cream'])
 
 export type PoiFeature = { id?: number | string; name?: string; subclass?: string; lng: number; lat: number }
