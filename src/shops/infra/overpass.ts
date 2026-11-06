@@ -3,9 +3,20 @@
 import type { LatLng } from '../../map/domain/geo.ts'
 import { kindOf } from '../domain/genre.ts'
 import type { Shop } from '../domain/shop.ts'
-import { OVERPASS_RETRY_WAIT_MS, OVERPASS_URL, SHOP_RADIUS_M } from '../config.ts'
+import { OVERPASS_CENTER_GRID_M, OVERPASS_RETRY_WAIT_MS, OVERPASS_URL, SHOP_RADIUS_M } from '../config.ts'
+import { REF_LAT_DEG } from '../../fog/config.ts'
+import { M_PER_DEG_LAT } from '../../fog/domain/grid.ts'
 
 const TIMEOUT_MS = 25000
+
+// 世界に固定した gridM 四方のマスの中心に丸める（正確な現在地を外に送らないため）。
+// 経度の幅はセルと同じく北緯35度で決める。ずれは最大で半マスの対角（250m なら約177m）
+export function roundCenter(p: LatLng, gridM: number): LatLng {
+  const dLat = gridM / M_PER_DEG_LAT
+  const dLng = gridM / (M_PER_DEG_LAT * Math.cos((REF_LAT_DEG * Math.PI) / 180))
+  const snap = (v: number, d: number) => Number(((Math.floor(v / d) + 0.5) * d).toFixed(6))
+  return { lat: snap(p.lat, dLat), lng: snap(p.lng, dLng) }
+}
 
 export function overpassQuery(center: LatLng, radiusM: number): string {
   const around = `(around:${radiusM},${center.lat},${center.lng})`
@@ -61,7 +72,7 @@ export async function fetchShops(
   opts: { fetchFn?: typeof fetch; waitMs?: number } = {},
 ): Promise<Shop[]> {
   const fetchFn = opts.fetchFn ?? fetch
-  const query = overpassQuery(center, SHOP_RADIUS_M)
+  const query = overpassQuery(roundCenter(center, OVERPASS_CENTER_GRID_M), SHOP_RADIUS_M)
   let result = await attempt(OVERPASS_URL, query, fetchFn)
   if (result === 'retry') {
     await new Promise((r) => setTimeout(r, opts.waitMs ?? OVERPASS_RETRY_WAIT_MS))
