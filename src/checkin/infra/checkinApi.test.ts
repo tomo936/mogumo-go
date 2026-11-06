@@ -44,6 +44,12 @@ describe('postCheckin', () => {
     expect(await postCheckin(input, { ...base, fetchFn })).toEqual({ ok: false, reason })
     expect(fetchFn).toHaveBeenCalledTimes(1) // 再送しない
   })
+  it('409 で本文が already_today なら already_today、それ以外は no_profile', async () => {
+    const today = vi.fn().mockResolvedValue(res(409, { error: 'already_today' }))
+    expect(await postCheckin(input, { ...base, fetchFn: today })).toEqual({ ok: false, reason: 'already_today' })
+    const profile = vi.fn().mockResolvedValue(res(409, { error: 'profile_missing' }))
+    expect(await postCheckin(input, { ...base, fetchFn: profile })).toEqual({ ok: false, reason: 'no_profile' })
+  })
   it('通信失敗・壊れた JSON は network', async () => {
     expect(await postCheckin(input, { ...base, fetchFn: vi.fn().mockRejectedValue(new Error('x')) })).toEqual({ ok: false, reason: 'network' })
     const bad = vi.fn().mockResolvedValue(new Response('<html>', { status: 200 }))

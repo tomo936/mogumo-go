@@ -44,6 +44,7 @@ test.each([
   ['network', '通信できませんでした。記録されていることもあるので、少し待ってからもう一度押してください'],
   ['not_found', 'このお店は見つかりませんでした'],
   ['no_profile', '初回設定を終えてからチェックインできます'],
+  ['already_today', 'このお店は今日もうチェックインしました。また明日来てね'],
 ] as const)('エラー %s の文言', (reason, text) => {
   setup({ error: reason })
   expect(screen.getByText(text)).toBeInTheDocument()

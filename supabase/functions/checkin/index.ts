@@ -159,6 +159,7 @@ Deno.serve(async (req: Request) => {
     })
     if (error) {
       if (error.code === '23503' && error.message.includes('profile_missing')) return fail('profile_missing', 409)
+      if (error.code === 'P0001' && error.message.includes('already_today')) return fail('already_today', 409)
       throw new Error('perform_checkin')
     }
     const row = Array.isArray(data) ? data[0] : data
