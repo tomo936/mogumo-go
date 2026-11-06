@@ -5,12 +5,12 @@ import { startConfetti } from './confetti.ts'
 
 export const EFFECT_MS = 3000
 
-type Props = { coins: 30 | 0; shopName: string; onDone: () => void }
+type Props = { coins: 30 | 0; onDone: () => void }
 
 const prefersReducedMotion = () =>
   typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-export function CheckinEffect({ coins, shopName, onDone }: Props) {
+export function CheckinEffect({ coins, onDone }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const doneRef = useRef(false)
   const onDoneRef = useRef(onDone)
@@ -37,7 +37,7 @@ export function CheckinEffect({ coins, shopName, onDone }: Props) {
   }, [])
 
   return (
-    <div className="checkin-effect" data-testid="checkin-effect" data-shop={shopName} onClick={finish}>
+    <div className="checkin-effect" data-testid="checkin-effect" onClick={finish}>
       {!reduced && <canvas ref={canvasRef} className="checkin-effect__confetti" data-testid="checkin-confetti" />}
       <div className="checkin-effect__banner" role="status">
         <span className="checkin-effect__check" aria-hidden="true">✓</span>

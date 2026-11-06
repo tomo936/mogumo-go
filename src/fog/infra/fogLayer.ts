@@ -189,7 +189,7 @@ export function createFogLayer(): FogLayer {
     },
     setThin(spots) {
       thin.fill(0)
-      spots.slice(0, MAX_THIN).forEach((s, i) => thin.set([s.x, s.y, s.amount], i * 3))
+      spots.slice(0, MAX_THIN).forEach((s, i) => thin.set([s.x, s.y, Math.min(1, Math.max(0, s.amount))], i * 3))
       map?.triggerRepaint()
     },
     onAdd(m, g) {

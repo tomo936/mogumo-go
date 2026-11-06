@@ -20,6 +20,15 @@ const reply = (body: string, status: number, type = 'text/plain') =>
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
   if (req.method !== 'POST') return reply('bad_request', 400)
+  // ログインしたユーザーだけ（チェックインと同じく、サービスロールのクライアントでトークンを確かめる）
+  const token = (req.headers.get('Authorization') ?? '').match(/^Bearer\s+(.+)$/i)?.[1]
+  if (!token) return reply('unauthorized', 401)
+  const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const { data: auth, error: authError } = await db.auth.getUser(token)
+  if (authError || !auth.user) return reply('unauthorized', 401)
+
   let lat: unknown
   let lng: unknown
   try {
@@ -61,7 +70,6 @@ Deno.serve(async (req: Request) => {
   const unique = dedupeRows(rows)
   if (unique.length > 0) {
     try {
-      const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
       const fetched_at = new Date().toISOString()
       const { error } = await db
         .from('shops')

@@ -36,7 +36,7 @@ export function MapPage() {
   const [me, setMe] = useState<LatLng | null>(null)
   const [busy, setBusy] = useState(false)
   const [checkinError, setCheckinError] = useState<CheckinError | null>(null)
-  const [effect, setEffect] = useState<{ coins: 30 | 0; shopName: string; key: number } | null>(null)
+  const [effect, setEffect] = useState<{ coins: 30 | 0; key: number } | null>(null)
   const busyRef = useRef(false)
   const effectSeq = useRef(0)
   const selectedRef = useRef<Shop | null>(null)
@@ -60,7 +60,7 @@ export function MapPage() {
     setBusy(false)
     if (result.ok) {
       setSelected((cur) => (cur?.id === posted.id ? null : cur))
-      setEffect({ coins: result.coins, shopName: posted.name, key: ++effectSeq.current })
+      setEffect({ coins: result.coins, key: ++effectSeq.current })
       mapRef.current?.checkin(posted, result.newCells)
     } else {
       if (selectedRef.current?.id === posted.id) setCheckinError(result.reason)
@@ -93,7 +93,7 @@ export function MapPage() {
           onClose={() => select(null)}
         />
       )}
-      {effect && <CheckinEffect key={effect.key} coins={effect.coins} shopName={effect.shopName} onDone={() => setEffect(null)} />}
+      {effect && <CheckinEffect key={effect.key} coins={effect.coins} onDone={() => setEffect(null)} />}
       <div className="map-overlay">
         <LocationOverlay status={status} onRetry={retry} onReload={() => window.location.reload()} />
         {shopsError && <p className="location-banner">お店を読み込めませんでした</p>}

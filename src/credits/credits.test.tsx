@@ -30,6 +30,7 @@ test('出典ボタンで詳しい出典とリンクが見られる', () => {
   expect(screen.getByRole('link', { name: 'OpenFreeMap' })).toHaveAttribute('href', 'https://openfreemap.org/')
   expect(screen.getByRole('link', { name: 'OpenMapTiles' })).toHaveAttribute('href', 'https://www.openmaptiles.org/')
   expect(screen.getByRole('link', { name: 'OpenStreetMap contributors' })).toHaveAttribute('href', 'https://www.openstreetmap.org/copyright')
+  expect(screen.getByRole('link', { name: 'Powered by ホットペッパーグルメ Webサービス' })).toHaveAttribute('href', 'https://webservice.recruit.co.jp/')
   act(() => screen.getByRole('button', { name: '閉じる' }).click())
   expect(screen.queryByRole('link', { name: 'OpenFreeMap' })).not.toBeInTheDocument()
 })

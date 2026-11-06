@@ -22,6 +22,7 @@
 3. パソコンで `supabase/migrations/0002_checkin.sql` を開き、**中身を全部コピー**して、SQL Editor に貼る。
 4. 右下の **Run** を押す。
 5. 「Success（成功）」と出れば OK。赤いエラーが出たら、文面をそのまま Claude Code に見せる。
+   - ただし `column "open" … already exists`（列 open はもうあります）と出たときは、0002 はすでに流してあるということなので、そのままで大丈夫。
 
 ### 4. 関数 `shops-hotpepper` を置く
 1. 左のメニューから **Edge Functions** を開く。
@@ -41,7 +42,7 @@
 5. **Verify JWT** がオンのまま **Deploy function**。
 
 ### 6. ホットペッパーのキーがあるか確かめる
-1. **Edge Functions** の中の **Secrets**（またはメニューの Edge Functions → Secrets）を開く。
+1. 左のメニューの **Edge Functions** を開き、ページ右上あたりの **Secrets**（または **Manage secrets** ボタン）を押して、シークレットの一覧を開く。
 2. **`HOTPEPPER_API_KEY`** が一覧にあることを確かめる（値は見えなくて大丈夫。見せないでください）。
 3. 無いときは、ホットペッパーのキーを新しく登録する（Claude Code に聞いてください）。
 

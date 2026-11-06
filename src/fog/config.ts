@@ -13,5 +13,5 @@ export const FOG_RESORT_DEG = 2 // 地図がこれだけ回ったら重ね順を
 export const WAVE_SPEED_MPS = 210 // 霧が晴れる波が広がる速さ
 export const POP_S = 0.55 // 塊がふくらんで縮む（はじける）時間
 export const THIN_RADIUS_M = 35 // 薄くなる範囲の半径（お店から）
-export const THIN_FULL_M = 30 // 霧の中のお店で、この距離以内なら最大に薄くなる（利用側の判定用）
+export const THIN_FULL_M = 30 // 薄さが最大になる距離。薄さの式（wave.ts の thinAmount）が使う
 export const THIN_START_M = 50 // 霧の中のお店で、この距離から薄くなり始める
