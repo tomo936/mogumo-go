@@ -37,6 +37,7 @@ export function MapPage() {
   const [busy, setBusy] = useState(false)
   const [checkinError, setCheckinError] = useState<CheckinError | null>(null)
   const [effect, setEffect] = useState<{ coins: 30 | 0; key: number } | null>(null)
+  const [doneToday, setDoneToday] = useState(false)
   const busyRef = useRef(false)
   const effectSeq = useRef(0)
   const selectedRef = useRef<Shop | null>(null)
@@ -46,6 +47,8 @@ export function MapPage() {
   const select = useCallback((shop: Shop | null) => {
     if (busyRef.current && shop) return // チェックイン中は別のお店にシートを入れ替えない（閉じるのは可）
     setSelected(shop)
+    // 今日もうチェックインしたお店かは、板を開いたときに地図に聞いておく（描画中に ref を読まない）
+    setDoneToday(shop ? (mapRef.current?.isCheckedToday(shop) ?? false) : false)
     setCheckinError(null)
     if (!shop) mapRef.current?.unfocus() // 板を閉じたらカメラを自分に戻す
   }, [])
@@ -88,6 +91,7 @@ export function MapPage() {
         <ShopSheet
           shop={selected}
           distanceM={distanceMeters(me, selected)}
+          doneToday={doneToday}
           busy={busy}
           error={checkinError}
           onCheckin={() => void checkin()}

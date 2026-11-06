@@ -25,13 +25,14 @@ const BADGE_COLOR: Record<ShopKind, string> = {
 type Props = {
   shop: Shop
   distanceM: number
+  doneToday?: boolean // 今日もうチェックインしたお店
   busy: boolean
   error: CheckinError | null
   onCheckin: () => void
   onClose: () => void
 }
 
-export function ShopSheet({ shop, distanceM, busy, error, onCheckin, onClose }: Props) {
+export function ShopSheet({ shop, distanceM, doneToday = false, busy, error, onCheckin, onClose }: Props) {
   const inRange = distanceM <= CHECKIN_M
   const open = shop.details?.open
   return (
@@ -52,8 +53,8 @@ export function ShopSheet({ shop, distanceM, busy, error, onCheckin, onClose }: 
           {ERROR_TEXT[error]}
         </p>
       )}
-      <button type="button" className="shop-sheet__go" disabled={!inRange || busy} onClick={onCheckin}>
-        {busy ? 'チェックイン中…' : inRange ? 'チェックイン' : `あと ${Math.ceil(distanceM - CHECKIN_M)}m`}
+      <button type="button" className="shop-sheet__go" disabled={doneToday || !inRange || busy} onClick={onCheckin}>
+        {doneToday ? '今日はチェックイン済み' : busy ? 'チェックイン中…' : inRange ? 'チェックイン' : `あと ${Math.ceil(distanceM - CHECKIN_M)}m`}
       </button>
     </section>
   )
