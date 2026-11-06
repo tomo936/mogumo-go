@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="UTF-8"><title>shop spike</title>
+<style>html,body{margin:0;background:#cfe8f7}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"./package/build/three.module.js","three/addons/":"./package/examples/jsm/"}}</script>
+</head><body>
+<script type="module">
+// 試作: コードで組む「かわいいお店」の 3D 模型（ラーメン屋・寿司屋）
+import * as THREE from 'three'
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
+
+const W = 780, H = 780
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
+renderer.setPixelRatio(1); renderer.setSize(W, H)
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap
+document.body.appendChild(renderer.domElement)
+const scene = new THREE.Scene()
+scene.background = new THREE.Color('#eaf3e4')
+
+// アニメ調の陰影（3段階）
+const grad = new THREE.DataTexture(new Uint8Array([150, 150, 150, 255, 215, 215, 215, 255, 255, 255, 255, 255]), 3, 1)
+grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true
+const mat = (c, extra = {}) => new THREE.MeshToonMaterial({ color: c, gradientMap: grad, ...extra })
+const OUTLINE = new THREE.MeshBasicMaterial({ color: '#5a3d2b', side: THREE.BackSide })
+
+// 部品を置く（輪郭線つき: 裏返した少し大きい形を重ねる＝イラストの線）
+function add(parent, geo, m, x, y, z, { line = true, s = 1.035, rot } = {}) {
+  const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); mesh.castShadow = mesh.receiveShadow = true
+  if (rot) mesh.rotation.set(...rot)
+  parent.add(mesh)
+  if (line) { const o = new THREE.Mesh(geo, OUTLINE); o.scale.setScalar(s); mesh.add(o) }
+  return mesh
+}
+const rbox = (w, h, d, r = 0.06) => new RoundedBoxGeometry(w, h, d, 3, r)
+
+// 文字や柄の絵（看板・のれん）。本番ではシロの絵に差し替える部分
+function texture(draw, w = 256, h = 128) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h
+  draw(c.getContext('2d'), w, h)
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t
+}
+const sign = (text, bg, fg) => texture((g, w, h) => {
+  g.fillStyle = bg; g.beginPath(); g.roundRect(4, 4, w - 8, h - 8, 22); g.fill()
+  g.lineWidth = 8; g.strokeStyle = '#5a3d2b'; g.stroke()
+  g.fillStyle = fg; g.font = 'bold 70px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, w / 2, h / 2 + 4)
+})
+const noren = (bg, mark) => texture((g, w, h) => {
+  g.fillStyle = bg; g.fillRect(0, 0, w, h)
+  g.fillStyle = 'rgba(255,255,255,0.95)'
+  if (mark === 'bowl') { g.beginPath(); g.arc(w / 2, h * 0.42, 34, 0, Math.PI); g.fill(); g.fillRect(w / 2 - 42, h * 0.42 - 6, 84, 8); g.fillRect(w / 2 - 14, h * 0.42 + 30, 28, 8) }
+  else { g.font = 'bold 64px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(mark, w / 2, h * 0.45) }
+}, 128, 128)
+
+function base(group, w, d) {
+  add(group, rbox(w + 0.5, 0.18, d + 0.5, 0.08), mat('#efe6d6'), 0, 0.09, 0)
+}
+
+// ── ラーメン屋: 木の壁・紺の瓦屋根・紺ののれん・赤ちょうちん・屋根の上にどんぶり
+function ramen() {
+  const g = new THREE.Group()
+  base(g, 2.2, 1.8)
+  add(g, rbox(2.2, 1.35, 1.8, 0.08), mat('#c98a55'), 0, 0.85, 0) // 木の壁
+  add(g, rbox(2.26, 0.12, 1.86, 0.04), mat('#7a4a2c'), 0, 0.24, 0) // 腰の板
+  // 屋根（切妻）: 2枚の板を傾けて合わせる
+  const roof = mat('#3f4f7a')
+  add(g, rbox(2.5, 0.12, 1.15, 0.05), roof, 0, 1.86, 0.46, { rot: [0.62, 0, 0] })
+  add(g, rbox(2.5, 0.12, 1.15, 0.05), roof, 0, 1.86, -0.46, { rot: [-0.62, 0, 0] })
+  add(g, new THREE.CylinderGeometry(0.09, 0.09, 2.8, 12), mat('#2f3c60'), 0, 2.2, 0, { rot: [0, 0, Math.PI / 2] }) // 棟
+  // 入口: 明るいガラス戸
+  add(g, rbox(0.9, 0.85, 0.06, 0.03), mat('#fff1c7', { emissive: '#ffcf73', emissiveIntensity: 0.55 }), 0, 0.66, 0.91)
+  // のれん（3枚）
+  for (const [i, x] of [-0.33, 0, 0.33].entries()) {
+    const m = new THREE.MeshBasicMaterial({ map: noren('#2e4a86', i === 1 ? 'bowl' : ''), side: THREE.DoubleSide })
+    add(g, new THREE.PlaneGeometry(0.3, 0.36), m, x, 0.98, 0.97, { line: false })
+  }
+  add(g, new THREE.CylinderGeometry(0.025, 0.025, 1.1, 8), mat('#7a4a2c'), 0, 1.16, 0.97, { rot: [0, 0, Math.PI / 2] })
+  // 看板
+  add(g, rbox(1.3, 0.42, 0.1, 0.05), new THREE.MeshBasicMaterial({ map: sign('ラーメン', '#fff4dc', '#b5362f') }), 0, 1.4, 1.0, { line: false })
+  // 赤ちょうちん
+  for (const x of [-0.85, 0.85]) {
+    const l = add(g, new THREE.SphereGeometry(0.17, 20, 14), mat('#e0483d', { emissive: '#ff6a4d', emissiveIntensity: 0.35 }), x, 1.2, 1.0)
+    l.scale.set(1, 1.3, 1)
+    add(g, new THREE.CylinderGeometry(0.1, 0.1, 0.05, 12), mat('#2b2b2b'), x, 1.43, 1.0, { line: false })
+  }
+  // 窓
+  add(g, rbox(0.05, 0.42, 0.6, 0.02), mat('#fff1c7', { emissive: '#ffcf73', emissiveIntensity: 0.5 }), 1.12, 0.85, 0.1)
+  // 屋根の上のどんぶり（ジャンルがひと目で分かる目印）
+  const bowl = new THREE.Group(); bowl.position.set(0.15, 2.28, 0.05); g.add(bowl)
+  const pts = []; for (let i = 0; i <= 10; i++) { const t = i / 10; pts.push(new THREE.Vector2(0.18 + Math.sin(t * Math.PI / 2) * 0.32, t * 0.36)) }
+  add(bowl, new THREE.LatheGeometry(pts, 32), mat('#fbfbfb', { side: THREE.DoubleSide }), 0, 0, 0, { line: false })
+  add(bowl, new THREE.TorusGeometry(0.47, 0.035, 8, 40), mat('#c8342c'), 0, 0.3, 0, { line: false, rot: [Math.PI / 2, 0, 0] })
+  add(bowl, new THREE.CylinderGeometry(0.47, 0.47, 0.03, 32), mat('#e8a858'), 0, 0.31, 0, { line: false }) // スープ
+  add(bowl, new THREE.CylinderGeometry(0.13, 0.13, 0.05, 20), mat('#ffffff'), -0.18, 0.34, 0.05, { line: false }) // なると
+  add(bowl, new THREE.TorusGeometry(0.05, 0.018, 6, 16), mat('#ef7f9a'), -0.18, 0.37, 0.05, { line: false, rot: [Math.PI / 2, 0, 0] })
+  const egg = add(bowl, new THREE.SphereGeometry(0.12, 16, 10), mat('#fff6e0'), 0.15, 0.34, -0.1, { line: false }); egg.scale.set(1, 0.5, 1.2)
+  add(bowl, new THREE.SphereGeometry(0.06, 12, 8), mat('#ffb21e'), 0.15, 0.39, -0.1, { line: false })
+  add(bowl, rbox(0.3, 0.03, 0.18, 0.01), mat('#9a5a3a'), 0.12, 0.34, 0.18, { line: false, rot: [0, 0.4, 0] }) // チャーシュー
+  for (const z of [-0.06, 0.06]) add(bowl, new THREE.CylinderGeometry(0.012, 0.012, 0.9, 6), mat('#a0703f'), 0.1, 0.62, z, { line: false, rot: [0.2, 0, 0.5] }) // おはし
+  return g
+}
+
+// ── 寿司屋: 白い壁・木の格子・こげ茶の屋根・白ののれん・屋根の上ににぎり
+function sushi() {
+  const g = new THREE.Group()
+  base(g, 2.2, 1.8)
+  add(g, rbox(2.2, 1.3, 1.8, 0.08), mat('#fbf6ec'), 0, 0.83, 0)
+  add(g, rbox(2.26, 0.14, 1.86, 0.04), mat('#8b5a35'), 0, 0.25, 0)
+  for (const x of [-0.95, 0.95]) add(g, rbox(0.12, 1.3, 0.12, 0.03), mat('#8b5a35'), x, 0.83, 0.88) // 柱
+  const roof = mat('#5b4636')
+  add(g, rbox(2.5, 0.12, 1.15, 0.05), roof, 0, 1.84, 0.46, { rot: [0.6, 0, 0] })
+  add(g, rbox(2.5, 0.12, 1.15, 0.05), roof, 0, 1.84, -0.46, { rot: [-0.6, 0, 0] })
+  add(g, new THREE.CylinderGeometry(0.09, 0.09, 2.8, 12), mat('#463428'), 0, 2.17, 0, { rot: [0, 0, Math.PI / 2] })
+  add(g, rbox(0.9, 0.85, 0.06, 0.03), mat('#fff1c7', { emissive: '#ffcf73', emissiveIntensity: 0.5 }), 0, 0.66, 0.91)
+  // 格子窓
+  for (let i = 0; i < 5; i++) add(g, rbox(0.04, 0.5, 0.04, 0.01), mat('#8b5a35'), -0.78 + i * 0.09, 0.85, 0.92, { line: false })
+  for (const [i, x] of [-0.3, 0.3].entries()) {
+    const m = new THREE.MeshBasicMaterial({ map: noren('#f6f1e6', ''), side: THREE.DoubleSide })
+    add(g, new THREE.PlaneGeometry(0.55, 0.36), m, x * 0.95, 0.98, 0.97, { line: false })
+  }
+  add(g, new THREE.PlaneGeometry(0.32, 0.32), new THREE.MeshBasicMaterial({ map: texture((c, w, h) => { c.fillStyle = '#f6f1e6'; c.fillRect(0, 0, w, h); c.fillStyle = '#26478a'; c.font = 'bold 96px serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('鮨', w / 2, h / 2 + 4) }, 128, 128) }), 0, 0.98, 0.975, { line: false })
+  add(g, new THREE.CylinderGeometry(0.025, 0.025, 1.2, 8), mat('#8b5a35'), 0, 1.16, 0.97, { rot: [0, 0, Math.PI / 2] })
+  add(g, rbox(1.2, 0.42, 0.1, 0.05), new THREE.MeshBasicMaterial({ map: sign('寿司', '#5b3a24', '#fff4dc') }), 0, 1.38, 1.0, { line: false })
+  // 屋根の上のにぎり（サーモン）
+  const n = new THREE.Group(); n.position.set(0.1, 2.38, 0.05); n.rotation.y = 0.5; g.add(n)
+  add(n, rbox(0.8, 0.34, 0.42, 0.15), mat('#ffffff'), 0, 0, 0)
+  const fish = add(n, rbox(0.92, 0.12, 0.5, 0.06), mat('#ff9c6b'), 0, 0.22, 0); fish.rotation.z = 0.06
+  for (let i = 0; i < 4; i++) add(n, rbox(0.03, 0.125, 0.5, 0.01), mat('#ffe0cc'), -0.3 + i * 0.2, 0.23, 0, { line: false })
+  return g
+}
+
+// 地面（平らな地図のつもり）と配置
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshToonMaterial({ color: '#eaf3e4', gradientMap: grad }))
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground)
+const road = new THREE.Mesh(new THREE.PlaneGeometry(30, 1.3), mat('#fffaf0')); road.rotation.x = -Math.PI / 2; road.position.set(0, 0.005, 2.0); scene.add(road)
+const r1 = ramen(); r1.position.set(-1.6, 0, 0); scene.add(r1)
+const s1 = sushi(); s1.position.set(1.7, 0, 0.1); s1.rotation.y = -0.15; scene.add(s1)
+
+// 光: 空の色の環境光＋斜め上の太陽（影を落とす）
+scene.add(new THREE.HemisphereLight('#ffffff', '#cfe0c8', 1.6))
+const sun = new THREE.DirectionalLight('#fff4e0', 2.2); sun.position.set(-4, 8, 6); sun.castShadow = true
+sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6 }); scene.add(sun)
+
+// 地図を斜め55°から見下ろす角度に合わせたカメラ
+const cam = new THREE.PerspectiveCamera(30, W / H, 0.1, 100)
+const dist = 13, pitch = THREE.MathUtils.degToRad(55)
+const yaw = THREE.MathUtils.degToRad(Number(new URLSearchParams(location.search).get('yaw') ?? 35))
+cam.position.set(Math.sin(yaw) * Math.sin(pitch) * dist, Math.cos(pitch) * dist + 0.8, Math.cos(yaw) * Math.sin(pitch) * dist)
+cam.lookAt(0, 0.9, 0)
+renderer.render(scene, cam)
+window.__done = true
+</script></body></html>
