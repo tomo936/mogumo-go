@@ -12,6 +12,7 @@ const shop = (id: string, northM: number): Shop => ({
   lat: me.lat + northM * M,
   lng: me.lng,
   kind: 'cafe',
+  mapId: null,
   details: null,
 })
 

@@ -2,8 +2,7 @@
 import './checkin.css'
 import type { ShopKind } from '../../shops/domain/shop.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
-
-export const CHECKIN_RANGE_M = 50
+import { CHECKIN_M } from '../../shops/config.ts'
 
 export type CheckinError = 'too_far' | 'network' | 'not_found' | 'no_profile'
 
@@ -31,7 +30,7 @@ type Props = {
 }
 
 export function ShopSheet({ shop, distanceM, busy, error, onCheckin, onClose }: Props) {
-  const inRange = distanceM <= CHECKIN_RANGE_M
+  const inRange = distanceM <= CHECKIN_M
   const open = shop.details?.open
   return (
     <section className="shop-sheet" aria-label="お店の情報">
@@ -52,7 +51,7 @@ export function ShopSheet({ shop, distanceM, busy, error, onCheckin, onClose }: 
         </p>
       )}
       <button type="button" className="shop-sheet__go" disabled={!inRange || busy} onClick={onCheckin}>
-        {busy ? 'チェックイン中…' : inRange ? 'チェックイン' : `あと ${Math.ceil(distanceM - CHECKIN_RANGE_M)}m`}
+        {busy ? 'チェックイン中…' : inRange ? 'チェックイン' : `あと ${Math.ceil(distanceM - CHECKIN_M)}m`}
       </button>
     </section>
   )

@@ -57,7 +57,7 @@ test('お店の取得に失敗すると帯が出る', () => {
   expect(screen.getByText('お店を読み込めませんでした')).toBeInTheDocument()
 })
 
-const shop: Shop = { id: 'hp:J1', name: '麺屋もぐも', lat: 35, lng: 139, kind: 'ramen', details: null }
+const shop: Shop = { id: 'hp:J1', name: '麺屋もぐも', lat: 35, lng: 139, kind: 'ramen', details: null, mapId: null }
 const here: LatLng = { lat: 35, lng: 139 }
 const renderPage = () =>
   render(
@@ -105,7 +105,7 @@ test('何もない所をタップするとシートが閉じる', () => {
   expect(screen.queryByText('麺屋もぐも')).not.toBeInTheDocument()
 })
 
-const shop2: Shop = { id: 'hp:J2', name: '別のお店', lat: 35, lng: 139, kind: 'cafe', details: null }
+const shop2: Shop = { id: 'hp:J2', name: '別のお店', lat: 35, lng: 139, kind: 'cafe', details: null, mapId: null }
 
 test('通信中は別のお店をタップしてもシートが入れ替わらず、失敗してもそのお店のシートは残る', async () => {
   let resolve!: (v: unknown) => void

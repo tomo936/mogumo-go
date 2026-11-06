@@ -30,7 +30,7 @@ function parseOk(json: unknown): CheckinResult {
 }
 
 export async function postCheckin(
-  input: { shopId: string; me: LatLng; farFromHome: boolean },
+  input: { shopId: string; me: LatLng; farFromHome: boolean; mapId?: string | null },
   opts: {
     fetchFn?: typeof fetch
     endpoint?: string
@@ -56,6 +56,7 @@ export async function postCheckin(
         lat: input.me.lat,
         lng: input.me.lng,
         far_from_home: input.farFromHome,
+        ...(input.mapId ? { map_id: input.mapId } : {}),
       }),
       signal: ctrl.signal,
     })

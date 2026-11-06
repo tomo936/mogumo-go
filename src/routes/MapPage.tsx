@@ -55,7 +55,7 @@ export function MapPage() {
     setBusy(true)
     setCheckinError(null)
     const posted = selected
-    const result = await postCheckin({ shopId: posted.id, me, farFromHome: farFromHome(home, me) })
+    const result = await postCheckin({ shopId: posted.id, me, farFromHome: farFromHome(home, me), ...(posted.mapId ? { mapId: posted.mapId } : {}) })
     busyRef.current = false
     setBusy(false)
     if (result.ok) {

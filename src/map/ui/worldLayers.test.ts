@@ -24,7 +24,7 @@ const north = (m: number): LatLng => ({ lat: home.lat + m / M, lng: home.lng })
 const LNG_M = M * Math.cos((home.lat * Math.PI) / 180)
 // 自宅から東 x m・北 y m の [lng, lat]
 const ll = (x: number, y: number): [number, number] => [home.lng + x / LNG_M, home.lat + y / M]
-const shop: Shop = { id: 's1', name: 'a', lat: home.lat + 20 / M, lng: home.lng, kind: 'ramen', details: null }
+const shop: Shop = { id: 's1', name: 'a', lat: home.lat + 20 / M, lng: home.lng, kind: 'ramen', details: null, mapId: null }
 // 店の 5m 北を東西に通る道
 const roadFeature = { geometry: { type: 'LineString', coordinates: [ll(-30, 25), ll(30, 25)] }, properties: { class: 'minor' } }
 const building = (cx: number, cy: number, w: number, h: number) => ({
@@ -79,7 +79,7 @@ test('霧とお店は自分の位置の印より下に入れ、お店は霧よ�
 })
 
 test('店が何軒あっても、1回の更新でタイルを読むのは道路1回・建物1回', async () => {
-  const many = Array.from({ length: 30 }, (_, i): Shop => ({ id: `s${i}`, name: 'a', lat: home.lat + (i * 6) / M, lng: home.lng + 10 / LNG_M, kind: 'cafe', details: null }))
+  const many = Array.from({ length: 30 }, (_, i): Shop => ({ id: `s${i}`, name: 'a', lat: home.lat + (i * 6) / M, lng: home.lng + 10 / LNG_M, kind: 'cafe', details: null, mapId: null }))
   const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve(many)) })
   world.onPosition(home)
   await flush()
@@ -89,8 +89,8 @@ test('店が何軒あっても、1回の更新でタイルを読むのは道路1
 
 test('同じ建物に2軒あれば、近い方が建物に合わせ、もう1軒は輪郭なしで置く', async () => {
   tiles = { transportation: [roadFeature], building: [building(0, 16, 20, 12)] }
-  const a: Shop = { id: 'a', name: 'a', lat: home.lat + 14 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe', details: null }
-  const b: Shop = { id: 'b', name: 'b', lat: home.lat + 18 / M, lng: home.lng + 5 / LNG_M, kind: 'ramen', details: null }
+  const a: Shop = { id: 'a', name: 'a', lat: home.lat + 14 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe', details: null, mapId: null }
+  const b: Shop = { id: 'b', name: 'b', lat: home.lat + 18 / M, lng: home.lng + 5 / LNG_M, kind: 'ramen', details: null, mapId: null }
   const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([b, a])) })
   world.onPosition(home)
   await flush()
@@ -237,7 +237,7 @@ const poi = (id: number, name: string, x: number, y: number) => ({
 
 test('地図の店とホットペッパーの同じ店は1軒にまとまり、hp: の id になる', async () => {
   tiles = { transportation: [roadFeature], building: [], poi: [poi(7, 'カフェ花', 0, 20)] }
-  const hp: Shop = { id: 'hp:J1', name: 'カフェ花', lat: home.lat + 30 / M, lng: home.lng, kind: 'cafe', details: null }
+  const hp: Shop = { id: 'hp:J1', name: 'カフェ花', lat: home.lat + 30 / M, lng: home.lng, kind: 'cafe', details: null, mapId: null }
   const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([hp])) })
   world.onPosition(home)
   expect(vi.mocked(shopLayer.setShops).mock.lastCall![0]).toEqual([expect.objectContaining({ id: 'osm:7' })])
@@ -301,7 +301,7 @@ test('一度読んだあと、同じ場所でタイルが読み込み直しに�
   expect(poiReads()).toBe(n + 1)
 })
 
-const far: Shop = { id: 'far', name: 'f', lat: home.lat + 400 / M, lng: home.lng, kind: 'cafe', details: null }
+const far: Shop = { id: 'far', name: 'f', lat: home.lat + 400 / M, lng: home.lng, kind: 'cafe', details: null, mapId: null }
 
 test('loadProgress の晴れたセルにある店が見える', async () => {
   const cell = cellOf(far)
@@ -375,7 +375,7 @@ test('雲の塊の原点が変わったあとの addCleared でも、from は新
 })
 
 // 霧の中の店を北 y m に置き、自分は home の北 0m に立つ（home: null で全部が霧の中）
-const fogShop = (id: string, dy: number, dx = 0): Shop => ({ id, name: id, lat: home.lat + dy / M, lng: home.lng + dx / LNG_M, kind: 'cafe', details: null })
+const fogShop = (id: string, dy: number, dx = 0): Shop => ({ id, name: id, lat: home.lat + dy / M, lng: home.lng + dx / LNG_M, kind: 'cafe', details: null, mapId: null })
 const withClock = async (shopsIn: Shop[], run: (world: ReturnType<typeof attachWorld>, tick: (ms: number) => void) => void | Promise<void>) => {
   let now = 1000
   const spy = vi.spyOn(performance, 'now').mockImplementation(() => now)

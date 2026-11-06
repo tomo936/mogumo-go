@@ -6,9 +6,9 @@ import { ShopSheet } from './ShopSheet.tsx'
 
 const hp: Shop = {
   id: 'hp:J001', name: '麺屋もぐも', lat: 35, lng: 139, kind: 'ramen',
-  details: { genreCode: 'G013', genreName: 'ラーメン', catch: null, budgetName: null, open: '11:00〜22:00' },
+  details: { genreCode: 'G013', genreName: 'ラーメン', catch: null, budgetName: null, open: '11:00〜22:00' }, mapId: null,
 }
-const mapShop: Shop = { id: 'osm:1', name: '名無しの店', lat: 35, lng: 139, kind: 'cafe', details: null }
+const mapShop: Shop = { id: 'osm:1', name: '名無しの店', lat: 35, lng: 139, kind: 'cafe', details: null, mapId: null }
 
 const setup = (p: Partial<Parameters<typeof ShopSheet>[0]> = {}) => {
   const props = { shop: hp, distanceM: 32, busy: false, error: null, onCheckin: vi.fn(), onClose: vi.fn(), ...p }

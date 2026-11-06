@@ -24,7 +24,7 @@ export function extractMapShops(src: FeatureSource, center: LatLng, radiusM: num
     const [lng, lat] = f.geometry.coordinates
     if (distanceMeters(center, { lat, lng }) > radiusM) continue
     seen.add(id)
-    shops.push({ id, name, lat, lng, kind: kindFromMap(subclass, name), details: null })
+    shops.push({ id, name, lat, lng, kind: kindFromMap(subclass, name), details: null, mapId: null })
   }
   return shops
 }

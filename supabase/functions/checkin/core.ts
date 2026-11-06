@@ -20,6 +20,18 @@ export function distanceM(a: LatLng, b: LatLng): number {
   return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h)))
 }
 
+// 現在地から、いくつかの場所のうち一番近いものまでの距離（m）。場所が無ければ Infinity
+export function closestM(me: LatLng, places: LatLng[]): number {
+  let best = Infinity
+  for (const p of places) best = Math.min(best, distanceM(me, p))
+  return best
+}
+
+// アプリが送る地図の点の番号（合体した店の osm:…）。形が合わなければ null
+export function parseMapId(v: unknown): string | null {
+  return typeof v === 'string' && /^osm:\d+$/.test(v) ? v : null
+}
+
 // 中心が円の中にあるセル（クライアントの cellsInCircle と同じ結果）
 export function cellsAround(lat: number, lng: number, radiusM: number): [number, number][] {
   if (radiusM <= 0) return []

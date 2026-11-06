@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { cellsInCircle } from '../../../src/fog/domain/grid.ts'
 import { distanceMeters } from '../../../src/map/domain/geo.ts'
-import { CHECKIN_M, CLEAR_M, cellsAround, distanceM, findPoi, jstDay, tileXY, tilesToTry } from './core.ts'
+import { CHECKIN_M, CLEAR_M, cellsAround, closestM, distanceM, findPoi, parseMapId, jstDay, tileXY, tilesToTry } from './core.ts'
 
 const sortCells = (c: [number, number][]) => [...c].sort((a, b) => a[0] - b[0] || a[1] - b[1])
 
@@ -88,5 +88,28 @@ describe('findPoi', () => {
     expect(findPoi(fs, 'osm:55')).toBeNull()
     expect(findPoi(fs, 'osm:999')).toBeNull()
     expect(findPoi(fs, 'hp:123')).toBeNull()
+  })
+})
+
+describe('closestM / parseMapId（合体した店の 50m 判定）', () => {
+  const me = { lat: 35, lng: 139 }
+  const north = (m: number) => ({ lat: 35 + m / 111195, lng: 139 })
+  it('一番近い場所までの距離を返す', () => {
+    // ホットペッパーの位置は 80m、地図の点は 20m → 20m で通る
+    const d = closestM(me, [north(80), north(20)])
+    expect(d).toBeCloseTo(20, 0)
+    expect(d <= CHECKIN_M).toBe(true)
+  })
+  it('どちらも遠ければ近い方（丸めて返す値）が 50m を超える', () => {
+    const d = closestM(me, [north(80), north(60)])
+    expect(Math.round(d)).toBe(60)
+    expect(d > CHECKIN_M).toBe(true)
+  })
+  it('場所が無ければ Infinity', () => {
+    expect(closestM(me, [])).toBe(Infinity)
+  })
+  it('map_id は osm:<数字> だけ通す', () => {
+    expect(parseMapId('osm:123')).toBe('osm:123')
+    for (const v of ['osm:', 'osm:1a', 'hp:1', 'osm:1 ', 12, null, {}]) expect(parseMapId(v)).toBeNull()
   })
 })

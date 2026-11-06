@@ -6,6 +6,17 @@ const input = { shopId: 'hp:J001', me: { lat: 35.68, lng: 139.76 }, farFromHome:
 const res = (status: number, body: unknown = {}) => new Response(JSON.stringify(body), { status })
 
 describe('postCheckin', () => {
+  it('map_id は mapId があるときだけ body に入る', async () => {
+    const ok = () => vi.fn().mockResolvedValue(res(200, { checkin_id: 'c1', coins_awarded: 30, new_cells: [] }))
+    const f1 = ok()
+    await postCheckin({ ...input, mapId: 'osm:42' }, { ...base, fetchFn: f1 })
+    expect(JSON.parse(f1.mock.calls[0][1].body).map_id).toBe('osm:42')
+    for (const mapId of [undefined, null]) {
+      const f2 = ok()
+      await postCheckin({ ...input, mapId }, { ...base, fetchFn: f2 })
+      expect(JSON.parse(f2.mock.calls[0][1].body)).not.toHaveProperty('map_id')
+    }
+  })
   it('body は {shop_id,lat,lng,far_from_home} だけで、認証ヘッダー付き', async () => {
     const fetchFn = vi.fn().mockResolvedValue(res(200, { checkin_id: 'c1', coins_awarded: 30, new_cells: [[1, 2], [3, 4]] }))
     const r = await postCheckin(input, { ...base, fetchFn })

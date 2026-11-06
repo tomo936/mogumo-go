@@ -4,7 +4,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { VectorTile } from 'npm:@mapbox/vector-tile@2'
 import Pbf from 'npm:pbf@4'
-import { CHECKIN_M, CLEAR_M, cellsAround, distanceM, findPoi, jstDay, tilesToTry } from './core.ts'
+import { CHECKIN_M, CLEAR_M, cellsAround, closestM, findPoi, jstDay, parseMapId, tilesToTry } from './core.ts'
 import type { PoiFeature } from './core.ts'
 
 const Z = 14
@@ -85,7 +85,7 @@ Deno.serve(async (req: Request) => {
   } catch {
     return fail('bad_request', 400)
   }
-  const { shop_id, lat, lng, far_from_home } = body
+  const { shop_id, lat, lng, far_from_home, map_id } = body
   if (
     typeof shop_id !== 'string' || !/^(hp|osm):.{1,64}$/.test(shop_id) ||
     typeof lat !== 'number' || typeof lng !== 'number' ||
@@ -94,6 +94,9 @@ Deno.serve(async (req: Request) => {
   ) {
     return fail('bad_request', 400)
   }
+  // 合体した店の、元の地図の点（任意）。あるのに形が違えば不正
+  const mapId = map_id === undefined ? null : parseMapId(map_id)
+  if (map_id !== undefined && mapId === null) return fail('bad_request', 400)
 
   const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -105,25 +108,36 @@ Deno.serve(async (req: Request) => {
   try {
     // 1. 店を確かめる。アプリが言う店の場所は信じない
     let shop: { lat: number; lng: number }
+    let dist: number
+    let osmPoi: Awaited<ReturnType<typeof verifyOsm>> = null
     if (shop_id.startsWith('hp:')) {
       const { data, error } = await db.from('shops').select('lat, lng').eq('shop_id', shop_id).maybeSingle()
       if (error) throw new Error('shops read')
       if (!data) return fail('shop_not_found', 404)
       shop = data
+      // 2. 50m（GPS の誤差は足さない）。ホットペッパーの位置で足りなければ、
+      //    合体前の地図の点（タイルで確かめたもの）からの距離も見て、近い方を使う
+      dist = closestM({ lat, lng }, [shop])
+      if (dist > CHECKIN_M && mapId) {
+        const poi = await verifyOsm(mapId, lat, lng)
+        if (poi) dist = closestM({ lat, lng }, [shop, poi])
+      }
     } else {
-      const poi = await verifyOsm(shop_id, lat, lng)
-      if (!poi) return fail('shop_not_found', 404)
+      osmPoi = await verifyOsm(shop_id, lat, lng)
+      if (!osmPoi) return fail('shop_not_found', 404)
+      shop = osmPoi
+      dist = closestM({ lat, lng }, [shop])
+    }
+    if (dist > CHECKIN_M) return json({ error: 'too_far', distance_m: Math.round(dist) }, 403)
+
+    // 50m を通ってから地図の店を shops に書く（断られた要求は何も書かない）
+    if (osmPoi) {
       const { error } = await db.from('shops').upsert(
-        { shop_id, name: poi.name, lat: poi.lat, lng: poi.lng, genre_name: poi.subclass, fetched_at: new Date().toISOString() },
+        { shop_id, name: osmPoi.name, lat: osmPoi.lat, lng: osmPoi.lng, genre_name: osmPoi.subclass, fetched_at: new Date().toISOString() },
         { onConflict: 'shop_id' },
       )
       if (error) throw new Error('shops upsert')
-      shop = poi
     }
-
-    // 2. 50m（GPS の誤差は足さない）
-    const dist = distanceM({ lat, lng }, shop)
-    if (dist > CHECKIN_M) return json({ error: 'too_far', distance_m: Math.round(dist) }, 403)
 
     // 3. 1トランザクションで書く
     const { data, error } = await db.rpc('perform_checkin', {

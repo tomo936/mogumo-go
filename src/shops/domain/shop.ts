@@ -29,4 +29,6 @@ export type Shop = {
   lng: number
   kind: ShopKind
   details: ShopDetails | null
+  // 地図と合体したホットペッパーの店だけ、元の地図の点の id（osm:…）。それ以外は null
+  mapId: string | null
 }

@@ -42,6 +42,7 @@ function toShops(json: unknown): Shop[] {
         budgetName: strOrNull(r.budget_name),
         open: strOrNull(r.open),
       },
+      mapId: null,
     })
   }
   return shops

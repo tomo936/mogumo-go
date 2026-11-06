@@ -33,7 +33,7 @@ describe('fetchHotpepperShops', () => {
     expect(shops).toHaveLength(2)
     expect(shops[0]).toEqual({
       id: 'hp:J001', name: '麺屋いろは', lat: 35.681, lng: 139.767, kind: 'ramen',
-      details: { genreCode: 'G013', genreName: 'ラーメン', catch: 'こだわり', budgetName: '~1000円', open: '11:00～22:00' },
+      details: { genreCode: 'G013', genreName: 'ラーメン', catch: 'こだわり', budgetName: '~1000円', open: '11:00～22:00' }, mapId: null,
     })
     expect(shops[1].id).toBe('hp:J002')
   })
