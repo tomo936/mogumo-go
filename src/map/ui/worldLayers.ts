@@ -1,9 +1,8 @@
 import type { Map as MapLibreMap } from 'maplibre-gl'
-import { SEA_REBUILD_M } from '../../fog/config.ts'
+import { FOG_REBUILD_M } from '../../fog/config.ts'
 import { clearedFromHome } from '../../fog/domain/clearing.ts'
-import { cloudSpots } from '../../fog/domain/cloudSpots.ts'
-import { createCloudLayer } from '../../fog/infra/cloudLayer.ts'
-import { addSea } from '../../fog/infra/seaLayer.ts'
+import { fogClumps } from '../../fog/domain/clumps.ts'
+import { createFogLayer } from '../../fog/infra/fogLayer.ts'
 import { SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
 import { placeShop } from '../../shops/domain/placement.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
@@ -22,7 +21,7 @@ type Deps = {
   onShopsError: () => void
 }
 
-// 霧（雲海と雲）とお店の建物を地図に載せ、位置が変わるたびに更新する
+// 霧（雲の塊）とお店の建物を地図に載せ、位置が変わるたびに更新する
 type WorldMap = MapLibreMap
 
 // 自分の位置の印（MapView で下から順に足す）。霧とお店はこれより下に入れる
@@ -33,10 +32,9 @@ type Placed = { main: PlacedShop; free: PlacedShop | null }
 
 export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng): void; dispose(): void } {
   const cleared = clearedFromHome(deps.home)
-  const cloudLayer = createCloudLayer()
+  const fogLayer = createFogLayer()
   const shopLayer = createShopLayer()
-  let sea: ReturnType<typeof addSea> | null = null
-  let seaCenter: LatLng | null = null
+  let fogCenter: LatLng | null = null // 雲の塊を置いたときの現在地
   let fetchCenter: LatLng | null = null
   let fetching = false
   let failedAt: number | null = null
@@ -116,17 +114,15 @@ export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng):
     onPosition(p) {
       if (disposed) return
       last = p
-      if (!sea || !seaCenter) {
+      if (!fogCenter) {
         const below = PLAYER_LAYERS.find((id) => map.getLayer(id))
-        sea = addSea(map, p, cleared, below)
-        map.addLayer(cloudLayer, below)
-        cloudLayer.setSpots(cloudSpots(p, cleared), p)
-        map.addLayer(shopLayer, below)
-        seaCenter = p
-      } else if (distanceMeters(seaCenter, p) >= SEA_REBUILD_M) {
-        sea.update(p, cleared)
-        cloudLayer.setSpots(cloudSpots(p, cleared), p)
-        seaCenter = p
+        map.addLayer(fogLayer, below)
+        map.addLayer(shopLayer, below) // お店は霧より上
+        fogLayer.setClumps(p, fogClumps(p, cleared))
+        fogCenter = p
+      } else if (distanceMeters(fogCenter, p) >= FOG_REBUILD_M) {
+        fogLayer.setClumps(p, fogClumps(p, cleared))
+        fogCenter = p
       }
       if (canFetch(p)) fetchAround(p)
       if (!refreshedAt || distanceMeters(refreshedAt, p) >= SHOP_REFRESH_M) refreshShops(p)
@@ -134,8 +130,7 @@ export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng):
     dispose() {
       disposed = true
       map.off('idle', onIdle)
-      sea?.remove()
-      for (const id of [cloudLayer.id, shopLayer.id]) if (map.getLayer(id)) map.removeLayer(id)
+      for (const id of [fogLayer.id, shopLayer.id]) if (map.getLayer(id)) map.removeLayer(id)
     },
   }
 }

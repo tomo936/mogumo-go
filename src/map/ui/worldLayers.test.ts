@@ -4,14 +4,11 @@ import type { Shop } from '../../shops/domain/shop.ts'
 import type { PlacedShop } from '../../shops/infra/shopLayer.ts'
 import type { LatLng } from '../domain/geo.ts'
 
-const sea = { update: vi.fn(), remove: vi.fn() }
-const cloudLayer = { id: 'fog-clouds', setSpots: vi.fn() }
+const fogLayer = { id: 'fog', setClumps: vi.fn() }
 const shopLayer = { id: 'shops-3d', setShops: vi.fn() }
-vi.mock('../../fog/infra/seaLayer.ts', () => ({ addSea: vi.fn(() => sea) }))
-vi.mock('../../fog/infra/cloudLayer.ts', () => ({ createCloudLayer: () => cloudLayer }))
+vi.mock('../../fog/infra/fogLayer.ts', () => ({ createFogLayer: () => fogLayer }))
 vi.mock('../../shops/infra/shopLayer.ts', () => ({ createShopLayer: () => shopLayer }))
 
-import { addSea } from '../../fog/infra/seaLayer.ts'
 import { attachWorld } from './worldLayers.ts'
 
 const M = 111195 // 1度あたりのm（緯度）
@@ -56,22 +53,19 @@ function setup(over: Partial<Parameters<typeof attachWorld>[1]> = {}) {
   return { world, fetchShops, onShopsError, map }
 }
 
-test('最初の位置で雲海・雲・お店の層が作られ、fetchShops が現在地で1回呼ばれる', () => {
+test('最初の位置で霧とお店の層が作られ、fetchShops が現在地で1回呼ばれる', () => {
   const { world, fetchShops, map } = setup()
   world.onPosition(home)
-  expect(addSea).toHaveBeenCalledTimes(1)
-  expect(cloudLayer.setSpots).toHaveBeenCalledTimes(1)
+  expect(fogLayer.setClumps).toHaveBeenCalledTimes(1)
   expect(map.addLayer).toHaveBeenCalledTimes(2)
   expect(fetchShops).toHaveBeenCalledTimes(1)
 })
 
-test('雲海・雲・お店は自分の位置の印より下に入れる', () => {
+test('霧とお店は自分の位置の印より下に入れ、お店は霧より上', () => {
   const { world, map } = setup()
   vi.mocked(map.getLayer).mockImplementation(((id: string) => (id === 'me-circle-line' || id === 'me-shadow' ? {} : undefined)) as never)
   world.onPosition(home)
-  expect(vi.mocked(addSea).mock.calls[0][3]).toBe('me-circle-line')
-  expect(map.addLayer).toHaveBeenCalledWith(cloudLayer, 'me-circle-line')
-  expect(map.addLayer).toHaveBeenCalledWith(shopLayer, 'me-circle-line')
+  expect(vi.mocked(map.addLayer).mock.calls).toEqual([[fogLayer, 'me-circle-line'], [shopLayer, 'me-circle-line']])
 })
 
 test('店が何軒あっても、1回の更新でタイルを読むのは道路1回・建物1回', async () => {
@@ -102,19 +96,17 @@ test('同じ建物に2軒あれば、近い方が建物に合わせ、もう1軒
   expect(pb.facingDeg).toBeCloseTo(0, 0)
 })
 
-test('400m では再取得せず、520m で2回目。720m で雲海と雲を作り直す', async () => {
+test('400m では再取得せず、520m で2回目。720m で雲の塊を置き直す', async () => {
   const { world, fetchShops } = setup()
   world.onPosition(home)
   await flush()
   world.onPosition(north(400))
   expect(fetchShops).toHaveBeenCalledTimes(1)
-  expect(sea.update).not.toHaveBeenCalled()
   world.onPosition(north(520))
   expect(fetchShops).toHaveBeenCalledTimes(2)
-  expect(sea.update).not.toHaveBeenCalled()
+  expect(fogLayer.setClumps).toHaveBeenCalledTimes(1)
   world.onPosition(north(720))
-  expect(sea.update).toHaveBeenCalledTimes(1)
-  expect(cloudLayer.setSpots).toHaveBeenCalledTimes(2)
+  expect(fogLayer.setClumps).toHaveBeenCalledTimes(2)
 })
 
 test('取得中は2本目を投げない', async () => {
@@ -220,8 +212,7 @@ test('dispose で層を外し、遅れて届いた結果は無視する', async 
   const { world, map } = setup({ fetchShops: vi.fn((_c: LatLng) => new Promise<Shop[]>((r) => { resolve = r })) })
   world.onPosition(home)
   world.dispose()
-  expect(sea.remove).toHaveBeenCalled()
-  expect(map.removeLayer).toHaveBeenCalledWith('fog-clouds')
+  expect(map.removeLayer).toHaveBeenCalledWith('fog')
   expect(map.removeLayer).toHaveBeenCalledWith('shops-3d')
   shopLayer.setShops.mockClear()
   resolve([shop])
