@@ -14,10 +14,9 @@
 ## 次にやること
 1. Overpass が空いている時間に、本人が iPhone でお店が出るか・霧と合わせて滑らかか・回しても崩れないかを確認（手順11）
 2. 実機確認が済んだら、台帳の Ruling 一覧を本人に渡し、`superpowers:finishing-a-development-branch` で締める（台帳フォルダは消す）
-3. 次の段: ホットペッパー連携（Edge Function で鍵を隠す）＋チェックイン（店から50m・カード・霧晴れ）。本人のキー待ち
+3. 次の段: ホットペッパー連携＋チェックイン。設計 `docs/superpowers/specs/2026-11-06-hotpepper-checkin-design.md`（本人承認）、手順書 `docs/superpowers/plans/2026-11-06-hotpepper-checkin.md`（13手順）。**本人がサブエージェント方式を選択。ただしトークン消費を気にしていて、開始の合図待ち**（安くする案: 機械的な手順は安いモデル、小さい手順はまとめる）。キーは開発用 Supabase の Secrets に `HOTPEPPER_API_KEY` で登録済み
 
 ## 本人待ち・シロ待ち
-- 本人: ホットペッパーの API キー（次の段で使う）
 - シロ: 連携は `handoff/`（`to-shiro/` に依頼、`to-claude/` にシロからの依頼）。作成中＝お店のピンのアイコン 13種（`handoff/to-shiro/2026-11-06-shop-pin-icons.md`）、女の子の歩行の絵
 
 ## 道具の置き場所（この会話の作業用フォルダ。再起動で消えることがある）
