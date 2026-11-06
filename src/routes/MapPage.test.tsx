@@ -107,7 +107,7 @@ test('何もない所をタップするとシートが閉じる', () => {
 
 const shop2: Shop = { id: 'hp:J2', name: '別のお店', lat: 35, lng: 139, kind: 'cafe', details: null }
 
-test('通信中は別のお店をタップしてもシートが入れ替わらず、終わったらそのお店は閉じない', async () => {
+test('通信中は別のお店をタップしてもシートが入れ替わらず、失敗してもそのお店のシートは残る', async () => {
   let resolve!: (v: unknown) => void
   postCheckin.mockReset()
   postCheckin.mockReturnValue(new Promise((r) => { resolve = r }))
@@ -131,4 +131,34 @@ test('シートの onCheckin を同期で2回呼んでも postCheckin は1回', 
   const btn = screen.getByRole('button', { name: 'チェックイン' })
   act(() => { fireEvent.click(btn); fireEvent.click(btn) })
   expect(postCheckin).toHaveBeenCalledTimes(1)
+})
+
+const startBusy = async () => {
+  let resolve!: (v: unknown) => void
+  postCheckin.mockReset()
+  postCheckin.mockReturnValue(new Promise((r) => { resolve = r }))
+  renderPage()
+  act(() => last().position(here))
+  act(() => last().select(shop))
+  await userEvent.click(screen.getByRole('button', { name: 'チェックイン' }))
+  act(() => last().select(null)) // 通信中にシートを閉じる
+  expect(screen.queryByText('麺屋もぐも')).not.toBeInTheDocument()
+  return resolve
+}
+
+test('通信中にシートを閉じて成功 → シートは戻らず、演出は出る', async () => {
+  const resolve = await startBusy()
+  await act(async () => resolve({ ok: true, checkinId: 'c1', coins: 30, newCells: [] }))
+  expect(screen.queryByText('麺屋もぐも')).not.toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: 'お店の情報' })).not.toBeInTheDocument()
+  expect(screen.getByText('チェックイン完了')).toBeInTheDocument()
+})
+
+test('通信中にシートを閉じて失敗 → エラーも出ず、シートも戻らない。次に開くとエラーは残っていない', async () => {
+  const resolve = await startBusy()
+  await act(async () => resolve({ ok: false, reason: 'network' }))
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: 'お店の情報' })).not.toBeInTheDocument()
+  act(() => last().select(shop))
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })

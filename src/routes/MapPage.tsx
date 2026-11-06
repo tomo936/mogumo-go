@@ -38,6 +38,7 @@ export function MapPage() {
   const [checkinError, setCheckinError] = useState<CheckinError | null>(null)
   const [effect, setEffect] = useState<{ coins: 30 | 0; shopName: string; key: number } | null>(null)
   const busyRef = useRef(false)
+  const effectSeq = useRef(0)
   const selectedRef = useRef<Shop | null>(null)
   useEffect(() => {
     selectedRef.current = selected
@@ -59,7 +60,7 @@ export function MapPage() {
     setBusy(false)
     if (result.ok) {
       setSelected((cur) => (cur?.id === posted.id ? null : cur))
-      setEffect({ coins: result.coins, shopName: posted.name, key: Date.now() })
+      setEffect({ coins: result.coins, shopName: posted.name, key: ++effectSeq.current })
       mapRef.current?.checkin(posted, result.newCells)
     } else {
       if (selectedRef.current?.id === posted.id) setCheckinError(result.reason)

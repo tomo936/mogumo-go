@@ -37,7 +37,7 @@ export function CheckinEffect({ coins, shopName, onDone }: Props) {
   }, [])
 
   return (
-    <div className="checkin-effect" data-testid="checkin-effect" aria-label={`${shopName}にチェックイン`} onClick={finish}>
+    <div className="checkin-effect" data-testid="checkin-effect" data-shop={shopName} onClick={finish}>
       {!reduced && <canvas ref={canvasRef} className="checkin-effect__confetti" data-testid="checkin-confetti" />}
       <div className="checkin-effect__banner" role="status">
         <span className="checkin-effect__check" aria-hidden="true">✓</span>
