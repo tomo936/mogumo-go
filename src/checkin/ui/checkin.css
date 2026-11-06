@@ -212,3 +212,51 @@
   font-weight: 800;
   white-space: nowrap;
 }
+
+/* ビルのお店の一覧 */
+.bldg-sheet__head {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding-right: 40px;
+}
+.bldg-sheet__done {
+  color: #6b7a8c;
+  font-size: 14px;
+  font-weight: 700;
+}
+.bldg-sheet__list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.bldg-sheet__row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 1px solid #eef2f7;
+  background: none;
+  color: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: left;
+}
+.bldg-sheet__badge {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #dbeafe;
+}
+.bldg-sheet__name {
+  flex: 1;
+}
+.bldg-sheet__check {
+  color: #3ecf8e;
+  font-weight: 900;
+}

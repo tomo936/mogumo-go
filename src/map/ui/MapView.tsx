@@ -24,13 +24,14 @@ import { nextBearing } from '../domain/rotate.ts'
 import { isStale, judgeFix, shouldMoveCamera, stepToward } from '../domain/smoothing.ts'
 import type { Fix } from '../domain/smoothing.ts'
 
-export type MapViewHandle = { checkin(shop: Shop, newCells: Cell[]): void; unfocus(): void; isCheckedToday(shop: Shop): boolean }
+export type MapViewHandle = { checkin(shop: Shop, newCells: Cell[]): void; unfocus(): void; isCheckedToday(shop: Shop): boolean; checked(): ReadonlySet<string> }
 
 type Props = {
   onStatus: (event: LocationEvent) => void
   home: LatLng | null
   onShopsError: () => void
   onSelectShop: (shop: Shop | null) => void
+  onSelectBuilding: (shops: Shop[] | null) => void // ビル（同じ建物の複数のお店）が押された
   onPosition: (me: LatLng) => void // 1秒に4回まで
   ref?: Ref<MapViewHandle>
 }
@@ -43,17 +44,19 @@ const CHECKIN_WAVE_DELAY_MS = 900 // 紙吹雪のあと、霧の波が走り出�
 
 // 地図・カメラ・位置は MapLibre と ref だけで持ち、React の再描画を起こさない。
 // React に上げるのは位置情報の出来事（onStatus）だけ。
-export function MapView({ onStatus, home, onShopsError, onSelectShop, onPosition, ref }: Props) {
+export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBuilding, onPosition, ref }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const onStatusRef = useRef(onStatus)
   const onShopsErrorRef = useRef(onShopsError)
   const onSelectShopRef = useRef(onSelectShop)
+  const onSelectBuildingRef = useRef(onSelectBuilding)
   const onPositionRef = useRef(onPosition)
   const worldRef = useRef<ReturnType<typeof attachWorld> | null>(null)
   useLayoutEffect(() => {
     onStatusRef.current = onStatus
     onShopsErrorRef.current = onShopsError
     onSelectShopRef.current = onSelectShop
+    onSelectBuildingRef.current = onSelectBuilding
     onPositionRef.current = onPosition
   })
   // チェックイン演出: 約0.9秒後に済みの印を付け、新しく晴れるセルを足して波を走らせる（外すときに取り消す）
@@ -61,9 +64,11 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onPosition
   // お店の板を開いている間は、カメラをそのお店に向けて、自分への追いかけを止める
   const focusRef = useRef<{ lat: number; lng: number } | null>(null)
   const unfocusRef = useRef<() => void>(() => {})
+  const tapRef = useRef<(ids: string[] | null) => void>(() => {})
   useImperativeHandle(ref, () => ({
     unfocus: () => unfocusRef.current(),
     isCheckedToday: (shop) => worldRef.current?.checkedToday(shop) ?? false,
+    checked: () => worldRef.current?.checked() ?? new Set<string>(),
     checkin: (shop, newCells) => {
       const t = setTimeout(() => {
         checkinTimers.current.delete(t)
@@ -127,6 +132,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onPosition
         shopsEnabled: shopSourceEnabled(import.meta.env.DEV, window.location.hostname),
         onShopsError: () => onShopsErrorRef.current(),
         loadProgress,
+        onPinTap: (ids) => tapRef.current(ids),
       })
       worldRef.current = s.world
       if (s.current) s.world.onPosition(s.current)
@@ -181,13 +187,23 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onPosition
       if (e.type !== 'pointerup' || !d || d.multi || !s.world) return
       if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > TAP_MAX_MOVE_PX || performance.now() - d.t > TAP_MAX_MS) return
       const rect = container.getBoundingClientRect()
-      const id = s.world.pick({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-      const shop = id ? s.world.shopsNear().find((sh) => sh.id === id) ?? null : null
-      onSelectShopRef.current(shop)
-      if (shop) {
+      tapRef.current(s.world.pick({ x: e.clientX - rect.left, y: e.clientY - rect.top }))
+    }
+    // 建物かピンが押された: 1軒ならお店のシート、2軒以上ならビルの一覧。カメラはそのお店（ビルなら先頭の店）へ寄せる
+    tapRef.current = (ids) => {
+      const found = (ids ?? []).map((id) => s.world?.shopsNear().find((sh) => sh.id === id)).filter((sh): sh is Shop => !!sh)
+      if (found.length > 1) {
+        onSelectShopRef.current(null)
+        onSelectBuildingRef.current(found)
+      } else {
+        onSelectBuildingRef.current(null)
+        onSelectShopRef.current(found[0] ?? null)
+      }
+      const at = found[0]
+      if (at) {
         const zoom = focusRef.current ? map.getZoom() : Math.min(map.getZoom() + TAP_ZOOM_STEP, MAX_ZOOM)
-        focusRef.current = { lat: shop.lat, lng: shop.lng }
-        map.easeTo({ center: [shop.lng, shop.lat], zoom, duration: 500 })
+        focusRef.current = { lat: at.lat, lng: at.lng }
+        map.easeTo({ center: [at.lng, at.lat], zoom, duration: 500 })
       } else {
         unfocusRef.current()
       }
