@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { distanceMeters } from '../../map/domain/geo.ts'
 import type { Shop } from './shop.ts'
-import { mergeShops, normalizeName } from './merge.ts'
+import { mergeShops, nameTokens, normalizeName, tokensSimilar } from './merge.ts'
 
 // 呼び出し回数を数えるだけ（中身は本物）
 vi.mock('../../map/domain/geo.ts', async (orig) => {
@@ -101,5 +101,25 @@ describe('mergeShops', () => {
     expect(mergeShops([], [])).toEqual([])
     expect(mergeShops([shop('osm:1', 'a')], [])).toHaveLength(1)
     expect(mergeShops([], [shop('hp:1', 'a', 0, det)])).toHaveLength(1)
+  })
+})
+
+describe('打ち間違いの許容', () => {
+  const base = { kind: 'mystery' as const, details: null, mapId: null }
+  const at = (id: string, name: string, northM: number) => ({ ...base, id, name, lat: 35.68 + northM / 111195, lng: 139.76 })
+  it('20m 以内なら TOSOANA と トスカーナ TOSCANA を同じ店にする', () => {
+    const r = mergeShops([at('osm:1', 'TOSOANA', 0)], [at('hp:1', 'トスカーナ TOSCANA', 15)])
+    expect(r.map((s) => s.id)).toEqual(['hp:1'])
+  })
+  it('30m 離れていれば打ち間違いでは合わせない', () => {
+    const r = mergeShops([at('osm:1', 'TOSOANA', 0)], [at('hp:1', 'トスカーナ TOSCANA', 30)])
+    expect(r).toHaveLength(2)
+  })
+  it('似ていない名前はすぐ近くでも合わせない', () => {
+    const r = mergeShops([at('osm:1', 'サイゼリヤ', 0)], [at('hp:1', 'ガスト', 5)])
+    expect(r).toHaveLength(2)
+  })
+  it('短い語（3文字以下）は比べない', () => {
+    expect(tokensSimilar(nameTokens('もぐ'), nameTokens('もぎ'))).toBe(false)
   })
 })
