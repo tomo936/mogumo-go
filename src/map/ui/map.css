@@ -49,3 +49,16 @@
   display: flex;
   gap: 8px;
 }
+
+/* ホットペッパーのクレジット（規約でいつも表示する。文字の形） */
+.hp-credit {
+  position: absolute;
+  top: calc(64px + env(safe-area-inset-top));
+  right: calc(16px + env(safe-area-inset-right));
+  font-size: 10px;
+  color: #1f2a37;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 2px 6px;
+  border-radius: 8px;
+  pointer-events: auto;
+}

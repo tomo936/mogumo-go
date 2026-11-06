@@ -5,19 +5,21 @@
 最終更新: 2026-11-06 夜（Claude Code）。区切りごとに上書きする。
 
 ## いまの状態
-- ブランチ: **`cycle1-fog-shops`**。霧とお店の手順書（`docs/superpowers/plans/2026-11-06-fog-and-shops.md`）の手順1〜10と最後の確認の直しは完了。そのあと霧を絵本風 2.5D に作り直した（設計書 §12、`src/fog/domain/clumps.ts`・`src/fog/infra/fogLayer.ts`）。開発環境 `dev` にも反映済み（mogumo-go-dev）。本番 `main` は本人の OK まで出さない
-- 進み具合の台帳: `.superpowers/sdd/2026-11-06-fog-and-shops/progress.md`（判断 `Ruling:` の一覧もここ）
-- push: `git push` は Sandbox の外で動く設定（`.claude/settings.json` の excludedCommands）。**`git push` は単独のコマンドで実行する**（`cd` やパイプとつなぐと Sandbox の中に戻って失敗する）。dev への反映は worktree が使えないので `git merge-tree --write-tree origin/dev cycle1-fog-shops` → `git commit-tree` → `git push origin <sha>:refs/heads/dev`
-- お店の仮データ: Supabase Edge Function `shops-overpass` 経由（設計書 §11）。**開発用 Supabase `mogumo-go-dev` に置き済み**（2026-11-06。本番に誤って置いた分は消すようお願い済み）。いまの 502 は Overpass の公開サーバーが満杯なため
-- 霧の確認: `.superpowers/preview/vite.fog2.config.mjs`（ポート 5181）で `map-fog.html` を開く。地図を回して撮るのは `pw/shot-drag.mjs`（`DRAG=100,101,...` で横に引く）
+- ブランチ: **`cycle1-checkin`**（ホットペッパー連携＋チェックイン。手順書 `docs/superpowers/plans/2026-11-06-hotpepper-checkin.md` の手順1〜12 まで完了。13 は本人の実機確認）。設計 `docs/superpowers/specs/2026-11-06-hotpepper-checkin-design.md`。本番 `main` は本人の OK まで出さない
+- 進み具合の台帳: `.superpowers/sdd/2026-11-06-hotpepper-checkin/`
+- できたこと: 地図データのお店を土台にホットペッパーを上乗せ／霧の中 50m のお店が見える（まわりの雲がうすくなる）／建物タップ → シート → チェックイン（Edge Function `checkin` ＋ SQL `perform_checkin`）／紙ふぶき・帯・チェックの印・霧の波／クレジット表示
+- push: `git push` は Sandbox の外で動く設定。**単独のコマンドで実行する**。dev への反映は `git merge-tree --write-tree origin/dev cycle1-checkin` → `git commit-tree` → `git push origin <sha>:refs/heads/dev`（レビューのあとに親エージェントが行う）
+- 霧の確認: `.superpowers/preview/vite.fog2.config.mjs`（ポート 5181）で `map-fog.html`
 
 ## 次にやること
-1. Overpass が空いている時間に、本人が iPhone でお店が出るか・霧と合わせて滑らかか・回しても崩れないかを確認（手順11）
-2. 実機確認が済んだら、台帳の Ruling 一覧を本人に渡し、`superpowers:finishing-a-development-branch` で締める（台帳フォルダは消す）
-3. 次の段: ホットペッパー連携＋チェックイン。設計 `docs/superpowers/specs/2026-11-06-hotpepper-checkin-design.md`（本人承認）、手順書 `docs/superpowers/plans/2026-11-06-hotpepper-checkin.md`（13手順）。**本人がサブエージェント方式を選択。ただしトークン消費を気にしていて、開始の合図待ち**（安くする案: 機械的な手順は安いモデル、小さい手順はまとめる）。キーは開発用 Supabase の Secrets に `HOTPEPPER_API_KEY` で登録済み
+1. 本人が公開の手順書 `docs/superpowers/plans/2026-11-06-hotpepper-checkin-deploy.md` を実行（**開発用 `mogumo-go-dev` で。本番は使わない**）→ iPhone で確認（手順13）
+2. ブランチ全体の最後の確認と締め（`superpowers:finishing-a-development-branch`）
+3. そのあとの機能を本人に聞いて選ぶ: 気配・デイリー／図鑑／ルート晴れ（OSRM）／町制覇 など
+4. ポコタンのチュートリアル（Live2D、ブランチ `origin/add-pokotan-live2d`）は欲しいが、**ほかの機能より後**（優先度は低い）
 
 ## 本人待ち・シロ待ち
-- シロ: 連携は `handoff/`（`to-shiro/` に依頼、`to-claude/` にシロからの依頼）。作成中＝お店のピンのアイコン 13種（`handoff/to-shiro/2026-11-06-shop-pin-icons.md`）、女の子の歩行の絵
+- 本人: 手順書の実行（SQL・関数2つ・古い関数の削除）と iPhone 確認
+- シロ: 連携は `handoff/`。作成中＝お店のピンのアイコン 13種（`handoff/to-shiro/2026-11-06-shop-pin-icons.md`）、女の子の歩行の絵。未対応＝チェックイン演出の素材4種（`handoff/to-shiro/2026-11-06-checkin-effect-art.md`）
 
 ## 道具の置き場所（この会話の作業用フォルダ。再起動で消えることがある）
 - Blender 4.2: `/tmp/claude-1000/-home-otosa-mogumo-go/f1bcb96d-7f7a-4651-a9c3-a1f83beeb930/scratchpad/blender/blender-4.2.3-linux-x64/blender`（無ければ `download.blender.org/release/Blender4.2/blender-4.2.3-linux-x64.tar.xz` を作業用フォルダに展開）

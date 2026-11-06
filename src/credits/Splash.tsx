@@ -16,6 +16,7 @@ export function Splash() {
       <span className="splash-credit">
         <span>地図: OpenFreeMap © OpenMapTiles</span>
         <span>データ: © OpenStreetMap contributors</span>
+        <span>Powered by ホットペッパーグルメ Webサービス</span>
       </span>
     </button>
   )

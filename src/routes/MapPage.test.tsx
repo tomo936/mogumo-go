@@ -162,3 +162,12 @@ test('通信中にシートを閉じて失敗 → エラーも出ず、シート
   act(() => last().select(shop))
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })
+
+test('ホットペッパーのクレジットがいつも出ていて、規約のリンク先を向く', () => {
+  render(
+    <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+      <MapPage />
+    </AuthContext.Provider>,
+  )
+  expect(screen.getByRole('link', { name: 'Powered by ホットペッパーグルメ Webサービス' })).toHaveAttribute('href', 'http://webservice.recruit.co.jp/')
+})

@@ -103,6 +103,9 @@ export function MapPage() {
             ログアウト
           </button>
         </div>
+        <a className="hp-credit" href="http://webservice.recruit.co.jp/" target="_blank" rel="noreferrer">
+          Powered by ホットペッパーグルメ Webサービス
+        </a>
       </div>
     </>
   )
