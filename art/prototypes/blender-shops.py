@@ -648,49 +648,61 @@ def bakery():
     cube((0.42, 0.42, 0.1), (-0.5, 0.35, zt + 0.95), mat(BR[0]), bevel=0.03)
     cube((0.24, 0.24, 0.11), (-0.5, 0.35, zt + 0.96), mat('#5a3a2a'), bevel=0.01)
 
-# ── その他・謎の気配（見本 mystery.webp＝前のデザイン） ─────────────
+# ── その他（見本 shop-other-restaurant.png、2026-11-07 シロ作・オーナー承認）
+# ごく普通のレストラン風: クリーム色の四角い建物・木の平屋根・赤白しまのひさし2つ・格子の窓・ガラス戸・テラス席。看板・文字なし
 def mystery():
-    WALL = mat('#f1f0f4'); ROOF = mat('#a3a4aa'); ROOF_D = mat('#8f9097'); CLOTH = mat('#f7f5f0', 0.95); GREY = mat('#9c9ca3')
-    CURT = mat('#b9b6cc'); DOOR = mat('#a86a43'); SIGN = mat('#d89a76'); Q = mat('#9a5a43')
-    W, D, H = 2.0, 1.8, 1.15; FY = -D / 2
-    cube((W, D, H), (0, 0, H / 2), WALL, bevel=0.03)
-    # 布: 下の 3/4 をおおう。ふちが波打ち、ひだがある
-    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0.4)); c = bpy.context.object
-    c.scale = (W + 0.08, D + 0.08, 0.82); bpy.ops.object.transform_apply(scale=True)
-    bm = bmesh.new(); bm.from_mesh(c.data)
-    bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=14, use_grid_fill=True)
-    for v in bm.verts:
-        ang = math.atan2(v.co.y, v.co.x)
-        if v.co.z > 0.75: v.co.z = 0.62 + 0.18 * (0.5 + 0.5 * math.sin(ang * 3 + 0.5)) + 0.05 * math.sin(v.co.x * 9)  # 上のふちのたるみ
-        if v.co.z < 0.02: v.co.z = 0.0
-        out = 0.025 * math.sin(v.co.x * 11 + v.co.z * 3) + 0.025 * math.sin(v.co.y * 13)              # ひだ
-        n = Vector((v.co.x, v.co.y, 0)); 
-        if n.length > 0: v.co += n.normalized() * out * (1 if v.co.z < 0.8 else 0.4)
-    bm.to_mesh(c.data); bm.free(); finish(c, CLOTH)
-    c.modifiers.new('sd', 'SUBSURF').levels = 1
-    # 布の切れ目から見える戸と、布の上の窓（カーテン）
-    cube((0.34, 0.06, 0.72), (0.0, FY - 0.08, 0.36), DOOR, bevel=0.015)
-    for k in range(2): cube((0.06, 0.07, 0.72), (-0.2 + k * 0.4, FY - 0.09, 0.4), CLOTH, bevel=0.03, rot=(0, (0.15 if k else -0.15), 0))
-    for x in (-0.65, 0.65):
-        cube((0.36, 0.06, 0.3), (x, FY - 0.1, 0.52), GREY, bevel=0.03)
-        for sx in (-1, 1): cube((0.13, 0.065, 0.24), (x + sx * 0.08, FY - 0.11, 0.52), CURT, bevel=0.02)
-    # 屋根（灰色・切妻、妻が正面）と「？」の看板
-    zt = H; pitch = math.radians(36); gh = math.tan(pitch) * (W / 2)
-    for sy in (-1, 1): gable_wall(W, sy * (D / 2 - 0.02), zt, gh, WALL, sy)
-    half = W / 2 + 0.14; run = half / math.cos(pitch)
-    for sx in (-1, 1):
-        xform([cube((D + 0.3, run, 0.1), (0, run / 2, 0), ROOF, bevel=0.035)], M_at(sx * half, 0, zt - 0.03, rz=(math.pi / 2 if sx > 0 else -math.pi / 2), rx=pitch))
-    rz = zt - 0.03 + math.tan(pitch) * half
-    cube((0.15, D + 0.34, 0.13), (0, 0, rz + 0.03), ROOF_D, bevel=0.05)
-    cube((0.46, 0.06, 0.32), (0, FY - 0.04, zt + 0.25), SIGN, bevel=0.05)
-    bpy.ops.object.text_add(location=(0, FY - 0.075, zt + 0.24), rotation=(math.pi / 2, 0, 0))
-    t = bpy.context.object; t.data.body = '?'; t.data.size = 0.3; t.data.extrude = 0.01; t.data.align_x = 'CENTER'; t.data.align_y = 'CENTER'
-    t.data.font = bpy.data.fonts.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'MPLUSRounded1c-ExtraBold.ttf'))
-    t.data.materials.append(Q); bpy.ops.object.convert(target='MESH')
-    # 灰色の煙突（丸い筒＋れんが）
-    for k in range(2):
-        for j in range(2): cube((0.13, 0.26, 0.11), (-0.55 - 0.065 + j * 0.13, 0.35, zt + 0.4 + k * 0.12), GREY, bevel=0.02)
-    cyl(0.08, 0.5, (-0.55, 0.45, zt + 0.6), mat('#8e8e95'), verts=16)
+    WALL = mat('#f3e6cc'); WOOD = mat('#b8794a'); WOOD_D = mat('#9c6239'); RED = mat('#e0605a'); WHITE = mat('#f7f1e6')
+    GLOW = mat('#f7dcae', 0.7, emit=0.4); STONE = mat('#d9d2c8'); POT = mat('#c4835a'); LEAF = mat('#7aa45e'); BRASS = mat('#c9a35c', 0.4)
+    W, D, H = 1.9, 1.8, 1.55; FY = -D / 2; LX = -W / 2
+    cube((W, D, H), (0, 0, H / 2), WALL, bevel=0.04, seg=3)
+    cube((W + 0.06, D + 0.06, 0.14), (0, 0, 0.07), WOOD, bevel=0.03)                              # 足もとの木の帯
+    # 平らな屋根: 上はかべと同じクリーム色、まわりだけ木のふち（見本どおり）
+    for (sx, sy, lx, ly) in ((0, -1, W + 0.24, 0.14), (0, 1, W + 0.24, 0.14), (-1, 0, 0.14, D + 0.02), (1, 0, 0.14, D + 0.02)):
+        cube((lx, ly, 0.13), (sx * (W / 2 + 0.05), sy * (D / 2 + 0.05), H + 0.03), WOOD, bevel=0.04, seg=3)
+    def grid_window(cx, cz, w, h, nx, nz, face, sill=False):
+        """木の格子窓。face='front'（-Y）/'left'（-X）"""
+        objs = [cube((w + 0.1, 0.08, h + 0.1), (0, 0, 0), WOOD, bevel=0.02), cube((w, 0.085, h), (0, -0.005, 0), GLOW, bevel=0.006)]
+        for k in range(1, nx): objs.append(cube((0.03, 0.09, h), (-w / 2 + w * k / nx, -0.01, 0), WOOD, bevel=0.004))
+        for k in range(1, nz): objs.append(cube((w, 0.09, 0.03), (0, -0.01, -h / 2 + h * k / nz), WOOD, bevel=0.004))
+        if sill: objs.append(cube((w + 0.3, 0.16, 0.06), (0, -0.07, -h / 2 - 0.08), WOOD, bevel=0.02))
+        M = M_at(cx, FY - 0.02, cz) if face == 'front' else M_at(LX - 0.02, cx, cz, rz=-math.pi / 2)
+        xform(objs, M); return objs
+    def pot(x, y, z, succulent=False):
+        lathe([(0, 0), (0.05, 0), (0.065, 0.1), (0.072, 0.11), (0, 0.11)], (x, y, z), POT, steps=14)
+        for k in range(5 if succulent else 4):
+            a = k * math.tau / (5 if succulent else 4)
+            sphere(0.035, (x + math.cos(a) * 0.025, y + math.sin(a) * 0.025, z + 0.16 + (k % 2) * 0.03), LEAF, scale=(0.6, 0.6, 1.4) if succulent else (1, 1, 1), seg=8)
+    # 左の側面: 大きな格子窓＋窓台の鉢＋しまのひさし
+    grid_window(0.0, 0.85, 1.1, 0.85, 3, 3, 'left', sill=True)
+    for y in (-0.42, 0.42): pot(LX - 0.1, y, 0.36, succulent=(y < 0))
+    awning(1.35, 12, 0.42, 0.55, RED, WHITE, M_at(LX - 0.04, 0.0, 1.42, rz=-math.pi / 2))
+    cube((0.06, 1.4, 0.06), (LX - 0.05, 0.0, 1.46), WOOD, bevel=0.015)
+    # 正面: ガラスの戸（左）＋格子窓（右）＋しまのひさし
+    DX = -0.45
+    xform([cube((0.5, 0.08, 1.05), (0, 0, 0), WOOD, bevel=0.02), cube((0.38, 0.085, 0.92), (0, -0.005, 0.0), GLOW, bevel=0.006)]
+          + [cube((0.025, 0.09, 0.92), (0, -0.01, 0), WOOD, bevel=0)]
+          + [cube((0.38, 0.09, 0.025), (0, -0.01, -0.46 + 0.92 * k / 6), WOOD, bevel=0) for k in range(1, 6)], M_at(DX, FY - 0.02, 0.14 + 0.53))
+    sphere(0.025, (DX + 0.17, FY - 0.09, 0.6), BRASS, seg=8)
+    grid_window(0.42, 0.85, 0.55, 0.65, 2, 4, 'front')
+    awning(1.7, 14, 0.42, 0.55, RED, WHITE, M_at(0.0, FY - 0.04, 1.42))
+    cube((1.75, 0.06, 0.06), (0.0, FY - 0.05, 1.46), WOOD, bevel=0.015)
+    # 戸の前の石の踏み段とテラス（丸テーブル＋いす2つ＋鉢）
+    cube((1.5, 0.7, 0.05), (0.2, FY - 0.36, 0.025), STONE, bevel=0.01)
+    TX, TY = 0.42, FY - 0.42
+    cyl(0.17, 0.03, (TX, TY, 0.43), WOOD, verts=20, bevel=0.008); cyl(0.022, 0.4, (TX, TY, 0.22), WOOD_D, verts=8, bevel=0)
+    cyl(0.09, 0.02, (TX, TY, 0.06), WOOD_D, verts=14, bevel=0.005)
+    cyl(0.04, 0.012, (TX + 0.06, TY, 0.455), WHITE, verts=12, bevel=0.003)
+    for dx in (-0.3, 0.3):
+        cube((0.18, 0.18, 0.03), (TX + dx, TY, 0.27), WOOD, bevel=0.01)
+        cube((0.03, 0.18, 0.28), (TX + dx * 1.35, TY, 0.42), WOOD, bevel=0.01)
+        for lx in (-0.07, 0.07):
+            for ly in (-0.07, 0.07): cube((0.02, 0.02, 0.26), (TX + dx + lx, TY + ly, 0.14), WOOD_D, bevel=0)
+    pot(TX + 0.02, TY - 0.02, 0.445, succulent=False)
+    for (x, y, s) in ((0.95, FY - 0.6, False), (0.25, FY - 0.7, True), (-0.12, FY - 0.25, False), (LX - 0.15, FY - 0.1, True)):
+        lathe([(0, 0), (0.07, 0), (0.09, 0.14), (0.1, 0.155), (0, 0.155)], (x, y, 0.05), POT, steps=14)
+        for k in range(5):
+            a = k * math.tau / 5
+            sphere(0.05, (x + math.cos(a) * 0.035, y + math.sin(a) * 0.035, 0.27 + (k % 2) * 0.04), LEAF, scale=(0.6, 0.6, 1.4) if s else (1, 1, 1), seg=8)
 
 # ── 横長の切妻屋根（棟が左右＝長い面が正面） ─────────────────
 def side_gable_roof(W, D, z, pitch, ox, oy, roof, roof_d, ridge):
