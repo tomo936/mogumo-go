@@ -45,31 +45,22 @@ function nearestRoadPoint(roads: P[][]): P | null {
 
 const clampSize = (m: number) => Math.max(SHOP_MIN_SIZE_M, Math.min(SHOP_MAX_SIZE_M, m))
 
-// 店の点は原点。道路に正面を向け、建物の輪郭があればその真ん中・大きさに合わせる
-export function placeShop(roads: P[][], footprints: P[][]): Placement {
-  const road = nearestRoadPoint(roads)
-  const roadDist = road ? Math.hypot(road.x, road.y) : Infinity
-  // 道路が無い・重なりすぎのときは南向き
-  const roadDir = road && roadDist > 0.5 ? road : SOUTH
+// 輪郭なし: 道路に向け、近すぎれば下がる。road は一番近い道路の点、dir は道路への向き（単位ベクトル）
+function free(road: P | null, roadDist: number, dir: P): Placement {
+  const sizeM = SHOP_MIN_SIZE_M
+  const need = sizeM / 2 + 4
+  const back = road && roadDist < need ? need - roadDist : 0
+  return { center: { x: -dir.x * back || 0, y: -dir.y * back || 0 }, facingDeg: bearing(dir), sizeM, onFootprint: false }
+}
 
-  const ring = footprints.find((r) => contains({ x: 0, y: 0 }, r))
-  if (!ring) {
-    const sizeM = SHOP_MIN_SIZE_M
-    const need = sizeM / 2 + 4
-    const back = road && roadDist < need ? need - roadDist : 0
-    const d = Math.hypot(roadDir.x, roadDir.y)
-    return {
-      center: { x: (-roadDir.x / d) * back || 0, y: (-roadDir.y / d) * back || 0 },
-      facingDeg: bearing(roadDir),
-      sizeM,
-      onFootprint: false,
-    }
-  }
-
+// 輪郭あり: その真ん中・大きさに合わせ、道路（無ければ南）に一番向いている辺を正面にする。
+// 使える辺（2m 以上）が無ければ null
+function fitFootprint(ring: P[], road: P | null): Placement | null {
   // 閉じた輪（最初と最後が同じ点）でも開いた輪でも同じに扱う
   const pts = ring.length > 1 && ring[0].x === ring[ring.length - 1].x && ring[0].y === ring[ring.length - 1].y ? ring.slice(0, -1) : ring
   const c = { x: pts.reduce((s, q) => s + q.x, 0) / pts.length, y: pts.reduce((s, q) => s + q.y, 0) / pts.length }
-  const toRoad = { x: roadDir.x - c.x, y: roadDir.y - c.y }
+  // 道路の点への向き。道路が無いときは南という「向き」（位置ではない）
+  const toRoad = road ? { x: road.x - c.x, y: road.y - c.y } : SOUTH
   const toRoadLen = Math.hypot(toRoad.x, toRoad.y) || 1
   const area = pts.reduce((s, q, i) => {
     const n = pts[(i + 1) % pts.length]
@@ -77,7 +68,7 @@ export function placeShop(roads: P[][], footprints: P[][]): Placement {
   }, 0) / 2
 
   // 道路に一番向いている辺の外向きの向き＝正面（長い辺をわずかに優先）
-  let face = toRoad
+  let face: P | null = null
   let score = -Infinity
   for (let i = 0; i < pts.length; i++) {
     const a = pts[i]
@@ -93,6 +84,7 @@ export function placeShop(roads: P[][], footprints: P[][]): Placement {
       face = n
     }
   }
+  if (!face) return null
 
   // 正面方向と横方向の幅のうち小さい方を大きさにする
   const fx = face.x
@@ -110,4 +102,15 @@ export function placeShop(roads: P[][], footprints: P[][]): Placement {
     maxS = Math.max(maxS, v)
   }
   return { center: c, facingDeg: bearing(face), sizeM: clampSize(Math.min(maxF - minF, maxS - minS)), onFootprint: true }
+}
+
+// 店の点は原点。道路に正面を向け、建物の輪郭があればその真ん中・大きさに合わせる
+export function placeShop(roads: P[][], footprints: P[][]): Placement {
+  const road = nearestRoadPoint(roads)
+  const roadDist = road ? Math.hypot(road.x, road.y) : Infinity
+  // 道路が無い・重なりすぎ（0.5m 以下）のときは南向き
+  const usable = road && roadDist > 0.5 ? road : null
+  const dir = usable ? { x: usable.x / roadDist, y: usable.y / roadDist } : SOUTH
+  const ring = footprints.find((r) => contains({ x: 0, y: 0 }, r))
+  return (ring && fitFootprint(ring, usable)) || free(road, roadDist, dir)
 }
