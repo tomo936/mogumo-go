@@ -24,7 +24,7 @@ import { nextBearing } from '../domain/rotate.ts'
 import { isStale, judgeFix, shouldMoveCamera, stepToward } from '../domain/smoothing.ts'
 import type { Fix } from '../domain/smoothing.ts'
 
-export type MapViewHandle = { checkin(shop: Shop, newCells: Cell[]): void }
+export type MapViewHandle = { checkin(shop: Shop, newCells: Cell[]): void; unfocus(): void }
 
 type Props = {
   onStatus: (event: LocationEvent) => void
@@ -58,7 +58,11 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onPosition
   })
   // チェックイン演出: 約0.9秒後に済みの印を付け、新しく晴れるセルを足して波を走らせる（外すときに取り消す）
   const checkinTimers = useRef(new Set<ReturnType<typeof setTimeout>>())
+  // お店の板を開いている間は、カメラをそのお店に向けて、自分への追いかけを止める
+  const focusRef = useRef<{ lat: number; lng: number } | null>(null)
+  const unfocusRef = useRef<() => void>(() => {})
   useImperativeHandle(ref, () => ({
+    unfocus: () => unfocusRef.current(),
     checkin: (shop, newCells) => {
       const t = setTimeout(() => {
         checkinTimers.current.delete(t)
@@ -179,7 +183,20 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onPosition
       const id = s.world.pick({ x: e.clientX - rect.left, y: e.clientY - rect.top })
       const shop = id ? s.world.shopsNear().find((sh) => sh.id === id) ?? null : null
       onSelectShopRef.current(shop)
-      if (shop) map.easeTo({ zoom: Math.min(map.getZoom() + TAP_ZOOM_STEP, MAX_ZOOM), duration: 500 })
+      if (shop) {
+        const zoom = focusRef.current ? map.getZoom() : Math.min(map.getZoom() + TAP_ZOOM_STEP, MAX_ZOOM)
+        focusRef.current = { lat: shop.lat, lng: shop.lng }
+        map.easeTo({ center: [shop.lng, shop.lat], zoom, duration: 500 })
+      } else {
+        unfocusRef.current()
+      }
+    }
+    // 板を閉じたら、カメラを自分に戻して追いかけを再開する
+    unfocusRef.current = () => {
+      if (!focusRef.current) return
+      focusRef.current = null
+      s.shown = null
+      if (s.current) map.easeTo({ center: [s.current.lng, s.current.lat], duration: 500 })
     }
     // 毎コマ、表示位置を目標へ寄せてカメラを動かす
     const loop = { frame: 0, prevTime: performance.now(), positionAt: 0 }
@@ -194,7 +211,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onPosition
           loop.positionAt = now
           onPositionRef.current(c)
         }
-        if (shouldMoveCamera(s.shown, c, pointers.size >= 2 || map.isZooming())) {
+        if (!focusRef.current && shouldMoveCamera(s.shown, c, pointers.size >= 2 || map.isZooming())) {
           map.jumpTo({ center: [c.lng, c.lat] })
           s.shown = c
         }

@@ -47,6 +47,7 @@ export function MapPage() {
     if (busyRef.current && shop) return // チェックイン中は別のお店にシートを入れ替えない（閉じるのは可）
     setSelected(shop)
     setCheckinError(null)
+    if (!shop) mapRef.current?.unfocus() // 板を閉じたらカメラを自分に戻す
   }, [])
 
   const checkin = async () => {
@@ -93,7 +94,10 @@ export function MapPage() {
           onClose={() => select(null)}
         />
       )}
-      {effect && <CheckinEffect key={effect.key} coins={effect.coins} onDone={() => setEffect(null)} />}
+      {effect && <CheckinEffect key={effect.key} coins={effect.coins} onDone={() => {
+            setEffect(null)
+            if (!selectedRef.current) mapRef.current?.unfocus() // 演出が終わったらカメラを自分に戻す
+          }} />}
       <div className="map-overlay">
         <LocationOverlay status={status} onRetry={retry} onReload={() => window.location.reload()} />
         {shopsError && <p className="location-banner">お店を読み込めませんでした</p>}

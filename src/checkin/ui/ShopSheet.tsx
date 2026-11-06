@@ -5,13 +5,14 @@ import type { Shop } from '../../shops/domain/shop.ts'
 import { CHECKIN_M } from '../../shops/config.ts'
 import { formatOpen } from '../domain/openHours.ts'
 
-export type CheckinError = 'too_far' | 'network' | 'not_found' | 'no_profile'
+export type CheckinError = 'too_far' | 'network' | 'not_found' | 'no_profile' | 'already_today'
 
 const ERROR_TEXT: Record<CheckinError, string> = {
   too_far: 'お店から50mより遠いようです',
   network: '通信できませんでした。記録されていることもあるので、少し待ってからもう一度押してください',
   not_found: 'このお店は見つかりませんでした',
   no_profile: '初回設定を終えてからチェックインできます',
+  already_today: 'このお店は今日もうチェックインしました。また明日来てね',
 }
 
 // シロのアイコンが届くまでの仮のバッジ色（パステル13色）

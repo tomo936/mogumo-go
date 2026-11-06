@@ -24,6 +24,12 @@
 5. 「Success（成功）」と出れば OK。赤いエラーが出たら、文面をそのまま Claude Code に見せる。
    - ただし `column "open" … already exists`（列 open はもうあります）と出たときは、0002 はすでに流してあるということなので、そのままで大丈夫。
 
+### 3-2. 追加の SQL（0003）を流す（2026-11-07 追加。同じお店のチェックインを1日1回にする）
+1. SQL Editor で **New query** を押す。
+2. `supabase/migrations/0003_checkin_once_a_day.sql` の中身を全部コピーして貼り、**Run**。
+3. 「Success」と出れば OK（何度流しても大丈夫）。
+4. 関数 `checkin` を置いたあとなら、`checkin` の `index.ts` も新しい中身に貼り替えて **Deploy** し直す。
+
 ### 4. 関数 `shops-hotpepper` を置く
 1. 左のメニューから **Edge Functions** を開く。
 2. **Deploy a new function** → **Via Editor** を選ぶ。

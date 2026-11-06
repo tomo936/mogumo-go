@@ -5,9 +5,9 @@ import type { LatLng } from '../../map/domain/geo.ts'
 
 export type CheckinResult =
   | { ok: true; checkinId: string; coins: 30 | 0; newCells: Cell[] }
-  | { ok: false; reason: 'too_far' | 'network' | 'not_found' | 'no_profile' }
+  | { ok: false; reason: 'too_far' | 'network' | 'not_found' | 'no_profile' | 'already_today' }
 
-const fail = (reason: 'too_far' | 'network' | 'not_found' | 'no_profile'): CheckinResult => ({ ok: false, reason })
+const fail = (reason: 'too_far' | 'network' | 'not_found' | 'no_profile' | 'already_today'): CheckinResult => ({ ok: false, reason })
 
 const TIMEOUT_MS = 25000
 
@@ -62,7 +62,11 @@ export async function postCheckin(
     })
     if (res.status === 403) return fail('too_far')
     if (res.status === 404) return fail('not_found')
-    if (res.status === 409) return fail('no_profile')
+    if (res.status === 409) {
+      // 409 は「プロフィールが無い」か「このお店は今日もう済み」。本文の error で分ける
+      const body = (await res.json().catch(() => null)) as { error?: unknown } | null
+      return fail(body?.error === 'already_today' ? 'already_today' : 'no_profile')
+    }
     if (!res.ok) return fail('network')
     return parseOk(await res.json())
   } catch {
