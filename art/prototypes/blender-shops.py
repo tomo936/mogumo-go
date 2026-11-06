@@ -127,7 +127,8 @@ def stool(x, y, top, leg, s=1.0):
 
 def half_disc(x, y, z, r, m, depth=0.02):
     bpy.ops.mesh.primitive_cylinder_add(radius=r, depth=depth, vertices=24, location=(0, 0, 0), rotation=(math.pi / 2, 0, 0))
-    c = bpy.context.object; bm = bmesh.new(); bm.from_mesh(c.data)
+    c = bpy.context.object; bpy.ops.object.transform_apply(rotation=True)  # 円の面を正面（-Y）へ向けてから下半分を残す
+    bm = bmesh.new(); bm.from_mesh(c.data)
     bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=(0, 0, 0), plane_no=(0, 0, 1), clear_outer=True)
     bmesh.ops.holes_fill(bm, edges=bm.edges[:]); bm.to_mesh(c.data); bm.free()
     c.location = (x, y, z); return finish(c, m, 0.004, 1)
@@ -881,7 +882,122 @@ def washoku():
     cyl(0.025, 0.22, (-1.05, FY - 0.42, 0.2), mat('#6b4a32'), rot=(0.3, 0, 0), verts=8, bevel=0)
     for (dx, dz) in ((-0.08, 0.3), (0.06, 0.34), (0.0, 0.26)): sphere(0.09, (-1.05 + dx, FY - 0.42, dz), PINE, scale=(1.4, 1.2, 0.5), seg=12)
 
-{'ramen': ramen, 'sushi': sushi, 'chinese': chinese, 'yakiniku': yakiniku, 'western': western, 'cake': cake, 'bakery': bakery, 'mystery': mystery, 'soba': soba, 'izakaya': izakaya, 'washoku': washoku}[KIND]()
+# ── カレー屋（見本 curry.webp＝ジオラマ版・インドのお店の形） ─────────
+def curry():
+    WALL = mat('#f6f0e3'); ORANGE = mat('#e8843f'); GREEN = mat('#3d7a52'); CREAM = mat('#f1e3c4'); WOOD = mat('#8a5a3a')
+    WARM = mat('#b9824f', 0.8, emit=0.15); FIRE = mat('#ff8a3a', 0.6, emit=1.5); SIGN = mat('#6e4a33'); WHITE = mat('#f4ecdc')
+    W, D, H = 2.0, 2.0, 1.75; FY = -D / 2
+    cube((W + 0.16, D + 0.16, 0.08), (0, 0, 0.04), WOOD, bevel=0.015)
+    cube((W, D, H), (0, 0, 0.08 + H / 2), WALL, bevel=0.02)
+    # 飾りの帯（上）と、角・ふちの細い枠
+    for z, m_, t in ((0.08 + H - 0.08, ORANGE, 0.09), (0.08 + H - 0.17, GREEN, 0.05), (0.08 + H - 0.23, ORANGE, 0.03)):
+        cube((W + 0.04, D + 0.04, t), (0, 0, z), m_, bevel=0.01)
+    for sx in (-1, 1):
+        for sy in (-1, 1): cube((0.06, 0.06, H - 0.3), (sx * (W / 2 + 0.005), sy * (D / 2 + 0.005), 0.08 + (H - 0.3) / 2 + 0.04), ORANGE, bevel=0.01)
+    # 屋上のふちと、ドーム＋オレンジの玉ねぎ飾り
+    for sx in (-1, 1): cube((0.12, D + 0.16, 0.14), (sx * (W / 2 + 0.02), 0, 0.08 + H + 0.06), CREAM, bevel=0.03)
+    for sy in (-1, 1): cube((W + 0.16, 0.12, 0.14), (0, sy * (D / 2 + 0.02), 0.08 + H + 0.06), CREAM, bevel=0.03)
+    for sx in (-1, 1): cube((0.13, D + 0.18, 0.03), (sx * (W / 2 + 0.02), 0, 0.08 + H + 0.14), ORANGE, bevel=0.01)
+    for sy in (-1, 1): cube((W + 0.18, 0.13, 0.03), (0, sy * (D / 2 + 0.02), 0.08 + H + 0.14), ORANGE, bevel=0.01)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1, segments=32, ring_count=16, location=(0, 0, 0.08 + H)); dome = bpy.context.object
+    dome.scale = (0.78, 0.78, 0.5); bpy.ops.object.transform_apply(scale=True)
+    bm = bmesh.new(); bm.from_mesh(dome.data)
+    bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=(0, 0, 0), plane_no=(0, 0, -1), clear_outer=True)
+    bm.to_mesh(dome.data); bm.free(); finish(dome, CREAM)
+    zt = 0.08 + H + 0.5
+    cube((0.3, 0.3, 0.05), (0, 0, zt), ORANGE, bevel=0.01)
+    lathe([(0, 0), (0.1, 0.01), (0.14, 0.07), (0.13, 0.14), (0.07, 0.2), (0.02, 0.26), (0, 0.28)], (0, 0, zt + 0.02), ORANGE, steps=16)
+    for k in range(8):
+        a = k * math.tau / 8
+        cube((0.02, 0.02, 0.2), (0.135 * math.cos(a), 0.135 * math.sin(a), zt + 0.11), GREEN, bevel=0.004, rot=(0, 0, a))
+    cyl(0.012, 0.12, (0, 0, zt + 0.35), GREEN, verts=8, bevel=0); sphere(0.025, (0, 0, zt + 0.42), GREEN, seg=8)
+    # アーチ（先がとがった形）の入口と窓。中は暖かい色＋窯の火
+    def cusped(x, y, z, w, h, rz=0.0, fire=False):
+        """先のとがったアーチ: 外枠（オレンジ）→ 内枠（緑）→ 暖かい店内。上はアーチ形"""
+        objs = []
+        for (ww, dy, m_) in ((w + 0.16, 0.0, ORANGE), (w + 0.07, -0.004, GREEN), (w, -0.008, WARM)):
+            objs.append(cube((ww, 0.06, h - w / 2), (0, dy, -w / 4), m_, bevel=0.006))
+            t = half_disc(0, dy, h / 2 - w / 2, ww / 2, m_, depth=0.06); t.rotation_euler = (0, math.pi, 0); t.scale = (1, 1, 1.35); objs.append(t)
+            objs.append(sphere(0.03 if m_ is ORANGE else 0.022, (0, dy - 0.01, h / 2 - w / 2 + ww / 2 * 1.35 + 0.02), m_, seg=8))
+        if fire:
+            objs.append(sphere(0.13, (0, -0.05, -h / 2 + 0.25), FIRE, scale=(1, 0.4, 1.15), seg=12))
+            objs.append(cube((0.3, 0.06, 0.06), (0.12, -0.05, -h / 2 + 0.12), WOOD, bevel=0.01))
+        xform(objs, M_at(x, y, z, rz=rz))
+    cusped(-0.45, FY - 0.03, 0.08 + 0.5, 0.62, 0.95, fire=True)
+    cusped(0.45, FY - 0.03, 0.08 + 0.72, 0.4, 0.7)
+    for y in (-0.45, 0.4): cusped(-W / 2 - 0.03, y, 0.08 + 0.72, 0.4, 0.7, rz=-math.pi / 2)
+    # 看板（カレーの鍋とナン）
+    cube((0.62, 0.05, 0.28), (-0.4, FY - 0.04, 0.08 + 1.3), SIGN, bevel=0.03)
+    half_disc(-0.55, FY - 0.08, 0.08 + 1.32, 0.08, WHITE); cube((0.2, 0.03, 0.015), (-0.55, FY - 0.08, 0.08 + 1.33), WHITE, bevel=0.003)
+    for k in range(3): sphere(0.012, (-0.58 + k * 0.03, FY - 0.08, 0.08 + 1.38 + k * 0.012), WHITE, seg=6)
+    sphere(1, (-0.27, FY - 0.08, 0.08 + 1.3), mat('#f0d8a8'), scale=(0.11, 0.02, 0.07), seg=12)
+
+# ── カフェ（見本 cafe.webp＝ジオラマ版） ─────────────────────
+def cafe():
+    PL = mat('#f5f3ef'); WOOD = mat('#c99a66'); WOOD_D = mat('#a87a4c'); ROOF = mat('#a8755a'); ROOF_D = mat('#946349')
+    BLUE = mat('#6f93c4'); WHITE = mat('#f7f6f2'); GLOW = mat('#f6e3c3', 0.7, emit=0.35); RATTAN = mat('#cfa66a'); TAB = mat('#d9b98a')
+    STONE = mat('#b7aea2'); LEAF = mat('#6aa363'); POT = mat('#c27a55'); SIGN = mat('#7a5136')
+    W, D, H = 2.2, 1.8, 1.3; FY = -D / 2
+    cube((W + 0.08, D + 0.08, 0.06), (0, 0, 0.03), mat('#bdb6ac'), bevel=0.01)
+    cube((W, D, H), (0, 0, 0.06 + H / 2), PL, bevel=0.02)
+    for x in (-W / 2, W / 2):
+        for y in (FY, D / 2): cube((0.09, 0.09, H + 0.02), (x, y, 0.06 + H / 2), WOOD, bevel=0.02)
+    cube((W + 0.04, 0.08, 0.07), (0, FY - 0.02, 0.06 + H - 0.05), WOOD, bevel=0.015)
+    # 正面: 窓2つ（棚のびん）＋戸
+    def shop_window(x, w, h):
+        cube((w + 0.08, 0.07, h + 0.08), (x, FY - 0.03, 0.06 + 0.62), WOOD, bevel=0.015)
+        cube((w, 0.075, h), (x, FY - 0.035, 0.06 + 0.62), GLOW, bevel=0.008)
+        for k in range(1, 3): cube((0.02, 0.08, h), (x - w / 2 + w * k / 3, FY - 0.04, 0.06 + 0.62), WOOD, bevel=0)
+        cube((w, 0.08, 0.02), (x, FY - 0.04, 0.06 + 0.62), WOOD, bevel=0)
+        cube((w + 0.14, 0.12, 0.04), (x, FY - 0.06, 0.06 + 0.62 - h / 2 - 0.05), WOOD, bevel=0.01)
+    shop_window(-0.62, 0.5, 0.5); shop_window(0.62, 0.5, 0.5)
+    cube((0.38, 0.07, 0.82), (0.0, FY - 0.03, 0.06 + 0.41), WOOD_D, bevel=0.015)
+    cube((0.26, 0.075, 0.3), (0.0, FY - 0.04, 0.06 + 0.6), GLOW, bevel=0.008)
+    # 青と白のしまのひさし（正面いっぱい）
+    awning(W - 0.1, 16, 0.4, 0.42, BLUE, WHITE, M_at(0, FY - 0.04, 0.06 + 1.05))
+    # 右の側面: 丸窓
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.26, minor_radius=0.05, location=(0, 0, 0), rotation=(math.pi / 2, 0, 0))
+    t = finish(bpy.context.object, WOOD); g = cyl(0.24, 0.05, (0, 0.0, 0), GLOW, rot=(math.pi / 2, 0, 0), verts=28, bevel=0.005)
+    bars = [cube((0.48, 0.06, 0.025), (0, -0.01, 0), WOOD, bevel=0), cube((0.025, 0.06, 0.48), (0, -0.01, 0), WOOD, bevel=0)]
+    xform([t, g] + bars, M_at(-W / 2 - 0.03, 0.15, 0.06 + 0.7, rz=-math.pi / 2))
+    # 妻と看板（コーヒーカップ）・屋根・石の煙突
+    zt = 0.06 + H; pitch = math.radians(34); gh = math.tan(pitch) * (W / 2)
+    for sy in (-1, 1): gable_wall(W, sy * (D / 2 - 0.02), zt, gh, PL, sy)
+    cube((0.3, 0.05, 0.3), (0, FY - 0.04, zt + 0.25), SIGN, bevel=0.03)
+    cyl(0.06, 0.08, (-0.01, FY - 0.08, zt + 0.23), WHITE, rot=(math.pi / 2, 0, 0), verts=16, bevel=0.01)
+    cube((0.16, 0.02, 0.02), (0, FY - 0.08, zt + 0.17), WHITE, bevel=0.004)
+    for k in range(3): sphere(0.012, (-0.03 + k * 0.025, FY - 0.08, zt + 0.32 + (k % 2) * 0.02), WHITE, seg=6)
+    for sx in (-1, 1):
+        L = (W / 2 + 0.16) / math.cos(pitch)
+        cube((L, 0.07, 0.07), (sx * (W / 2 + 0.16) / 2, FY - 0.12, zt + math.tan(pitch) * (W / 2 + 0.16) / 2 - 0.03), WOOD, bevel=0.02, rot=(0, sx * pitch, 0))
+    gable_roof(W, D, zt - 0.05, pitch, 0.16, 0.16, ROOF, ROOF_D, ROOF_D)
+    for k in range(3):
+        for j in range(2): cube((0.14, 0.28, 0.12), (-0.55 - 0.07 + j * 0.14, 0.35, zt + 0.42 + k * 0.13), STONE if (k + j) % 2 else mat('#a39a8f'), bevel=0.03)
+    # テラス: 白い低い塀・木の床・丸テーブルと籐のいす・パラソル・植木
+    TY0 = FY - 1.0
+    cube((W + 0.1, 1.0, 0.04), (0, FY - 0.5, 0.02), mat('#e8dcc8'), bevel=0.005)
+    cube((W + 0.14, 0.12, 0.32), (0, TY0, 0.16), WHITE, bevel=0.04)
+    for sx in (-1, 1): cube((0.12, 1.0, 0.32), (sx * (W / 2 + 0.01), FY - 0.5, 0.16), WHITE, bevel=0.04)
+    for (x, y) in ((-0.65, FY - 0.5), (0.25, FY - 0.6)):
+        cyl(0.15, 0.025, (x, y, 0.36), TAB, verts=20, bevel=0.008); cyl(0.018, 0.33, (x, y, 0.18), TAB, verts=8, bevel=0)
+        for dx in (-0.22, 0.22):
+            cyl(0.07, 0.03, (x + dx, y, 0.22), RATTAN, verts=14, bevel=0.008)
+            cube((0.025, 0.13, 0.17), (x + dx * 1.4, y, 0.31), RATTAN, bevel=0.01)
+            for lx in (-0.04, 0.04): cube((0.012, 0.012, 0.21), (x + dx + lx, y, 0.105), RATTAN, bevel=0)
+    cyl(0.012, 0.85, (-0.65, FY - 0.5, 0.42), WOOD_D, verts=8, bevel=0)
+    for k in range(12):  # パラソル（青白のしま）
+        a0 = k * math.tau / 12
+        bpy.ops.mesh.primitive_cone_add(vertices=3, radius1=0.001, depth=0.001, location=(0, 0, 0)); bpy.data.objects.remove(bpy.context.object)
+        me = bpy.data.meshes.new('para'); bm = bmesh.new()
+        c = bm.verts.new((-0.65, FY - 0.5, 0.95)); r = 0.4
+        a = bm.verts.new((-0.65 + r * math.cos(a0), FY - 0.5 + r * math.sin(a0), 0.8)); b = bm.verts.new((-0.65 + r * math.cos(a0 + math.tau / 12), FY - 0.5 + r * math.sin(a0 + math.tau / 12), 0.8))
+        bm.faces.new((c, a, b)); bm.to_mesh(me); bm.free(); o = bpy.data.objects.new('para', me); col.objects.link(o); finish(o, BLUE if k % 2 else WHITE)
+        o.modifiers.new('s', 'SOLIDIFY').thickness = 0.015
+    for (x, y) in ((W / 2 - 0.15, FY - 0.15), (0.75, TY0 + 0.15)):
+        cube((0.16, 0.14, 0.12), (x, y, 0.1), POT, bevel=0.02)
+        for k in range(4): sphere(0.06, (x + (k - 1.5) * 0.03, y, 0.22 + (k % 2) * 0.04), LEAF, scale=(0.6, 0.6, 1.2), seg=10)
+
+{'ramen': ramen, 'sushi': sushi, 'chinese': chinese, 'yakiniku': yakiniku, 'western': western, 'cake': cake, 'bakery': bakery, 'mystery': mystery, 'soba': soba, 'izakaya': izakaya, 'washoku': washoku, 'curry': curry, 'cafe': cafe}[KIND]()
 # 曲線（瓦の筋など）は glb に入らないので形に変えておく
 for o in list(bpy.data.objects):
     if o.type == 'CURVE':

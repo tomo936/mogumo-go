@@ -19,3 +19,6 @@
 | cake | スイーツの店 | 前のデザイン（マットな3D風） | G014＋「ケーキ・スイーツ」 |
 | bakery | パン屋 | 前のデザイン（マットな3D風） | 地図のデータ（パン屋） |
 | mystery | その他（謎の気配） | 前のデザイン（マットな3D風） | 上のどれでもない店 |
+
+## 3D 模型（2026-11-06）
+13種そろった。一覧 `art/prototypes/shop-models-13.png`。作り方: ラーメン屋（赤×白）は `art/prototypes/blender-shop-jp.py`（KIND=ramen）、ほかの12種は `art/prototypes/blender-shops.py`（KIND=<種類>）。1軒 約0.8万〜4万三角形。glb は手順から作り直せるので、アプリに入れるときに軽くして `src/assets/` に置く。
