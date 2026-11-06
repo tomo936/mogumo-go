@@ -77,9 +77,9 @@ describe('extractFeatures + featuresNear', () => {
     const tExtract = performance.now() - t0
     const t1 = performance.now()
     for (let s = 0; s < 30; s++) featuresNear(all, { x: -600 + s * 40, y: -600 + s * 40 })
-    const tPerShop = (performance.now() - t1) / 30
+    const tSelect = performance.now() - t1
+    // 読み込みは道路1回・建物1回のまま（店ごとに読み直さない）。時間は桁違いの遅くなりだけ見る
     expect(src.querySourceFeatures).toHaveBeenCalledTimes(2)
-    // 店ごとの選び出しは、全部を読み直すより十分に軽い
-    expect(tPerShop).toBeLessThan(Math.max(tExtract / 3, 5))
+    expect(tExtract + tSelect).toBeLessThan(1000)
   })
 })

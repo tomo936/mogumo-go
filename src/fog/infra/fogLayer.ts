@@ -2,10 +2,11 @@
 // 塊はいつも画面のほうを向き、上が白・下側に水色の影。画面の奥から手前の順に重ねる。
 import { MercatorCoordinate } from 'maplibre-gl'
 import type { CustomLayerInterface, Map as MapLibreMap } from 'maplibre-gl'
-import { FOG_RESORT_DEG } from '../config.ts'
+import { FOG_RESORT_DEG, POP_S, THIN_RADIUS_M } from '../config.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
 import { drawOrder } from '../domain/clumps.ts'
 import type { Clump } from '../domain/clumps.ts'
+import type { AnimClump } from '../domain/wave.ts'
 
 const LIFT = 0.22 // 影の帯の厚み（塊の半幅に対する割合）
 const SOFT = 0.12 // 白と影の境目のぼかし
@@ -13,19 +14,44 @@ const SOFT = 0.12 // 白と影の境目のぼかし
 // 塊1つ = 四角1枚。四角の大きさは塊の形が収まる範囲（単位は半幅）
 const VS = `#version 300 es
 precision highp float;
+const float POP_S = ${POP_S.toFixed(3)};
+const float THIN_R = ${THIN_RADIUS_M.toFixed(1)};
 layout(location=0) in vec2 a_corner;
 layout(location=1) in vec4 a_clump; // x, y（origin からの m）, w（半幅 m）, 種
+layout(location=2) in vec2 a_anim; // 変化後の半幅, 変化の始まり（秒、<0 は変化なし）
 uniform mat4 u_matrix;
 uniform vec2 u_viewport;
+uniform float u_time;
+uniform vec3 u_thin[4]; // お店の x, y（m）, 薄さ（0 なら未使用）
 out vec2 v_uv;
 out float v_seed;
+out float v_alpha;
 const vec2 LO = vec2(-1.3, -0.75);
 const vec2 HI = vec2(1.3, 1.25);
 vec2 px(vec4 c) { return c.xy / c.w * u_viewport * 0.5; }
 void main() {
+  float w = a_clump.z;
+  v_alpha = 1.0;
+  if (a_anim.y >= 0.0) {
+    float t = clamp((u_time - a_anim.y) / POP_S, 0.0, 1.0);
+    // ふくらむ（0〜0.35）→ はじけて縮む（0.35〜1）
+    float swell = 1.0 + 0.22 * sin(clamp(t / 0.35, 0.0, 1.0) * 1.5708);
+    float k = t < 0.35 ? 0.0 : (t - 0.35) / 0.65;
+    k = k * k * (3.0 - 2.0 * k);
+    w = mix(a_clump.z * swell, a_anim.x, k);
+    if (a_anim.x <= 0.0) v_alpha = 1.0 - smoothstep(0.55, 1.0, t);
+    if (w <= 0.01) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); v_uv = vec2(0.0); v_seed = 0.0; return; }
+  }
+  // お店のまわりは雲を透かす（塊の中心からの距離で決める）
+  float thin = 0.0;
+  for (int i = 0; i < 4; i++) {
+    float f = 1.0 - smoothstep(0.0, THIN_R, length(a_clump.xy - u_thin[i].xy));
+    thin = max(thin, u_thin[i].z * f);
+  }
+  v_alpha *= 1.0 - 0.75 * thin;
   vec4 c = u_matrix * vec4(a_clump.xy, 0.0, 1.0);
-  vec4 ex = u_matrix * vec4(a_clump.xy + vec2(a_clump.z, 0.0), 0.0, 1.0);
-  vec4 ny = u_matrix * vec4(a_clump.xy + vec2(0.0, a_clump.z), 0.0, 1.0);
+  vec4 ex = u_matrix * vec4(a_clump.xy + vec2(w, 0.0), 0.0, 1.0);
+  vec4 ny = u_matrix * vec4(a_clump.xy + vec2(0.0, w), 0.0, 1.0);
   // 半幅が画面で何 px か（東と北のうち長く見える方。傾けても潰れない）
   float wpx = max(length(px(ex) - px(c)), length(px(ny) - px(c)));
   // カメラの真下より後ろの塊は、画面に映らないのに何倍も大きく計算される（地図を回すと画面を覆う）。描かない
@@ -45,6 +71,7 @@ const FS = `#version 300 es
 precision highp float;
 in vec2 v_uv;
 in float v_seed;
+in float v_alpha;
 uniform float u_lift;
 uniform float u_soft;
 out vec4 o;
@@ -72,6 +99,7 @@ void main() {
   vec3 top = mix(vec3(1.0), vec3(0.94, 0.97, 1.0), 1.0 - smoothstep(-0.5, 0.6, v_uv.y));
   vec3 col = mix(vec3(0.70, 0.84, 0.96), top, lit);
   col = mix(col, vec3(0.62, 0.78, 0.93), smoothstep(-aa * 2.5, -aa, d) * 0.5); // ふちの薄い線
+  a *= v_alpha;
   o = vec4(col * a, a);
 }`
 
@@ -100,7 +128,14 @@ function program(gl: WebGL2RenderingContext): WebGLProgram {
   return p
 }
 
-export type FogLayer = CustomLayerInterface & { setClumps(origin: LatLng, clumps: Clump[]): void }
+export type ThinSpot = { x: number; y: number; amount: number }
+export type FogLayer = CustomLayerInterface & {
+  setClumps(origin: LatLng, clumps: (Clump | AnimClump)[]): void
+  setThin(spots: ThinSpot[]): void // 最大 4 つ。origin からの m
+}
+
+const MAX_THIN = 4
+const FLOATS = 6 // 1塊あたり: x, y, w, 種, 変化後の半幅, 始まり
 
 export function createFogLayer(): FogLayer {
   let map: MapLibreMap | null = null
@@ -113,8 +148,12 @@ export function createFogLayer(): FogLayer {
   let uViewport: WebGLUniformLocation | null = null
   let uLift: WebGLUniformLocation | null = null
   let uSoft: WebGLUniformLocation | null = null
+  let uTime: WebGLUniformLocation | null = null
+  let uThin: WebGLUniformLocation | null = null
   let origin: LatLng | null = null
-  let clumps: Clump[] = []
+  let clumps: (Clump | AnimClump)[] = []
+  const thin = new Float32Array(MAX_THIN * 3)
+  let animEnd = 0 // 動きがすべて終わる時刻（秒）
   let count = 0
   let sortedFor = NaN // 並べたときの地図の向き。NaN は「並べ直しが要る」
 
@@ -122,8 +161,11 @@ export function createFogLayer(): FogLayer {
   const upload = (bearing: number) => {
     if (!gl || !inst) return
     const sorted = drawOrder(clumps, bearing)
-    const data = new Float32Array(sorted.length * 4)
-    sorted.forEach((c, n) => data.set([c.x, c.y, c.w, c.seed], n * 4))
+    const data = new Float32Array(sorted.length * FLOATS)
+    sorted.forEach((c, n) => {
+      const a = c as Partial<AnimClump>
+      data.set([c.x, c.y, c.w, c.seed, a.w1 ?? c.w, a.start ?? -1], n * FLOATS)
+    })
     gl.bindBuffer(gl.ARRAY_BUFFER, inst)
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW)
     count = sorted.length
@@ -137,7 +179,17 @@ export function createFogLayer(): FogLayer {
     setClumps(o, cs) {
       origin = o
       clumps = cs
+      animEnd = 0
+      for (const c of cs) {
+        const st = (c as Partial<AnimClump>).start
+        if (st !== undefined && st >= 0) animEnd = Math.max(animEnd, st + POP_S)
+      }
       sortedFor = NaN
+      map?.triggerRepaint()
+    },
+    setThin(spots) {
+      thin.fill(0)
+      spots.slice(0, MAX_THIN).forEach((s, i) => thin.set([s.x, s.y, Math.min(1, Math.max(0, s.amount))], i * 3))
       map?.triggerRepaint()
     },
     onAdd(m, g) {
@@ -148,6 +200,8 @@ export function createFogLayer(): FogLayer {
       uViewport = gl.getUniformLocation(prog, 'u_viewport')
       uLift = gl.getUniformLocation(prog, 'u_lift')
       uSoft = gl.getUniformLocation(prog, 'u_soft')
+      uTime = gl.getUniformLocation(prog, 'u_time')
+      uThin = gl.getUniformLocation(prog, 'u_thin')
       vao = gl.createVertexArray()
       gl.bindVertexArray(vao)
       quad = gl.createBuffer()
@@ -158,8 +212,11 @@ export function createFogLayer(): FogLayer {
       inst = gl.createBuffer()
       gl.bindBuffer(gl.ARRAY_BUFFER, inst)
       gl.enableVertexAttribArray(1)
-      gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 16, 0)
+      gl.vertexAttribPointer(1, 4, gl.FLOAT, false, FLOATS * 4, 0)
       gl.vertexAttribDivisor(1, 1)
+      gl.enableVertexAttribArray(2)
+      gl.vertexAttribPointer(2, 2, gl.FLOAT, false, FLOATS * 4, 16)
+      gl.vertexAttribDivisor(2, 1)
       gl.bindVertexArray(null)
       sortedFor = NaN
     },
@@ -187,6 +244,10 @@ export function createFogLayer(): FogLayer {
       gl.uniform2f(uViewport, gl.drawingBufferWidth, gl.drawingBufferHeight)
       gl.uniform1f(uLift, LIFT)
       gl.uniform1f(uSoft, SOFT)
+      const now = performance.now() / 1000
+      gl.uniform1f(uTime, now)
+      gl.uniform3fv(uThin, thin)
+      if (animEnd > now) map.triggerRepaint() // 動いている間だけ描き続ける
       gl.disable(gl.DEPTH_TEST)
       gl.disable(gl.CULL_FACE)
       gl.enable(gl.BLEND)

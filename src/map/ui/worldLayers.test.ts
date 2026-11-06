@@ -2,13 +2,21 @@ import { beforeEach, expect, test, vi } from 'vitest'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import type { Shop } from '../../shops/domain/shop.ts'
 import type { PlacedShop } from '../../shops/infra/shopLayer.ts'
+import type { Cell } from '../../fog/domain/grid.ts'
+import { cellOf } from '../../fog/domain/grid.ts'
 import type { LatLng } from '../domain/geo.ts'
 
-const fogLayer = { id: 'fog', setClumps: vi.fn() }
+const fogLayer = { id: 'fog', setClumps: vi.fn(), setThin: vi.fn() }
 const shopLayer = { id: 'shops-3d', setShops: vi.fn() }
 vi.mock('../../fog/infra/fogLayer.ts', () => ({ createFogLayer: () => fogLayer }))
 vi.mock('../../shops/infra/shopLayer.ts', () => ({ createShopLayer: () => shopLayer }))
+vi.mock('../../shops/infra/checkMarks.ts', () => ({ createCheckMarks: () => ({ update: vi.fn(), dispose: vi.fn() }) }))
 
+vi.mock('../domain/geo.ts', async (orig) => {
+  const a = await orig<typeof import('../domain/geo.ts')>()
+  return { ...a, distanceMeters: vi.fn(a.distanceMeters) }
+})
+import { distanceMeters } from '../domain/geo.ts'
 import { attachWorld } from './worldLayers.ts'
 
 const M = 111195 // 1度あたりのm（緯度）
@@ -17,7 +25,7 @@ const north = (m: number): LatLng => ({ lat: home.lat + m / M, lng: home.lng })
 const LNG_M = M * Math.cos((home.lat * Math.PI) / 180)
 // 自宅から東 x m・北 y m の [lng, lat]
 const ll = (x: number, y: number): [number, number] => [home.lng + x / LNG_M, home.lat + y / M]
-const shop: Shop = { id: 's1', name: 'a', lat: home.lat + 20 / M, lng: home.lng, kind: 'ramen' }
+const shop: Shop = { id: 's1', name: 'a', lat: home.lat + 20 / M, lng: home.lng, kind: 'ramen', details: null, mapId: null }
 // 店の 5m 北を東西に通る道
 const roadFeature = { geometry: { type: 'LineString', coordinates: [ll(-30, 25), ll(30, 25)] }, properties: { class: 'minor' } }
 const building = (cx: number, cy: number, w: number, h: number) => ({
@@ -36,6 +44,9 @@ const fakeMap = () => ({
   on: vi.fn((_e: string, h: () => void) => { idleHandler = h }),
   off: vi.fn(),
 }) as unknown as MapLibreMap
+// 道路・建物の読み込み回数（お店の poi 読みは数えない）
+const featureReads = () => querySourceFeatures.mock.calls.filter((c) => c[1].sourceLayer !== 'poi').length
+const loadProgress = vi.fn(() => Promise.resolve({ cells: [] as Cell[], checkedShopIds: new Set<string>() }))
 const flush = () => new Promise((r) => setTimeout(r, 0))
 
 beforeEach(() => {
@@ -46,19 +57,19 @@ beforeEach(() => {
 })
 
 function setup(over: Partial<Parameters<typeof attachWorld>[1]> = {}) {
-  const fetchShops = over.fetchShops ? vi.mocked(over.fetchShops) : vi.fn((_c: LatLng) => Promise.resolve([shop]))
+  const fetchHotpepper = over.fetchHotpepper ? vi.mocked(over.fetchHotpepper) : vi.fn((_c: LatLng) => Promise.resolve([shop]))
   const onShopsError = vi.fn()
   const map = fakeMap()
-  const world = attachWorld(map, { home, shopsEnabled: true, onShopsError, ...over, fetchShops })
-  return { world, fetchShops, onShopsError, map }
+  const world = attachWorld(map, { home, shopsEnabled: true, onShopsError, loadProgress, ...over, fetchHotpepper })
+  return { world, fetchHotpepper, onShopsError, map }
 }
 
-test('最初の位置で霧とお店の層が作られ、fetchShops が現在地で1回呼ばれる', () => {
-  const { world, fetchShops, map } = setup()
+test('最初の位置で霧とお店の層が作られ、fetchHotpepper が現在地で1回呼ばれる', () => {
+  const { world, fetchHotpepper, map } = setup()
   world.onPosition(home)
   expect(fogLayer.setClumps).toHaveBeenCalledTimes(1)
   expect(map.addLayer).toHaveBeenCalledTimes(2)
-  expect(fetchShops).toHaveBeenCalledTimes(1)
+  expect(fetchHotpepper).toHaveBeenCalledTimes(1)
 })
 
 test('霧とお店は自分の位置の印より下に入れ、お店は霧より上', () => {
@@ -69,19 +80,19 @@ test('霧とお店は自分の位置の印より下に入れ、お店は霧よ�
 })
 
 test('店が何軒あっても、1回の更新でタイルを読むのは道路1回・建物1回', async () => {
-  const many = Array.from({ length: 30 }, (_, i): Shop => ({ id: `s${i}`, name: 'a', lat: home.lat + (i * 6) / M, lng: home.lng + 10 / LNG_M, kind: 'cafe' }))
-  const { world } = setup({ fetchShops: vi.fn((_c: LatLng) => Promise.resolve(many)) })
+  const many = Array.from({ length: 30 }, (_, i): Shop => ({ id: `s${i}`, name: 'a', lat: home.lat + (i * 6) / M, lng: home.lng + 10 / LNG_M, kind: 'cafe', details: null, mapId: null }))
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve(many)) })
   world.onPosition(home)
   await flush()
   expect(vi.mocked(shopLayer.setShops).mock.lastCall![0]).toHaveLength(30)
-  expect(querySourceFeatures).toHaveBeenCalledTimes(2)
+  expect(featureReads()).toBe(2)
 })
 
 test('同じ建物に2軒あれば、近い方が建物に合わせ、もう1軒は輪郭なしで置く', async () => {
   tiles = { transportation: [roadFeature], building: [building(0, 16, 20, 12)] }
-  const a: Shop = { id: 'a', name: 'a', lat: home.lat + 14 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe' }
-  const b: Shop = { id: 'b', name: 'b', lat: home.lat + 18 / M, lng: home.lng + 5 / LNG_M, kind: 'ramen' }
-  const { world } = setup({ fetchShops: vi.fn((_c: LatLng) => Promise.resolve([b, a])) })
+  const a: Shop = { id: 'a', name: 'a', lat: home.lat + 14 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe', details: null, mapId: null }
+  const b: Shop = { id: 'b', name: 'b', lat: home.lat + 18 / M, lng: home.lng + 5 / LNG_M, kind: 'ramen', details: null, mapId: null }
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([b, a])) })
   world.onPosition(home)
   await flush()
   const out = vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]
@@ -97,13 +108,13 @@ test('同じ建物に2軒あれば、近い方が建物に合わせ、もう1軒
 })
 
 test('400m では再取得せず、520m で2回目。720m で雲の塊を置き直す', async () => {
-  const { world, fetchShops } = setup()
+  const { world, fetchHotpepper } = setup()
   world.onPosition(home)
   await flush()
   world.onPosition(north(400))
-  expect(fetchShops).toHaveBeenCalledTimes(1)
+  expect(fetchHotpepper).toHaveBeenCalledTimes(1)
   world.onPosition(north(520))
-  expect(fetchShops).toHaveBeenCalledTimes(2)
+  expect(fetchHotpepper).toHaveBeenCalledTimes(2)
   expect(fogLayer.setClumps).toHaveBeenCalledTimes(1)
   world.onPosition(north(720))
   expect(fogLayer.setClumps).toHaveBeenCalledTimes(2)
@@ -111,56 +122,57 @@ test('400m では再取得せず、520m で2回目。720m で雲の塊を置き�
 
 test('取得中は2本目を投げない', async () => {
   let resolve: (s: Shop[]) => void = () => {}
-  const { world, fetchShops } = setup({ fetchShops: vi.fn((_c: LatLng) => new Promise<Shop[]>((r) => { resolve = r })) })
+  const { world, fetchHotpepper } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => new Promise<Shop[]>((r) => { resolve = r })) })
   world.onPosition(home)
   world.onPosition(north(600))
-  expect(fetchShops).toHaveBeenCalledTimes(1)
+  expect(fetchHotpepper).toHaveBeenCalledTimes(1)
   resolve([])
   await flush()
   world.onPosition(north(620))
-  expect(fetchShops).toHaveBeenCalledTimes(2)
+  expect(fetchHotpepper).toHaveBeenCalledTimes(2)
 })
 
-test('home が null でも例外なく、建物は0軒', async () => {
-  const { world, onShopsError } = setup({ home: null })
+test('home が null でも例外なく、霧の中の遠い店は0軒', async () => {
+  const far: Shop = { ...shop, id: 'far', lat: home.lat + 100 / M }
+  const { world, onShopsError } = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([far])) })
   expect(() => world.onPosition(home)).not.toThrow()
   await flush()
   expect(shopLayer.setShops).toHaveBeenLastCalledWith([])
   expect(onShopsError).not.toHaveBeenCalled()
 })
 
-test('shopsEnabled: false では fetchShops を呼ばない', () => {
-  const { world, fetchShops } = setup({ shopsEnabled: false })
+test('shopsEnabled: false では fetchHotpepper を呼ばない', () => {
+  const { world, fetchHotpepper } = setup({ shopsEnabled: false })
   world.onPosition(home)
-  expect(fetchShops).not.toHaveBeenCalled()
+  expect(fetchHotpepper).not.toHaveBeenCalled()
 })
 
-test('fetchShops が reject すると onShopsError が1回、60秒たてば同じ場所でも再試行', async () => {
+test('fetchHotpepper が reject すると onShopsError が1回、60秒たてば同じ場所でも再試行', async () => {
   vi.useFakeTimers({ toFake: ['Date'] })
   try {
-    const { world, fetchShops, onShopsError } = setup({ fetchShops: vi.fn((_c: LatLng) => Promise.reject(new Error('x'))) })
+    const { world, fetchHotpepper, onShopsError } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.reject(new Error('x'))) })
     world.onPosition(home)
     await flush()
     expect(onShopsError).toHaveBeenCalledTimes(1)
     world.onPosition(north(100))
     world.onPosition(north(600)) // 60秒たつまでは動いても投げない
-    expect(fetchShops).toHaveBeenCalledTimes(1)
+    expect(fetchHotpepper).toHaveBeenCalledTimes(1)
     vi.advanceTimersByTime(59000)
     world.onPosition(north(600))
-    expect(fetchShops).toHaveBeenCalledTimes(1)
+    expect(fetchHotpepper).toHaveBeenCalledTimes(1)
     vi.advanceTimersByTime(1000)
     world.onPosition(north(600))
-    expect(fetchShops).toHaveBeenCalledTimes(2)
+    expect(fetchHotpepper).toHaveBeenCalledTimes(2)
   } finally {
     vi.useRealTimers()
   }
 })
 
-test('fetchShops には現在地が渡り、自宅は渡らない', () => {
-  const { world, fetchShops } = setup()
+test('fetchHotpepper には現在地が渡り、自宅は渡らない', () => {
+  const { world, fetchHotpepper } = setup()
   const p = north(300)
   world.onPosition(p)
-  expect(fetchShops).toHaveBeenCalledWith(p)
+  expect(fetchHotpepper).toHaveBeenCalledWith(p)
 })
 
 test('晴れた所のお店が建物として置かれ、置き方は店ごとに1回だけ計算する', async () => {
@@ -169,7 +181,7 @@ test('晴れた所のお店が建物として置かれ、置き方は店ごと�
   await flush()
   expect(shopLayer.setShops).toHaveBeenLastCalledWith([expect.objectContaining({ id: 's1', kind: 'ramen' })])
   world.onPosition(north(15))
-  expect(querySourceFeatures).toHaveBeenCalledTimes(2) // 道路1回・建物1回
+  expect(featureReads()).toBe(2) // 道路1回・建物1回
 })
 
 test('道も建物も無い店は、タイルが読めていれば南向き14mで1回だけ置く', async () => {
@@ -180,7 +192,7 @@ test('道も建物も無い店は、タイルが読めていれば南向き14m�
   expect(shopLayer.setShops).toHaveBeenLastCalledWith([expect.objectContaining({ id: 's1', facingDeg: 180, sizeM: 14 })])
   world.onPosition(north(15))
   world.onPosition(north(30))
-  expect(querySourceFeatures).toHaveBeenCalledTimes(2)
+  expect(featureReads()).toBe(2)
 })
 
 test('タイル読み込み中は何も覚えず、idle で置く', async () => {
@@ -207,9 +219,22 @@ test('10m 未満の位置更新ではお店を計算し直さない', async () =
   expect(shopLayer.setShops).toHaveBeenLastCalledWith([expect.objectContaining({ id: 's1' })])
 })
 
+test('地図のお店の読み直しは 100m 以上動いたときだけ（10m〜99m では poi を読み直さない）', async () => {
+  const { world } = setup()
+  world.onPosition(home)
+  await flush()
+  const n = poiReads()
+  for (const m of [15, 40, 80, 99]) world.onPosition(north(m)) // 10m ごとの見える・見えないの更新は走る
+  expect(poiReads()).toBe(n)
+  world.onPosition(north(110))
+  expect(poiReads()).toBe(n + 1)
+  world.onPosition(north(150)) // 前回の読み直しからは 40m
+  expect(poiReads()).toBe(n + 1)
+})
+
 test('dispose で層を外し、遅れて届いた結果は無視する', async () => {
   let resolve: (s: Shop[]) => void = () => {}
-  const { world, map } = setup({ fetchShops: vi.fn((_c: LatLng) => new Promise<Shop[]>((r) => { resolve = r })) })
+  const { world, map } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => new Promise<Shop[]>((r) => { resolve = r })) })
   world.onPosition(home)
   world.dispose()
   expect(map.removeLayer).toHaveBeenCalledWith('fog')
@@ -218,4 +243,270 @@ test('dispose で層を外し、遅れて届いた結果は無視する', async 
   resolve([shop])
   await flush()
   expect(shopLayer.setShops).not.toHaveBeenCalled()
+})
+
+const poi = (id: number, name: string, x: number, y: number) => ({
+  id, geometry: { type: 'Point', coordinates: ll(x, y) }, properties: { subclass: 'cafe', name },
+})
+
+test('地図の店とホットペッパーの同じ店は1軒にまとまり、hp: の id になる', async () => {
+  tiles = { transportation: [roadFeature], building: [], poi: [poi(7, 'カフェ花', 0, 20)] }
+  const hp: Shop = { id: 'hp:J1', name: 'カフェ花', lat: home.lat + 30 / M, lng: home.lng, kind: 'cafe', details: null, mapId: null }
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([hp])) })
+  world.onPosition(home)
+  expect(vi.mocked(shopLayer.setShops).mock.lastCall![0]).toEqual([expect.objectContaining({ id: 'osm:7' })])
+  await flush()
+  const out = vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]
+  expect(out).toHaveLength(1)
+  expect(out[0].id).toBe('hp:J1')
+  expect(world.shopsNear().map((s) => s.id)).toEqual(['hp:J1'])
+})
+
+test('ホットペッパーが失敗しても地図の店は出て、onShopsError は1回', async () => {
+  tiles = { transportation: [roadFeature], building: [], poi: [poi(7, 'カフェ花', 0, 20)] }
+  const { world, onShopsError } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.reject(new Error('x'))) })
+  world.onPosition(home)
+  await flush()
+  expect(onShopsError).toHaveBeenCalledTimes(1)
+  expect(vi.mocked(shopLayer.setShops).mock.lastCall![0]).toEqual([expect.objectContaining({ id: 'osm:7' })])
+})
+
+test('shopsEnabled: false でも地図の店は出る', () => {
+  tiles = { transportation: [roadFeature], building: [], poi: [poi(7, 'カフェ花', 0, 20)] }
+  const { world, onShopsError } = setup({ shopsEnabled: false })
+  world.onPosition(home)
+  expect(vi.mocked(shopLayer.setShops).mock.lastCall![0]).toEqual([expect.objectContaining({ id: 'osm:7' })])
+  expect(onShopsError).not.toHaveBeenCalled()
+})
+
+const poiReads = () => querySourceFeatures.mock.calls.filter((c) => c[1].sourceLayer === 'poi').length
+
+test('同じ位置で idle が2回来ても、poi を読むのは1回だけ', async () => {
+  const { world } = setup()
+  world.onPosition(home)
+  await flush()
+  const n = poiReads()
+  idleHandler!()
+  idleHandler!()
+  expect(poiReads()).toBe(n)
+})
+
+test('タイル読み込み中は poi を読まず、読めたあとの idle で読む', async () => {
+  tilesLoaded = false
+  const { world } = setup()
+  world.onPosition(home)
+  await flush()
+  expect(poiReads()).toBe(0)
+  tilesLoaded = true
+  idleHandler!()
+  expect(poiReads()).toBe(1)
+})
+
+test('一度読んだあと、同じ場所でタイルが読み込み直しになったら、読めたあとの idle で poi を読み直す', async () => {
+  const { world } = setup()
+  world.onPosition(home)
+  await flush()
+  tilesLoaded = false
+  world.onPosition(north(5))
+  idleHandler!()
+  const n = poiReads()
+  tilesLoaded = true
+  idleHandler!()
+  expect(poiReads()).toBe(n + 1)
+})
+
+const far: Shop = { id: 'far', name: 'f', lat: home.lat + 400 / M, lng: home.lng, kind: 'cafe', details: null, mapId: null }
+
+test('loadProgress の晴れたセルにある店が見える', async () => {
+  const cell = cellOf(far)
+  const { world } = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([far])), loadProgress: vi.fn(() => Promise.resolve({ cells: [cell], checkedShopIds: new Set(['x']) })) })
+  world.onPosition(home)
+  await flush()
+  expect(world.shopsNear().map((s) => s.id)).toEqual(['far'])
+  expect(world.checked().has('x')).toBe(true)
+})
+
+test('済みの判定は店の id か合体前の地図の id のどちらでもよい', async () => {
+  const merged: Shop = { ...far, id: 'hp:M', mapId: 'osm:7' }
+  const { world } = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([merged])), loadProgress: vi.fn(() => Promise.resolve({ cells: [cellOf(far)], checkedShopIds: new Set(['osm:7']) })) })
+  world.onPosition(home)
+  await flush()
+  expect(world.checked().has('hp:M')).toBe(true)
+  const other = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([merged])) })
+  other.world.onPosition(home)
+  await flush()
+  expect(other.world.checked().has('hp:M')).toBe(false)
+  other.world.markChecked('hp:M', 'osm:7')
+  expect(other.world.checked()).toEqual(new Set(['hp:M', 'osm:7']))
+})
+
+test('loadProgress が失敗しても落ちず、onShopsError も呼ばない', async () => {
+  const { world, onShopsError } = setup({ loadProgress: vi.fn(() => Promise.reject(new Error('x'))) })
+  world.onPosition(home)
+  await flush()
+  expect(onShopsError).not.toHaveBeenCalled()
+  expect(fogLayer.setClumps).toHaveBeenCalledTimes(1)
+})
+
+test('addCleared は新しいセルがあれば波つきで setClumps、空なら何もしない', async () => {
+  const { world } = setup()
+  world.onPosition(home)
+  fogLayer.setClumps.mockClear()
+  world.addCleared([], far)
+  expect(fogLayer.setClumps).not.toHaveBeenCalled()
+  world.addCleared([cellOf(north(300))], north(300))
+  expect(fogLayer.setClumps).toHaveBeenCalledTimes(1)
+  const cs = fogLayer.setClumps.mock.lastCall![1] as { start: number }[]
+  expect(cs.length).toBeGreaterThan(0)
+  expect(cs.some((c) => c.start >= 0)).toBe(true)
+})
+
+// 波は from から広がる: 変わる塊のうち from に近いものほど start が早い
+type AC = { x: number; y: number; start: number }
+const waveOrder = (cs: AC[], fx: number, fy: number) => {
+  const moving = cs.filter((c) => c.start >= 0).map((c) => ({ d: Math.hypot(c.x - fx, c.y - fy), start: c.start }))
+  moving.sort((a, b) => a.d - b.d)
+  return { nearest: moving[0], farthest: moving[moving.length - 1] }
+}
+const cellsAround = (c: LatLng): Cell[] => {
+  const o = cellOf(c)
+  const out: Cell[] = []
+  for (let x = -4; x <= 4; x++) for (let y = -4; y <= 4; y++) out.push({ x: o.x + x, y: o.y + y })
+  return out
+}
+
+test('波は from から広がる（近い塊ほど start が小さい）', () => {
+  const { world } = setup()
+  world.onPosition(home)
+  const from = north(300)
+  world.addCleared(cellsAround(from), from)
+  const cs = fogLayer.setClumps.mock.lastCall![1] as AC[]
+  const o = fogLayer.setClumps.mock.lastCall![0] as LatLng
+  const f = { x: (from.lng - o.lng) * LNG_M, y: (from.lat - o.lat) * M }
+  const { nearest, farthest } = waveOrder(cs, f.x, f.y)
+  expect(nearest.d).toBeLessThan(farthest.d)
+  expect(nearest.start).toBeLessThan(farthest.start)
+})
+
+test('雲の塊の原点が変わったあとの addCleared でも、from は新しい原点で換算される', () => {
+  const { world } = setup()
+  world.onPosition(home)
+  world.onPosition(north(720)) // 置き直し
+  const o2 = fogLayer.setClumps.mock.lastCall![0] as LatLng
+  expect(o2.lat).toBeCloseTo(north(720).lat, 6)
+  const from = north(900)
+  world.addCleared(cellsAround(from), from)
+  const cs = fogLayer.setClumps.mock.lastCall![1] as AC[]
+  const f = { x: (from.lng - o2.lng) * LNG_M, y: (from.lat - o2.lat) * M }
+  const { nearest, farthest } = waveOrder(cs, f.x, f.y)
+  expect(nearest.start).toBeLessThan(farthest.start)
+})
+
+// 霧の中の店を北 y m に置き、自分は home の北 0m に立つ（home: null で全部が霧の中）
+const fogShop = (id: string, dy: number, dx = 0): Shop => ({ id, name: id, lat: home.lat + dy / M, lng: home.lng + dx / LNG_M, kind: 'cafe', details: null, mapId: null })
+const withClock = async (shopsIn: Shop[], run: (world: ReturnType<typeof attachWorld>, tick: (ms: number) => void) => void | Promise<void>) => {
+  let now = 1000
+  const spy = vi.spyOn(performance, 'now').mockImplementation(() => now)
+  try {
+    const { world } = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve(shopsIn)) })
+    world.onPosition(home)
+    await flush()
+    await run(world, (ms) => { now += ms })
+  } finally {
+    spy.mockRestore()
+  }
+}
+
+test('薄さは目標へ約3/秒で近づく（100ms で目標の約0.3）', async () => {
+  await withClock([fogShop('a', 30)], (world, tick) => {
+    tick(0)
+    world.onPosition(home) // 距離30m: 目標は最大(1)
+    tick(100)
+    world.onPosition(home)
+    const spots = fogLayer.setThin.mock.lastCall![0] as { amount: number }[]
+    expect(spots[0].amount).toBeGreaterThan(0.25)
+    expect(spots[0].amount).toBeLessThan(0.35)
+  })
+})
+
+test('薄くする店は近い4軒まで', async () => {
+  const list = [10, 15, 20, 25, 30].map((d, i) => fogShop(`n${i}`, d))
+  await withClock(list, (world, tick) => {
+    tick(100)
+    world.onPosition(home)
+    expect(fogLayer.setThin.mock.lastCall![0]).toHaveLength(4)
+  })
+})
+
+test('晴れたセルの店には薄い所を作らない', async () => {
+  const s = fogShop('c', 20)
+  await withClock([s], (world, tick) => {
+    world.addCleared([cellOf(s)], s)
+    tick(100)
+    world.onPosition(home)
+    expect(fogLayer.setThin.mock.lastCall![0]).toEqual([])
+  })
+})
+
+test('変化がなければ setThin を送り直さない', async () => {
+  await withClock([fogShop('a', 20)], (world, tick) => {
+    // 目標に十分近づくまで進める
+    for (let i = 0; i < 20; i++) { tick(500); world.onPosition(home) }
+    fogLayer.setThin.mockClear()
+    tick(16)
+    world.onPosition(home)
+    tick(16)
+    world.onPosition(home)
+    expect(fogLayer.setThin).not.toHaveBeenCalled()
+  })
+})
+
+test('3m 未満の移動では店の全件走査をしない', async () => {
+  const many = Array.from({ length: 50 }, (_, i) => fogShop(`m${i}`, 200 + i))
+  await withClock(many, (world, tick) => {
+    tick(16)
+    world.onPosition(home)
+    const n0 = vi.mocked(distanceMeters).mock.calls.length
+    for (let i = 1; i <= 5; i++) { tick(16); world.onPosition(north(i * 0.5)) }
+    expect(vi.mocked(distanceMeters).mock.calls.length - n0).toBeLessThan(50)
+  })
+})
+
+test('薄くしていた店のセルが晴れたら、0 へなめらかに戻してから外す', async () => {
+  const s = fogShop('a', 20)
+  await withClock([s], (world, tick) => {
+    for (let i = 0; i < 10; i++) { tick(500); world.onPosition(home) }
+    const before = (fogLayer.setThin.mock.lastCall![0] as { amount: number }[])[0].amount
+    expect(before).toBeGreaterThan(0.9)
+    world.addCleared([cellOf(s)], s)
+    tick(100)
+    world.onPosition(home)
+    const mid = fogLayer.setThin.mock.lastCall![0] as { amount: number }[]
+    expect(mid).toHaveLength(1) // すぐには消えない
+    expect(mid[0].amount).toBeLessThan(before)
+    expect(mid[0].amount).toBeGreaterThan(0.5)
+    for (let i = 0; i < 20; i++) { tick(500); world.onPosition(home) }
+    expect(fogLayer.setThin).toHaveBeenLastCalledWith([])
+  })
+})
+
+test('霧の中の店が40mにあれば setThin(amount>0)、70mでは setThin([])', async () => {
+  let now = 1000
+  const spy = vi.spyOn(performance, 'now').mockImplementation(() => now)
+  try {
+    const f: Shop = { ...far, lat: home.lat + 400 / M }
+    const { world } = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([f])) })
+    world.onPosition(north(360))
+    await flush()
+    now += 500
+    world.onPosition(north(360))
+    const spots = fogLayer.setThin.mock.lastCall![0] as { amount: number }[]
+    expect(spots).toHaveLength(1)
+    expect(spots[0].amount).toBeGreaterThan(0)
+    now += 500
+    world.onPosition(north(330))
+    expect(fogLayer.setThin).toHaveBeenLastCalledWith([])
+  } finally {
+    spy.mockRestore()
+  }
 })

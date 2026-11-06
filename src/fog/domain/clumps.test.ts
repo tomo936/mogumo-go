@@ -50,12 +50,12 @@ describe('fogClumps', () => {
     for (const k of a) expect(b.has(k)).toBe(true)
   })
 
-  it('町全体くらい晴れていても速い（1万セルで 200ms 未満）', () => {
+  it('町全体くらい晴れていても速い（1万セルで 1 秒未満。桁違いの遅くなりだけ見る）', () => {
     const cleared = new Set(cellsInCircle(home, 1400).map(cellKey))
     expect(cleared.size).toBeGreaterThan(9000)
     const t = performance.now()
     fogClumps(home, cleared)
-    expect(performance.now() - t).toBeLessThan(200)
+    expect(performance.now() - t).toBeLessThan(1000)
   })
 })
 

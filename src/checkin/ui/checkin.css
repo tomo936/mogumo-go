@@ -1,0 +1,157 @@
+.shop-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 18px rgba(74, 168, 255, 0.25);
+  color: #1f2a37;
+}
+.shop-sheet__close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: #eef6ff;
+  color: #4aa8ff;
+  font-size: 20px;
+}
+.shop-sheet__head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding-right: 40px;
+}
+.shop-sheet__badge {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px #dbeafe;
+}
+.shop-sheet__name {
+  margin: 0;
+  font-size: 18px;
+}
+.shop-sheet__open,
+.shop-sheet__distance {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #5b6b7b;
+}
+.shop-sheet__error {
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #fff0f0;
+  color: #c0392b;
+  font-size: 13px;
+}
+.shop-sheet__go {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #4aa8ff;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+}
+.shop-sheet__go:disabled {
+  background: #cfe3f7;
+  color: #6b8299;
+}
+
+/* チェックイン演出 */
+.checkin-effect {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+.checkin-effect__confetti {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.checkin-effect__banner {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  background: #3ecf8e;
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(62, 207, 142, 0.45);
+  opacity: 0;
+  animation: checkin-banner-in 0.35s 0.6s cubic-bezier(0.2, 1.2, 0.4, 1) forwards;
+}
+.checkin-effect__check {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #fff;
+  color: #3ecf8e;
+  font-size: 20px;
+  font-weight: 900;
+}
+.checkin-effect__title {
+  flex: 1;
+  font-size: 20px;
+  font-weight: 800;
+}
+.checkin-effect__coin {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+}
+.checkin-effect__coin-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffd23f;
+  box-shadow: inset 0 0 0 3px #ffb703;
+}
+@keyframes checkin-banner-in {
+  from { opacity: 0; transform: translateY(30px) scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .checkin-effect__banner { animation: none; opacity: 1; }
+}
+
+/* 済みの印（地図のお店の上） */
+.check-mark {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  color: #3ecf8e;
+  font-size: 14px;
+  font-weight: 900;
+  box-shadow: 0 1px 4px rgba(31, 42, 55, 0.3);
+  pointer-events: none;
+}

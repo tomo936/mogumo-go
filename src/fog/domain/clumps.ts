@@ -72,7 +72,7 @@ export function fogClumps(origin: LatLng, cleared: Cleared): Clump[] {
 }
 
 // 画面の奥にある塊から順に並べる。画面の上（奥）は、地図の向き bearing の方角
-export function drawOrder(clumps: readonly Clump[], bearingDeg: number): Clump[] {
+export function drawOrder<T extends Clump>(clumps: readonly T[], bearingDeg: number): T[] {
   const b = (bearingDeg * Math.PI) / 180
   const ux = Math.sin(b)
   const uy = Math.cos(b)

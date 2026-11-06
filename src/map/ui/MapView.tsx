@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef } from 'react'
+import type { Ref } from 'react'
 import { Map as MapLibreMap } from 'maplibre-gl'
 import '../infra/maplibreWorker.ts'
 import type { GeoJSONSource } from 'maplibre-gl'
@@ -14,24 +15,66 @@ import { circlePolygon, distanceMeters } from '../domain/geo.ts'
 import type { LatLng } from '../domain/geo.ts'
 import { watchLocation } from '../infra/location.ts'
 import type { LocationEvent } from '../domain/locationStatus.ts'
-import { fetchShops, shopSourceEnabled } from '../../shops/infra/overpass.ts'
+import { fetchHotpepperShops, shopSourceEnabled } from '../../shops/infra/hotpepper.ts'
+import { loadProgress } from '../../checkin/infra/checkinApi.ts'
+import type { Shop } from '../../shops/domain/shop.ts'
+import type { Cell } from '../../fog/domain/grid.ts'
 import { attachWorld } from './worldLayers.ts'
 import { nextBearing } from '../domain/rotate.ts'
 import { isStale, judgeFix, shouldMoveCamera, stepToward } from '../domain/smoothing.ts'
 import type { Fix } from '../domain/smoothing.ts'
 
-type Props = { onStatus: (event: LocationEvent) => void; home: LatLng | null; onShopsError: () => void }
+export type MapViewHandle = { checkin(shop: Shop, newCells: Cell[]): void }
+
+type Props = {
+  onStatus: (event: LocationEvent) => void
+  home: LatLng | null
+  onShopsError: () => void
+  onSelectShop: (shop: Shop | null) => void
+  onPosition: (me: LatLng) => void // 1秒に4回まで
+  ref?: Ref<MapViewHandle>
+}
+
+const TAP_MAX_MOVE_PX = 10
+const TAP_MAX_MS = 300
+const POSITION_EVERY_MS = 250
+const TAP_ZOOM_STEP = 0.6
+const CHECKIN_WAVE_DELAY_MS = 900 // 紙吹雪のあと、霧の波が走り出すまで
 
 // 地図・カメラ・位置は MapLibre と ref だけで持ち、React の再描画を起こさない。
 // React に上げるのは位置情報の出来事（onStatus）だけ。
-export function MapView({ onStatus, home, onShopsError }: Props) {
+export function MapView({ onStatus, home, onShopsError, onSelectShop, onPosition, ref }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const onStatusRef = useRef(onStatus)
   const onShopsErrorRef = useRef(onShopsError)
+  const onSelectShopRef = useRef(onSelectShop)
+  const onPositionRef = useRef(onPosition)
+  const worldRef = useRef<ReturnType<typeof attachWorld> | null>(null)
   useLayoutEffect(() => {
     onStatusRef.current = onStatus
     onShopsErrorRef.current = onShopsError
+    onSelectShopRef.current = onSelectShop
+    onPositionRef.current = onPosition
   })
+  // チェックイン演出: 約0.9秒後に済みの印を付け、新しく晴れるセルを足して波を走らせる（外すときに取り消す）
+  const checkinTimers = useRef(new Set<ReturnType<typeof setTimeout>>())
+  useImperativeHandle(ref, () => ({
+    checkin: (shop, newCells) => {
+      const t = setTimeout(() => {
+        checkinTimers.current.delete(t)
+        worldRef.current?.markChecked(shop.id, shop.mapId)
+        worldRef.current?.addCleared(newCells, shop)
+      }, CHECKIN_WAVE_DELAY_MS)
+      checkinTimers.current.add(t)
+    },
+  }), [])
+  useEffect(() => {
+    const timers = checkinTimers.current
+    return () => {
+      for (const t of timers) clearTimeout(t)
+      timers.clear()
+    }
+  }, [])
 
   useEffect(() => {
     const container = containerRef.current!
@@ -75,10 +118,12 @@ export function MapView({ onStatus, home, onShopsError }: Props) {
       })
       s.world = attachWorld(map, {
         home,
-        fetchShops,
+        fetchHotpepper: fetchHotpepperShops,
         shopsEnabled: shopSourceEnabled(import.meta.env.DEV, window.location.hostname),
         onShopsError: () => onShopsErrorRef.current(),
+        loadProgress,
       })
+      worldRef.current = s.world
       if (s.current) s.world.onPosition(s.current)
       s.loaded = true
       s.drawn = null
@@ -111,16 +156,33 @@ export function MapView({ onStatus, home, onShopsError }: Props) {
 
     // 1本指の横なぞりで回す（2本指のときはピンチのズームに任せる）
     const pointers = new Map<number, number>()
-    const onDown = (e: PointerEvent) => pointers.set(e.pointerId, e.clientX)
+    // タップの判定用: 押した位置・時刻と、途中で2本目が触れたか
+    const downs = new Map<number, { x: number; y: number; t: number; multi: boolean }>()
+    const onDown = (e: PointerEvent) => {
+      pointers.set(e.pointerId, e.clientX)
+      downs.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now(), multi: false })
+      if (pointers.size >= 2) for (const d of downs.values()) d.multi = true
+    }
     const onMove = (e: PointerEvent) => {
       const prevX = pointers.get(e.pointerId)
       if (prevX === undefined) return
       pointers.set(e.pointerId, e.clientX)
       if (pointers.size === 1) map.setBearing(nextBearing(map.getBearing(), e.clientX - prevX))
     }
-    const onUp = (e: PointerEvent) => pointers.delete(e.pointerId)
+    const onUp = (e: PointerEvent) => {
+      const d = downs.get(e.pointerId)
+      downs.delete(e.pointerId)
+      pointers.delete(e.pointerId)
+      if (e.type !== 'pointerup' || !d || d.multi || !s.world) return
+      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > TAP_MAX_MOVE_PX || performance.now() - d.t > TAP_MAX_MS) return
+      const rect = container.getBoundingClientRect()
+      const id = s.world.pick({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+      const shop = id ? s.world.shopsNear().find((sh) => sh.id === id) ?? null : null
+      onSelectShopRef.current(shop)
+      if (shop) map.easeTo({ zoom: Math.min(map.getZoom() + TAP_ZOOM_STEP, MAX_ZOOM), duration: 500 })
+    }
     // 毎コマ、表示位置を目標へ寄せてカメラを動かす
-    const loop = { frame: 0, prevTime: performance.now() }
+    const loop = { frame: 0, prevTime: performance.now(), positionAt: 0 }
     const tick = (now: number) => {
       const dt = now - loop.prevTime
       loop.prevTime = now
@@ -128,6 +190,10 @@ export function MapView({ onStatus, home, onShopsError }: Props) {
         const c = stepToward(s.current, s.target, dt)
         s.current = c
         s.world?.onPosition(c)
+        if (now - loop.positionAt >= POSITION_EVERY_MS) {
+          loop.positionAt = now
+          onPositionRef.current(c)
+        }
         if (shouldMoveCamera(s.shown, c, pointers.size >= 2 || map.isZooming())) {
           map.jumpTo({ center: [c.lng, c.lat] })
           s.shown = c
@@ -156,6 +222,7 @@ export function MapView({ onStatus, home, onShopsError }: Props) {
       container.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
+      worldRef.current = null
       s.world?.dispose()
       map.remove()
     }

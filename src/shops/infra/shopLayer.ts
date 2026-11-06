@@ -6,6 +6,7 @@ import { localFrame } from '../../map/domain/geo.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
 import type { ShopKind } from '../domain/shop.ts'
 import { threeLayer } from '../../lib/threeLayer.ts'
+import { pickShop } from './pickShop.ts'
 
 export type PlacedShop = { id: string; kind: ShopKind; lat: number; lng: number; facingDeg: number; sizeM: number }
 
@@ -16,7 +17,10 @@ const urlOf = (kind: ShopKind) => URLS[`../../assets/shops/${kind}.glb`]
 type Part = { geo: THREE.BufferGeometry; mat: THREE.Material | THREE.Material[]; local: THREE.Matrix4 }
 type Model = { parts: Part[]; unit: number } // unit: 模型の幅（東西・南北の大きい方）
 
-export function createShopLayer(): CustomLayerInterface & { setShops(shops: PlacedShop[]): void } {
+export function createShopLayer(): CustomLayerInterface & {
+  setShops(shops: PlacedShop[]): void
+  pick(point: { x: number; y: number }): string | null
+} {
   let scene: THREE.Scene | null = null
   let map: MapLibreMap | null = null
   const models = new Map<ShopKind, Model | null>() // null = 読み込み中か失敗
@@ -129,6 +133,13 @@ export function createShopLayer(): CustomLayerInterface & { setShops(shops: Plac
       shops = next
       origin = next.length ? { lat: next[0].lat, lng: next[0].lng } : null
       build()
+    },
+    // 画面の点で押された店の id（建物が出ている店だけ）
+    pick(point) {
+      if (!map) return null
+      const m = map
+      const drawn = shops.filter((s) => models.get(s.kind))
+      return pickShop(drawn, point, (p) => m.project([p.lng, p.lat]))
     },
   }
 }
