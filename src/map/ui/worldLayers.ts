@@ -1,7 +1,12 @@
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import { FOG_REBUILD_M } from '../../fog/config.ts'
-import { clearedFromHome } from '../../fog/domain/clearing.ts'
+import { THIN_START_M } from '../../fog/config.ts'
+import { clearedFromHome, isClearedAt } from '../../fog/domain/clearing.ts'
 import { fogClumps } from '../../fog/domain/clumps.ts'
+import type { Clump } from '../../fog/domain/clumps.ts'
+import { cellKey } from '../../fog/domain/grid.ts'
+import type { Cell } from '../../fog/domain/grid.ts'
+import { thinAmount, waveClumps } from '../../fog/domain/wave.ts'
 import { createFogLayer } from '../../fog/infra/fogLayer.ts'
 import { SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
 import { mergeShops } from '../../shops/domain/merge.ts'
@@ -21,7 +26,12 @@ type Deps = {
   fetchHotpepper: (center: LatLng) => Promise<Shop[]>
   shopsEnabled: boolean
   onShopsError: () => void
+  loadProgress: () => Promise<{ cells: Cell[]; checkedShopIds: Set<string> }>
 }
+
+const THIN_EASE_PER_S = 3 // 薄さが目標に近づく速さ（1秒あたり）
+const THIN_MAX_SPOTS = 4
+const THIN_EPS = 0.01
 
 // 霧（雲の塊）とお店の建物を地図に載せ、位置が変わるたびに更新する
 type WorldMap = MapLibreMap
@@ -32,11 +42,25 @@ const PLAYER_LAYERS = ['me-circle-fill', 'me-circle-line', 'me-shadow']
 // 店ごとの置き方。main が輪郭に合わせたとき、同じ輪郭を先に使う店があれば free（輪郭なし）を使う
 type Placed = { main: PlacedShop; free: PlacedShop | null }
 
-export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng): void; shopsNear(): Shop[]; dispose(): void } {
+type World = {
+  onPosition(p: LatLng): void
+  shopsNear(): Shop[]
+  addCleared(cells: Cell[], from: LatLng): void
+  markChecked(shopId: string): void
+  checked(): ReadonlySet<string>
+  dispose(): void
+}
+
+export function attachWorld(map: WorldMap, deps: Deps): World {
   const cleared = clearedFromHome(deps.home)
   const fogLayer = createFogLayer()
   const shopLayer = createShopLayer()
   let fogCenter: LatLng | null = null // 雲の塊を置いたときの現在地
+  let lastClumps: Clump[] = [] // 層に最後に渡した雲の塊（波の「変わる前」）
+  const checkedIds = new Set<string>()
+  const thinShown = new Map<string, number>() // 店ごとの、いま見せている薄さ
+  let thinSent: { id: string; amount: number }[] | null = null // 層に最後に渡した薄さ
+  let lastTickMs: number | null = null
   let fetchCenter: LatLng | null = null
   let fetching = false
   let failedAt: number | null = null
@@ -96,6 +120,42 @@ export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng):
     shopLayer.setShops(out)
   }
 
+  const setFog = (origin: LatLng) => {
+    lastClumps = fogClumps(origin, cleared)
+    fogLayer.setClumps(origin, lastClumps)
+    fogCenter = origin
+    thinSent = null // 原点が変わったので薄さも送り直す
+  }
+
+  // 霧の中でお店の近くにいるとき、そのまわりの雲を薄くする
+  const updateThin = (p: LatLng) => {
+    const nowMs = performance.now()
+    const dt = lastTickMs === null ? 0 : Math.max(0, (nowMs - lastTickMs) / 1000)
+    lastTickMs = nowMs
+    const cands = shops
+      .map((shop) => ({ shop, d: distanceMeters(p, shop) }))
+      .filter(({ shop, d }) => d <= THIN_START_M && !isClearedAt(cleared, shop))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, THIN_MAX_SPOTS)
+    const keep = new Set(cands.map((c) => c.shop.id))
+    for (const id of thinShown.keys()) if (!keep.has(id)) thinShown.delete(id)
+    const k = Math.min(1, THIN_EASE_PER_S * dt)
+    const next = cands.map(({ shop, d }) => {
+      const cur = thinShown.get(shop.id) ?? 0
+      const amount = cur + (thinAmount(d) - cur) * k
+      thinShown.set(shop.id, amount)
+      return { id: shop.id, amount, shop }
+    })
+    const same =
+      thinSent !== null &&
+      thinSent.length === next.length &&
+      next.every((n, i) => thinSent![i].id === n.id && Math.abs(thinSent![i].amount - n.amount) <= THIN_EPS)
+    if (same || !fogCenter) return
+    thinSent = next.map(({ id, amount }) => ({ id, amount }))
+    const frame = localFrame(fogCenter)
+    fogLayer.setThin(next.map(({ shop, amount }) => ({ ...frame.to(shop), amount })))
+  }
+
   const fetchAround = (p: LatLng) => {
     fetching = true
     fetchCenter = p
@@ -127,6 +187,20 @@ export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng):
   }
   map.on('idle', onIdle)
 
+  // 保存済みの晴れたセルを足す（波なし）。失敗したら自宅まわりだけのまま
+  deps.loadProgress().then(
+    ({ cells, checkedShopIds }) => {
+      if (disposed) return
+      const before = cleared.size
+      for (const c of cells) cleared.add(cellKey(c))
+      for (const id of checkedShopIds) checkedIds.add(id)
+      if (cleared.size === before) return
+      if (fogCenter) setFog(fogCenter)
+      if (last) refreshShops(last)
+    },
+    () => {},
+  )
+
   return {
     onPosition(p) {
       if (disposed) return
@@ -135,16 +209,38 @@ export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng):
         const below = PLAYER_LAYERS.find((id) => map.getLayer(id))
         map.addLayer(fogLayer, below)
         map.addLayer(shopLayer, below) // お店は霧より上
-        fogLayer.setClumps(p, fogClumps(p, cleared))
-        fogCenter = p
+        setFog(p)
       } else if (distanceMeters(fogCenter, p) >= FOG_REBUILD_M) {
-        fogLayer.setClumps(p, fogClumps(p, cleared))
-        fogCenter = p
+        setFog(p)
       }
+      updateThin(p)
       if (canFetch(p)) fetchAround(p)
       if (!refreshedAt || distanceMeters(refreshedAt, p) >= SHOP_REFRESH_M) refreshShops(p)
     },
     shopsNear: () => near,
+    addCleared(cells, from) {
+      if (disposed) return
+      let added = false
+      for (const c of cells) {
+        const k = cellKey(c)
+        if (!cleared.has(k)) {
+          cleared.add(k)
+          added = true
+        }
+      }
+      if (!added) return
+      if (fogCenter) {
+        const before = lastClumps
+        const after = fogClumps(fogCenter, cleared)
+        fogLayer.setClumps(fogCenter, waveClumps(before, after, localFrame(fogCenter).to(from), performance.now() / 1000))
+        lastClumps = after
+      }
+      if (last) refreshShops(last)
+    },
+    markChecked(shopId) {
+      checkedIds.add(shopId)
+    },
+    checked: () => checkedIds,
     dispose() {
       disposed = true
       map.off('idle', onIdle)

@@ -2,9 +2,11 @@ import { beforeEach, expect, test, vi } from 'vitest'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import type { Shop } from '../../shops/domain/shop.ts'
 import type { PlacedShop } from '../../shops/infra/shopLayer.ts'
+import type { Cell } from '../../fog/domain/grid.ts'
+import { cellOf } from '../../fog/domain/grid.ts'
 import type { LatLng } from '../domain/geo.ts'
 
-const fogLayer = { id: 'fog', setClumps: vi.fn() }
+const fogLayer = { id: 'fog', setClumps: vi.fn(), setThin: vi.fn() }
 const shopLayer = { id: 'shops-3d', setShops: vi.fn() }
 vi.mock('../../fog/infra/fogLayer.ts', () => ({ createFogLayer: () => fogLayer }))
 vi.mock('../../shops/infra/shopLayer.ts', () => ({ createShopLayer: () => shopLayer }))
@@ -38,6 +40,7 @@ const fakeMap = () => ({
 }) as unknown as MapLibreMap
 // 道路・建物の読み込み回数（お店の poi 読みは数えない）
 const featureReads = () => querySourceFeatures.mock.calls.filter((c) => c[1].sourceLayer !== 'poi').length
+const loadProgress = vi.fn(() => Promise.resolve({ cells: [] as Cell[], checkedShopIds: new Set<string>() }))
 const flush = () => new Promise((r) => setTimeout(r, 0))
 
 beforeEach(() => {
@@ -51,7 +54,7 @@ function setup(over: Partial<Parameters<typeof attachWorld>[1]> = {}) {
   const fetchHotpepper = over.fetchHotpepper ? vi.mocked(over.fetchHotpepper) : vi.fn((_c: LatLng) => Promise.resolve([shop]))
   const onShopsError = vi.fn()
   const map = fakeMap()
-  const world = attachWorld(map, { home, shopsEnabled: true, onShopsError, ...over, fetchHotpepper })
+  const world = attachWorld(map, { home, shopsEnabled: true, onShopsError, loadProgress, ...over, fetchHotpepper })
   return { world, fetchHotpepper, onShopsError, map }
 }
 
@@ -291,4 +294,58 @@ test('一度読んだあと、同じ場所でタイルが読み込み直しに�
   tilesLoaded = true
   idleHandler!()
   expect(poiReads()).toBe(n + 1)
+})
+
+const far: Shop = { id: 'far', name: 'f', lat: home.lat + 400 / M, lng: home.lng, kind: 'cafe', details: null }
+
+test('loadProgress の晴れたセルにある店が見える', async () => {
+  const cell = cellOf(far)
+  const { world } = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([far])), loadProgress: vi.fn(() => Promise.resolve({ cells: [cell], checkedShopIds: new Set(['x']) })) })
+  world.onPosition(home)
+  await flush()
+  expect(world.shopsNear().map((s) => s.id)).toEqual(['far'])
+  expect(world.checked().has('x')).toBe(true)
+})
+
+test('loadProgress が失敗しても落ちず、onShopsError も呼ばない', async () => {
+  const { world, onShopsError } = setup({ loadProgress: vi.fn(() => Promise.reject(new Error('x'))) })
+  world.onPosition(home)
+  await flush()
+  expect(onShopsError).not.toHaveBeenCalled()
+  expect(fogLayer.setClumps).toHaveBeenCalledTimes(1)
+})
+
+test('addCleared は新しいセルがあれば波つきで setClumps、空なら何もしない', async () => {
+  const { world } = setup()
+  world.onPosition(home)
+  fogLayer.setClumps.mockClear()
+  world.addCleared([], far)
+  expect(fogLayer.setClumps).not.toHaveBeenCalled()
+  world.addCleared([cellOf(north(300))], north(300))
+  expect(fogLayer.setClumps).toHaveBeenCalledTimes(1)
+  const cs = fogLayer.setClumps.mock.lastCall![1] as { start: number }[]
+  expect(cs.length).toBeGreaterThan(0)
+  expect(cs.every((c) => c.start >= 0 || c.start === -1)).toBe(true)
+  expect(cs.some((c) => c.start >= 0)).toBe(true)
+})
+
+test('霧の中の店が40mにあれば setThin(amount>0)、70mでは setThin([])', async () => {
+  let now = 1000
+  const spy = vi.spyOn(performance, 'now').mockImplementation(() => now)
+  try {
+    const f: Shop = { ...far, lat: home.lat + 400 / M }
+    const { world } = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([f])) })
+    world.onPosition(north(360))
+    await flush()
+    now += 500
+    world.onPosition(north(360))
+    const spots = fogLayer.setThin.mock.lastCall![0] as { amount: number }[]
+    expect(spots).toHaveLength(1)
+    expect(spots[0].amount).toBeGreaterThan(0)
+    now += 500
+    world.onPosition(north(330))
+    expect(fogLayer.setThin).toHaveBeenLastCalledWith([])
+  } finally {
+    spy.mockRestore()
+  }
 })

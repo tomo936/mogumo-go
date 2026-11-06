@@ -15,6 +15,7 @@ import type { LatLng } from '../domain/geo.ts'
 import { watchLocation } from '../infra/location.ts'
 import type { LocationEvent } from '../domain/locationStatus.ts'
 import { fetchHotpepperShops, shopSourceEnabled } from '../../shops/infra/hotpepper.ts'
+import { loadProgress } from '../../checkin/infra/checkinApi.ts'
 import { attachWorld } from './worldLayers.ts'
 import { nextBearing } from '../domain/rotate.ts'
 import { isStale, judgeFix, shouldMoveCamera, stepToward } from '../domain/smoothing.ts'
@@ -78,6 +79,7 @@ export function MapView({ onStatus, home, onShopsError }: Props) {
         fetchHotpepper: fetchHotpepperShops,
         shopsEnabled: shopSourceEnabled(import.meta.env.DEV, window.location.hostname),
         onShopsError: () => onShopsErrorRef.current(),
+        loadProgress,
       })
       if (s.current) s.world.onPosition(s.current)
       s.loaded = true
