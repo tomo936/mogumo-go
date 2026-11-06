@@ -17,7 +17,47 @@ describe('normalizeName', () => {
   })
 })
 
+describe('normalizeName 追加', () => {
+  it('末尾の 本店/支店/店 を除く', () => {
+    expect(normalizeName('もぐも本店')).toBe(normalizeName('もぐも'))
+    expect(normalizeName('もぐも支店')).toBe(normalizeName('もぐも'))
+    expect(normalizeName('もぐも店')).toBe(normalizeName('もぐも'))
+  })
+  it('長音 ー は残す', () => {
+    expect(normalizeName('ラーメン')).toContain('ー')
+    expect(normalizeName('ラーメン')).not.toBe(normalizeName('ラメン'))
+  })
+})
+
 describe('mergeShops', () => {
+  it('出力順は地図の店が先、余ったホットペッパーが後', () => {
+    const r = mergeShops(
+      [shop('osm:1', 'あ'), shop('osm:2', 'もぐも', 100)],
+      [shop('hp:x', 'ぜんぜん別', 500, det), shop('hp:1', 'もぐも', 100, det)],
+    )
+    expect(r.map((s) => s.id)).toEqual(['osm:1', 'hp:1', 'hp:x'])
+  })
+  it('1つのホットペッパーを2つの地図の店が取らない', () => {
+    const r = mergeShops(
+      [shop('osm:1', 'もぐも'), shop('osm:2', 'もぐも', 3)],
+      [shop('hp:1', 'もぐも', 1, det)],
+    )
+    expect(r.map((s) => s.id)).toEqual(['hp:1', 'osm:2'])
+  })
+  it('2000 × 300 を 150ms 未満で合体', () => {
+    const maps: Shop[] = []
+    const hps: Shop[] = []
+    for (let i = 0; i < 2000; i++) {
+      maps.push({ id: `osm:${i}`, name: `店${i}`, lat: 35 + ((i * 37) % 1000) * M, lng: 139 + ((i * 91) % 1000) * M, kind: 'cafe', details: null })
+    }
+    for (let i = 0; i < 300; i++) {
+      hps.push({ id: `hp:${i}`, name: `店${i}`, lat: 35 + ((i * 53) % 1000) * M, lng: 139 + ((i * 17) % 1000) * M, kind: 'cafe', details: det })
+    }
+    const t = performance.now()
+    const r = mergeShops(maps, hps)
+    expect(performance.now() - t).toBeLessThan(150)
+    expect(r.length).toBeGreaterThanOrEqual(2000)
+  })
   it('同名で20m → 合体（id は hp、位置は地図）', () => {
     const r = mergeShops([shop('osm:1', 'もぐも')], [shop('hp:1', 'もぐも', 20, det)])
     expect(r).toHaveLength(1)
