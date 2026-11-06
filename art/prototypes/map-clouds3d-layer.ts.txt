@@ -1,0 +1,49 @@
+// 確認用（git 管理外）: 霧の範囲いっぱいに 3D の雲を並べる（three.js のインスタンス描画で数百個を1回で描く）
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { MercatorCoordinate } from 'maplibre-gl'
+import type { CustomLayerInterface } from 'maplibre-gl'
+
+export type CloudSpot = { x: number; y: number; w: number; rot: number; kind: number } // 中心からの m（東・北）、幅 m
+
+export function cloudsLayer(origin: [number, number], spots: CloudSpot[], urls: string[]): CustomLayerInterface {
+  let renderer: THREE.WebGLRenderer
+  const camera = new THREE.Camera(), scene = new THREE.Scene()
+  const mc = MercatorCoordinate.fromLngLat(origin, 0)
+  let ready = false
+  return {
+    id: 'clouds3d', type: 'custom', renderingMode: '3d',
+    onAdd(map, gl) {
+      scene.add(new THREE.HemisphereLight('#ffffff', '#cfe3f7', 2.4))
+      const sun = new THREE.DirectionalLight('#ffffff', 1.4); sun.position.set(-0.5, 0.9, 0.4); scene.add(sun)
+      renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true }); renderer.autoClear = false
+      const loader = new GLTFLoader()
+      Promise.all(urls.map((u) => loader.loadAsync(u))).then((gl3) => {
+        gl3.forEach((g, kind) => {
+          let mesh: THREE.Mesh | undefined
+          g.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) mesh = o as THREE.Mesh })
+          if (!mesh) return
+          const geo = mesh.geometry
+          geo.computeBoundingBox(); const bw = geo.boundingBox!.max.x - geo.boundingBox!.min.x
+          const matl = new THREE.MeshLambertMaterial({ vertexColors: true })
+          const mine = spots.filter((s) => s.kind === kind)
+          const inst = new THREE.InstancedMesh(geo, matl, mine.length)
+          const m = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3()
+          mine.forEach((s, i) => {
+            const k = s.w / bw
+            inst.setMatrixAt(i, m.compose(v.set(s.x, 0, -s.y), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), s.rot), sc.set(k, k, k)))
+          })
+          scene.add(inst)
+        })
+        ready = true; map.triggerRepaint()
+      })
+    },
+    render(_gl, args) {
+      if (!ready) return
+      const s = mc.meterInMercatorCoordinateUnits()
+      const l = new THREE.Matrix4().makeTranslation(mc.x, mc.y, mc.z).scale(new THREE.Vector3(s, -s, s)).multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2))
+      camera.projectionMatrix = new THREE.Matrix4().fromArray(args.defaultProjectionData.mainMatrix as unknown as number[]).multiply(l)
+      renderer.resetState(); renderer.render(scene, camera)
+    },
+  }
+}
