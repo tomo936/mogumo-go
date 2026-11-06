@@ -545,7 +545,153 @@ def western():
             for lx in (-0.05, 0.05):
                 for ly in (-0.05, 0.05): cube((0.015, 0.015, 0.21), (x + dx + lx, y + ly, 0.105), CHAIR, bevel=0)
 
-{'ramen': ramen, 'sushi': sushi, 'chinese': chinese, 'yakiniku': yakiniku, 'western': western}[KIND]()
+# ── スイーツの店（見本 cake.webp＝前のデザイン） ───────────────
+def stripes_face(ax, fixed, span, z0, z1, c1, c2, n, depth=0.04):
+    for k in range(n):
+        c = -span / 2 + span * (k + 0.5) / n
+        size = (span / n + 0.002, depth, z1 - z0) if ax == 'x' else (depth, span / n + 0.002, z1 - z0)
+        cube(size, (c, fixed, (z0 + z1) / 2) if ax == 'x' else (fixed, c, (z0 + z1) / 2), c1 if k % 2 == 0 else c2, bevel=0.004, seg=1)
+
+def cake():
+    PINK = mat('#e8a3b4'); PINKW = mat('#f7e3e8'); TRIM = mat('#f6e9ee'); CREAM = mat('#f6e3bd'); CREAM_D = mat('#efd6a6')
+    GLASS = mat('#b9c8e6', 0.3); CURT = mat('#ffffff'); WOOD = mat('#c27e64'); DOOR = mat('#cf8a74'); GLOW = mat('#fff1e2', 0.7, emit=0.4)
+    STRAW = mat('#e45a63'); LEAF = mat('#6fb35a')
+    W, D, H1, H2 = 2.1, 2.0, 1.0, 0.85; FY = -D / 2; zt = H1 + H2
+    cube((W - 0.04, D - 0.04, zt), (0, 0, zt / 2), PINKW, bevel=0.01)
+    for ax, fixed, span in (('x', FY - 0.02, W), ('y', -W / 2 - 0.02, D), ('y', W / 2 + 0.02, D)):
+        stripes_face(ax, fixed, span, 0.1, zt - 0.05, PINK, PINKW, 13)
+    cube((W + 0.1, D + 0.1, 0.12), (0, 0, 0.06), TRIM, bevel=0.03)                             # 足もとの帯
+    cube((W + 0.1, D + 0.1, 0.09), (0, 0, H1), TRIM, bevel=0.035)                              # 階の間の帯（太く丸い）
+    # 屋根: クリーム色の平らなふち＋低い四角すい。ふちの下にぎざぎざの飾り
+    cube((W + 0.3, D + 0.3, 0.12), (0, 0, zt + 0.05), CREAM, bevel=0.05)
+    me = bpy.data.meshes.new('pyr'); bm = bmesh.new()
+    a, b = (W - 0.05) / 2, (D - 0.05) / 2
+    v = [bm.verts.new(p_) for p_ in [(-a, -b, 0), (a, -b, 0), (a, b, 0), (-a, b, 0), (0, 0, 0.55)]]
+    for f in [(0, 1, 4), (1, 2, 4), (2, 3, 4), (3, 0, 4), (3, 2, 1, 0)]: bm.faces.new([v[i] for i in f])
+    bm.to_mesh(me); bm.free(); pyr = bpy.data.objects.new('pyr', me); col.objects.link(pyr); pyr.location = (0, 0, zt + 0.1); finish(pyr, CREAM_D, 0.04, 3)
+    for ax, fixed, span in (('x', FY - 0.12, W + 0.2), ('y', -W / 2 - 0.12, D + 0.2), ('y', W / 2 + 0.12, D + 0.2)):
+        n = int(span / 0.13)
+        for k in range(n):
+            c = -span / 2 + span * (k + 0.5) / n
+            cube((0.08, 0.05, 0.08) if ax == 'x' else (0.05, 0.08, 0.08), (c, fixed, zt - 0.04) if ax == 'x' else (fixed, c, zt - 0.04), TRIM, bevel=0.02)
+    # 丸い四角の窓（白い枠＋カーテン）
+    def win(x, y, z, rz=0.0):
+        objs = [cube((0.46, 0.1, 0.46), (0, 0, 0), TRIM, bevel=0.09, seg=3), cube((0.32, 0.105, 0.32), (0, -0.005, 0), GLASS, bevel=0.05, seg=2)]
+        for sx in (-1, 1): objs.append(cube((0.09, 0.11, 0.3), (sx * 0.1, -0.01, -0.01), CURT, bevel=0.025))
+        xform(objs, M_at(x, y, z, rz=rz))
+    for x in (-0.6, 0.1): win(x, FY - 0.05, H1 + 0.45)
+    for y in (-0.45, 0.45): win(W / 2 + 0.05, y, H1 + 0.45, rz=math.pi / 2)
+    for y in (-0.25, 0.5): win(W / 2 + 0.05, y, 0.55, rz=math.pi / 2)
+    # 1階の正面: ケーキのショーウインドウ（左）＋戸（右）
+    cube((0.95, 0.08, 0.62), (-0.45, FY - 0.04, 0.5), WOOD, bevel=0.02)
+    cube((0.85, 0.085, 0.52), (-0.45, FY - 0.05, 0.52), GLOW, bevel=0.01)
+    cube((0.95, 0.16, 0.06), (-0.45, FY - 0.08, 0.2), WOOD, bevel=0.015)
+    for k in range(1, 3): cube((0.025, 0.09, 0.52), (-0.45 - 0.425 + 0.85 * k / 3, FY - 0.06, 0.52), WOOD, bevel=0)
+    cube((0.85, 0.12, 0.02), (-0.45, FY - 0.04, 0.5), WOOD, bevel=0.003)                       # 棚
+    for i, x in enumerate((-0.75, -0.55, -0.35, -0.15)):                                          # ケーキ（大きめだけ）
+        for z in (0.32, 0.53):
+            cyl(0.06, 0.06, (x, FY - 0.08, z), mat('#fff3e0'), verts=16, bevel=0.01)
+            sphere(0.022, (x, FY - 0.08, z + 0.05), STRAW, seg=8)
+    cube((0.38, 0.07, 0.78), (0.45, FY - 0.04, 0.47), DOOR, bevel=0.02)
+    cube((0.28, 0.075, 0.3), (0.45, FY - 0.05, 0.62), mat('#e4a493'), bevel=0.01)
+    sphere(0.025, (0.58, FY - 0.09, 0.45), mat('#e7c36a'), seg=8)
+    # ピンクのしまのひさし（ショーウインドウの上）
+    awning(1.15, 9, 0.38, 0.45, PINK, PINKW, M_at(-0.4, FY - 0.06, 0.95))
+    # いちごの吊り看板（戸の横）
+    cube((0.035, 0.32, 0.035), (0.75, FY - 0.17, 0.92), WOOD, bevel=0.008)
+    cube((0.2, 0.05, 0.2), (0.82, FY - 0.3, 0.76), mat('#f6e9dc'), bevel=0.03)
+    sphere(0.055, (0.82, FY - 0.335, 0.75), STRAW, scale=(1, 0.5, 1.15), seg=12)
+    sphere(0.03, (0.82, FY - 0.34, 0.81), LEAF, scale=(1.3, 0.5, 0.6), seg=8)
+
+# ── パン屋（見本 bakery.webp＝前のデザイン） ─────────────────
+def planks_face(ax, fixed, span, z0, z1, cols, ph=0.12, depth=0.05):
+    rows = int((z1 - z0) / ph)
+    for r in range(rows):
+        z = z0 + ph * (r + 0.5)
+        size = (span, depth, ph - 0.014) if ax == 'x' else (depth, span, ph - 0.014)
+        cube(size, (0, fixed, z) if ax == 'x' else (fixed, 0, z), mat(cols[r % len(cols)]), bevel=0.02, seg=1)
+
+def bakery():
+    YEL = ['#f2d27e', '#ecc871', '#f5d98d']; POST = mat('#e6bd6c'); ROOF = mat('#b8683f'); ROOF_D = mat('#a65b35')
+    FRAME = mat('#b9733f'); GLASS = mat('#d6e5f2', 0.3); BASE = mat('#a8653b'); BR = ['#c9824f', '#bd7646', '#d08a57']
+    BROWN = mat('#a8653b'); CREAM = mat('#f4dc94'); SIGN = mat('#b5713f')
+    W, D, H = 2.1, 1.9, 1.1; FY = -D / 2
+    cube((W - 0.04, D - 0.04, H), (0, 0, H / 2), mat(YEL[0]), bevel=0.01)
+    cube((W + 0.12, D + 0.12, 0.14), (0, 0, 0.07), BASE, bevel=0.03)
+    holes_f = [(-0.6, 0.55, 0.3, 0.32), (0.0, 0.42, 0.5, 0.62), (0.58, 0.55, 0.3, 0.32)]
+    planks_face('x', FY - 0.02, W, 0.14, H, YEL); planks_face('y', -W / 2 - 0.02, D, 0.14, H, YEL); planks_face('y', W / 2 + 0.02, D, 0.14, H, YEL)
+    for x in (-W / 2, W / 2):
+        for y in (FY, D / 2): cube((0.12, 0.12, H + 0.04), (x, y, H / 2 + 0.02), POST, bevel=0.03)
+    for hx, hz, hw, hh in holes_f: arch_win(hx, FY - 0.06, hz, hw, hh, FRAME, GLASS, door=(hw > 0.4))
+    for y in (-0.35, 0.4): arch_win(W / 2 + 0.06, y, 0.55, 0.28, 0.32, FRAME, GLASS, rz=math.pi / 2)
+    awning(0.82, 6, 0.3, 0.55, BROWN, CREAM, M_at(0.0, FY - 0.07, 0.98))
+    # 妻（三角・板張り）と看板
+    zt = H; pitch = math.radians(36); gh = math.tan(pitch) * (W / 2)
+    for sy in (-1, 1): gable_wall(W, sy * (D / 2 - 0.02), zt, gh, mat(YEL[1]), sy)
+    for k in range(int(gh / 0.12)):
+        z = zt + 0.06 + k * 0.12; w = W * (1 - (z - zt + 0.06) / gh)
+        if w > 0.15: cube((w, 0.05, 0.105), (0, FY - 0.03, z), mat(YEL[k % 3]), bevel=0.02, seg=1)
+    for k in range(3): cube((0.62, 0.05, 0.085), (0, FY - 0.07, zt + 0.3 + k * 0.09), SIGN if k != 1 else mat('#a8663a'), bevel=0.015, rot=(0, (k - 1) * 0.03, 0))
+    for x in (-0.24, 0.24): cube((0.05, 0.06, 0.38), (x, FY - 0.08, zt + 0.39), BROWN, bevel=0.012)
+    # 板ぶきの屋根
+    half = W / 2 + 0.16; run = half / math.cos(pitch)
+    for sx in (-1, 1):
+        objs = [cube((D + 0.32, run, 0.1), (0, run / 2, 0), ROOF, bevel=0.035)]
+        for k in range(6): objs.append(cube((0.03, run, 0.03), (-(D + 0.3) / 2 + (D + 0.3) * (k + 0.5) / 6, run / 2, 0.055), ROOF_D, bevel=0.01))
+        xform(objs, M_at(sx * half, 0, zt - 0.03, rz=(math.pi / 2 if sx > 0 else -math.pi / 2), rx=pitch))
+    rz = zt - 0.03 + math.tan(pitch) * half
+    cube((0.16, D + 0.36, 0.14), (0, 0, rz + 0.03), ROOF_D, bevel=0.05)
+    # れんがの煙突（見える側の斜面）
+    for k in range(4):
+        for j in range(2): cube((0.17, 0.34, 0.12), (-0.5 - 0.085 + j * 0.17, 0.35, zt + 0.42 + k * 0.13), mat(BR[(k + j) % 3]), bevel=0.025)
+    cube((0.42, 0.42, 0.1), (-0.5, 0.35, zt + 0.95), mat(BR[0]), bevel=0.03)
+    cube((0.24, 0.24, 0.11), (-0.5, 0.35, zt + 0.96), mat('#5a3a2a'), bevel=0.01)
+
+# ── その他・謎の気配（見本 mystery.webp＝前のデザイン） ─────────────
+def mystery():
+    WALL = mat('#f1f0f4'); ROOF = mat('#a3a4aa'); ROOF_D = mat('#8f9097'); CLOTH = mat('#f7f5f0', 0.95); GREY = mat('#9c9ca3')
+    CURT = mat('#b9b6cc'); DOOR = mat('#a86a43'); SIGN = mat('#d89a76'); Q = mat('#9a5a43')
+    W, D, H = 2.0, 1.8, 1.15; FY = -D / 2
+    cube((W, D, H), (0, 0, H / 2), WALL, bevel=0.03)
+    # 布: 下の 3/4 をおおう。ふちが波打ち、ひだがある
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0.4)); c = bpy.context.object
+    c.scale = (W + 0.08, D + 0.08, 0.82); bpy.ops.object.transform_apply(scale=True)
+    bm = bmesh.new(); bm.from_mesh(c.data)
+    bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=14, use_grid_fill=True)
+    for v in bm.verts:
+        ang = math.atan2(v.co.y, v.co.x)
+        if v.co.z > 0.75: v.co.z = 0.62 + 0.18 * (0.5 + 0.5 * math.sin(ang * 3 + 0.5)) + 0.05 * math.sin(v.co.x * 9)  # 上のふちのたるみ
+        if v.co.z < 0.02: v.co.z = 0.0
+        out = 0.025 * math.sin(v.co.x * 11 + v.co.z * 3) + 0.025 * math.sin(v.co.y * 13)              # ひだ
+        n = Vector((v.co.x, v.co.y, 0)); 
+        if n.length > 0: v.co += n.normalized() * out * (1 if v.co.z < 0.8 else 0.4)
+    bm.to_mesh(c.data); bm.free(); finish(c, CLOTH)
+    c.modifiers.new('sd', 'SUBSURF').levels = 1
+    # 布の切れ目から見える戸と、布の上の窓（カーテン）
+    cube((0.34, 0.06, 0.72), (0.0, FY - 0.08, 0.36), DOOR, bevel=0.015)
+    for k in range(2): cube((0.06, 0.07, 0.72), (-0.2 + k * 0.4, FY - 0.09, 0.4), CLOTH, bevel=0.03, rot=(0, (0.15 if k else -0.15), 0))
+    for x in (-0.65, 0.65):
+        cube((0.36, 0.06, 0.3), (x, FY - 0.1, 0.52), GREY, bevel=0.03)
+        for sx in (-1, 1): cube((0.13, 0.065, 0.24), (x + sx * 0.08, FY - 0.11, 0.52), CURT, bevel=0.02)
+    # 屋根（灰色・切妻、妻が正面）と「？」の看板
+    zt = H; pitch = math.radians(36); gh = math.tan(pitch) * (W / 2)
+    for sy in (-1, 1): gable_wall(W, sy * (D / 2 - 0.02), zt, gh, WALL, sy)
+    half = W / 2 + 0.14; run = half / math.cos(pitch)
+    for sx in (-1, 1):
+        xform([cube((D + 0.3, run, 0.1), (0, run / 2, 0), ROOF, bevel=0.035)], M_at(sx * half, 0, zt - 0.03, rz=(math.pi / 2 if sx > 0 else -math.pi / 2), rx=pitch))
+    rz = zt - 0.03 + math.tan(pitch) * half
+    cube((0.15, D + 0.34, 0.13), (0, 0, rz + 0.03), ROOF_D, bevel=0.05)
+    cube((0.46, 0.06, 0.32), (0, FY - 0.04, zt + 0.25), SIGN, bevel=0.05)
+    bpy.ops.object.text_add(location=(0, FY - 0.075, zt + 0.24), rotation=(math.pi / 2, 0, 0))
+    t = bpy.context.object; t.data.body = '?'; t.data.size = 0.3; t.data.extrude = 0.01; t.data.align_x = 'CENTER'; t.data.align_y = 'CENTER'
+    t.data.font = bpy.data.fonts.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts', 'MPLUSRounded1c-ExtraBold.ttf'))
+    t.data.materials.append(Q); bpy.ops.object.convert(target='MESH')
+    # 灰色の煙突（丸い筒＋れんが）
+    for k in range(2):
+        for j in range(2): cube((0.13, 0.26, 0.11), (-0.55 - 0.065 + j * 0.13, 0.35, zt + 0.4 + k * 0.12), GREY, bevel=0.02)
+    cyl(0.08, 0.5, (-0.55, 0.45, zt + 0.6), mat('#8e8e95'), verts=16)
+
+{'ramen': ramen, 'sushi': sushi, 'chinese': chinese, 'yakiniku': yakiniku, 'western': western, 'cake': cake, 'bakery': bakery, 'mystery': mystery}[KIND]()
 # 曲線（瓦の筋など）は glb に入らないので形に変えておく
 for o in list(bpy.data.objects):
     if o.type == 'CURVE':
