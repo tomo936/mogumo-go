@@ -19,7 +19,7 @@
 
 ## 運用
 
-- Claude Code は、セッション開始時に `to-shiro/` の「未対応」と、この README を確認する。
-- シロは、作業前に `to-claude/` と `LOG.md` の状態を確認する。
+- Claude Code は、セッション開始時に `to-claude/` の「未対応」と、この README を確認する。シロへの依頼は `to-shiro/` に書く。
+- シロは、作業前に `to-shiro/` の「未対応」と `LOG.md` の状態を確認する。Claude への依頼は `to-claude/` に書く。
 - 依頼に対応したら、状態を更新し、`LOG.md` に1行残す。
 - 仕様の正本は従来どおり `docs/SPEC.md`。このフォルダは受け渡し専用で、仕様をここに書かない。

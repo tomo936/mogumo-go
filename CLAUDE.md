@@ -7,7 +7,7 @@
 
 ## シロとの連携（2026-11-06 オーナー決定）
 - シロ（Muse）との情報連携は GitHub リポジトリの `handoff/` を正本にする。チャット経由の受け渡しはしない。
-- **セッション開始時に `handoff/README.md` と、`handoff/to-shiro/` の未対応を確認する。** あわせて `handoff/to-claude/`（シロからの依頼）の未対応も確認する。
+- **セッション開始時に `handoff/README.md` と、`handoff/to-claude/`（シロからの依頼）の未対応を確認する。** あわせて `handoff/to-shiro/`（こちらからの依頼）の進み具合も見る。
 - 依頼は1依頼1ファイル（`YYYY-MM-DD-<slug>.md`、先頭に `状態: 未対応／対応中／完了`）。対応したら状態を更新し、`handoff/LOG.md` に1行残す。
 
 ## 工程（上司課題の進め方）
