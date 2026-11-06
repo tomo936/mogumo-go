@@ -7,10 +7,10 @@ export type FeatureSource = {
   querySourceFeatures(
     source: string,
     opts: { sourceLayer: string },
-  ): { geometry: Geometry; properties: Record<string, unknown>; _z?: number }[]
+  ): { geometry: Geometry; properties: Record<string, unknown>; id?: number | string; _z?: number }[]
 }
 
-const SOURCE = 'openmaptiles'
+export const SOURCE = 'openmaptiles'
 const ROAD_CLASSES = new Set([
   'motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor', 'service', 'street', 'path', 'pedestrian',
 ])
