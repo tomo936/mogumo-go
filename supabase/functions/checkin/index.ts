@@ -4,7 +4,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { VectorTile } from 'npm:@mapbox/vector-tile@2'
 import Pbf from 'npm:pbf@4'
-import { CHECKIN_M, CLEAR_M, cellsAround, closestM, findPoi, jstDay, parseMapId, tilesToTry } from './core.ts'
+import { CHECKIN_M, CLEAR_M, acceptHpCheckin, cellsAround, closestM, distanceM, findPoi, jstDay, parseMapId, tilesToTry } from './core.ts'
 import type { PoiFeature } from './core.ts'
 
 const Z = 14
@@ -117,11 +117,21 @@ Deno.serve(async (req: Request) => {
       shop = data
       // 2. 50m（GPS の誤差は足さない）。ホットペッパーの位置で足りなければ、
       //    合体前の地図の点（タイルで確かめたもの）からの距離も見て、近い方を使う
-      dist = closestM({ lat, lng }, [shop])
-      if (dist > CHECKIN_M && mapId) {
-        const poi = await verifyOsm(mapId, lat, lng)
-        if (poi) dist = closestM({ lat, lng }, [shop, poi])
+      const dHp = closestM({ lat, lng }, [shop])
+      let dPoi: number | null = null
+      let poiToShop: number | null = null
+      if (dHp > CHECKIN_M && mapId) {
+        try {
+          const poi = await verifyOsm(mapId, lat, lng)
+          if (poi) {
+            dPoi = distanceM({ lat, lng }, poi)
+            poiToShop = distanceM(poi, shop) // 別の店の点で通れないように、同じ店とみなせる点だけ使う
+          }
+        } catch (e) {
+          if (!(e instanceof UpstreamError)) throw e // タイルが読めなければ、ホットペッパーの位置の結果で決める
+        }
       }
+      dist = acceptHpCheckin({ dHp, dPoi, poiToShop }).distance
     } else {
       osmPoi = await verifyOsm(shop_id, lat, lng)
       if (!osmPoi) return fail('shop_not_found', 404)

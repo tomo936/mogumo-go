@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { cellsInCircle } from '../../../src/fog/domain/grid.ts'
 import { distanceMeters } from '../../../src/map/domain/geo.ts'
-import { CHECKIN_M, CLEAR_M, cellsAround, closestM, distanceM, findPoi, parseMapId, jstDay, tileXY, tilesToTry } from './core.ts'
+import { CHECKIN_M, CLEAR_M, MATCH_M, cellsAround, acceptHpCheckin, closestM, distanceM, findPoi, parseMapId, jstDay, tileXY, tilesToTry } from './core.ts'
 
 const sortCells = (c: [number, number][]) => [...c].sort((a, b) => a[0] - b[0] || a[1] - b[1])
 
@@ -111,5 +111,23 @@ describe('closestM / parseMapId（合体した店の 50m 判定）', () => {
   it('map_id は osm:<数字> だけ通す', () => {
     expect(parseMapId('osm:123')).toBe('osm:123')
     for (const v of ['osm:', 'osm:1a', 'hp:1', 'osm:1 ', 12, null, {}]) expect(parseMapId(v)).toBeNull()
+  })
+})
+
+describe('acceptHpCheckin', () => {
+  it('ホットペッパーの位置から 50m 以内ならそのまま通る', () => {
+    expect(acceptHpCheckin({ dHp: 30, dPoi: null, poiToShop: null })).toEqual({ ok: true, distance: 30 })
+  })
+  it('点が店から遠い（別の店の点）なら、点のそばにいても断る', () => {
+    const r = acceptHpCheckin({ dHp: 300, dPoi: 5, poiToShop: 295 })
+    expect(r.ok).toBe(false)
+    expect(r.distance).toBe(300)
+  })
+  it('点が店から 40m 以内で、点から 50m 以内なら通る', () => {
+    expect(acceptHpCheckin({ dHp: 80, dPoi: 20, poiToShop: MATCH_M })).toEqual({ ok: true, distance: 20 })
+  })
+  it('どちらも外れたら、使える中で小さい方の距離で断る', () => {
+    expect(acceptHpCheckin({ dHp: 90, dPoi: 70, poiToShop: 30 })).toEqual({ ok: false, distance: 70 })
+    expect(acceptHpCheckin({ dHp: 90, dPoi: null, poiToShop: null })).toEqual({ ok: false, distance: 90 })
   })
 })

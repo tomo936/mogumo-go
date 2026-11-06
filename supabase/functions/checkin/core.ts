@@ -1,5 +1,6 @@
 // checkin の純粋な部分（Deno・npm を import しない）。テストは vitest で core.ts だけを読む。
 export const CHECKIN_M = 50 // チェックインできる距離
+export const MATCH_M = 40 // 合体とみなす最大距離。src/shops/config.ts の MATCH_DISTANCE_M と同じにしておくこと（keep in sync）
 export const CLEAR_M = 200 // 店のまわりを晴らす半径
 
 const EARTH_RADIUS_M = 6371008.8 // src/map/domain/geo.ts と同じ
@@ -25,6 +26,16 @@ export function closestM(me: LatLng, places: LatLng[]): number {
   let best = Infinity
   for (const p of places) best = Math.min(best, distanceM(me, p))
   return best
+}
+
+// hp: の店のチェックインを通すか。dHp = 現在地とホットペッパーの位置、
+// dPoi = 現在地とタイルで確かめた地図の点（無ければ null）、poiToShop = その点とホットペッパーの位置。
+// 地図の点は、ホットペッパーの店から MATCH_M 以内（本当に同じ店とみなせる）ときだけ使う。
+// 通らないときの distance は 403 に返す距離（使える中で近い方）
+export function acceptHpCheckin(i: { dHp: number; dPoi: number | null; poiToShop: number | null }): { ok: boolean; distance: number } {
+  const tied = i.dPoi !== null && i.poiToShop !== null && i.poiToShop <= MATCH_M
+  const distance = tied ? Math.min(i.dHp, i.dPoi as number) : i.dHp
+  return { ok: distance <= CHECKIN_M, distance }
 }
 
 // アプリが送る地図の点の番号（合体した店の osm:…）。形が合わなければ null
