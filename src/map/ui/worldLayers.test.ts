@@ -21,11 +21,20 @@ const north = (m: number): LatLng => ({ lat: home.lat + m / M, lng: home.lng })
 const shop: Shop = { id: 's1', name: 'a', lat: home.lat + 20 / M, lng: home.lng, kind: 'ramen' }
 const road = [{ x: -10, y: 5 }, { x: 10, y: 5 }]
 
-const fakeMap = () => ({ addLayer: vi.fn(), removeLayer: vi.fn(), getLayer: vi.fn(() => true) }) as unknown as MapLibreMap
+let tilesLoaded = true
+let idleHandler: (() => void) | null = null
+const fakeMap = () => ({
+  addLayer: vi.fn(), removeLayer: vi.fn(), getLayer: vi.fn(() => true),
+  areTilesLoaded: () => tilesLoaded,
+  on: vi.fn((_e: string, h: () => void) => { idleHandler = h }),
+  off: vi.fn(),
+}) as unknown as MapLibreMap
 const flush = () => new Promise((r) => setTimeout(r, 0))
 
 beforeEach(() => {
   vi.clearAllMocks()
+  tilesLoaded = true
+  idleHandler = null
   features.mockReturnValue({ roads: [road], footprints: [] })
 })
 
@@ -110,18 +119,42 @@ test('晴れた所のお店が建物として置かれ、置き方は店ごと�
   world.onPosition(home)
   await flush()
   expect(shopLayer.setShops).toHaveBeenLastCalledWith([expect.objectContaining({ id: 's1', kind: 'ramen' })])
-  world.onPosition(north(5))
+  world.onPosition(north(15))
   expect(features).toHaveBeenCalledTimes(1)
 })
 
-test('タイルが無い(道も建物も空)間は建物を出さず、次の更新でやり直す', async () => {
+test('道も建物も無い店は、タイルが読めていれば南向き14mで1回だけ置く', async () => {
   features.mockReturnValue({ roads: [], footprints: [] })
   const { world } = setup()
   world.onPosition(home)
   await flush()
+  expect(shopLayer.setShops).toHaveBeenLastCalledWith([expect.objectContaining({ id: 's1', facingDeg: 180, sizeM: 14 })])
+  world.onPosition(north(15))
+  world.onPosition(north(30))
+  expect(features).toHaveBeenCalledTimes(1)
+})
+
+test('タイル読み込み中は何も覚えず、idle で置く', async () => {
+  tilesLoaded = false
+  const { world } = setup()
+  world.onPosition(home)
+  await flush()
+  expect(features).not.toHaveBeenCalled()
   expect(shopLayer.setShops).toHaveBeenLastCalledWith([])
-  features.mockReturnValue({ roads: [road], footprints: [] })
+  tilesLoaded = true
+  idleHandler!()
+  expect(shopLayer.setShops).toHaveBeenLastCalledWith([expect.objectContaining({ id: 's1' })])
+})
+
+test('10m 未満の位置更新ではお店を計算し直さない', async () => {
+  const { world } = setup()
+  world.onPosition(home)
+  await flush()
+  const n = features.mock.calls.length
+  tilesLoaded = false
   world.onPosition(north(5))
+  world.onPosition(north(9))
+  expect(features.mock.calls.length).toBe(n)
   expect(shopLayer.setShops).toHaveBeenLastCalledWith([expect.objectContaining({ id: 's1' })])
 })
 

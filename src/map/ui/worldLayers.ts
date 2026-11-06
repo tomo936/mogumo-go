@@ -4,7 +4,7 @@ import { clearedFromHome } from '../../fog/domain/clearing.ts'
 import { cloudSpots } from '../../fog/domain/cloudSpots.ts'
 import { createCloudLayer } from '../../fog/infra/cloudLayer.ts'
 import { addSea } from '../../fog/infra/seaLayer.ts'
-import { SHOP_REFETCH_M } from '../../shops/config.ts'
+import { SHOP_REFETCH_M, SHOP_REFRESH_M } from '../../shops/config.ts'
 import { placeShop } from '../../shops/domain/placement.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
 import { visibleShops } from '../../shops/domain/visibility.ts'
@@ -22,7 +22,9 @@ type Deps = {
 }
 
 // 霧（雲海と雲）とお店の建物を地図に載せ、位置が変わるたびに更新する
-export function attachWorld(map: MapLibreMap, deps: Deps): { onPosition(p: LatLng): void; dispose(): void } {
+type WorldMap = MapLibreMap
+
+export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng): void; dispose(): void } {
   const cleared = clearedFromHome(deps.home)
   const cloudLayer = createCloudLayer()
   const shopLayer = createShopLayer()
@@ -39,8 +41,8 @@ export function attachWorld(map: MapLibreMap, deps: Deps): { onPosition(p: LatLn
   const placeOne = (shop: Shop): PlacedShop | null => {
     const hit = placed.get(shop.id)
     if (hit) return hit
+    if (!map.areTilesLoaded()) return null // タイル読み込み中は置かない。idle のときにやり直す
     const { roads, footprints } = roadsAndFootprints(map, shop)
-    if (roads.length === 0 && footprints.length === 0) return null // タイルがまだ無い。次の更新でやり直す
     const pl = placeShop(roads, footprints)
     const c = localFrame(shop).back(pl.center)
     const out: PlacedShop = { id: shop.id, kind: shop.kind, lat: c.lat, lng: c.lng, facingDeg: pl.facingDeg, sizeM: pl.sizeM }
@@ -48,7 +50,9 @@ export function attachWorld(map: MapLibreMap, deps: Deps): { onPosition(p: LatLn
     return out
   }
 
+  let refreshedAt: LatLng | null = null
   const refreshShops = (p: LatLng) => {
+    refreshedAt = p
     const list = visibleShops(shops, p, cleared).map(placeOne)
     const out = list.filter((s): s is PlacedShop => s !== null)
     const key = out.map((s) => s.id).join(',')
@@ -74,6 +78,11 @@ export function attachWorld(map: MapLibreMap, deps: Deps): { onPosition(p: LatLn
     )
   }
 
+  const onIdle = () => {
+    if (last) refreshShops(last)
+  }
+  map.on('idle', onIdle)
+
   return {
     onPosition(p) {
       if (disposed) return
@@ -90,10 +99,11 @@ export function attachWorld(map: MapLibreMap, deps: Deps): { onPosition(p: LatLn
         seaCenter = p
       }
       if (deps.shopsEnabled && !fetching && (!fetchCenter || distanceMeters(fetchCenter, p) >= SHOP_REFETCH_M)) fetchAround(p)
-      refreshShops(p)
+      if (!refreshedAt || distanceMeters(refreshedAt, p) >= SHOP_REFRESH_M) refreshShops(p)
     },
     dispose() {
       disposed = true
+      map.off('idle', onIdle)
       sea?.remove()
       for (const id of [cloudLayer.id, shopLayer.id]) if (map.getLayer(id)) map.removeLayer(id)
     },
