@@ -13,6 +13,7 @@ const mounts: ((e: LocationEvent) => void)[] = []
 const shopErrors: (() => void)[] = []
 const handlers: { select: (s: Shop | null) => void; position: (p: LatLng) => void }[] = []
 const checkinCalls: { id: string; cells: unknown[] }[] = []
+const unfocusCalls: number[] = []
 const postCheckin = vi.fn()
 vi.mock('../checkin/infra/checkinApi.ts', () => ({ postCheckin: (...a: unknown[]) => postCheckin(...a) }))
 vi.mock('../map/ui/MapView.tsx', async () => {
@@ -26,7 +27,7 @@ vi.mock('../map/ui/MapView.tsx', async () => {
       useEffect(() => { mounts.push(onStatus) }, [onStatus])
       useEffect(() => { shopErrors.push(onShopsError) }, [onShopsError])
       useEffect(() => { handlers.push({ select: onSelectShop, position: onPosition }) }, [onSelectShop, onPosition])
-      useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) } }), [])
+      useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, unfocus: () => { unfocusCalls.push(1) } }), [])
       return <div data-testid="map-view" />
     },
   }
