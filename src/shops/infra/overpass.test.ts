@@ -4,6 +4,7 @@ import fixture from './__fixtures__/overpass.json'
 import { fetchShops, overpassQuery, parseOverpass, roundCenter, shopSourceEnabled } from './overpass.ts'
 
 const center = { lat: 35.6812, lng: 139.7671 }
+const base = { endpoint: 'https://x.supabase.co/functions/v1/shops-overpass', anonKey: 'anon', getToken: () => Promise.resolve('tok'), waitMs: 0 }
 const res = (status: number, body: unknown = fixture) =>
   new Response(JSON.stringify(body), { status })
 
@@ -35,34 +36,49 @@ describe('parseOverpass', () => {
 })
 
 describe('fetchShops', () => {
+  it('関数の URL へ JSON {lat,lng}（丸め済み）を認証ヘッダー付きで POST する', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(res(200))
+    await fetchShops(center, { ...base, fetchFn })
+    const [url, init] = fetchFn.mock.calls[0]
+    const c = roundCenter(center, 250)
+    expect(url).toBe(base.endpoint)
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(init.body)).toEqual({ lat: c.lat, lng: c.lng })
+    expect(init.headers).toEqual({ 'Content-Type': 'application/json', apikey: 'anon', Authorization: 'Bearer tok' })
+  })
+  it('トークンが無ければ fetch せず shops_unavailable', async () => {
+    const fetchFn = vi.fn()
+    await expect(fetchShops(center, { ...base, fetchFn, getToken: () => Promise.resolve(null) })).rejects.toThrow('shops_unavailable')
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
   it('429 のあと 200 でやり直して取れる', async () => {
     const fetchFn = vi.fn().mockResolvedValueOnce(res(429, {})).mockResolvedValueOnce(res(200))
-    const shops = await fetchShops(center, { fetchFn, waitMs: 0 })
+    const shops = await fetchShops(center, { ...base, fetchFn })
     expect(shops).toHaveLength(4)
     expect(fetchFn).toHaveBeenCalledTimes(2)
   })
   it('2回とも 429 なら shops_unavailable', async () => {
     const fetchFn = vi.fn().mockImplementation(() => Promise.resolve(res(429, {})))
-    await expect(fetchShops(center, { fetchFn, waitMs: 0 })).rejects.toThrow('shops_unavailable')
+    await expect(fetchShops(center, { ...base, fetchFn })).rejects.toThrow('shops_unavailable')
     expect(fetchFn).toHaveBeenCalledTimes(2)
   })
   it('400 はやり直さない', async () => {
     const fetchFn = vi.fn().mockImplementation(() => Promise.resolve(res(400, {})))
-    await expect(fetchShops(center, { fetchFn, waitMs: 0 })).rejects.toThrow('shops_unavailable')
+    await expect(fetchShops(center, { ...base, fetchFn })).rejects.toThrow('shops_unavailable')
     expect(fetchFn).toHaveBeenCalledTimes(1)
   })
   it('ネットワーク失敗もやり直す', async () => {
     const fetchFn = vi.fn().mockRejectedValueOnce(new TypeError('x')).mockResolvedValueOnce(res(200))
-    expect(await fetchShops(center, { fetchFn, waitMs: 0 })).toHaveLength(4)
+    expect(await fetchShops(center, { ...base, fetchFn })).toHaveLength(4)
   })
   it('200 でも JSON が読めなければやり直す', async () => {
     const fetchFn = vi.fn().mockResolvedValueOnce(new Response('<html>busy</html>', { status: 200 })).mockResolvedValueOnce(res(200))
-    expect(await fetchShops(center, { fetchFn, waitMs: 0 })).toHaveLength(4)
+    expect(await fetchShops(center, { ...base, fetchFn })).toHaveLength(4)
     expect(fetchFn).toHaveBeenCalledTimes(2)
   })
   it('AbortError でもやり直す', async () => {
     const fetchFn = vi.fn().mockRejectedValueOnce(new DOMException('aborted', 'AbortError')).mockResolvedValueOnce(res(200))
-    expect(await fetchShops(center, { fetchFn, waitMs: 0 })).toHaveLength(4)
+    expect(await fetchShops(center, { ...base, fetchFn })).toHaveLength(4)
     expect(fetchFn).toHaveBeenCalledTimes(2)
   })
   it('応答が来ないと 25 秒で打ち切ってやり直す', async () => {
@@ -71,7 +87,7 @@ describe('fetchShops', () => {
       const hang = (_u: unknown, init?: RequestInit) =>
         new Promise<Response>((_r, reject) => init!.signal!.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError'))))
       const fetchFn = vi.fn().mockImplementationOnce(hang).mockResolvedValueOnce(res(200))
-      const p = fetchShops(center, { fetchFn, waitMs: 0 })
+      const p = fetchShops(center, { ...base, fetchFn })
       await vi.advanceTimersByTimeAsync(24999)
       expect(fetchFn).toHaveBeenCalledTimes(1)
       await vi.advanceTimersByTimeAsync(1)
@@ -85,17 +101,19 @@ describe('fetchShops', () => {
   it('送る中心は 250m のマスに丸める（同じマスの 50m 離れた2点は同じ中心）', async () => {
     const sent: string[] = []
     const fetchFn = vi.fn((_u: unknown, init?: RequestInit) => {
-      sent.push(decodeURIComponent(String(init!.body)).match(/around:1000,([^)]*)\)/)![1])
+      const b = JSON.parse(String(init!.body))
+      sent.push(`${b.lat},${b.lng}`)
       return Promise.resolve(res(200))
     })
     const cell = roundCenter(center, 250)
     const a = { lat: cell.lat + 25 / 111195, lng: cell.lng + 0.0001 }
     const b = { lat: cell.lat - 25 / 111195, lng: cell.lng + 0.0001 }
     expect(distanceMeters(a, b)).toBeCloseTo(50, 0)
-    await fetchShops(a, { fetchFn, waitMs: 0 })
-    await fetchShops(b, { fetchFn, waitMs: 0 })
+    await fetchShops(a, { ...base, fetchFn })
+    await fetchShops(b, { ...base, fetchFn })
     expect(sent[0]).toBe(sent[1])
     expect(sent[0]).not.toContain(String(a.lat))
+    expect(sent[0]).not.toContain(String(a.lng))
     expect(sent[0]).toBe(`${cell.lat},${cell.lng}`)
   })
 })

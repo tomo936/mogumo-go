@@ -3,7 +3,7 @@
 import type { LatLng } from '../../map/domain/geo.ts'
 import { kindOf } from '../domain/genre.ts'
 import type { Shop } from '../domain/shop.ts'
-import { OVERPASS_CENTER_GRID_M, OVERPASS_RETRY_WAIT_MS, OVERPASS_URL, SHOP_RADIUS_M } from '../config.ts'
+import { OVERPASS_CENTER_GRID_M, OVERPASS_RETRY_WAIT_MS } from '../config.ts'
 import { REF_LAT_DEG } from '../../fog/config.ts'
 import { M_PER_DEG_LAT } from '../../fog/domain/grid.ts'
 
@@ -47,16 +47,13 @@ export function parseOverpass(json: unknown): Shop[] {
   return shops
 }
 
-async function attempt(url: string, query: string, fetchFn: typeof fetch): Promise<Shop[] | 'retry' | 'fail'> {
+type Req = { endpoint: string; headers: Record<string, string>; body: string }
+
+async function attempt(req: Req, fetchFn: typeof fetch): Promise<Shop[] | 'retry' | 'fail'> {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS)
   try {
-    const res = await fetchFn(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `data=${encodeURIComponent(query)}`,
-      signal: ctrl.signal,
-    })
+    const res = await fetchFn(req.endpoint, { method: 'POST', headers: req.headers, body: req.body, signal: ctrl.signal })
     if (res.status === 429 || res.status >= 500) return 'retry'
     if (!res.ok) return 'fail'
     return parseOverpass(await res.json())
@@ -67,16 +64,38 @@ async function attempt(url: string, query: string, fetchFn: typeof fetch): Promi
   }
 }
 
+// supabase は読み込み時に環境変数を要求するので、使う時に読む（テストで env 無しでも import できる）
+const sessionToken = async () =>
+  (await (await import('../../lib/supabase.ts')).supabase.auth.getSession()).data.session?.access_token ?? null
+
+// Edge Function（shops-overpass）経由で取る。送るのは 250m に丸めた中心だけ
 export async function fetchShops(
   center: LatLng,
-  opts: { fetchFn?: typeof fetch; waitMs?: number } = {},
+  opts: {
+    fetchFn?: typeof fetch
+    waitMs?: number
+    endpoint?: string
+    anonKey?: string
+    getToken?: () => Promise<string | null>
+  } = {},
 ): Promise<Shop[]> {
   const fetchFn = opts.fetchFn ?? fetch
-  const query = overpassQuery(roundCenter(center, OVERPASS_CENTER_GRID_M), SHOP_RADIUS_M)
-  let result = await attempt(OVERPASS_URL, query, fetchFn)
+  const token = await (opts.getToken ?? sessionToken)()
+  if (!token) throw new Error('shops_unavailable')
+  const c = roundCenter(center, OVERPASS_CENTER_GRID_M)
+  const req: Req = {
+    endpoint: opts.endpoint ?? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shops-overpass`,
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: opts.anonKey ?? import.meta.env.VITE_SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ lat: c.lat, lng: c.lng }),
+  }
+  let result = await attempt(req, fetchFn)
   if (result === 'retry') {
     await new Promise((r) => setTimeout(r, opts.waitMs ?? OVERPASS_RETRY_WAIT_MS))
-    result = await attempt(OVERPASS_URL, query, fetchFn)
+    result = await attempt(req, fetchFn)
   }
   if (typeof result === 'string') throw new Error('shops_unavailable')
   return result
