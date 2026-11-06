@@ -1,4 +1,6 @@
-# 引き継ぎメモ（会話を新しくしたら最初に読む）
+# 会話の引き継ぎメモ（会話を新しくしたら最初に読む）
+
+シロとの受け渡しは `handoff/`（別物）。こちらは Claude Code 自身の会話の引き継ぎ。
 
 最終更新: 2026-11-06 夕方（Claude Code）。区切りごとに上書きする。
 
@@ -17,7 +19,7 @@
 
 ## 本人待ち・シロ待ち
 - 本人: push（上記）／ホットペッパーの API キー（次の段で使う）
-- シロ（作成中）: **お店のピンのアイコン 13種**（設計書 10章）。女の子の歩行の絵
+- シロ: 連携は `handoff/`（`to-shiro/` に依頼、`to-claude/` にシロからの依頼）。作成中＝お店のピンのアイコン 13種（`handoff/to-shiro/2026-11-06-shop-pin-icons.md`）、女の子の歩行の絵
 
 ## 道具の置き場所（この会話の作業用フォルダ。再起動で消えることがある）
 - Blender 4.2: `/tmp/claude-1000/-home-otosa-mogumo-go/f1bcb96d-7f7a-4651-a9c3-a1f83beeb930/scratchpad/blender/blender-4.2.3-linux-x64/blender`（無ければ `download.blender.org/release/Blender4.2/blender-4.2.3-linux-x64.tar.xz` を作業用フォルダに展開）

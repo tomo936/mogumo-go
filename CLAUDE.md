@@ -3,7 +3,12 @@
 ## このプロジェクトについて
 - スマホ向け Web アプリ「もぐもGO」（霧晴らし × クエストのグルメ探索）。仕様の正本は `docs/SPEC.md`、上司課題の原文は `docs/source-dai2an-20261021.md`、1周目の計画は `docs/PLAN-cycle1.md`。作業前に該当箇所を読むこと。
 - 技術: React + TypeScript + Vite / Supabase（DB・認証・ストレージ・Edge Functions）/ MapLibre GL JS + OpenFreeMap / ホットペッパーグルメAPI（キーはサーバー側のみ）/ OSRM（FOSSGIS）/ Vercel。完全無料の範囲で作る。対象は iPhone 優先。
-- 現状: 土台のみ。React Router（`src/routes/`、`/login`・`/setup`・`/`）、ログイン状態は `src/auth/`（Supabase Auth の Google ログイン）、テストは Vitest。地図は `src/map/`（`domain/` 位置のならし・判定・状態、`infra/` 位置情報・MapLibre の色やワーカー・歩いたふり、`ui/` 地図の画面。調整値は `src/map/config.ts`、色の案は `src/map/infra/themes.ts`、開発中は `?fake` で歩いたふり）。出典は起動時のスプラッシュ（`src/credits/`）。初回設定は `src/setup/`（① ニックネーム → ② 最初のキャラ → ③ 自宅。自宅は localStorage の `mogumo.home.<userId>` だけに保存）。素材は `src/assets/`（アプリで使う形）と `art/`（シロの元データ・見本・試作）。状態管理ライブラリは未導入。**作業を再開するときは、まず `docs/handoff.md`（引き継ぎメモ）を読む。** 実装が進んだらこの節を更新すること。
+- 現状: 土台のみ。React Router（`src/routes/`、`/login`・`/setup`・`/`）、ログイン状態は `src/auth/`（Supabase Auth の Google ログイン）、テストは Vitest。地図は `src/map/`（`domain/` 位置のならし・判定・状態、`infra/` 位置情報・MapLibre の色やワーカー・歩いたふり、`ui/` 地図の画面。調整値は `src/map/config.ts`、色の案は `src/map/infra/themes.ts`、開発中は `?fake` で歩いたふり）。出典は起動時のスプラッシュ（`src/credits/`）。初回設定は `src/setup/`（① ニックネーム → ② 最初のキャラ → ③ 自宅。自宅は localStorage の `mogumo.home.<userId>` だけに保存）。素材は `src/assets/`（アプリで使う形）と `art/`（シロの元データ・見本・試作）。状態管理ライブラリは未導入。**作業を再開するときは、まず `docs/session-handoff.md`（会話の引き継ぎメモ）を読む。** 実装が進んだらこの節を更新すること。
+
+## シロとの連携（2026-11-06 オーナー決定）
+- シロ（Muse）との情報連携は GitHub リポジトリの `handoff/` を正本にする。チャット経由の受け渡しはしない。
+- **セッション開始時に `handoff/README.md` と、`handoff/to-shiro/` の未対応を確認する。** あわせて `handoff/to-claude/`（シロからの依頼）の未対応も確認する。
+- 依頼は1依頼1ファイル（`YYYY-MM-DD-<slug>.md`、先頭に `状態: 未対応／対応中／完了`）。対応したら状態を更新し、`handoff/LOG.md` に1行残す。
 
 ## 工程（上司課題の進め方）
 要件定義 → 基本設計 → 詳細設計 → 実装 → 検証 → 振り返り の順で進める。
@@ -58,4 +63,4 @@
   - ただし上の「シンプルに」を優先し、使い道が1つしかない interface やリポジトリ層を先回りで作らない。差し替えの必要が実際にある境界（タイル、位置情報、DB）だけを分ける。
 - 仕様に無い機能を勝手に足さない。迷ったら SPEC を確認し、無ければ人間に聞く。
 - 世界観は「明るい昼のグルメ」（青空色＋パステル、白基調、霧はもこもこの雲、図鑑はシールアルバム風）。UI はフラットに寄せる。
-- 画像・動画素材について： 開発中に画像や動画が必要になったら、外部素材やプレースホルダで勝手に済ませず、必要な素材の仕様（内容・サイズ・用途・画風）を明記して、作業報告の中で Muse（シロ）への依頼として出すこと。素材はシロが生成して渡す。
+- 画像・動画素材について： 開発中に画像や動画が必要になったら、外部素材やプレースホルダで勝手に済ませず、必要な素材の仕様（内容・サイズ・用途・画風）を明記して、`handoff/to-shiro/` に依頼ファイルとして書くこと。素材はシロが生成して `art/` などに置く。
