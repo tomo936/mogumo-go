@@ -28,9 +28,11 @@ describe('visibleShops', () => {
   })
 
   it('霧の中のちょうど 50m は出る', () => {
-    // ほぼちょうど 50m 北に置く（誤差があっても 50m 以下）
-    const edge = { ...shop('edge', 0), lat: me.lat + 50 / 111195.0 * (50 / 50.00003607805453) }
-    expect(distanceMeters(me, edge)).toBeCloseTo(50, 4)
+    // 1度ぶんの距離を distanceMeters で測り、そこから 50m ぶんの緯度差を出す（地球の半径の値に頼らない）
+    const mPerDeg = distanceMeters(me, { lat: me.lat + 1, lng: me.lng })
+    const edge = { ...shop('edge', 0), lat: me.lat + (50 - 1e-9) / mPerDeg } // 浮動小数の丸めで 50m を超えないよう 1e-9m だけ手前
+    expect(distanceMeters(me, edge)).toBeLessThanOrEqual(50)
+    expect(distanceMeters(me, edge)).toBeGreaterThan(49.999)
     expect(visibleShops([edge], me, new Set<string>()).map((s) => s.id)).toEqual(['edge'])
   })
 

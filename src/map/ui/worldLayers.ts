@@ -58,6 +58,7 @@ export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng):
   let extractedAt: LatLng | null = null
   const refreshShops = (p: LatLng) => {
     refreshedAt = p
+    if (!map.areTilesLoaded()) extractedAt = null // 読めなかった回があれば、読めたあとの最初の更新で必ず読み直す
     // 地図のお店の読み直しは、まだ読んでいない・前回から SHOP_REFRESH_M 以上動いたときだけ（idle は回転のたびに来る）
     if (map.areTilesLoaded() && (!extractedAt || distanceMeters(extractedAt, p) >= SHOP_REFRESH_M)) {
       extractedAt = p

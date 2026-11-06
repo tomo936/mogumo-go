@@ -279,3 +279,16 @@ test('タイル読み込み中は poi を読まず、読めたあとの idle で
   idleHandler!()
   expect(poiReads()).toBe(1)
 })
+
+test('一度読んだあと、同じ場所でタイルが読み込み直しになったら、読めたあとの idle で poi を読み直す', async () => {
+  const { world } = setup()
+  world.onPosition(home)
+  await flush()
+  tilesLoaded = false
+  world.onPosition(north(5))
+  idleHandler!()
+  const n = poiReads()
+  tilesLoaded = true
+  idleHandler!()
+  expect(poiReads()).toBe(n + 1)
+})
