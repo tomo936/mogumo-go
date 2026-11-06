@@ -17,6 +17,7 @@ export function cloudsLayer(origin: [number, number], spots: CloudSpot[], urls: 
       scene.add(new THREE.HemisphereLight('#ffffff', '#cfe3f7', 2.4))
       const sun = new THREE.DirectionalLight('#ffffff', 1.4); sun.position.set(-0.5, 0.9, 0.4); scene.add(sun)
       renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true }); renderer.autoClear = false
+      renderer.info.autoReset = true
       const loader = new GLTFLoader()
       Promise.all(urls.map((u) => loader.loadAsync(u))).then((gl3) => {
         gl3.forEach((g, kind) => {
@@ -26,15 +27,21 @@ export function cloudsLayer(origin: [number, number], spots: CloudSpot[], urls: 
           const geo = mesh.geometry
           geo.computeBoundingBox(); const bw = geo.boundingBox!.max.x - geo.boundingBox!.min.x
           const matl = new THREE.MeshLambertMaterial({ vertexColors: true })
-          const mine = spots.filter((s) => s.kind === kind)
-          const inst = new THREE.InstancedMesh(geo, matl, mine.length)
-          inst.frustumCulled = false
-          const m = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3()
-          mine.forEach((s, i) => {
-            const k = s.w / bw
-            inst.setMatrixAt(i, m.compose(v.set(s.x, s.h ?? 0, -s.y), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), s.rot), sc.set(k, k, k)))
-          })
-          scene.add(inst)
+          // 区画（約300m 四方）ごとに1つのまとまりにする。画面に入っていない区画は three.js が描かない
+          const CHUNK = 300, cells = new Map<string, CloudSpot[]>()
+          for (const sp of spots) {
+            if (sp.kind !== kind) continue
+            const key = Math.floor(sp.x / CHUNK) + ',' + Math.floor(sp.y / CHUNK)
+            if (!cells.has(key)) cells.set(key, [])
+            cells.get(key)!.push(sp)
+          }
+          const m = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0)
+          for (const mine of cells.values()) {
+            const inst = new THREE.InstancedMesh(geo, matl, mine.length)
+            mine.forEach((sp, i) => { const k = sp.w / bw; inst.setMatrixAt(i, m.compose(v.set(sp.x, sp.h ?? 0, -sp.y), q.setFromAxisAngle(up, sp.rot), sc.set(k, k, k))) })
+            inst.computeBoundingSphere()
+            scene.add(inst)
+          }
         })
         ready = true; map.triggerRepaint()
       })
@@ -45,6 +52,8 @@ export function cloudsLayer(origin: [number, number], spots: CloudSpot[], urls: 
       const l = new THREE.Matrix4().makeTranslation(mc.x, mc.y, mc.z).scale(new THREE.Vector3(s, -s, s)).multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2))
       camera.projectionMatrix = new THREE.Matrix4().fromArray(args.defaultProjectionData.mainMatrix as unknown as number[]).multiply(l)
       renderer.resetState(); renderer.render(scene, camera)
+      ;(window as unknown as { __tris?: number; __calls?: number }).__tris = renderer.info.render.triangles
+      ;(window as unknown as { __calls?: number }).__calls = renderer.info.render.calls
     },
   }
 }

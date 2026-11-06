@@ -84,7 +84,7 @@ def build(mk, name):
     nt.links.new(vc.outputs['Color'], b.inputs['Base Color']); b.inputs['Roughness'].default_value = 0.95
     o.data.materials.append(m)
     sm = o.modifiers.new('sm', 'SMOOTH'); sm.factor = 0.8; sm.iterations = 6
-    dec = o.modifiers.new('dec', 'DECIMATE'); dec.ratio = 0.22
+    dec = o.modifiers.new('dec', 'DECIMATE'); dec.ratio = float(os.environ.get('DEC', '0.07'))
     return o
 
 made = []
