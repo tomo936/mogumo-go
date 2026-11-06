@@ -14,11 +14,11 @@ export const THEMES = {
     building: '#f0eee2', buildingLine: '#e1ddcb', road: '#ffffff', roadCasing: '#e7e1bf', path: '#ebe7d1', rail: '#d2cfbf', majorRoad: '#fff8dc', majorRoadCasing: '#e3d6a4',
     label: '#66684f', labelHalo: '#ffffff', showPlaceLabels: true, showRoadLabels: true,
   },
-  // C: ポップ（本人が選択 2026-11-06）。淡い草色の地面に白い道、大きい道は淡いクリーム色、地名なし
+  // C: ポップ（本人が選択 2026-11-06）。淡い草色の地面に白い道、大きい道は淡いクリーム色、地名なし・道路名なし（本人 2026-11-06）
   pop: {
     ground: '#e4f4d8', residential: '#dcefcf', park: '#c3e7ae', wood: '#b1dd98', water: '#8ccff3', waterLine: '#74c3ef',
     building: '#f8f1e4', buildingLine: '#e6d9bf', road: '#ffffff', roadCasing: '#cfe5c2', path: '#f3f8ec', rail: '#b8c6ad', majorRoad: '#fff4cf', majorRoadCasing: '#ead39a',
-    label: '#4d6656', labelHalo: '#ffffff', showPlaceLabels: false, showRoadLabels: true,
+    label: '#4d6656', labelHalo: '#ffffff', showPlaceLabels: false, showRoadLabels: false,
   },
 } satisfies Record<string, MapTheme>
 
