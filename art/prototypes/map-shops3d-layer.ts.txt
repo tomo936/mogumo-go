@@ -7,7 +7,7 @@ import type { CustomLayerInterface, Map as MapLibreMap } from 'maplibre-gl'
 
 export type Shop3D = { lng: number; lat: number; facingDeg: number } // facingDeg: 正面の向き（北=0、時計回り）
 
-export function shopsLayer(url: string, shops: Shop3D[], metersPerUnit: number): CustomLayerInterface {
+export function shopsLayer(id: string, url: string, shops: Shop3D[], metersPerUnit: number): CustomLayerInterface {
   let renderer: THREE.WebGLRenderer, effect: OutlineEffect, map: MapLibreMap
   const camera = new THREE.Camera()
   const scene = new THREE.Scene()
@@ -16,7 +16,7 @@ export function shopsLayer(url: string, shops: Shop3D[], metersPerUnit: number):
   const grad = new THREE.DataTexture(new Uint8Array([168, 176, 214, 255, 236, 236, 242, 255, 255, 255, 255, 255]), 3, 1)
   grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true
   return {
-    id: 'shops3d', type: 'custom', renderingMode: '3d',
+    id, type: 'custom', renderingMode: '3d',
     onAdd(m, gl) {
       map = m
       scene.add(new THREE.HemisphereLight('#ffffff', '#dfe8ff', 1.4))
