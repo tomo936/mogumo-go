@@ -34,7 +34,6 @@ describe('cloudSpots', () => {
     const t0 = performance.now()
     cloudSpots(home, cleared)
     const ms = performance.now() - t0
-    console.log(`cloudSpots with cleared: ${ms.toFixed(1)}ms`)
     expect(ms).toBeLessThan(200)
   })
   it('晴れから margin 以内に雲は無い', () => {
