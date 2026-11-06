@@ -52,7 +52,7 @@ def build(mk, name):
         if any((x - bx) ** 2 + (y - by) ** 2 < (0.55 * br) ** 2 for br, bx, by in balls): continue
         balls.append((d, x, y))
         if len(balls) > 90: break
-    mb = bpy.data.metaballs.new(name); mb.resolution = 0.05; mb.render_resolution = 0.05; mb.threshold = 0.6
+    mb = bpy.data.metaballs.new(name); mb.resolution = 0.03; mb.render_resolution = 0.03; mb.threshold = 0.6
     obj = bpy.data.objects.new(name, mb); bpy.context.collection.objects.link(obj)
     import random; rr = random.Random(len(balls))
     for d, x, y in balls:
@@ -83,7 +83,8 @@ def build(mk, name):
     b = nt.nodes['Principled BSDF']; vc = nt.nodes.new('ShaderNodeVertexColor'); vc.layer_name = 'Col'
     nt.links.new(vc.outputs['Color'], b.inputs['Base Color']); b.inputs['Roughness'].default_value = 0.95
     o.data.materials.append(m)
-    dec = o.modifiers.new('dec', 'DECIMATE'); dec.ratio = 0.35
+    sm = o.modifiers.new('sm', 'SMOOTH'); sm.factor = 0.8; sm.iterations = 6
+    dec = o.modifiers.new('dec', 'DECIMATE'); dec.ratio = 0.22
     return o
 
 made = []

@@ -4,7 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { MercatorCoordinate } from 'maplibre-gl'
 import type { CustomLayerInterface } from 'maplibre-gl'
 
-export type CloudSpot = { x: number; y: number; w: number; rot: number; kind: number } // 中心からの m（東・北）、幅 m
+export type CloudSpot = { x: number; y: number; w: number; rot: number; kind: number; h?: number } // 中心からの m（東・北）、幅 m
 
 export function cloudsLayer(origin: [number, number], spots: CloudSpot[], urls: string[]): CustomLayerInterface {
   let renderer: THREE.WebGLRenderer
@@ -28,10 +28,11 @@ export function cloudsLayer(origin: [number, number], spots: CloudSpot[], urls: 
           const matl = new THREE.MeshLambertMaterial({ vertexColors: true })
           const mine = spots.filter((s) => s.kind === kind)
           const inst = new THREE.InstancedMesh(geo, matl, mine.length)
+          inst.frustumCulled = false
           const m = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3()
           mine.forEach((s, i) => {
             const k = s.w / bw
-            inst.setMatrixAt(i, m.compose(v.set(s.x, 0, -s.y), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), s.rot), sc.set(k, k, k)))
+            inst.setMatrixAt(i, m.compose(v.set(s.x, s.h ?? 0, -s.y), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), s.rot), sc.set(k, k, k)))
           })
           scene.add(inst)
         })
