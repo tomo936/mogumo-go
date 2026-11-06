@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import { AuthContext } from '../auth/AuthContext.ts'
@@ -7,11 +7,12 @@ import type { LocationEvent } from '../map/domain/locationStatus.ts'
 import type { Shop } from '../shops/domain/shop.ts'
 import { MapPage } from './MapPage.tsx'
 
+vi.mock('../checkin/ui/confetti.ts', () => ({ startConfetti: () => () => {} }))
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }))
 const mounts: ((e: LocationEvent) => void)[] = []
 const shopErrors: (() => void)[] = []
 const handlers: { select: (s: Shop | null) => void; position: (p: LatLng) => void }[] = []
-const checkinCalls: string[] = []
+const checkinCalls: { id: string; cells: unknown[] }[] = []
 const postCheckin = vi.fn()
 vi.mock('../checkin/infra/checkinApi.ts', () => ({ postCheckin: (...a: unknown[]) => postCheckin(...a) }))
 vi.mock('../map/ui/MapView.tsx', async () => {
@@ -20,12 +21,12 @@ vi.mock('../map/ui/MapView.tsx', async () => {
     MapView: ({ onStatus, onShopsError, onSelectShop, onPosition, ref }: {
       onStatus: (e: LocationEvent) => void; onShopsError: () => void
       onSelectShop: (s: Shop | null) => void; onPosition: (p: LatLng) => void
-      ref?: React.Ref<{ checkin(id: string): void }>
+      ref?: React.Ref<{ checkin(shop: Shop, cells: unknown[]): void }>
     }) => {
       useEffect(() => { mounts.push(onStatus) }, [onStatus])
       useEffect(() => { shopErrors.push(onShopsError) }, [onShopsError])
       useEffect(() => { handlers.push({ select: onSelectShop, position: onPosition }) }, [onSelectShop, onPosition])
-      useImperativeHandle(ref, () => ({ checkin: (id) => { checkinCalls.push(id) } }), [])
+      useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) } }), [])
       return <div data-testid="map-view" />
     },
   }
@@ -67,7 +68,7 @@ const renderPage = () =>
 const last = () => handlers[handlers.length - 1]
 
 test('お店をタップするとシートが出て、チェックインが成功すると閉じる', async () => {
-  postCheckin.mockResolvedValue({ ok: true, checkinId: 'c1', coins: 30, newCells: [] })
+  postCheckin.mockResolvedValue({ ok: true, checkinId: 'c1', coins: 30, newCells: [{ x: 1, y: 2 }] })
   renderPage()
   act(() => last().position(here))
   act(() => last().select(shop))
@@ -75,7 +76,9 @@ test('お店をタップするとシートが出て、チェックインが成�
   await userEvent.click(screen.getByRole('button', { name: 'チェックイン' }))
   expect(postCheckin).toHaveBeenCalledWith({ shopId: 'hp:J1', me: here, farFromHome: false })
   expect(screen.queryByText('麺屋もぐも')).not.toBeInTheDocument()
-  expect(checkinCalls).toEqual(['hp:J1'])
+  expect(checkinCalls).toEqual([{ id: 'hp:J1', cells: [{ x: 1, y: 2 }] }])
+  expect(screen.getByText('チェックイン完了')).toBeInTheDocument()
+  expect(screen.getByText('+30 コイン')).toBeInTheDocument()
 })
 
 test('失敗するとシートに文言が出て、閉じない。通信中は2回押せない', async () => {
@@ -100,4 +103,32 @@ test('何もない所をタップするとシートが閉じる', () => {
   act(() => last().select(shop))
   act(() => last().select(null))
   expect(screen.queryByText('麺屋もぐも')).not.toBeInTheDocument()
+})
+
+const shop2: Shop = { id: 'hp:J2', name: '別のお店', lat: 35, lng: 139, kind: 'cafe', details: null }
+
+test('通信中は別のお店をタップしてもシートが入れ替わらず、終わったらそのお店は閉じない', async () => {
+  let resolve!: (v: unknown) => void
+  postCheckin.mockReset()
+  postCheckin.mockReturnValue(new Promise((r) => { resolve = r }))
+  renderPage()
+  act(() => last().position(here))
+  act(() => last().select(shop))
+  await userEvent.click(screen.getByRole('button', { name: 'チェックイン' }))
+  act(() => last().select(shop2))
+  expect(screen.getByText('麺屋もぐも')).toBeInTheDocument()
+  expect(screen.queryByText('別のお店')).not.toBeInTheDocument()
+  await act(async () => resolve({ ok: false, reason: 'network' }))
+  expect(screen.getByText('麺屋もぐも')).toBeInTheDocument()
+})
+
+test('シートの onCheckin を同期で2回呼んでも postCheckin は1回', async () => {
+  postCheckin.mockReset()
+  postCheckin.mockReturnValue(new Promise(() => {}))
+  renderPage()
+  act(() => last().position(here))
+  act(() => last().select(shop))
+  const btn = screen.getByRole('button', { name: 'チェックイン' })
+  act(() => { fireEvent.click(btn); fireEvent.click(btn) })
+  expect(postCheckin).toHaveBeenCalledTimes(1)
 })

@@ -43,7 +43,7 @@ export function ShopSheet({ shop, distanceM, busy, error, onCheckin, onClose }: 
         <div>
           <h2 className="shop-sheet__name">{shop.name}</h2>
           {open && <p className="shop-sheet__open">{open}</p>}
-          <p className="shop-sheet__distance">{`ここから ${Math.round(distanceM)}m`}</p>
+          <p className="shop-sheet__distance">{`ここから ${Math.ceil(distanceM)}m`}</p>
         </div>
       </div>
       {error && (
@@ -52,7 +52,7 @@ export function ShopSheet({ shop, distanceM, busy, error, onCheckin, onClose }: 
         </p>
       )}
       <button type="button" className="shop-sheet__go" disabled={!inRange || busy} onClick={onCheckin}>
-        {inRange ? 'チェックイン' : `あと ${Math.ceil(distanceM - CHECKIN_RANGE_M)}m`}
+        {busy ? 'チェックイン中…' : inRange ? 'チェックイン' : `あと ${Math.ceil(distanceM - CHECKIN_RANGE_M)}m`}
       </button>
     </section>
   )

@@ -18,12 +18,13 @@ import type { LocationEvent } from '../domain/locationStatus.ts'
 import { fetchHotpepperShops, shopSourceEnabled } from '../../shops/infra/hotpepper.ts'
 import { loadProgress } from '../../checkin/infra/checkinApi.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
+import type { Cell } from '../../fog/domain/grid.ts'
 import { attachWorld } from './worldLayers.ts'
 import { nextBearing } from '../domain/rotate.ts'
 import { isStale, judgeFix, shouldMoveCamera, stepToward } from '../domain/smoothing.ts'
 import type { Fix } from '../domain/smoothing.ts'
 
-export type MapViewHandle = { checkin(shopId: string): void }
+export type MapViewHandle = { checkin(shop: Shop, newCells: Cell[]): void }
 
 type Props = {
   onStatus: (event: LocationEvent) => void
@@ -38,6 +39,7 @@ const TAP_MAX_MOVE_PX = 10
 const TAP_MAX_MS = 300
 const POSITION_EVERY_MS = 250
 const TAP_ZOOM_STEP = 0.6
+const CHECKIN_WAVE_DELAY_MS = 900 // 紙吹雪のあと、霧の波が走り出すまで
 
 // 地図・カメラ・位置は MapLibre と ref だけで持ち、React の再描画を起こさない。
 // React に上げるのは位置情報の出来事（onStatus）だけ。
@@ -54,8 +56,25 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onPosition
     onSelectShopRef.current = onSelectShop
     onPositionRef.current = onPosition
   })
-  // チェックインの演出は Task 11 で入れる。いまは「済み」の印だけ付ける
-  useImperativeHandle(ref, () => ({ checkin: (shopId) => worldRef.current?.markChecked(shopId) }), [])
+  // チェックイン演出: 約0.9秒後に済みの印を付け、新しく晴れるセルを足して波を走らせる（外すときに取り消す）
+  const checkinTimers = useRef(new Set<ReturnType<typeof setTimeout>>())
+  useImperativeHandle(ref, () => ({
+    checkin: (shop, newCells) => {
+      const t = setTimeout(() => {
+        checkinTimers.current.delete(t)
+        worldRef.current?.markChecked(shop.id)
+        worldRef.current?.addCleared(newCells, shop)
+      }, CHECKIN_WAVE_DELAY_MS)
+      checkinTimers.current.add(t)
+    },
+  }), [])
+  useEffect(() => {
+    const timers = checkinTimers.current
+    return () => {
+      for (const t of timers) clearTimeout(t)
+      timers.clear()
+    }
+  }, [])
 
   useEffect(() => {
     const container = containerRef.current!

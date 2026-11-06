@@ -59,3 +59,13 @@ test('閉じるボタン', async () => {
   await userEvent.click(screen.getByRole('button', { name: '閉じる' }))
   expect(props.onClose).toHaveBeenCalled()
 })
+
+test('距離は切り上げで出す（50.4m は 51m、あと 1m）', () => {
+  setup({ distanceM: 50.4 })
+  expect(screen.getByText('ここから 51m')).toBeInTheDocument()
+})
+
+test('通信中のボタンは「チェックイン中…」', () => {
+  setup({ busy: true })
+  expect(screen.getByRole('button', { name: 'チェックイン中…' })).toBeDisabled()
+})

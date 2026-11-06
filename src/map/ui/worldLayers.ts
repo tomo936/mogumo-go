@@ -15,6 +15,7 @@ import { visibleShops } from '../../shops/domain/visibility.ts'
 import { extractFeatures, featuresNear, NEAR_M } from '../../shops/infra/mapFeatures.ts'
 import type { AreaFeatures } from '../../shops/infra/mapFeatures.ts'
 import { extractMapShops } from '../../shops/infra/mapShops.ts'
+import { createCheckMarks } from '../../shops/infra/checkMarks.ts'
 import { createShopLayer } from '../../shops/infra/shopLayer.ts'
 import type { PlacedShop } from '../../shops/infra/shopLayer.ts'
 import { distanceMeters, localFrame } from '../domain/geo.ts'
@@ -56,6 +57,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const cleared = clearedFromHome(deps.home)
   const fogLayer = createFogLayer()
   const shopLayer = createShopLayer()
+  const checkMarks = createCheckMarks(map)
+  let shownPlaced: PlacedShop[] = [] // いま層に渡している置き方
   let fogCenter: LatLng | null = null // 雲の塊を置いたときの現在地
   let lastClumps: Clump[] = [] // 層に最後に渡した雲の塊（波の「変わる前」）
   const checkedIds = new Set<string>()
@@ -122,7 +125,9 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     near = shown
     if (key === shownKey) return // 顔ぶれが変わったときだけ層を作り直す
     shownKey = key
+    shownPlaced = out
     shopLayer.setShops(out)
+    checkMarks.update(out, checkedIds)
   }
 
   const setFog = (origin: LatLng) => {
@@ -210,6 +215,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       const before = cleared.size
       for (const c of cells) cleared.add(cellKey(c))
       for (const id of checkedShopIds) checkedIds.add(id)
+      checkMarks.update(shownPlaced, checkedIds)
       if (cleared.size === before) return
       if (fogCenter) setFog(fogCenter)
       if (last) refreshShops(last)
@@ -256,10 +262,12 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     },
     markChecked(shopId) {
       checkedIds.add(shopId)
+      checkMarks.update(shownPlaced, checkedIds)
     },
     checked: () => checkedIds,
     dispose() {
       disposed = true
+      checkMarks.dispose()
       map.off('idle', onIdle)
       for (const id of [fogLayer.id, shopLayer.id]) if (map.getLayer(id)) map.removeLayer(id)
     },

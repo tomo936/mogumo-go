@@ -8,7 +8,7 @@ import { distanceMeters } from '../map/domain/geo.ts'
 import type { LatLng } from '../map/domain/geo.ts'
 import { farFromHome } from '../checkin/domain/far.ts'
 import { postCheckin } from '../checkin/infra/checkinApi.ts'
-import type { CheckinResult } from '../checkin/infra/checkinApi.ts'
+import { CheckinEffect } from '../checkin/ui/CheckinEffect.tsx'
 import { ShopSheet } from '../checkin/ui/ShopSheet.tsx'
 import type { CheckinError } from '../checkin/ui/ShopSheet.tsx'
 import type { Shop } from '../shops/domain/shop.ts'
@@ -36,9 +36,14 @@ export function MapPage() {
   const [me, setMe] = useState<LatLng | null>(null)
   const [busy, setBusy] = useState(false)
   const [checkinError, setCheckinError] = useState<CheckinError | null>(null)
-  const [, setLastCheckin] = useState<Extract<CheckinResult, { ok: true }> | null>(null) // Task 11 の演出で使う
+  const [effect, setEffect] = useState<{ coins: 30 | 0; shopName: string; key: number } | null>(null)
   const busyRef = useRef(false)
+  const selectedRef = useRef<Shop | null>(null)
+  useEffect(() => {
+    selectedRef.current = selected
+  })
   const select = useCallback((shop: Shop | null) => {
+    if (busyRef.current && shop) return // チェックイン中は別のお店にシートを入れ替えない（閉じるのは可）
     setSelected(shop)
     setCheckinError(null)
   }, [])
@@ -48,15 +53,16 @@ export function MapPage() {
     busyRef.current = true // 連打を state の反映より前に止める
     setBusy(true)
     setCheckinError(null)
-    const result = await postCheckin({ shopId: selected.id, me, farFromHome: farFromHome(home, me) })
+    const posted = selected
+    const result = await postCheckin({ shopId: posted.id, me, farFromHome: farFromHome(home, me) })
     busyRef.current = false
     setBusy(false)
     if (result.ok) {
-      setLastCheckin(result)
-      setSelected(null)
-      mapRef.current?.checkin(selected.id)
+      setSelected((cur) => (cur?.id === posted.id ? null : cur))
+      setEffect({ coins: result.coins, shopName: posted.name, key: Date.now() })
+      mapRef.current?.checkin(posted, result.newCells)
     } else {
-      setCheckinError(result.reason)
+      if (selectedRef.current?.id === posted.id) setCheckinError(result.reason)
     }
   }
 
@@ -86,6 +92,7 @@ export function MapPage() {
           onClose={() => select(null)}
         />
       )}
+      {effect && <CheckinEffect key={effect.key} coins={effect.coins} shopName={effect.shopName} onDone={() => setEffect(null)} />}
       <div className="map-overlay">
         <LocationOverlay status={status} onRetry={retry} onReload={() => window.location.reload()} />
         {shopsError && <p className="location-banner">お店を読み込めませんでした</p>}
