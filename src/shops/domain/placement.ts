@@ -43,7 +43,7 @@ function nearestRoadPoint(roads: P[][]): P | null {
   return found
 }
 
-const clampSize = (m: number) => Math.max(SHOP_MIN_SIZE_M, Math.min(SHOP_MAX_SIZE_M, m))
+const clampSize = (m: number, max: number) => Math.max(SHOP_MIN_SIZE_M, Math.min(max, m))
 
 // 輪郭なし: 道路に向け、近すぎれば下がる。road は一番近い道路の点、dir は道路への向き（単位ベクトル）
 function free(road: P | null, roadDist: number, dir: P): Placement {
@@ -55,7 +55,7 @@ function free(road: P | null, roadDist: number, dir: P): Placement {
 
 // 輪郭あり: その真ん中・大きさに合わせ、道路（無ければ南）に一番向いている辺を正面にする。
 // 使える辺（2m 以上）が無ければ null
-function fitFootprint(ring: P[], road: P | null): Placement | null {
+function fitFootprint(ring: P[], road: P | null, maxSizeM: number): Placement | null {
   // 閉じた輪（最初と最後が同じ点）でも開いた輪でも同じに扱う
   const pts = ring.length > 1 && ring[0].x === ring[ring.length - 1].x && ring[0].y === ring[ring.length - 1].y ? ring.slice(0, -1) : ring
   const c = { x: pts.reduce((s, q) => s + q.x, 0) / pts.length, y: pts.reduce((s, q) => s + q.y, 0) / pts.length }
@@ -101,16 +101,16 @@ function fitFootprint(ring: P[], road: P | null): Placement | null {
     minS = Math.min(minS, v)
     maxS = Math.max(maxS, v)
   }
-  return { center: c, facingDeg: bearing(face), sizeM: clampSize(Math.min(maxF - minF, maxS - minS)), onFootprint: true }
+  return { center: c, facingDeg: bearing(face), sizeM: clampSize(Math.min(maxF - minF, maxS - minS), maxSizeM), onFootprint: true }
 }
 
-// 店の点は原点。道路に正面を向け、建物の輪郭があればその真ん中・大きさに合わせる
-export function placeShop(roads: P[][], footprints: P[][]): Placement {
+// 店の点は原点。道路に正面を向け、建物の輪郭があればその真ん中・大きさ（maxSizeM まで）に合わせる
+export function placeShop(roads: P[][], footprints: P[][], maxSizeM = SHOP_MAX_SIZE_M): Placement {
   const road = nearestRoadPoint(roads)
   const roadDist = road ? Math.hypot(road.x, road.y) : Infinity
   // 道路が無い・重なりすぎ（0.5m 以下）のときは南向き
   const usable = road && roadDist > 0.5 ? road : null
   const dir = usable ? { x: usable.x / roadDist, y: usable.y / roadDist } : SOUTH
   const ring = footprints.find((r) => contains({ x: 0, y: 0 }, r))
-  return (ring && fitFootprint(ring, usable)) || free(road, roadDist, dir)
+  return (ring && fitFootprint(ring, usable, maxSizeM)) || free(road, roadDist, dir)
 }
