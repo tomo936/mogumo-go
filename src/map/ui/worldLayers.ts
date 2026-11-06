@@ -7,7 +7,8 @@ import { cellKey } from '../../fog/domain/grid.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
 import { thinAmount, waveClumps } from '../../fog/domain/wave.ts'
 import { createFogLayer } from '../../fog/infra/fogLayer.ts'
-import { MAP_SHOPS_REEXTRACT_M, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
+import { BUILDING_MAX_SIZE_M, MAP_SHOPS_REEXTRACT_M, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
+import { groupShops } from '../../shops/domain/grouping.ts'
 import { mergeShops } from '../../shops/domain/merge.ts'
 import { placeShop } from '../../shops/domain/placement.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
@@ -15,6 +16,8 @@ import { visibleShops } from '../../shops/domain/visibility.ts'
 import { extractFeatures, featuresNear, NEAR_M } from '../../shops/infra/mapFeatures.ts'
 import type { AreaFeatures } from '../../shops/infra/mapFeatures.ts'
 import { extractMapShops } from '../../shops/infra/mapShops.ts'
+import { createBuildingPins } from '../../shops/infra/buildingPins.ts'
+import type { PinnedBuilding } from '../../shops/infra/buildingPins.ts'
 import { createCheckMarks } from '../../shops/infra/checkMarks.ts'
 import { createShopLayer } from '../../shops/infra/shopLayer.ts'
 import type { PlacedShop } from '../../shops/infra/shopLayer.ts'
@@ -28,6 +31,7 @@ type Deps = {
   shopsEnabled: boolean
   onShopsError: () => void
   loadProgress: () => Promise<{ cells: Cell[]; checkedShopIds: Set<string>; lastDayByShop?: Map<string, string> }>
+  onPinTap: (shopIds: string[]) => void // ビルの上のピンが押された（1軒ならその店、まとめたピンなら全員）
 }
 
 const THIN_EASE_PER_S = 3 // 薄さが目標に近づく速さ（1秒あたり）
@@ -41,13 +45,13 @@ type WorldMap = MapLibreMap
 // 自分の位置の印（MapView で下から順に足す）。霧とお店はこれより下に入れる
 const PLAYER_LAYERS = ['me-circle-fill', 'me-circle-line', 'me-shadow']
 
-// 店ごとの置き方。main が輪郭に合わせたとき、同じ輪郭を先に使う店があれば free（輪郭なし）を使う
-type Placed = { main: PlacedShop; free: PlacedShop | null }
+// 店ごとの置き方。輪郭に合わせたときは、同じ建物の店がそろったときのビルの置き方（bldg）も持つ
+type Placed = { main: PlacedShop; bldg: PlacedShop | null }
 
 type World = {
   onPosition(p: LatLng): void
   shopsNear(): Shop[]
-  pick(point: { x: number; y: number }): string | null
+  pick(point: { x: number; y: number }): string[] | null // 押された建物の店の id（ビルなら全員）
   addCleared(cells: Cell[], from: LatLng): void
   markChecked(shopId: string, mapId?: string | null): void
   checked(): ReadonlySet<string> // 済みの店 id（合体した店は、地図の点の id で済みでも含む）
@@ -60,7 +64,9 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const fogLayer = createFogLayer()
   const shopLayer = createShopLayer()
   const checkMarks = createCheckMarks(map)
-  let shownPlaced: PlacedShop[] = [] // いま層に渡している置き方
+  const buildingPins = createBuildingPins(map, (ids) => deps.onPinTap(ids))
+  let shownPlaced: PlacedShop[] = [] // いま層に渡している置き方（1軒の店だけ。✓ の印用）
+  let shownBuildings: PinnedBuilding[] = [] // いま出しているビルと、その中の店
   let fogCenter: LatLng | null = null // 雲の塊を置いたときの現在地
   let lastClumps: Clump[] = [] // 層に最後に渡した雲の塊（波の「変わる前」）
   const checkedIds = new Set<string>() // サーバーが知っている id と、今回付けた id（hp: と osm: の両方がありうる）
@@ -93,7 +99,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
 
   const toPlaced = (shop: Shop, pl: ReturnType<typeof placeShop>): PlacedShop => {
     const c = localFrame(shop).back(pl.center)
-    return { id: shop.id, kind: shop.kind, lat: c.lat, lng: c.lng, facingDeg: pl.facingDeg, sizeM: pl.sizeM }
+    return { id: shop.id, model: shop.kind, shopIds: [shop.id], lat: c.lat, lng: c.lng, facingDeg: pl.facingDeg, sizeM: pl.sizeM }
   }
 
   let refreshedAt: LatLng | null = null
@@ -111,10 +117,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     // タイルは1回の更新で1回だけ読む（店ごとに読むと、店の数×タイルの大きさだけ重くなる）
     let area: AreaFeatures | null = null
     const frame = localFrame(p)
-    const out: PlacedShop[] = []
-    const shown: Shop[] = []
-    const usedFootprints: LatLng[] = [] // 輪郭に合わせて置いた店の中心
-    let key = ''
+    const visible: { shop: Shop; hit: Placed }[] = []
     for (const shop of visibleShops(shops, p, cleared)) { // 近い順
       let hit = placed.get(shop.id)
       if (!hit) {
@@ -122,23 +125,43 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         area ??= extractFeatures(map, p, SHOP_RADIUS_M + NEAR_M)
         const { roads, footprints } = featuresNear(area, frame.to(shop))
         const pl = placeShop(roads, footprints)
-        hit = { main: toPlaced(shop, pl), free: pl.onFootprint ? toPlaced(shop, placeShop(roads, [])) : null }
+        hit = { main: toPlaced(shop, pl), bldg: pl.onFootprint ? toPlaced(shop, placeShop(roads, footprints, BUILDING_MAX_SIZE_M)) : null }
         placed.set(shop.id, hit)
       }
-      const main = hit.main
-      const taken = hit.free !== null && usedFootprints.some((c) => distanceMeters(c, main) < 1)
-      const s = taken ? hit.free! : main
-      if (hit.free && !taken) usedFootprints.push(main)
-      out.push(s)
-      shown.push(shop)
-      key += `${s.id}${taken ? '*' : ''},`
+      visible.push({ shop, hit })
     }
-    near = shown
+    // 同じ建物（輪郭に合わせた中心がそろう）の見えている店を1組にする
+    const byId = new Map(visible.map((v) => [v.shop.id, v]))
+    const groups = groupShops(visible.map(({ shop, hit }) => ({ id: shop.id, footprintCenter: hit.bldg ? frame.to(hit.main) : null })))
+    const out: PlacedShop[] = []
+    const singles: PlacedShop[] = []
+    const blds: PinnedBuilding[] = []
+    let key = ''
+    for (const ids of groups) {
+      const members = ids.map((id) => byId.get(id)!)
+      if (members.length === 1) {
+        out.push(members[0].hit.main)
+        singles.push(members[0].hit.main)
+      } else {
+        const placedB: PlacedShop = { ...members[0].hit.bldg!, id: `bldg:${ids[0]}`, model: 'building', shopIds: ids }
+        out.push(placedB)
+        blds.push({ placed: placedB, shops: members.map((m) => m.shop) })
+      }
+      key += `${ids.join('+')},`
+    }
+    near = visible.map((v) => v.shop)
     if (key === shownKey) return // 顔ぶれが変わったときだけ層を作り直す
     shownKey = key
-    shownPlaced = out
+    shownPlaced = singles
+    shownBuildings = blds
     shopLayer.setShops(out)
-    checkMarks.update(out, checkedNow())
+    updateMarks()
+  }
+  // ✓ の印（1軒の店）とビルのピン（✓ はピンの上に出す）を、済みの一覧に合わせて出し直す
+  const updateMarks = () => {
+    const done = checkedNow()
+    checkMarks.update(shownPlaced, done)
+    buildingPins.update(shownBuildings, done)
   }
 
   const setFog = (origin: LatLng) => {
@@ -243,7 +266,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       const before = cleared.size
       for (const c of cells) cleared.add(cellKey(c))
       for (const id of checkedShopIds) checkedIds.add(id)
-      checkMarks.update(shownPlaced, checkedNow())
+      updateMarks()
       if (cleared.size === before) return
       if (fogCenter) setFog(fogCenter)
       if (last) refreshShops(last)
@@ -294,7 +317,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       const today = jstDay(new Date())
       lastDay.set(shopId, today)
       if (mapId) lastDay.set(mapId, today)
-      checkMarks.update(shownPlaced, checkedNow())
+      updateMarks()
     },
     checked: checkedNow,
     checkedToday(shop) {
@@ -304,6 +327,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     dispose() {
       disposed = true
       checkMarks.dispose()
+      buildingPins.dispose()
       map.off('idle', onIdle)
       for (const id of [fogLayer.id, shopLayer.id]) if (map.getLayer(id)) map.removeLayer(id)
     },

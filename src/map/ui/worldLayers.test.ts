@@ -10,7 +10,10 @@ const fogLayer = { id: 'fog', setClumps: vi.fn(), setThin: vi.fn() }
 const shopLayer = { id: 'shops-3d', setShops: vi.fn() }
 vi.mock('../../fog/infra/fogLayer.ts', () => ({ createFogLayer: () => fogLayer }))
 vi.mock('../../shops/infra/shopLayer.ts', () => ({ createShopLayer: () => shopLayer }))
-vi.mock('../../shops/infra/checkMarks.ts', () => ({ createCheckMarks: () => ({ update: vi.fn(), dispose: vi.fn() }) }))
+const marksUpdate = vi.fn()
+const pinsUpdate = vi.fn()
+vi.mock('../../shops/infra/checkMarks.ts', () => ({ createCheckMarks: () => ({ update: marksUpdate, dispose: vi.fn() }) }))
+vi.mock('../../shops/infra/buildingPins.ts', () => ({ createBuildingPins: () => ({ update: pinsUpdate, dispose: vi.fn() }) }))
 
 vi.mock('../domain/geo.ts', async (orig) => {
   const a = await orig<typeof import('../domain/geo.ts')>()
@@ -60,7 +63,7 @@ function setup(over: Partial<Parameters<typeof attachWorld>[1]> = {}) {
   const fetchHotpepper = over.fetchHotpepper ? vi.mocked(over.fetchHotpepper) : vi.fn((_c: LatLng) => Promise.resolve([shop]))
   const onShopsError = vi.fn()
   const map = fakeMap()
-  const world = attachWorld(map, { home, shopsEnabled: true, onShopsError, loadProgress, ...over, fetchHotpepper })
+  const world = attachWorld(map, { home, shopsEnabled: true, onShopsError, loadProgress, onPinTap: vi.fn(), ...over, fetchHotpepper })
   return { world, fetchHotpepper, onShopsError, map }
 }
 
@@ -88,7 +91,7 @@ test('店が何軒あっても、1回の更新でタイルを読むのは道路1
   expect(featureReads()).toBe(2)
 })
 
-test('同じ建物に2軒あれば、近い方が建物に合わせ、もう1軒は輪郭なしで置く', async () => {
+test('同じ建物に2軒あれば、ビル1つ（model building・id bldg:a・shopIds [a,b]）を建物の真ん中に置く', async () => {
   tiles = { transportation: [roadFeature], building: [building(0, 16, 20, 12)] }
   const a: Shop = { id: 'a', name: 'a', lat: home.lat + 14 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe', details: null, mapId: null }
   const b: Shop = { id: 'b', name: 'b', lat: home.lat + 18 / M, lng: home.lng + 5 / LNG_M, kind: 'ramen', details: null, mapId: null }
@@ -96,15 +99,37 @@ test('同じ建物に2軒あれば、近い方が建物に合わせ、もう1軒
   world.onPosition(home)
   await flush()
   const out = vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]
-  const pa = out.find((s) => s.id === 'a')!
-  const pb = out.find((s) => s.id === 'b')!
-  // a は建物の真ん中（自宅から北 16m）
-  expect((pa.lat - home.lat) * M).toBeCloseTo(16, 0)
-  expect((pa.lng - home.lng) * LNG_M).toBeCloseTo(0, 0)
-  // b は建物の真ん中に重ねず、14m のまま道（北）を向く
-  expect(Math.abs((pb.lng - home.lng) * LNG_M - 5)).toBeLessThan(0.5)
-  expect(pb.sizeM).toBe(14)
-  expect(pb.facingDeg).toBeCloseTo(0, 0)
+  expect(out).toHaveLength(1)
+  expect(out[0]).toMatchObject({ id: 'bldg:a', model: 'building', shopIds: ['a', 'b'], sizeM: 14 })
+  // 建物の真ん中（自宅から北 16m）
+  expect((out[0].lat - home.lat) * M).toBeCloseTo(16, 0)
+  expect((out[0].lng - home.lng) * LNG_M).toBeCloseTo(0, 0)
+  expect(pinsUpdate).toHaveBeenLastCalledWith([{ placed: out[0], shops: [a, b] }], expect.any(Set))
+})
+
+test('組の片方が霧の中なら、見えている1軒はふつうの店', async () => {
+  tiles = { transportation: [roadFeature], building: [building(0, 52, 20, 12)] }
+  const a: Shop = { id: 'a', name: 'a', lat: home.lat + 47 / M, lng: home.lng, kind: 'cafe', details: null, mapId: null }
+  const b: Shop = { id: 'b', name: 'b', lat: home.lat + 56 / M, lng: home.lng + 5 / LNG_M, kind: 'ramen', details: null, mapId: null }
+  const { world } = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([a, b])) })
+  world.onPosition(home)
+  await flush()
+  const out = vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]
+  expect(out.map((s) => [s.id, s.model])).toEqual([['a', 'cafe']])
+})
+
+test('ビルに入った済みの店には checkMarks を出さず、buildingPins に渡る', async () => {
+  tiles = { transportation: [roadFeature], building: [building(0, 16, 20, 12)] }
+  const a: Shop = { id: 'a', name: 'a', lat: home.lat + 14 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe', details: null, mapId: null }
+  const b: Shop = { id: 'b', name: 'b', lat: home.lat + 18 / M, lng: home.lng + 5 / LNG_M, kind: 'ramen', details: null, mapId: null }
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([a, b])), loadProgress: vi.fn(() => Promise.resolve({ cells: [], checkedShopIds: new Set(['a']) })) })
+  world.onPosition(home)
+  await flush()
+  await flush()
+  expect(marksUpdate).toHaveBeenLastCalledWith([], expect.any(Set))
+  const [blds, checked] = pinsUpdate.mock.lastCall!
+  expect(blds).toHaveLength(1)
+  expect((checked as Set<string>).has('a')).toBe(true)
 })
 
 test('400m では再取得せず、520m で2回目。720m で雲の塊を置き直す', async () => {
@@ -179,7 +204,7 @@ test('晴れた所のお店が建物として置かれ、置き方は店ごと�
   const { world } = setup()
   world.onPosition(home)
   await flush()
-  expect(shopLayer.setShops).toHaveBeenLastCalledWith([expect.objectContaining({ id: 's1', kind: 'ramen' })])
+  expect(shopLayer.setShops).toHaveBeenLastCalledWith([expect.objectContaining({ id: 's1', model: 'ramen', shopIds: ['s1'] })])
   world.onPosition(north(15))
   expect(featureReads()).toBe(2) // 道路1回・建物1回
 })
