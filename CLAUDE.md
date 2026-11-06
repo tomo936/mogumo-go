@@ -3,7 +3,7 @@
 ## このプロジェクトについて
 - スマホ向け Web アプリ「もぐもGO」（霧晴らし × クエストのグルメ探索）。仕様の正本は `docs/SPEC.md`、上司課題の原文は `docs/source-dai2an-20261021.md`、1周目の計画は `docs/PLAN-cycle1.md`。作業前に該当箇所を読むこと。
 - 技術: React + TypeScript + Vite / Supabase（DB・認証・ストレージ・Edge Functions）/ MapLibre GL JS + OpenFreeMap / ホットペッパーグルメAPI（キーはサーバー側のみ）/ OSRM（FOSSGIS）/ Vercel。完全無料の範囲で作る。対象は iPhone 優先。
-- 現状: 土台のみ。React Router（`src/routes/`、`/login`・`/setup`・`/`）、ログイン状態は `src/auth/`（Supabase Auth の Google ログイン）、テストは Vitest。地図は `src/map/`（`domain/` 位置のならし・判定・状態、`infra/` 位置情報・MapLibre の色やワーカー・歩いたふり、`ui/` 地図の画面。調整値は `src/map/config.ts`、色の案は `src/map/infra/themes.ts`、開発中は `?fake` で歩いたふり）。出典は起動時のスプラッシュ（`src/credits/`）。初回設定は `src/setup/`（① ニックネーム → ② 最初のキャラ → ③ 自宅。`/setup/name`・`/setup/character`・`/setup/home`。profiles の有無とこの端末の自宅で振り分け。自宅は localStorage の `mogumo.home.<userId>` だけに保存）。素材は `src/assets/`（アプリで使う形）と `art/`（シロの元データ）。状態管理ライブラリは未導入。実装が進んだらこの節を更新すること。
+- 現状: 土台のみ。React Router（`src/routes/`、`/login`・`/setup`・`/`）、ログイン状態は `src/auth/`（Supabase Auth の Google ログイン）、テストは Vitest。地図は `src/map/`（`domain/` 位置のならし・判定・状態、`infra/` 位置情報・MapLibre の色やワーカー・歩いたふり、`ui/` 地図の画面。調整値は `src/map/config.ts`、色の案は `src/map/infra/themes.ts`、開発中は `?fake` で歩いたふり）。出典は起動時のスプラッシュ（`src/credits/`）。初回設定は `src/setup/`（① ニックネーム → ② 最初のキャラ → ③ 自宅。自宅は localStorage の `mogumo.home.<userId>` だけに保存）。素材は `src/assets/`（アプリで使う形）と `art/`（シロの元データ・見本・試作）。状態管理ライブラリは未導入。**作業を再開するときは、まず `docs/handoff.md`（引き継ぎメモ）を読む。** 実装が進んだらこの節を更新すること。
 
 ## 工程（上司課題の進め方）
 要件定義 → 基本設計 → 詳細設計 → 実装 → 検証 → 振り返り の順で進める。
