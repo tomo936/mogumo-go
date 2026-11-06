@@ -256,3 +256,26 @@ test('shopsEnabled: false でも地図の店は出る', () => {
   expect(vi.mocked(shopLayer.setShops).mock.lastCall![0]).toEqual([expect.objectContaining({ id: 'osm:7' })])
   expect(onShopsError).not.toHaveBeenCalled()
 })
+
+const poiReads = () => querySourceFeatures.mock.calls.filter((c) => c[1].sourceLayer === 'poi').length
+
+test('同じ位置で idle が2回来ても、poi を読むのは1回だけ', async () => {
+  const { world } = setup()
+  world.onPosition(home)
+  await flush()
+  const n = poiReads()
+  idleHandler!()
+  idleHandler!()
+  expect(poiReads()).toBe(n)
+})
+
+test('タイル読み込み中は poi を読まず、読めたあとの idle で読む', async () => {
+  tilesLoaded = false
+  const { world } = setup()
+  world.onPosition(home)
+  await flush()
+  expect(poiReads()).toBe(0)
+  tilesLoaded = true
+  idleHandler!()
+  expect(poiReads()).toBe(1)
+})

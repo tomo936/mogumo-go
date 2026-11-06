@@ -55,9 +55,12 @@ export function attachWorld(map: WorldMap, deps: Deps): { onPosition(p: LatLng):
   }
 
   let refreshedAt: LatLng | null = null
+  let extractedAt: LatLng | null = null
   const refreshShops = (p: LatLng) => {
     refreshedAt = p
-    if (map.areTilesLoaded()) {
+    // 地図のお店の読み直しは、まだ読んでいない・前回から SHOP_REFRESH_M 以上動いたときだけ（idle は回転のたびに来る）
+    if (map.areTilesLoaded() && (!extractedAt || distanceMeters(extractedAt, p) >= SHOP_REFRESH_M)) {
+      extractedAt = p
       mapShops = extractMapShops(map, p, SHOP_RADIUS_M)
       shops = mergeShops(mapShops, hpShops)
     }

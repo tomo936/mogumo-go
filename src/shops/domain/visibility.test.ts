@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { visibleShops } from './visibility.ts'
+import { distanceMeters } from '../../map/domain/geo.ts'
 import { clearedFromHome } from '../../fog/domain/clearing.ts'
 import type { Shop } from './shop.ts'
 
@@ -24,6 +25,13 @@ describe('visibleShops', () => {
   it('霧の中でも 50m 以内の店は出る（40m は出る・60m は出ない）', () => {
     const cleared = new Set<string>() // 全部霧
     expect(visibleShops([shop('near', 40), shop('far', 60)], me, cleared).map((s) => s.id)).toEqual(['near'])
+  })
+
+  it('霧の中のちょうど 50m は出る', () => {
+    // ほぼちょうど 50m 北に置く（誤差があっても 50m 以下）
+    const edge = { ...shop('edge', 0), lat: me.lat + 50 / 111195.0 * (50 / 50.00003607805453) }
+    expect(distanceMeters(me, edge)).toBeCloseTo(50, 4)
+    expect(visibleShops([edge], me, new Set<string>()).map((s) => s.id)).toEqual(['edge'])
   })
 
   it('晴れた 900m の店は出る', () => {
