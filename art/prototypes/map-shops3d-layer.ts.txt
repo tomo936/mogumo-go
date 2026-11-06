@@ -1,0 +1,61 @@
+// 確認用（git 管理外）: Blender で作ったお店の模型を MapLibre の地図に立てる（three.js のカスタムレイヤー）
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { OutlineEffect } from 'three/addons/effects/OutlineEffect.js'
+import { MercatorCoordinate } from 'maplibre-gl'
+import type { CustomLayerInterface, Map as MapLibreMap } from 'maplibre-gl'
+
+export type Shop3D = { lng: number; lat: number; facingDeg: number } // facingDeg: 正面の向き（北=0、時計回り）
+
+export function shopsLayer(url: string, shops: Shop3D[], metersPerUnit: number): CustomLayerInterface {
+  let renderer: THREE.WebGLRenderer, effect: OutlineEffect, map: MapLibreMap
+  const camera = new THREE.Camera()
+  const scene = new THREE.Scene()
+  const items: { obj: THREE.Object3D; mc: MercatorCoordinate; rot: number }[] = []
+  // アニメ調の陰影（3段）
+  const grad = new THREE.DataTexture(new Uint8Array([168, 176, 214, 255, 236, 236, 242, 255, 255, 255, 255, 255]), 3, 1)
+  grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true
+  return {
+    id: 'shops3d', type: 'custom', renderingMode: '3d',
+    onAdd(m, gl) {
+      map = m
+      scene.add(new THREE.HemisphereLight('#ffffff', '#dfe8ff', 1.4))
+      const sun = new THREE.DirectionalLight('#ffffff', 2.0); sun.position.set(-0.45, 0.75, 0.7); scene.add(sun)
+      renderer = new THREE.WebGLRenderer({ canvas: m.getCanvas(), context: gl, antialias: true })
+      renderer.autoClear = false
+      effect = new OutlineEffect(renderer, { defaultThickness: 0.0035, defaultColor: [0.42, 0.29, 0.29], defaultAlpha: 1 })
+      new GLTFLoader().load(url, (gltf) => {
+        gltf.scene.traverse((o) => {
+          const mesh = o as THREE.Mesh
+          if (!mesh.isMesh) return
+          const src = mesh.material as THREE.MeshStandardMaterial
+          const glow = src.emissive && src.emissive.getHex() !== 0
+          mesh.material = glow
+            ? new THREE.MeshBasicMaterial({ color: src.emissive })
+            : new THREE.MeshToonMaterial({ color: src.color, gradientMap: grad })
+        })
+        for (const s of shops) {
+          const obj = gltf.scene.clone(); scene.add(obj)
+          items.push({ obj, mc: MercatorCoordinate.fromLngLat([s.lng, s.lat], 0), rot: THREE.MathUtils.degToRad(s.facingDeg) })
+        }
+        map.triggerRepaint()
+      })
+    },
+    render(_gl, args) {
+      if (!items.length) return
+      const proj = new THREE.Matrix4().fromArray(args.defaultProjectionData.mainMatrix as unknown as number[])
+      // 1軒ずつ: 地図の座標へ移して、大きさ（m）と向きを合わせて描く
+      for (const it of items) {
+        const s = it.mc.meterInMercatorCoordinateUnits() * metersPerUnit
+        const l = new THREE.Matrix4().makeTranslation(it.mc.x, it.mc.y, it.mc.z)
+          .scale(new THREE.Vector3(s, -s, s))
+          .multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2))
+          .multiply(new THREE.Matrix4().makeRotationY(Math.PI - it.rot))
+        for (const o of items) o.obj.visible = o === it
+        camera.projectionMatrix = proj.clone().multiply(l)
+        renderer.resetState()
+        effect.render(scene, camera)
+      }
+    },
+  }
+}
