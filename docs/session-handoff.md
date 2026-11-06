@@ -2,24 +2,24 @@
 
 シロとの受け渡しは `handoff/`（別物）。こちらは Claude Code 自身の会話の引き継ぎ。
 
-最終更新: 2026-11-06 夜（Claude Code）。区切りごとに上書きする。
+最終更新: 2026-11-07（Claude Code）。区切りごとに上書きする。
 
 ## いまの状態
-- ブランチ: **`cycle1-checkin`**（ホットペッパー連携＋チェックイン。手順書 `docs/superpowers/plans/2026-11-06-hotpepper-checkin.md` の手順1〜12 まで完了。13 は本人の実機確認）。設計 `docs/superpowers/specs/2026-11-06-hotpepper-checkin-design.md`。本番 `main` は本人の OK まで出さない
-- 進み具合の台帳: `.superpowers/sdd/2026-11-06-hotpepper-checkin/`
-- できたこと: 地図データのお店を土台にホットペッパーを上乗せ／霧の中 50m のお店が見える（まわりの雲がうすくなる）／建物タップ → シート → チェックイン（Edge Function `checkin` ＋ SQL `perform_checkin`）／紙ふぶき・帯・チェックの印・霧の波／クレジット表示
-- push: `git push` は Sandbox の外で動く設定。**単独のコマンドで実行する**。dev への反映は `git merge-tree --write-tree origin/dev cycle1-checkin` → `git commit-tree` → `git push origin <sha>:refs/heads/dev`（レビューのあとに親エージェントが行う）
-- 霧の確認: `.superpowers/preview/vite.fog2.config.mjs`（ポート 5181）で `map-fog.html`
+- ブランチ **`cycle1-checkin`**（ホットペッパー連携＋チェックイン）は**完成・実機確認済み**（2026-11-07）。開発環境 `dev` に反映済み。本番 `main` は未反映（本人の OK まで出さない）。設計 `docs/superpowers/specs/2026-11-06-hotpepper-checkin-design.md`（§13 同じ建物に複数のお店・§14 同じお店のチェックインは1日1回）
+- 開発用 Supabase `mogumo-go-dev` に置き済み: SQL 0002・0003、関数 `shops-hotpepper`・`checkin`（`shops-overpass` は削除）。キー `HOTPEPPER_API_KEY` は Secrets
+- できたこと: 地図データのお店＋ホットペッパー／霧の中 50m のお店が見える／建物タップでお店へ寄って板が出る／50m 以内でチェックイン（同じお店は1日1回、今日済みは最初から「今日はチェックイン済み」）／紙ふぶき・帯・チェックの印・霧の波／開き直しても残る
+- push: `git push` は Sandbox の外で動く設定。**単独のコマンドで実行する**。dev への反映は `git merge-tree --write-tree origin/dev <branch>` → `git commit-tree` → `git push origin <sha>:refs/heads/dev`
+- 進め方（トークン節約、本人と合意 2026-11-07）: 段ごとに会話を新しくする／小さい指摘は最後にまとめて直す／再確認は安いモデル、Opus はお金・安全と最後の確認だけ／小さい手順はまとめる／試作の画像は少なく
 
 ## 次にやること
-1. 本人が公開の手順書 `docs/superpowers/plans/2026-11-06-hotpepper-checkin-deploy.md` を実行（**開発用 `mogumo-go-dev` で。本番は使わない**）→ iPhone で確認（手順13）
-2. ブランチ全体の最後の確認と締め（`superpowers:finishing-a-development-branch`）
-3. そのあとの機能を本人に聞いて選ぶ: 気配・デイリー／図鑑／ルート晴れ（OSRM）／町制覇 など
-4. ポコタンのチュートリアル（Live2D、ブランチ `origin/add-pokotan-live2d`）は欲しいが、**ほかの機能より後**（優先度は低い）
+0. **その前に（本人希望 2026-11-07）: シロが作った「謎の飲食店」と「ビル」の絵を反映する**。謎の飲食店は今の灰色の mystery の模型を絵に合わせて Blender で作り直して差し替え（今の13種と同じ作り方、軽量化も同じ）。ビルは模型＋設計書 §13 の仕組み（同じ建物の複数のお店を1つにまとめ、タップで一覧）。絵の置き場所は本人に確認（2026-11-07 時点で GitHub にも Downloads にも無かった）
+1. **次は「気配・デイリー」（本人決定 2026-11-07）**。新しい会話で brainstorming から始める。決めること: 毎朝の件数（SPEC は3件）と選ぶ範囲（自宅 1km、圏外は今いる場所のまわり S10）、自宅をサーバーに送らないので選び方はアプリ内が有力（U-10）、地図データだけの店のヒント（キャッチ無し→ジャンルからの決まった文）、店名は 30m で明かす（S5・N-04）、1日の区切りは JST 0時（チェックインと同じ）。関係: SPEC S4・S5・S10、DB 設計 3.10 daily_hints。その次は図鑑の予定
+2. 本番（`main`）へ出すかは本人に聞く（2026-11-07 時点で未回答。おすすめは見た目を凝る段のあと）。出すなら本番の Supabase にも SQL 0002・0003、関数2つ、キーが要る（今はお店の仮データは開発用だけの決まり）
+3. 見た目を凝る段（後で）: ビル1つ＋一覧（§13、シロの見本待ち）、灰色の「謎」の家、建物の向き、チープさ、演出の素材
+4. あとでやること: 閉店・名前違いのお店を知らせる仕組み。ポコタンのチュートリアル（Live2D、`origin/add-pokotan-live2d`）は**ほかの機能より後**
 
 ## 本人待ち・シロ待ち
-- 本人: 手順書の実行（SQL・関数2つ・古い関数の削除）と iPhone 確認
-- シロ: 連携は `handoff/`。作成中＝お店のピンのアイコン 13種（`handoff/to-shiro/2026-11-06-shop-pin-icons.md`）、女の子の歩行の絵。未対応＝チェックイン演出の素材4種（`handoff/to-shiro/2026-11-06-checkin-effect-art.md`）
+- シロ: 連携は `handoff/`。作成中＝お店のピンのアイコン 13種、女の子の歩行の絵。未対応＝チェックイン演出の素材4種（`handoff/to-shiro/2026-11-06-checkin-effect-art.md`）、複数のお店が入るビルの見本（`handoff/to-shiro/2026-11-06-multi-shop-building.md`）
 
 ## 道具の置き場所（この会話の作業用フォルダ。再起動で消えることがある）
 - Blender 4.2: `/tmp/claude-1000/-home-otosa-mogumo-go/f1bcb96d-7f7a-4651-a9c3-a1f83beeb930/scratchpad/blender/blender-4.2.3-linux-x64/blender`（無ければ `download.blender.org/release/Blender4.2/blender-4.2.3-linux-x64.tar.xz` を作業用フォルダに展開）
