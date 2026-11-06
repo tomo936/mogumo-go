@@ -2,20 +2,18 @@
 
 シロとの受け渡しは `handoff/`（別物）。こちらは Claude Code 自身の会話の引き継ぎ。
 
-最終更新: 2026-11-06 夕方（Claude Code）。区切りごとに上書きする。
+最終更新: 2026-11-06 夜（Claude Code）。区切りごとに上書きする。
 
 ## いまの状態
-- ブランチ: **`cycle1-fog-shops`**（`cycle1-setup` から作った。まだコードの変更なし）
-- 開発環境（`dev` → mogumo-go-dev.vercel.app）は初回設定まで。本番（`main`）は本人の OK まで出さない（「ある程度実装したあと」）
-- push: `git push` は Sandbox の外で動く設定にした（2026-11-06、`.claude/settings.json` の excludedCommands）。承認の確認は出る。Claude Code から push できる
+- ブランチ: **`cycle1-fog-shops`**。霧とお店の手順書（`docs/superpowers/plans/2026-11-06-fog-and-shops.md`）の手順1〜10と、最後の確認の直しまで完了（テスト 220件）。開発環境 `dev` にも反映済み（mogumo-go-dev）。本番 `main` は本人の OK まで出さない
+- 進み具合の台帳: `.superpowers/sdd/2026-11-06-fog-and-shops/progress.md`（判断 `Ruling:` の一覧もここ）
+- push: `git push` は Sandbox の外で動く設定（`.claude/settings.json` の excludedCommands）。**`git push` は単独のコマンドで実行する**（`cd` やパイプとつなぐと Sandbox の中に戻って失敗する）。dev への反映は worktree が使えないので `git merge-tree --write-tree origin/dev cycle1-fog-shops` → `git commit-tree` → `git push origin <sha>:refs/heads/dev`
+- お店の仮データ: overpass-api.de がブラウザからの問い合わせを 406 で断るため、Supabase Edge Function `shops-overpass`（`supabase/functions/shops-overpass/index.ts`）経由に変更（設計書 §11）
 
 ## 次にやること
-1. **霧とお店の手順書を、サブエージェントのやり方で実行する**（本人決定: サブエージェント）
-   - 手順書: `docs/superpowers/plans/2026-11-06-fog-and-shops.md`（11手順）
-   - 設計書: `docs/superpowers/specs/2026-11-06-fog-and-shops-design.md`
-   - 進み具合のメモ: `.superpowers/sdd/2026-11-06-fog-and-shops/progress.md`（作成済み。完了した手順は無い）
-   - スキル `superpowers:subagent-driven-development` を使う
-2. 終わったら `docs/learning-log.md` に記録し、このメモを更新する
+1. 本人が Edge Function `shops-overpass` をダッシュボードから置く（Verify JWT はオン）→ iPhone でお店が出るか・滑らかか・三角形の数を確認（手順11）
+2. 雲の見た目を4案から選んでもらい直す（比較用ページ: `.superpowers/preview/vite.clouds.config.mjs` を `VARIANT=none|sparse|flat` で起動し `map-fog.html` を開く。試しの自宅は新宿駅近く）
+3. 実機確認が済んだら、台帳の Ruling 一覧を本人に渡し、`superpowers:finishing-a-development-branch` で締める（台帳フォルダは消す）
 
 ## 本人待ち・シロ待ち
 - 本人: ホットペッパーの API キー（次の段で使う）
