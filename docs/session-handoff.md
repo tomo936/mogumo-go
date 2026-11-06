@@ -7,7 +7,7 @@
 ## いまの状態
 - ブランチ: **`cycle1-fog-shops`**（`cycle1-setup` から作った。まだコードの変更なし）
 - 開発環境（`dev` → mogumo-go-dev.vercel.app）は初回設定まで。本番（`main`）は本人の OK まで出さない（「ある程度実装したあと」）
-- **push が止まっている**: この環境（Sandbox）から GitHub の認証が通らない。手元に未 push のコミットが 30件ほど。本人に `! git push origin <ブランチ>` を頼む
+- push: `git push` は Sandbox の外で動く設定にした（2026-11-06、`.claude/settings.json` の excludedCommands）。承認の確認は出る。Claude Code から push できる
 
 ## 次にやること
 1. **霧とお店の手順書を、サブエージェントのやり方で実行する**（本人決定: サブエージェント）
@@ -18,7 +18,7 @@
 2. 終わったら `docs/learning-log.md` に記録し、このメモを更新する
 
 ## 本人待ち・シロ待ち
-- 本人: push（上記）／ホットペッパーの API キー（次の段で使う）
+- 本人: ホットペッパーの API キー（次の段で使う）
 - シロ: 連携は `handoff/`（`to-shiro/` に依頼、`to-claude/` にシロからの依頼）。作成中＝お店のピンのアイコン 13種（`handoff/to-shiro/2026-11-06-shop-pin-icons.md`）、女の子の歩行の絵
 
 ## 道具の置き場所（この会話の作業用フォルダ。再起動で消えることがある）

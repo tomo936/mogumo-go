@@ -24,3 +24,12 @@ test('開発中で fake が付いているときだけ有効', () => {
   expect(isFakeWalkEnabled('?fake', false)).toBe(false)
   expect(isFakeWalkEnabled('', true)).toBe(false)
 })
+
+test('自宅から始めると、最初の点は自宅から 2m 以内', () => {
+  const home = { lat: 35.68, lng: 139.76 }
+  const fixes: Fix[] = []
+  const stop = startFakeWalk((f) => fixes.push(f), home)
+  vi.advanceTimersByTime(1000)
+  stop()
+  expect(distanceMeters(home, fixes[0])).toBeLessThan(2)
+})

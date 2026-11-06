@@ -275,6 +275,27 @@ cube((0.2, 0.2, 0.12), (cx, cy, cz + 0.42), DARK, bevel=0.01)
 for k, (dx, dz, r) in enumerate([(0.0, 0.62, 0.09), (0.06, 0.78, 0.12), (0.02, 0.98, 0.15), (0.1, 1.2, 0.11)]):
     sphere(r, (cx + dx, cy, cz + dz), STEAM, seg=16)
 
+# ── 軽い glb（アプリ用）: LIGHT=1 のときはレンダリングせず、形をつなげて 1 万三角形以内に減らして書く ──
+if os.environ.get('LIGHT'):
+    for o in list(bpy.data.objects):
+        if o.type in ('MESH', 'CURVE'):  # 曲線を形に変え、モディファイアも適用する
+            for x in bpy.data.objects: x.select_set(False)
+            o.select_set(True); bpy.context.view_layer.objects.active = o; bpy.ops.object.convert(target='MESH')
+    for x in bpy.data.objects: x.select_set(x.type == 'MESH')
+    bpy.context.view_layer.objects.active = next(o for o in bpy.data.objects if o.type == 'MESH')
+    bpy.ops.object.join()
+    shop = bpy.context.object; shop.name = KIND
+    shop.data.calc_loop_triangles(); n0 = len(shop.data.loop_triangles)
+    target = int(os.environ.get('TARGET', '7000'))
+    if n0 > target:
+        dm = shop.modifiers.new('dec', 'DECIMATE'); dm.decimate_type = 'COLLAPSE'; dm.ratio = target / n0
+        bpy.ops.object.modifier_apply(modifier=dm.name)
+    shop.data.calc_loop_triangles()
+    print('TRIS', len(shop.data.loop_triangles))
+    bpy.ops.export_scene.gltf(filepath=os.path.join(out, f'{KIND}.glb'), use_selection=True, export_apply=True)
+    print('DONE')
+    sys.exit(0)
+
 # ── 光とカメラ（やわらかいマットな見え方） ──────────────────
 world = bpy.data.worlds.new('sky'); scene.world = world; world.use_nodes = True
 world.node_tree.nodes['Background'].inputs['Color'].default_value = (*srgb('#eef3fb'), 1)

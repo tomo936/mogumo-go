@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { circlePolygon, distanceMeters } from './geo.ts'
+import { circlePolygon, distanceMeters, localFrame } from './geo.ts'
 
 const tokyo = { lat: 35.6812, lng: 139.7671 }
 
@@ -18,4 +18,13 @@ test('円の頂点はすべて中心から 50m、輪は閉じている', () => {
   for (const [lng, lat] of ring) {
     expect(Math.abs(distanceMeters(tokyo, { lat, lng }) - 50)).toBeLessThan(0.5)
   }
+})
+
+test('localFrame: to → back で 0.01m 以内に戻る、北と東が正', () => {
+  const f = localFrame(tokyo)
+  const p = { lat: tokyo.lat + 0.0003, lng: tokyo.lng + 0.0004 }
+  const q = f.to(p)
+  expect(q.x).toBeGreaterThan(0)
+  expect(q.y).toBeGreaterThan(0)
+  expect(distanceMeters(p, f.back(q))).toBeLessThan(0.01)
 })

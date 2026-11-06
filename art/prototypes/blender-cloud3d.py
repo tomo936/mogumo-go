@@ -92,6 +92,18 @@ for i, (x0, x1) in enumerate(clouds_from_mask()):
     mk = np.zeros_like(mask); mk[:, x0:x1] = mask[:, x0:x1]
     o = build(mk, f'cloud{i + 1}'); o.location.x = (i - 1) * 2.6; made.append(o)
 
+# LIGHT=1: 確認用の絵は作らず、雲だけを書き出す（アプリ用）
+if os.environ.get('LIGHT'):
+    for o in made:
+        for x in bpy.data.objects: x.select_set(x == o)
+        loc = o.location.copy(); o.location = (0, 0, 0)
+        bpy.ops.export_scene.gltf(filepath=os.path.join(out, f'{o.name}.glb'), use_selection=True, export_apply=True)
+        o.location = loc
+    dg = bpy.context.evaluated_depsgraph_get()
+    print('TRIS', [len(o.evaluated_get(dg).data.loop_triangles) for o in made])
+    print('DONE')
+    sys.exit(0)
+
 # 確認用の絵
 world = bpy.data.worlds.new('w'); scene.world = world; world.use_nodes = True
 world.node_tree.nodes['Background'].inputs['Color'].default_value = (0.25, 0.55, 0.85, 1)

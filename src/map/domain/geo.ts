@@ -24,3 +24,15 @@ export function circlePolygon(center: LatLng, radiusM: number, steps = 64): Poly
   ring.push(ring[0])
   return { type: 'Polygon', coordinates: [ring] }
 }
+
+export type P = { x: number; y: number } // m（x=東、y=北）
+
+// origin を (0,0) とする平らな座標（数百 m の範囲なら誤差は無視できる）
+export function localFrame(origin: LatLng) {
+  const mLat = (EARTH_RADIUS_M * Math.PI) / 180
+  const mLng = mLat * Math.cos(rad(origin.lat))
+  return {
+    to: (p: LatLng): P => ({ x: (p.lng - origin.lng) * mLng, y: (p.lat - origin.lat) * mLat }),
+    back: (p: P): LatLng => ({ lat: origin.lat + p.y / mLat, lng: origin.lng + p.x / mLng }),
+  }
+}
