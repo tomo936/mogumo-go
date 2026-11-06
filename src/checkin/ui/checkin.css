@@ -162,3 +162,53 @@
   box-shadow: 0 1px 4px rgba(31, 42, 55, 0.3);
   pointer-events: none;
 }
+
+/* ビルの上のピン（仮。シロのアイコンが届いたら中身を差し替える） */
+.bldg-pins {
+  position: relative;
+  width: 0;
+  height: 0;
+}
+.bldg-pin {
+  position: absolute;
+  left: -15px;
+  bottom: 0;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.bldg-pin__head {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 3px solid #f0907a;
+  border-radius: 50% 50% 50% 0;
+  background: var(--pin-color, #fff);
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 4px rgba(31, 42, 55, 0.25);
+  box-sizing: border-box;
+  font-size: 14px;
+  font-weight: 900;
+  color: #3ecf8e;
+}
+.bldg-pin__label {
+  /* 中の文字（✓・絵）はまっすぐに見せる */
+  transform: rotate(45deg);
+}
+.bldg-pin__count {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #ff8a75;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}

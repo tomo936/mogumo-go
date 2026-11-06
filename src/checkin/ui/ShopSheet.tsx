@@ -1,6 +1,6 @@
 // お店をタップしたときに下から出るシート。チェックインのボタンは 50m 以内だけ押せる。
 import './checkin.css'
-import type { ShopKind } from '../../shops/domain/shop.ts'
+import { BADGE_COLOR } from '../../shops/domain/badgeColor.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
 import { CHECKIN_M } from '../../shops/config.ts'
 import { formatOpen } from '../domain/openHours.ts'
@@ -13,13 +13,6 @@ const ERROR_TEXT: Record<CheckinError, string> = {
   not_found: 'このお店は見つかりませんでした',
   no_profile: '初回設定を終えてからチェックインできます',
   already_today: 'このお店は今日もうチェックインしました。また明日来てね',
-}
-
-// シロのアイコンが届くまでの仮のバッジ色（パステル13色）
-const BADGE_COLOR: Record<ShopKind, string> = {
-  ramen: '#ffd6a5', sushi: '#ffadad', soba: '#d4c5a9', washoku: '#caffbf', izakaya: '#ffc6ff',
-  chinese: '#ffb3a7', yakiniku: '#f4a6a6', western: '#fdffb6', curry: '#ffe08a', cafe: '#d7c0ae',
-  cake: '#ffd1e8', bakery: '#f5deb3', mystery: '#bdb2ff',
 }
 
 type Props = {
