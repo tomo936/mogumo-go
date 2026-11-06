@@ -193,7 +193,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     tapRef.current = (ids) => {
       const found = (ids ?? []).map((id) => s.world?.shopsNear().find((sh) => sh.id === id)).filter((sh): sh is Shop => !!sh)
       if (found.length > 1) {
-        onSelectShopRef.current(null)
+        // お店のシートは一覧側で閉じる（ここで onSelectShop(null) を呼ぶとカメラの寄せが外れ、タップのたびにズームが進む）
         onSelectBuildingRef.current(found)
       } else {
         onSelectBuildingRef.current(null)
