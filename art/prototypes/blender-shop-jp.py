@@ -7,6 +7,7 @@ from mathutils import Vector, Matrix
 out = sys.argv[sys.argv.index('--') + 1] if '--' in sys.argv else '.'
 KIND = os.environ.get('KIND', 'ramen')  # ramen | soba
 SOBA = KIND == 'soba'
+RAMEN = KIND == 'ramen'  # v9: 赤×白
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene; col = bpy.context.collection
 import random; rnd = random.Random(3)
@@ -59,10 +60,15 @@ def xform(objs, M):
     for o in objs: o.matrix_world = M @ o.matrix_world
 
 # ── 色（見本から） ─────────────────────────────
-WOOD = ['#e8b47c', '#e0aa70', '#ecbd88']           # 壁の板（少しずつ違う色）
-POST = mat('#dba068'); POST_D = mat('#c48552'); TRIM = mat('#eab884')
-ROOF = mat('#97afc9'); ROOF_D = mat('#86a0bd'); GLASS = mat('#b9d2ec', 0.3)
-RED = mat('#e05a4e'); WHITE = mat('#fbf1ea'); DARK = mat('#5e4433', 0.9); FLOOR_IN = mat('#b9895f')
+if RAMEN:  # 見本 v9: 白〜クリームの板壁・明るい茶の木部・鮮やかな赤の瓦
+    WOOD = ['#f4e7cf', '#efdfc3', '#f7ecd8']
+    POST = mat('#b9764a'); POST_D = mat('#a2643d'); TRIM = mat('#c58256')
+    ROOF = mat('#e2504a'); ROOF_D = mat('#cc423e'); GLASS = mat('#c3d8f2', 0.3)
+else:
+    WOOD = ['#e8b47c', '#e0aa70', '#ecbd88']           # 壁の板（少しずつ違う色）
+    POST = mat('#dba068'); POST_D = mat('#c48552'); TRIM = mat('#eab884')
+    ROOF = mat('#97afc9'); ROOF_D = mat('#86a0bd'); GLASS = mat('#b9d2ec', 0.3)
+RED = mat('#e2504a'); WHITE = mat('#fbf1ea'); DARK = mat('#5e4433', 0.9); FLOOR_IN = mat('#b9895f')
 BRICK = mat('#d0905e'); BRICK_D = mat('#bf7f52'); STEAM = mat('#d9c6ef', 0.9); METAL = mat('#4a4048')
 BOARD = mat('#e4b57f')
 PLASTER = mat('#f6f2f4'); BLUE = mat('#8fb6e6'); GREY = mat('#a9a9b0'); GREY_D = mat('#96969e')
@@ -147,10 +153,15 @@ cyl(0.022, 0.9, (0, FY - 0.12, Z0 + 0.86), POST_D, rot=(0, math.pi / 2, 0), vert
 for i in range(3):
     x = -0.28 + i * 0.28
     for j in range(2):
-        cube((0.13 if not SOBA else 0.135, 0.025, 0.36), (x - 0.065 + j * 0.13, FY - 0.12, Z0 + 0.66), (WHITE if SOBA else (RED if (i + j) % 2 == 0 else WHITE)), bevel=0.012)
+        cube((0.13 if not SOBA else 0.135, 0.025, 0.36), (x - 0.065 + j * 0.13, FY - 0.12, Z0 + 0.66), (WHITE if SOBA else (WHITE if (RAMEN and i == 1) else (RED if (i + j) % 2 == 0 else WHITE))), bevel=0.012)
+if RAMEN:  # 真ん中ののれんに赤いどんぶりのマーク
+    m_ = lathe([(0, -0.05), (0.04, -0.05), (0.07, -0.02), (0.08, 0.01), (0, 0.01)], (0, FY - 0.14, Z0 + 0.64), RED, steps=20)
+    m_.rotation_euler = (math.radians(90), 0, 0)
+    cube((0.18, 0.02, 0.02), (0, FY - 0.15, Z0 + 0.655), RED, bevel=0.006)
 # 板のひさし（正面いっぱい）
+CANOPY = ['#c98a5c', '#c08052', '#cf9264'] if RAMEN else WOOD
 for i in range(7):
-    cube((W / 7 - 0.015, 0.55, 0.06), (-W / 2 + W / 7 * (i + 0.5), FY - 0.22, Z0 + H1 + 0.03), mat(rnd.choice(WOOD)), bevel=0.02, rot=(-0.12, 0, 0))
+    cube((W / 7 - 0.015, 0.55, 0.06), (-W / 2 + W / 7 * (i + 0.5), FY - 0.22, Z0 + H1 + 0.03), mat(rnd.choice(CANOPY)), bevel=0.02, rot=(-0.12, 0, 0))
 cube((W + 0.1, 0.08, 0.08), (0, FY - 0.47, Z0 + H1 - 0.02), POST, bevel=0.025)
 # 赤ちょうちん（ひさしの下に4つ）
 if SOBA:
@@ -181,8 +192,8 @@ for x, y in [(-W2 / 2, 0.1 - D2 / 2), (W2 / 2, 0.1 - D2 / 2)]:
     cube((0.12, 0.12, H2 + 0.02), (x, y, z2 + H2 / 2), POST, bevel=0.03)
 cube((W2 + 0.08, 0.1, 0.1), (0, 0.1 - D2 / 2 - 0.02, z2 + 0.05), POST, bevel=0.025)
 cube((W2 + 0.08, 0.1, 0.1), (0, 0.1 - D2 / 2 - 0.02, z2 + H2 - 0.03), POST, bevel=0.025)
-# 十字の窓（2つ）
-for x in (-0.42, 0.42):
+# 十字の窓（2つ）。ラーメン屋は大看板が前にあるので無し
+for x in (() if RAMEN else (-0.42, 0.42)):
     f = 0.1 - D2 / 2 - 0.05
     cube((0.46, 0.07, 0.4), (x, f, z2 + 0.42), POST, bevel=0.03)
     cube((0.36, 0.075, 0.3), (x, f - 0.01, z2 + 0.42), GLASS, bevel=0.01)
@@ -222,9 +233,37 @@ for sx in (-1, 1):
          rot=(0, sx * pitch, 0))
 
 # ── 看板（下屋の上・正面の中央） ─────────────────────
-for k in range(3):
-    cube((1.2, 0.08, 0.13), (0, FY - 0.06 + k * 0.004, zr1 + 0.14 + k * 0.14), BOARD if k != 1 else mat('#dcab73'), bevel=0.035)
-for x in (-0.4, 0.4): cube((0.08, 0.1, 0.1), (x, FY - 0.08, zr1 + 0.04), POST_D, bevel=0.02)
+if RAMEN:
+    # 赤い枠の大きな木の看板＋湯気の出たラーメンどんぶり（立体の浮き彫り）
+    SW, SH = 1.2, 0.92; sz = zr1 + 0.06 + SH / 2; sy = FY - 0.02
+    cube((SW + 0.12, 0.12, SH + 0.12), (0, sy + 0.02, sz), RED, bevel=0.05)
+    for k in range(4):
+        cube((SW, 0.1, SH / 4 - 0.01), (0, sy - 0.01, sz - SH / 2 + SH / 4 * (k + 0.5)), mat(['#c98a5c', '#c08052'][k % 2]), bevel=0.02)
+    for x in (-0.38, 0.38): cube((0.09, 0.12, 0.12), (x, sy - 0.04, zr1 + 0.05), POST_D, bevel=0.02)
+    # 看板の前の棚に、大きなどんぶりを立てて置く（斜め上から中身が見える）
+    cube((0.8, 0.3, 0.06), (0, sy - 0.2, sz - 0.3), mat('#c08052'), bevel=0.02)
+    bw = Vector((0, sy - 0.24, sz - 0.27))
+    lathe([(0, 0), (0.12, 0), (0.14, 0.03), (0.24, 0.12), (0.3, 0.24), (0.32, 0.3), (0.29, 0.3), (0.27, 0.25), (0.2, 0.16), (0.0, 0.14)], bw, WHITE, steps=36)
+    for zz, rr in ((0.2, 0.284), (0.27, 0.312)):
+        lathe([(rr - 0.003, zz - 0.02), (rr + 0.012, zz), (rr - 0.003, zz + 0.02)], bw, RED, steps=36)
+    t = bw + Vector((0, 0, 0.27))
+    cyl(0.285, 0.02, t, mat('#f0c27a'), verts=36, bevel=0.005)
+    for k in range(5): cyl(0.008, 0.36, t + Vector((-0.12 + k * 0.06, 0.02, 0.012)), mat('#f6dc96'), rot=(math.pi / 2, 0, 0.3), verts=6, bevel=0)  # めん
+    sphere(1, t + Vector((-0.13, -0.06, 0.02)), mat('#fff8ec'), scale=(0.1, 0.08, 0.03), seg=16)
+    sphere(0.045, t + Vector((-0.13, -0.06, 0.045)), mat('#ffab1f'), scale=(1, 1, 0.45), seg=12)
+    sphere(1, t + Vector((0.07, 0.03, 0.025)), mat('#c98670'), scale=(0.12, 0.1, 0.035), seg=16)
+    sphere(1, t + Vector((0.06, 0.03, 0.05)), mat('#e8b5a0'), scale=(0.06, 0.05, 0.015), seg=12)
+    cube((0.12, 0.02, 0.16), t + Vector((0.18, 0.12, 0.06)), mat('#3b4a44'), bevel=0.01, rot=(0.3, 0, 0.3))
+    for k in range(4): cyl(0.02, 0.018, t + Vector((-0.02 + k * 0.035, -0.14, 0.02)), mat('#7fcf6a'), verts=10, bevel=0.004)
+    # 湯気（白い3本）
+    for k, dx in enumerate((-0.09, 0.0, 0.09)):
+        for j in range(3):
+            sphere(0.04 - j * 0.007, (dx + 0.03 * math.sin(j * 1.7 + k), sy - 0.24, sz + 0.12 + j * 0.09), WHITE, seg=10)
+else:
+    for k in range(3):
+        cube((1.2, 0.08, 0.13), (0, FY - 0.06 + k * 0.004, zr1 + 0.14 + k * 0.14), BOARD if k != 1 else mat('#dcab73'), bevel=0.035)
+    for x in (-0.4, 0.4): cube((0.08, 0.1, 0.1), (x, FY - 0.08, zr1 + 0.04), POST_D, bevel=0.02)
+
 
 # ── 煙突（れんが）と湯気 ──────────────────────────
 cx, cy = -0.5, 0.45; cz = zr2 + 0.28
