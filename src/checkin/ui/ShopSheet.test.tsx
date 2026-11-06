@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import type { Shop } from '../../shops/domain/shop.ts'
 import { ShopSheet } from './ShopSheet.tsx'
+import { formatOpen } from '../domain/openHours.ts'
 
 const hp: Shop = {
   id: 'hp:J001', name: '麺屋もぐも', lat: 35, lng: 139, kind: 'ramen',
@@ -68,4 +69,9 @@ test('距離は切り上げで出す（50.4m は 51m、あと 1m）', () => {
 test('通信中のボタンは「チェックイン中…」', () => {
   setup({ busy: true })
   expect(screen.getByRole('button', { name: 'チェックイン中…' })).toBeDisabled()
+})
+
+test('営業時間の時刻のつなぎ目に区切りを入れる', () => {
+  expect(formatOpen('月: 11:00～15:0018:00～翌0:00')).toBe('月: 11:00～15:00 / 18:00～翌0:00')
+  expect(formatOpen('（L.O. 15:00）17:00～23:00')).toBe('（L.O. 15:00） 17:00～23:00')
 })

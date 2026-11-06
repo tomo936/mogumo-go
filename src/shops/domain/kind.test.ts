@@ -39,6 +39,13 @@ const map: [string, string, ShopKind][] = [
   ['restaurant', '鮨 さかな', 'sushi'],
   ['fast_food', 'カレーハウス', 'curry'],
   ['restaurant', 'x', 'mystery'],
+  ['restaurant', '焼肉 もぐ', 'yakiniku'],
+  ['restaurant', '餃子の王様', 'chinese'],
+  ['restaurant', 'Trattoria Mogu', 'western'],
+  ['restaurant', '魚民 新宿店', 'izakaya'],
+  ['restaurant', 'パッポン食堂', 'washoku'],
+  ['fast_food', 'もぐコーヒー', 'cafe'],
+  ['restaurant', 'もぐもぐ', 'mystery'],
 ]
 test.each(map)('kindFromMap(%s, %s) = %s', (sub, name, kind) => {
   expect(kindFromMap(sub, name)).toBe(kind)
