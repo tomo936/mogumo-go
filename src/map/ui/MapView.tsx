@@ -62,7 +62,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onPosition
     checkin: (shop, newCells) => {
       const t = setTimeout(() => {
         checkinTimers.current.delete(t)
-        worldRef.current?.markChecked(shop.id)
+        worldRef.current?.markChecked(shop.id, shop.mapId)
         worldRef.current?.addCleared(newCells, shop)
       }, CHECKIN_WAVE_DELAY_MS)
       checkinTimers.current.add(t)

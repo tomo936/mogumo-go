@@ -10,6 +10,7 @@ const fogLayer = { id: 'fog', setClumps: vi.fn(), setThin: vi.fn() }
 const shopLayer = { id: 'shops-3d', setShops: vi.fn() }
 vi.mock('../../fog/infra/fogLayer.ts', () => ({ createFogLayer: () => fogLayer }))
 vi.mock('../../shops/infra/shopLayer.ts', () => ({ createShopLayer: () => shopLayer }))
+vi.mock('../../shops/infra/checkMarks.ts', () => ({ createCheckMarks: () => ({ update: vi.fn(), dispose: vi.fn() }) }))
 
 vi.mock('../domain/geo.ts', async (orig) => {
   const a = await orig<typeof import('../domain/geo.ts')>()
@@ -218,6 +219,19 @@ test('10m 未満の位置更新ではお店を計算し直さない', async () =
   expect(shopLayer.setShops).toHaveBeenLastCalledWith([expect.objectContaining({ id: 's1' })])
 })
 
+test('地図のお店の読み直しは 100m 以上動いたときだけ（10m〜99m では poi を読み直さない）', async () => {
+  const { world } = setup()
+  world.onPosition(home)
+  await flush()
+  const n = poiReads()
+  for (const m of [15, 40, 80, 99]) world.onPosition(north(m)) // 10m ごとの見える・見えないの更新は走る
+  expect(poiReads()).toBe(n)
+  world.onPosition(north(110))
+  expect(poiReads()).toBe(n + 1)
+  world.onPosition(north(150)) // 前回の読み直しからは 40m
+  expect(poiReads()).toBe(n + 1)
+})
+
 test('dispose で層を外し、遅れて届いた結果は無視する', async () => {
   let resolve: (s: Shop[]) => void = () => {}
   const { world, map } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => new Promise<Shop[]>((r) => { resolve = r })) })
@@ -310,6 +324,20 @@ test('loadProgress の晴れたセルにある店が見える', async () => {
   await flush()
   expect(world.shopsNear().map((s) => s.id)).toEqual(['far'])
   expect(world.checked().has('x')).toBe(true)
+})
+
+test('済みの判定は店の id か合体前の地図の id のどちらでもよい', async () => {
+  const merged: Shop = { ...far, id: 'hp:M', mapId: 'osm:7' }
+  const { world } = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([merged])), loadProgress: vi.fn(() => Promise.resolve({ cells: [cellOf(far)], checkedShopIds: new Set(['osm:7']) })) })
+  world.onPosition(home)
+  await flush()
+  expect(world.checked().has('hp:M')).toBe(true)
+  const other = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([merged])) })
+  other.world.onPosition(home)
+  await flush()
+  expect(other.world.checked().has('hp:M')).toBe(false)
+  other.world.markChecked('hp:M', 'osm:7')
+  expect(other.world.checked()).toEqual(new Set(['hp:M', 'osm:7']))
 })
 
 test('loadProgress が失敗しても落ちず、onShopsError も呼ばない', async () => {
@@ -441,6 +469,24 @@ test('3m 未満の移動では店の全件走査をしない', async () => {
     const n0 = vi.mocked(distanceMeters).mock.calls.length
     for (let i = 1; i <= 5; i++) { tick(16); world.onPosition(north(i * 0.5)) }
     expect(vi.mocked(distanceMeters).mock.calls.length - n0).toBeLessThan(50)
+  })
+})
+
+test('薄くしていた店のセルが晴れたら、0 へなめらかに戻してから外す', async () => {
+  const s = fogShop('a', 20)
+  await withClock([s], (world, tick) => {
+    for (let i = 0; i < 10; i++) { tick(500); world.onPosition(home) }
+    const before = (fogLayer.setThin.mock.lastCall![0] as { amount: number }[])[0].amount
+    expect(before).toBeGreaterThan(0.9)
+    world.addCleared([cellOf(s)], s)
+    tick(100)
+    world.onPosition(home)
+    const mid = fogLayer.setThin.mock.lastCall![0] as { amount: number }[]
+    expect(mid).toHaveLength(1) // すぐには消えない
+    expect(mid[0].amount).toBeLessThan(before)
+    expect(mid[0].amount).toBeGreaterThan(0.5)
+    for (let i = 0; i < 20; i++) { tick(500); world.onPosition(home) }
+    expect(fogLayer.setThin).toHaveBeenLastCalledWith([])
   })
 })
 

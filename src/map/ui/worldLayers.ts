@@ -7,7 +7,7 @@ import { cellKey } from '../../fog/domain/grid.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
 import { thinAmount, waveClumps } from '../../fog/domain/wave.ts'
 import { createFogLayer } from '../../fog/infra/fogLayer.ts'
-import { SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
+import { MAP_SHOPS_REEXTRACT_M, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
 import { mergeShops } from '../../shops/domain/merge.ts'
 import { placeShop } from '../../shops/domain/placement.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
@@ -48,8 +48,8 @@ type World = {
   shopsNear(): Shop[]
   pick(point: { x: number; y: number }): string | null
   addCleared(cells: Cell[], from: LatLng): void
-  markChecked(shopId: string): void
-  checked(): ReadonlySet<string>
+  markChecked(shopId: string, mapId?: string | null): void
+  checked(): ReadonlySet<string> // 済みの店 id（合体した店は、地図の点の id で済みでも含む）
   dispose(): void
 }
 
@@ -61,11 +61,18 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   let shownPlaced: PlacedShop[] = [] // いま層に渡している置き方
   let fogCenter: LatLng | null = null // 雲の塊を置いたときの現在地
   let lastClumps: Clump[] = [] // 層に最後に渡した雲の塊（波の「変わる前」）
-  const checkedIds = new Set<string>()
+  const checkedIds = new Set<string>() // サーバーが知っている id と、今回付けた id（hp: と osm: の両方がありうる）
+  // 店の id か、合体前の地図の点の id のどちらかが済みなら、その店は済み
+  const checkedNow = (): Set<string> => {
+    const s = new Set(checkedIds)
+    for (const shop of shops) if (shop.mapId && checkedIds.has(shop.mapId)) s.add(shop.id)
+    return s
+  }
   const thinShown = new Map<string, number>() // 店ごとの、いま見せている薄さ
   let thinSent: { id: string; amount: number }[] | null = null // 層に最後に渡した薄さ
   let lastTickMs: number | null = null
   let thinCands: Shop[] = [] // 薄くする候補（洗い出した近い順の最大4軒）
+  const thinFading = new Map<string, Shop>() // 候補から外れた店のうち、晴れたせいで外れたもの。0 へ戻しきるまで残す
   let thinScanAt: LatLng | null = null
   let thinShops: Shop[] | null = null
   let thinClearedSize = -1
@@ -91,8 +98,9 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const refreshShops = (p: LatLng) => {
     refreshedAt = p
     if (!map.areTilesLoaded()) extractedAt = null // 読めなかった回があれば、読めたあとの最初の更新で必ず読み直す
-    // 地図のお店の読み直しは、まだ読んでいない・前回から SHOP_REFRESH_M 以上動いたときだけ（idle は回転のたびに来る）
-    if (map.areTilesLoaded() && (!extractedAt || distanceMeters(extractedAt, p) >= SHOP_REFRESH_M)) {
+    // 地図のお店の読み直し（取り出しと合体は重い）は、まだ読んでいない・前回から MAP_SHOPS_REEXTRACT_M 以上動いたときだけ（idle は回転のたびに来る）。
+    // 見える・見えないの計算は SHOP_REFRESH_M ごとに別でやる
+    if (map.areTilesLoaded() && (!extractedAt || distanceMeters(extractedAt, p) >= MAP_SHOPS_REEXTRACT_M)) {
       extractedAt = p
       mapShops = extractMapShops(map, p, SHOP_RADIUS_M)
       shops = mergeShops(mapShops, hpShops)
@@ -127,7 +135,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     shownKey = key
     shownPlaced = out
     shopLayer.setShops(out)
-    checkMarks.update(out, checkedIds)
+    checkMarks.update(out, checkedNow())
   }
 
   const setFog = (origin: LatLng) => {
@@ -147,18 +155,24 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       thinScanAt = p
       thinShops = shops
       thinClearedSize = cleared.size
+      const prev = thinCands
       thinCands = shops
         .map((shop) => ({ shop, d: distanceMeters(p, shop) }))
         .filter(({ shop, d }) => d <= THIN_START_M && !isClearedAt(cleared, shop))
         .sort((a, b) => a.d - b.d)
         .slice(0, THIN_MAX_SPOTS)
         .map(({ shop }) => shop)
+      // 晴れたせいで外れた店は、いきなり消さず 0 へ戻してから外す（波が来た瞬間に薄さが飛ばないように）
+      const stay = new Set(thinCands.map((c) => c.id))
+      for (const shop of prev) {
+        if (!stay.has(shop.id) && thinShown.has(shop.id) && isClearedAt(cleared, shop)) thinFading.set(shop.id, shop)
+      }
     }
     const cands = thinCands
       .map((shop) => ({ shop, d: distanceMeters(p, shop) }))
       .filter(({ d }) => d <= THIN_START_M)
     const keep = new Set(cands.map((c) => c.shop.id))
-    for (const id of thinShown.keys()) if (!keep.has(id)) thinShown.delete(id)
+    for (const id of thinShown.keys()) if (!keep.has(id) && !thinFading.has(id)) thinShown.delete(id)
     const k = Math.min(1, THIN_EASE_PER_S * dt)
     const next = cands.map(({ shop, d }) => {
       const cur = thinShown.get(shop.id) ?? 0
@@ -166,6 +180,16 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       thinShown.set(shop.id, amount)
       return { id: shop.id, amount, shop }
     })
+    for (const [id, shop] of thinFading) {
+      const amount = (thinShown.get(id) ?? 0) * (1 - k)
+      if (amount <= THIN_EPS || keep.has(id)) {
+        thinFading.delete(id)
+        thinShown.delete(id)
+      } else {
+        thinShown.set(id, amount)
+        if (next.length < THIN_MAX_SPOTS) next.push({ id, amount, shop })
+      }
+    }
     const sent = thinSent
     const same =
       sent !== null &&
@@ -215,7 +239,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       const before = cleared.size
       for (const c of cells) cleared.add(cellKey(c))
       for (const id of checkedShopIds) checkedIds.add(id)
-      checkMarks.update(shownPlaced, checkedIds)
+      checkMarks.update(shownPlaced, checkedNow())
       if (cleared.size === before) return
       if (fogCenter) setFog(fogCenter)
       if (last) refreshShops(last)
@@ -260,11 +284,12 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       }
       if (last) refreshShops(last)
     },
-    markChecked(shopId) {
+    markChecked(shopId, mapId) {
       checkedIds.add(shopId)
-      checkMarks.update(shownPlaced, checkedIds)
+      if (mapId) checkedIds.add(mapId)
+      checkMarks.update(shownPlaced, checkedNow())
     },
-    checked: () => checkedIds,
+    checked: checkedNow,
     dispose() {
       disposed = true
       checkMarks.dispose()
