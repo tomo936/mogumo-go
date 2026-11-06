@@ -72,21 +72,35 @@ export async function postCheckin(
 }
 
 type Rows = PromiseLike<{ data: unknown; error: unknown }>
-type ProgressClient = { from(table: string): { select(columns: string): Rows } }
+type Query = { order(column: string): Query; range(from: number, to: number): Rows }
+type ProgressClient = { from(table: string): { select(columns: string): Query } }
+
+const PAGE_SIZE = 1000 // Supabase は 1 回の応答を 1000 行までに切る
+
+// 1000 行ずつ、1000 行未満の頁が来るまで読む。並びを固定して頁の抜け・重なりを防ぐ
+async function readAll(c: ProgressClient, table: string, columns: string, order: string[]): Promise<unknown[]> {
+  const out: unknown[] = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    let q = c.from(table).select(columns)
+    for (const o of order) q = q.order(o)
+    const { data, error } = await q.range(from, from + PAGE_SIZE - 1)
+    if (error || !Array.isArray(data)) throw new Error('progress_unavailable')
+    out.push(...data)
+    if (data.length < PAGE_SIZE) return out
+  }
+}
 
 // 自分の行だけが返る（RLS）。失敗したら throw して呼び出し側に任せる
 export async function loadProgress(
   client?: ProgressClient,
 ): Promise<{ cells: Cell[]; checkedShopIds: Set<string> }> {
   const c = client ?? ((await import('../../lib/supabase.ts')).supabase as unknown as ProgressClient)
-  const [cellsRes, shopsRes] = await Promise.all([
-    c.from('fog_cells').select('cell_x, cell_y'),
-    c.from('checkins').select('shop_id'),
+  const [cellRows, shopRows] = await Promise.all([
+    readAll(c, 'fog_cells', 'cell_x, cell_y', ['cell_x', 'cell_y']),
+    readAll(c, 'checkins', 'shop_id', ['shop_id']),
   ])
-  if (cellsRes.error || !Array.isArray(cellsRes.data)) throw new Error('progress_unavailable')
-  if (shopsRes.error || !Array.isArray(shopsRes.data)) throw new Error('progress_unavailable')
   return {
-    cells: (cellsRes.data as { cell_x: number; cell_y: number }[]).map((r) => ({ x: r.cell_x, y: r.cell_y })),
-    checkedShopIds: new Set((shopsRes.data as { shop_id: string }[]).map((r) => r.shop_id)),
+    cells: (cellRows as { cell_x: number; cell_y: number }[]).map((r) => ({ x: r.cell_x, y: r.cell_y })),
+    checkedShopIds: new Set((shopRows as { shop_id: string }[]).map((r) => r.shop_id)),
   }
 }

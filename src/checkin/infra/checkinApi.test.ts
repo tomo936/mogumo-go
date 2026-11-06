@@ -48,8 +48,20 @@ describe('postCheckin', () => {
 })
 
 describe('loadProgress', () => {
-  const client = (tables: Record<string, { data: unknown; error: unknown }>) => ({
-    from: (t: string) => ({ select: () => Promise.resolve(tables[t]) }),
+  // テーブルごとに、頁（range）で切って返す偽クライアント
+  const client = (tables: Record<string, { data: unknown[] | null; error: unknown }>) => ({
+    from: (t: string) => ({
+      select: () => {
+        const q = {
+          order: () => q,
+          range: (from: number, to: number) => {
+            const { data, error } = tables[t]
+            return Promise.resolve({ data: data ? data.slice(from, to + 1) : null, error })
+          },
+        }
+        return q
+      },
+    }),
   })
   it('行を cells と Set にする', async () => {
     const p = await loadProgress(
@@ -60,6 +72,22 @@ describe('loadProgress', () => {
     )
     expect(p.cells).toEqual([{ x: 1, y: 2 }, { x: -3, y: 4 }])
     expect(p.checkedShopIds).toEqual(new Set(['hp:A', 'osm:1']))
+  })
+  it('1000 行を超えても頁をたどって全部読む（両テーブル）', async () => {
+    const cellRows = Array.from({ length: 1003 }, (_, i) => ({ cell_x: i, cell_y: -i }))
+    const shopRows = Array.from({ length: 1003 }, (_, i) => ({ shop_id: `hp:${i}` }))
+    const p = await loadProgress(
+      client({ fog_cells: { data: cellRows, error: null }, checkins: { data: shopRows, error: null } }),
+    )
+    expect(p.cells).toHaveLength(1003)
+    expect(p.cells[1002]).toEqual({ x: 1002, y: -1002 })
+    expect(p.checkedShopIds.size).toBe(1003)
+    expect(p.checkedShopIds.has('hp:1002')).toBe(true)
+  })
+  it('ちょうど 1000 行なら次の頁（空）まで読んで終わる', async () => {
+    const cellRows = Array.from({ length: 1000 }, (_, i) => ({ cell_x: i, cell_y: 0 }))
+    const p = await loadProgress(client({ fog_cells: { data: cellRows, error: null }, checkins: { data: [], error: null } }))
+    expect(p.cells).toHaveLength(1000)
   })
   it('エラーなら throw', async () => {
     await expect(
