@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { roundCenter as clientRound } from '../../../src/shops/infra/hotpepper.ts'
-import { hotpepperUrl, parseHotpepper, roundCenter } from './core.ts'
+import { dedupeRows, hotpepperError, hotpepperUrl, parseHotpepper, rawShopCount, roundCenter } from './core.ts'
 
 const fixture = {
   results: {
@@ -50,5 +50,30 @@ describe('parseHotpepper', () => {
     expect(parseHotpepper(null)).toEqual([])
     expect(parseHotpepper('x')).toEqual([])
     expect(parseHotpepper({ results: { shop: 'x' } })).toEqual([])
+  })
+})
+
+describe('hotpepperError', () => {
+  it('results.error があれば true', () => {
+    expect(hotpepperError({ results: { error: [{ code: 2000, message: 'x' }] } })).toBe(true)
+    expect(hotpepperError(fixture)).toBe(false)
+    expect(hotpepperError(null)).toBe(false)
+  })
+})
+
+describe('rawShopCount', () => {
+  it('名前なしも数える', () => {
+    expect(rawShopCount(fixture)).toBe(2)
+    expect(rawShopCount(null)).toBe(0)
+    expect(rawShopCount({ results: {} })).toBe(0)
+  })
+})
+
+describe('dedupeRows', () => {
+  it('shop_id が重なったら最初を残す', () => {
+    const [a] = parseHotpepper(fixture)
+    const rows = dedupeRows([a, { ...a, name: '別' }, { ...a, shop_id: 'hp:J9' }])
+    expect(rows.map((r) => r.shop_id)).toEqual(['hp:J001', 'hp:J9'])
+    expect(rows[0].name).toBe('麺屋いろは')
   })
 })

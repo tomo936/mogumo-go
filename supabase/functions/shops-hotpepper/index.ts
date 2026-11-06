@@ -3,7 +3,7 @@
 // 取れたお店は shops テーブルに保存（サービスロールで upsert）し、そのまま返す。
 // プライバシー: 受け取った位置は保存しない・ログに出さない（console に lat/lng・キーを出さないこと）。
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { hotpepperUrl, parseHotpepper, roundCenter } from './core.ts'
+import { dedupeRows, hotpepperError, hotpepperUrl, parseHotpepper, rawShopCount, roundCenter } from './core.ts'
 import type { ShopRow } from './core.ts'
 
 const PAGE = 100
@@ -45,26 +45,31 @@ Deno.serve(async (req: Request) => {
       })
       if (res.status === 429) return reply('rate_limited', 429)
       if (!res.ok) return reply('upstream_error', 502)
-      const got = parseHotpepper(await res.json())
-      rows.push(...got)
-      if (got.length < PAGE) break
+      const json = await res.json()
+      if (hotpepperError(json)) {
+        console.error('hotpepper error response')
+        return reply('upstream_error', 502)
+      }
+      rows.push(...parseHotpepper(json))
+      if (rawShopCount(json) < PAGE) break
     }
   } catch {
     return reply('upstream_error', 502)
   }
 
   // 保存に失敗してもお店は返す（表示のほうが大事）
-  if (rows.length > 0) {
+  const unique = dedupeRows(rows)
+  if (unique.length > 0) {
     try {
       const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
       const fetched_at = new Date().toISOString()
       const { error } = await db
         .from('shops')
-        .upsert(rows.map((r) => ({ ...r, fetched_at })), { onConflict: 'shop_id' })
+        .upsert(unique.map((r) => ({ ...r, fetched_at })), { onConflict: 'shop_id' })
       if (error) console.error('shops upsert failed')
     } catch {
       console.error('shops upsert failed')
     }
   }
-  return reply(JSON.stringify(rows), 200, 'application/json')
+  return reply(JSON.stringify(unique), 200, 'application/json')
 })

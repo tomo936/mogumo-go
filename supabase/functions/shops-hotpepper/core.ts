@@ -74,3 +74,19 @@ export function parseHotpepper(json: unknown): ShopRow[] {
   }
   return rows
 }
+
+// ホットペッパーは鍵や引数の誤りを HTTP 200 の { results: { error: [...] } } で返す
+export function hotpepperError(json: unknown): boolean {
+  return isObj(json) && isObj(json.results) && json.results.error != null
+}
+
+// 名前なしを捨てる前の件数。ページの最後かどうかはこちらで決める
+export function rawShopCount(json: unknown): number {
+  return isObj(json) && isObj(json.results) && Array.isArray(json.results.shop) ? json.results.shop.length : 0
+}
+
+// 同じ shop_id が重なると upsert が失敗するので、最初の1件だけ残す
+export function dedupeRows(rows: ShopRow[]): ShopRow[] {
+  const seen = new Set<string>()
+  return rows.filter((r) => (seen.has(r.shop_id) ? false : (seen.add(r.shop_id), true)))
+}
