@@ -31,7 +31,7 @@ type Props = {
   home: LatLng | null
   onShopsError: () => void
   onSelectShop: (shop: Shop | null) => void
-  onSelectBuilding: (shops: Shop[] | null) => void // ビル（同じ建物の複数のお店）が押された
+  onSelectBuilding: (shops: Shop[] | null, title?: string | null) => void // ビル・施設・駅（同じ建物の複数のお店）が押された。title は施設・駅の名前
   onPosition: (me: LatLng) => void // 1秒に4回まで
   ref?: Ref<MapViewHandle>
 }
@@ -194,7 +194,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       const found = (ids ?? []).map((id) => s.world?.shopsNear().find((sh) => sh.id === id)).filter((sh): sh is Shop => !!sh)
       if (found.length > 1) {
         // お店のシートは一覧側で閉じる（ここで onSelectShop(null) を呼ぶとカメラの寄せが外れ、タップのたびにズームが進む）
-        onSelectBuildingRef.current(found)
+        onSelectBuildingRef.current(found, s.world?.titleOf(found.map((sh) => sh.id)) ?? null)
       } else {
         onSelectBuildingRef.current(null)
         onSelectShopRef.current(found[0] ?? null)

@@ -34,7 +34,7 @@ export function MapPage() {
 
   const mapRef = useRef<MapViewHandle>(null)
   const [selected, setSelected] = useState<Shop | null>(null)
-  const [building, setBuilding] = useState<{ shops: Shop[]; checked: ReadonlySet<string> } | null>(null)
+  const [building, setBuilding] = useState<{ shops: Shop[]; checked: ReadonlySet<string>; title: string | null } | null>(null)
   const [me, setMe] = useState<LatLng | null>(null)
   const [busy, setBusy] = useState(false)
   const [checkinError, setCheckinError] = useState<CheckinError | null>(null)
@@ -56,9 +56,9 @@ export function MapPage() {
   }, [])
 
   // ビルの一覧（済みの印は開いたときに地図に聞いておく）
-  const selectBuilding = useCallback((shops: Shop[] | null) => {
+  const selectBuilding = useCallback((shops: Shop[] | null, title?: string | null) => {
     if (busyRef.current && shops) return
-    setBuilding(shops ? { shops, checked: mapRef.current?.checked() ?? new Set<string>() } : null)
+    setBuilding(shops ? { shops, checked: mapRef.current?.checked() ?? new Set<string>(), title: title ?? null } : null)
     if (shops) setSelected(null)
   }, [])
 
@@ -101,6 +101,7 @@ export function MapPage() {
         <BuildingSheet
           shops={building.shops}
           checkedIds={building.checked}
+          title={building.title}
           onPick={(shop) => {
             setBuilding(null)
             select(shop)

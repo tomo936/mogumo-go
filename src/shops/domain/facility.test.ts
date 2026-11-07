@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { cuteHeight, doorPoint, facilityParts, floors, stationIn } from './facility.ts'
+import { cuteHeight, doorPoint, facilityLabel, facilityParts, floors, outerEdges, stationIn } from './facility.ts'
 
 const rect = (cx: number, cy: number, w: number, h: number) => [
   { x: cx - w / 2, y: cy - h / 2 },
@@ -26,9 +26,9 @@ test('高さは 0.5 倍で 6〜30 に収まる', () => {
   expect(cuteHeight(200)).toBe(30)
 })
 
-test('同じ高さの2枚は 0.05m ずれる', () => {
+test('同じ高さの2枚は同じ高さのまま（ずらすと段差の線が見える。同じ色なのでちらつきは見えない）', () => {
   const parts = facilityParts(0, [rect(0, 0, 60, 40), rect(20, 0, 30, 30)], [20, 20])
-  expect(parts.map((p) => p.heightM)).toEqual([10, 10.05])
+  expect(parts.map((p) => p.heightM)).toEqual([10, 10])
 })
 
 test('floors(10)=3、低くても1', () => {
@@ -52,4 +52,19 @@ test('main の3倍より広い重なりの輪郭（隣の巨大な輪郭）は�
   const parts = facilityParts(0, [rect(0, 0, 60, 40), rect(50, 0, 200, 200), rect(25, 0, 20, 20)], [20, 20, 30])
   expect(parts).toHaveLength(2)
   expect(parts[1].pts).toEqual(rect(25, 0, 20, 20))
+})
+
+test('ふちを付けるのは外側の辺だけ（ほかの部分の中に入っている辺は除く）', () => {
+  // 左右に並んだ2枚（つなぎ目は x=0 で、少し重なっている）
+  const parts = [{ pts: rect(-10, 0, 21, 10), heightM: 10 }, { pts: rect(10, 0, 21, 10), heightM: 10.05 }]
+  const edges = outerEdges(parts)
+  expect(edges).toHaveLength(6) // 4辺ずつのうち、相手の中に入っている内側の辺1本ずつを除く
+  expect(edges.every((e) => Math.abs((e.a.x + e.b.x) / 2) > 0.6 || Math.abs(e.a.y) === 5)).toBe(true)
+})
+
+test('駅の点は本体（最初の部分）の中にあるときだけ駅。重なった別の部分の中なら数えない', () => {
+  const parts = facilityParts(0, [rect(0, 0, 60, 40), rect(40, 0, 40, 40)], [20, 8])
+  const marks = [{ p: { x: 55, y: 0 }, name: '経堂', kind: 'station' as const }]
+  expect(facilityLabel(parts, marks, [])).toEqual({ kind: 'facility', name: null })
+  expect(facilityLabel(parts, [{ ...marks[0], p: { x: 0, y: 0 } }], [])).toEqual({ kind: 'station', name: '経堂駅' })
 })

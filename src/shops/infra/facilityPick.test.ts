@@ -12,7 +12,7 @@ const project = (p: { lat: number; lng: number }) => {
 const ring = (cx: number, cy: number, w: number, h: number) =>
   [[cx - w / 2, cy - h / 2], [cx + w / 2, cy - h / 2], [cx + w / 2, cy + h / 2], [cx - w / 2, cy + h / 2], [cx - w / 2, cy - h / 2]].map(([x, y]) => f.back({ x, y }))
 const fac: PlacedFacility = {
-  id: 'fac:a', shopIds: ['a', 'b'], parts: [{ ring: ring(0, 0, 60, 40), heightM: 10 }], topM: 10, facingDeg: 180,
+  id: 'fac:a', kind: 'facility', name: null, shopIds: ['a', 'b'], parts: [{ ring: ring(0, 0, 60, 40), heightM: 10 }], topM: 10, facingDeg: 180,
   door: f.back({ x: 0, y: -20 }),
 }
 

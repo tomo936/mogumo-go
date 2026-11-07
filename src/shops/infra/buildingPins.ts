@@ -13,7 +13,15 @@ import { screenScale } from './screenScale.ts'
 import type { PlacedShop } from './shopLayer.ts'
 
 // facility: 大型の施設。topM: 屋根の高さ（m）。spots: 施設の店の位置（placed からの m、x=東・y=北。ビルは []）
-export type PinnedBuilding = { placed: PlacedShop; shops: Shop[]; facility: boolean; topM: number; spots: { id: string; x: number; y: number }[] }
+// label: 名前の札（station なら駅名標の形）
+export type PinnedBuilding = {
+  placed: PlacedShop
+  shops: Shop[]
+  facility: boolean
+  topM: number
+  spots: { id: string; x: number; y: number }[]
+  label: { text: string; station: boolean } | null
+}
 
 const SCATTER_SIZE_M = 10 // 散らばったピンの大きさを決める目安の幅
 
@@ -92,7 +100,17 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
     return { m, b, at, inner: el, count, sizeM, last: '' }
   }
 
+  const nameTag = (b: PinnedBuilding): HTMLElement | null => {
+    if (!b.label) return null
+    const n = document.createElement('div')
+    n.className = b.label.station ? 'bldg-name bldg-name--station' : 'bldg-name'
+    n.textContent = b.label.text
+    return n
+  }
+
   const collapsed = (b: PinnedBuilding) => (el: HTMLElement) => {
+    const tag = nameTag(b)
+    if (tag) el.appendChild(tag)
     const done = b.shops.filter((s) => checked.has(s.id)).length
     const p = pin('#ffffff', '🍽', () => onTap(b.shops.map((s) => s.id)))
     p.classList.add('bldg-pin--all')
@@ -126,6 +144,8 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
       if (layout === 'collapsed') {
         markers.push(marker(b, home, collapsed(b), b.placed.sizeM))
       } else if (layout === 'scatter') {
+        // 名前の札は施設の真ん中に1つ
+        if (b.label) markers.push(marker(b, home, (el) => (el.appendChild(nameTag(b)!), 1), b.placed.sizeM))
         const { pxPerM } = screenScale((p) => map.project([p.lng, p.lat]), home)
         const frame = localFrame(home)
         const byId = new Map(b.shops.map((s) => [s.id, s]))

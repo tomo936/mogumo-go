@@ -30,6 +30,7 @@ const map = {
 const shop = (id: string): Shop => ({ id, name: id, lat: 35, lng: 139, kind: 'cafe', details: null, mapId: null })
 const bldg = (ids: string[], facility = false, spots: { id: string; x: number; y: number }[] = []) => ({
   facility,
+  label: null as { text: string; station: boolean } | null,
   topM: 16 * 1.3,
   spots,
   placed: { id: `bldg:${ids[0]}`, model: 'building', shopIds: ids, lat: 35, lng: 139, facingDeg: 0, sizeM: 16 } as PlacedShop,
@@ -165,4 +166,15 @@ test('カメラが動いても大きさと高さが同じなら書き直さな�
   const n = offsets.length
   moved!()
   expect(offsets.length).toBe(n)
+})
+
+test('名前の札を出す（駅は駅名標の形）。縮小でも拡大でも1つだけ', () => {
+  const pins = createBuildingPins(map, vi.fn())
+  pins.update([{ ...bldg(['a', 'b'], true, [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 30, y: 0 }]), label: { text: '経堂駅', station: true } }], new Set())
+  const names = () => made.filter((m) => !m.removed).flatMap((m) => [...m.el.querySelectorAll('.bldg-name')])
+  expect(names().map((n) => n.textContent)).toEqual(['経堂駅'])
+  expect(names()[0].classList.contains('bldg-name--station')).toBe(true)
+  zoom = 18
+  zoomEnd!()
+  expect(names()).toHaveLength(1)
 })

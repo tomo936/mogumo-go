@@ -5,8 +5,11 @@ type Pt = { x: number; y: number }
 type Project = (p: { lat: number; lng: number }) => Pt
 
 // 地図に置く大型施設1つ。parts は立ち上げる輪郭（緯度経度）と高さ、door は入口（ひさし）の位置
+// kind: 駅（駅の点を含む）か施設。name: 名前の札（無ければ null）
 export type PlacedFacility = {
   id: string
+  kind: 'facility' | 'station'
+  name: string | null
   shopIds: string[]
   parts: { ring: LatLng[]; heightM: number }[]
   topM: number

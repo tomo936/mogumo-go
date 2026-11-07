@@ -280,3 +280,27 @@
   bottom: 0;
   transform-origin: 0 100%;
 }
+
+/* 大型施設・駅の名前の札 */
+.bldg-name {
+  position: absolute;
+  bottom: 62px;
+  left: 0;
+  transform: translateX(-50%);
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: #fff;
+  color: #3d4a5c;
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(31, 42, 55, 0.25);
+  pointer-events: none;
+}
+/* 駅は駅名標の形（白い板＋緑の帯。実在の鉄道会社の色は使わない） */
+.bldg-name--station {
+  border: 2px solid #3d4a5c;
+  border-radius: 5px;
+  padding: 2px 12px 0;
+  border-bottom: 7px solid #4fb3a6;
+}

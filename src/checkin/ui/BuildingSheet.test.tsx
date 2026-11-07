@@ -35,3 +35,9 @@ test('行を押すと onPick(その店)、閉じるで onClose', async () => {
   await userEvent.click(screen.getByRole('button', { name: '閉じる' }))
   expect(onClose).toHaveBeenCalled()
 })
+
+test('施設・駅は見出しにその名前', () => {
+  render(<BuildingSheet shops={shops} checkedIds={new Set()} title="経堂コルティ" onPick={vi.fn()} onClose={vi.fn()} />)
+  expect(screen.getByText('経堂コルティ')).toBeInTheDocument()
+  expect(screen.queryByText('このビルのお店')).toBeNull()
+})
