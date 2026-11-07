@@ -12,7 +12,7 @@ import type { PlacedFacility } from './facilityPick.ts'
 import { screenScale } from './screenScale.ts'
 
 const WALL = '#f6ead7'
-const ROOF = '#fbf3e6'
+const ROOF = '#eedcbc'
 const WINDOW = '#91cfe7'
 const WOOD = '#8e5c42'
 const WOOD_L = '#b7a08a'
