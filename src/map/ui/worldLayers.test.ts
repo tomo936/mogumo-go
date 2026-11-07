@@ -58,9 +58,18 @@ const fakeMap = () => ({
 const featureReads = () => querySourceFeatures.mock.calls.filter((c) => c[1].sourceLayer !== 'poi').length
 const loadProgress = vi.fn(() => Promise.resolve({ cells: [] as Cell[], checkedShopIds: new Set<string>() }))
 const flush = () => new Promise((r) => setTimeout(r, 0))
+// 次のコマ（requestAnimationFrame）は手で進める
+let frames: (() => void)[] = []
+const runFrames = (max = 1000) => {
+  for (let i = 0; i < max && frames.length; i++) frames.shift()!()
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
+  frames = []
+  vi.stubGlobal('requestAnimationFrame', (cb: () => void) => { frames.push(cb); return frames.length })
+  vi.stubGlobal('cancelAnimationFrame', () => { frames = [] })
+  vi.spyOn(performance, 'now').mockReturnValue(1000) // 時計は止めておく（置き方の計算が1回で終わる）
   tilesLoaded = true
   idleHandler = null
   tiles = { transportation: [roadFeature], building: [] }
@@ -634,4 +643,78 @@ test('同じ施設の店が何軒あっても、施設の形の計算は1回', a
   world.onPosition(home)
   await flush()
   expect(vi.mocked(facilityParts)).toHaveBeenCalledTimes(1)
+})
+
+test('施設の店が1軒だけ見えていても（仲間は霧の中）、施設として facilityLayer に渡る', async () => {
+  tiles = { transportation: [roadFeature], building: [building(0, -40, 60, 100)] }
+  const a: Shop = { id: 'a', name: 'a', lat: home.lat + 5 / M, lng: home.lng, kind: 'cafe', details: null, mapId: null }
+  const b: Shop = { id: 'b', name: 'b', lat: home.lat - 80 / M, lng: home.lng, kind: 'ramen', details: null, mapId: null } // 霧の中（80m）
+  const { world } = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([a, b])) })
+  world.onPosition(home)
+  await flush()
+  expect(world.shopsNear().map((s) => s.id)).toEqual(['a'])
+  const facs = facilityLayer.setFacilities.mock.lastCall![0] as Fac[]
+  expect(facs.map((f) => f.shopIds)).toEqual([['a']])
+  expect(vi.mocked(shopLayer.setShops).mock.lastCall![0]).toEqual([])
+})
+
+test('大きい建物でも、読み込んだ店が全部で1軒なら施設にしない（ふつうの店）', async () => {
+  tiles = { transportation: [roadFeature], building: [building(0, -40, 60, 100)] }
+  const a: Shop = { id: 'a', name: 'a', lat: home.lat + 5 / M, lng: home.lng, kind: 'cafe', details: null, mapId: null }
+  const { world } = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([a])) })
+  world.onPosition(home)
+  await flush()
+  expect(facilityLayer.setFacilities).toHaveBeenLastCalledWith([])
+  expect((vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]).map((s) => s.id)).toEqual(['a'])
+})
+
+// 自宅の北 y m・東 x m の cafe（自宅まわり 200m は晴れ）
+const at = (id: string, y: number, x = 0): Shop => ({ id, name: id, lat: home.lat + y / M, lng: home.lng + x / LNG_M, kind: 'cafe', details: null, mapId: null })
+
+test('50軒あれば 50軒とも層に渡る（40軒で切れない）', async () => {
+  const many = Array.from({ length: 50 }, (_, i) => at(`s${i}`, 10 + i * 3, (i % 2) * 30 - 15))
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve(many)) })
+  world.onPosition(home)
+  await flush()
+  expect(vi.mocked(shopLayer.setShops).mock.lastCall![0]).toHaveLength(50)
+})
+
+test('層に渡る店に「軽い」が付く: 150m 以内は詳しい・それより遠いと軽い', async () => {
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([at('near', 20), at('far', 170)])) })
+  world.onPosition(home)
+  await flush()
+  const out = vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]
+  expect(out.map((s) => [s.id, !!s.light])).toEqual([['near', false], ['far', true]])
+})
+
+test('詳しい・軽いの切りかえには余裕があり、切りかえたときだけ層を作り直す', async () => {
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([at('a', 140)])) })
+  world.onPosition(home)
+  await flush()
+  expect((vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[])[0].light).toBeFalsy()
+  const n = vi.mocked(shopLayer.setShops).mock.calls.length
+  world.onPosition(north(-20)) // 160m: 前回詳しいので詳しいまま
+  expect(vi.mocked(shopLayer.setShops).mock.calls.length).toBe(n)
+  world.onPosition(north(-45)) // 185m: 軽い
+  expect(vi.mocked(shopLayer.setShops).mock.calls.length).toBe(n + 1)
+  expect((vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[])[0].light).toBe(true)
+  world.onPosition(north(-15)) // 155m: 前回軽いので軽いまま
+  expect(vi.mocked(shopLayer.setShops).mock.calls.length).toBe(n + 1)
+})
+
+test('たくさんの店は、最初の呼び出しで一部を置き、コマを進めると全部が置かれる', async () => {
+  let now = 1000
+  vi.mocked(performance.now).mockImplementation(() => (now += 1)) // 呼ぶたびに 1ms 進む
+  const many = Array.from({ length: 80 }, (_, i) => at(`s${i}`, 10 + i * 2, (i % 2) * 30 - 15))
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve(many)) })
+  world.onPosition(home)
+  await flush()
+  const first = vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]
+  expect(first.length).toBeGreaterThan(0)
+  expect(first.length).toBeLessThan(80)
+  expect(first.map((s) => s.id)).toEqual(many.slice(0, first.length).map((s) => s.id)) // 近い順に出てくる
+  expect(frames.length).toBeGreaterThan(0)
+  runFrames()
+  expect(vi.mocked(shopLayer.setShops).mock.lastCall![0]).toHaveLength(80)
+  expect(frames).toHaveLength(0)
 })

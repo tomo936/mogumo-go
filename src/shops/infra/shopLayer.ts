@@ -10,11 +10,16 @@ import { pickShop } from './pickShop.ts'
 
 // 地図に置く建物1つ。1軒の店は model がその種類・shopIds が [id]。
 // ビル（同じ建物の複数の店）は model 'building'・id 'bldg:<先頭の店 id>'・shopIds に全員
+// light: 遠くの店は軽い模型（assets/shops/lod/）で描く
 export type ModelName = ShopKind | 'building'
-export type PlacedShop = { id: string; model: ModelName; shopIds: string[]; lat: number; lng: number; facingDeg: number; sizeM: number }
+export type PlacedShop = { id: string; model: ModelName; shopIds: string[]; lat: number; lng: number; facingDeg: number; sizeM: number; light?: boolean }
 
 const URLS = import.meta.glob<string>('../../assets/shops/*.glb', { query: '?url', import: 'default' })
-const urlOf = (model: ModelName) => URLS[`../../assets/shops/${model}.glb`]
+const LOD_URLS = import.meta.glob<string>('../../assets/shops/lod/*.glb', { query: '?url', import: 'default' })
+// 読み込む模型の見分け（詳しい版は種類の名前、軽い版は 'lod:' を付ける）
+type ModelKey = ModelName | `lod:${ModelName}`
+const keyOf = (s: PlacedShop): ModelKey => (s.light ? `lod:${s.model}` : s.model)
+const urlOf = (key: ModelKey) => (key.startsWith('lod:') ? LOD_URLS[`../../assets/shops/lod/${key.slice(4)}.glb`] : URLS[`../../assets/shops/${key}.glb`])
 
 // 読み込んだ模型: 部品ごとの形・材質と、模型の根元からの行列
 type Part = { geo: THREE.BufferGeometry; mat: THREE.Material | THREE.Material[]; local: THREE.Matrix4 }
@@ -26,7 +31,7 @@ export function createShopLayer(): CustomLayerInterface & {
 } {
   let scene: THREE.Scene | null = null
   let map: MapLibreMap | null = null
-  const models = new Map<ModelName, Model | null>() // null = 読み込み中か失敗
+  const models = new Map<ModelKey, Model | null>() // null = 読み込み中か失敗
   let meshes: THREE.InstancedMesh[] = []
   let shops: PlacedShop[] = []
   let origin: LatLng | null = null
@@ -39,7 +44,7 @@ export function createShopLayer(): CustomLayerInterface & {
     meshes = []
   }
 
-  const load = (kind: ModelName) => {
+  const load = (kind: ModelKey) => {
     const url = urlOf(kind)
     models.set(kind, null)
     if (!url) return
@@ -63,17 +68,28 @@ export function createShopLayer(): CustomLayerInterface & {
       .catch(() => {}) // 読めなかった種類は出さない
   }
 
+  // 描く模型: 欲しい方（詳しい・軽い）がまだ読めていなければ、もう片方が読めていればそれで代わりに出す（空白にしない）
+  const drawnKey = (s: PlacedShop): ModelKey | null => {
+    const want = keyOf(s)
+    if (models.get(want)) return want
+    const other: ModelKey = s.light ? s.model : `lod:${s.model}`
+    return models.get(other) ? other : null
+  }
+  // 大きさの基準の幅: 同じ種類なら詳しい版の幅を両方に使う（切りかえで大きさが跳ねないように）。まだ読めていなければ軽い版の幅
+  const unitOf = (model: ModelName) => (models.get(model) ?? models.get(`lod:${model}`))!.unit
+
   const build = () => {
     clear()
     if (!scene || !origin) return
     const frame = localFrame(origin)
-    const byKind = new Map<ModelName, PlacedShop[]>()
+    const byKind = new Map<ModelKey, PlacedShop[]>()
     for (const s of shops) {
-      if (!models.has(s.model)) load(s.model)
-      if (!models.get(s.model)) continue
-      const list = byKind.get(s.model)
+      if (!models.has(keyOf(s))) load(keyOf(s))
+      const key = drawnKey(s)
+      if (!key) continue
+      const list = byKind.get(key)
       if (list) list.push(s)
-      else byKind.set(s.model, [s])
+      else byKind.set(key, [s])
     }
     const m = new THREE.Matrix4()
     const q = new THREE.Quaternion()
@@ -85,7 +101,7 @@ export function createShopLayer(): CustomLayerInterface & {
       // 1軒ずつの置き方（m）。正面（模型の +z）を facingDeg（北0・時計回り）へ向ける
       const place = list.map((s) => {
         const p = frame.to(s)
-        const k = s.sizeM / model.unit
+        const k = s.sizeM / unitOf(s.model)
         return new THREE.Matrix4().compose(
           v.set(p.x, 0, -p.y),
           q.setFromAxisAngle(up, Math.PI - THREE.MathUtils.degToRad(s.facingDeg)),
@@ -141,7 +157,7 @@ export function createShopLayer(): CustomLayerInterface & {
     pick(point) {
       if (!map) return null
       const m = map
-      const drawn = shops.filter((s) => models.get(s.model))
+      const drawn = shops.filter((s) => drawnKey(s))
       return pickShop(drawn, point, (p) => m.project([p.lng, p.lat]))?.shopIds ?? null
     },
   }

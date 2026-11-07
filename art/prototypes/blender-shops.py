@@ -23,9 +23,11 @@ def mat(color, rough=0.72, emit=0.0):
     if emit: b.inputs['Emission Color'].default_value = (*srgb(color), 1); b.inputs['Emission Strength'].default_value = emit
     MATS[k] = m; return m
 
+LO = bool(os.environ.get('LOD'))   # 遠く用の軽い版: 角の丸めを付けず、丸い形の分割を半分にする（blender-lod.py）
+
 def finish(o, m, bevel=0.0, seg=2):
     o.data.materials.clear(); o.data.materials.append(m)
-    if bevel:
+    if bevel and not LO:
         b = o.modifiers.new('bevel', 'BEVEL'); b.width = bevel; b.segments = seg; b.limit_method = 'ANGLE'; b.harden_normals = False
     for p in o.data.polygons: p.use_smooth = True
     return o
@@ -36,15 +38,18 @@ def cube(size, loc, m, bevel=0.03, seg=2, rot=(0, 0, 0)):
     return finish(o, m, bevel, seg)
 
 def cyl(r, h, loc, m, rot=(0, 0, 0), verts=20, bevel=0.015):
+    if LO: verts = max(6, verts // 2)
     bpy.ops.mesh.primitive_cylinder_add(radius=r, depth=h, location=loc, rotation=rot, vertices=verts)
     return finish(bpy.context.object, m, bevel)
 
 def sphere(r, loc, m, scale=(1, 1, 1), seg=16):
+    if LO: seg = max(6, seg // 2)
     bpy.ops.mesh.primitive_uv_sphere_add(radius=r, location=loc, segments=seg, ring_count=seg // 2)
     o = bpy.context.object; o.scale = scale; bpy.ops.object.transform_apply(scale=True)
     return finish(o, m)
 
 def lathe(prof, loc, m, steps=20):
+    if LO: steps = max(6, steps // 2)
     me = bpy.data.meshes.new('l'); bm = bmesh.new()
     vs = [bm.verts.new((r, 0, z)) for r, z in prof]; es = [bm.edges.new((vs[i], vs[i + 1])) for i in range(len(vs) - 1)]
     bmesh.ops.spin(bm, geom=vs + es, cent=(0, 0, 0), axis=(0, 0, 1), angle=math.tau, steps=steps, use_duplicate=False)
@@ -64,7 +69,7 @@ KIND = os.environ.get('KIND', 'ramen')
 # ── 共通の部品 ─────────────────────────────────
 def tile_slope(width, length, M, roof, roof_d, tw=0.16, th=0.1):
     """小さな瓦をびっしり並べた斜面（ローカル: 幅 x × 長さ y、y=0 が軒、+y が棟）"""
-    objs = [cube((width, length, 0.05), (0, length / 2, 0), roof_d, bevel=0.01)]
+    objs = [cube((width, length, 0.05), (0, length / 2, 0), roof if LO else roof_d, bevel=0.01)]   # 遠く用は瓦を外すことがあるので、下地を瓦の色に
     rows = max(2, int(length / th))
     for r in range(rows):
         y = length * (r + 0.5) / rows; n = int(width / tw); off = tw / 2 if r % 2 else 0
@@ -275,7 +280,7 @@ def sushi():
 # ── 中華料理屋（見本 chinese.webp＝前のデザイン） ───────────────
 def tube(points, r, m, cap=True):
     """点の列に沿った丸い棒（瓦の筋・棟・反り返った飾り）"""
-    cu = bpy.data.curves.new('tube', 'CURVE'); cu.dimensions = '3D'; cu.bevel_depth = r; cu.bevel_resolution = 2
+    cu = bpy.data.curves.new('tube', 'CURVE'); cu.dimensions = '3D'; cu.bevel_depth = r; cu.bevel_resolution = 0 if LO else 2
     cu.use_fill_caps = cap
     sp = cu.splines.new('POLY'); sp.points.add(len(points) - 1)
     for p_, q in zip(sp.points, points): p_.co = (*q, 1)
@@ -284,6 +289,7 @@ def tube(points, r, m, cap=True):
 
 def curved_roof_patch(eave_a, eave_b, ridge_a, ridge_b, m, nu=14, nv=8, upturn=0.18, sag=1.6, thick=0.06):
     """軒の線と棟の線のあいだを、反りのある面で張る。軒の両はしは上に反り返る"""
+    if LO: nu, nv = max(4, nu // 2), max(3, nv // 2)
     me = bpy.data.meshes.new('roof'); bm = bmesh.new(); grid = []
     for j in range(nv + 1):
         v = j / nv; row = []
@@ -1115,6 +1121,10 @@ for o in list(bpy.data.objects):
     if o.type == 'CURVE':
         for x in bpy.data.objects: x.select_set(False)
         o.select_set(True); bpy.context.view_layer.objects.active = o; bpy.ops.object.convert(target='MESH')
+
+# ── 遠く用のさらに軽い glb（LOD=1）: 作り方は blender-lod.py（blender-shop-jp.py と共通） ──
+if os.environ.get('LOD'):
+    exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'blender-lod.py'), encoding='utf-8').read())
 
 # ── 軽い glb（アプリ用）: LIGHT=1 のときはレンダリングせず、形をつなげて 1 万三角形以内に減らして書く ──
 if os.environ.get('LIGHT'):

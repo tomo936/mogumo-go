@@ -123,6 +123,13 @@ export function dropSharedParts<R, F extends { parts: { ring: R }[] }>(list: F[]
   })
 }
 
+// 輪郭の中にある店の点の数
+export const shopsInRing = (ring: P[], pts: P[]) => pts.filter((p) => inside(p, ring)).length
+
+// 大型施設・駅として出すだけの店があるか（2軒以上）。数えるのは見えている店ではなく、読み込んだ全部の店（霧の中も含む）。
+// 仲間が霧の中や遠くにいても、施設が1軒の店に戻ったり欠けたりしないように
+export const enoughShops = (ring: P[], allShops: P[]) => shopsInRing(ring, allShops) >= 2
+
 // 2つの輪郭の形が重なるか（施設どうしをまとめる判定用）
 export const ringsOverlap = (a: P[], b: P[]) => overlaps(a, b, boxOf(a), boxOf(b))
 
