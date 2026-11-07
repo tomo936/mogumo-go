@@ -25,7 +25,8 @@ const urlOf = (key: ModelKey) => (key.startsWith('lod:') ? LOD_URLS[`../../asset
 type Part = { geo: THREE.BufferGeometry; mat: THREE.Material | THREE.Material[]; local: THREE.Matrix4 }
 type Model = { parts: Part[]; unit: number } // unit: 模型の幅（東西・南北の大きい方）
 
-export function createShopLayer(): CustomLayerInterface & {
+// id: 地図の層の名前（晴れた所の店と、霧の中の近い店で2つ作る）
+export function createShopLayer(id: string): CustomLayerInterface & {
   setShops(shops: PlacedShop[]): void
   pick(point: { x: number; y: number }): string[] | null
 } {
@@ -120,7 +121,7 @@ export function createShopLayer(): CustomLayerInterface & {
   }
 
   const layer = threeLayer({
-    id: 'shops-3d',
+    id,
     onAdd(sc, mp) {
       scene = sc
       map = mp

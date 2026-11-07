@@ -1,5 +1,6 @@
 // 霧（§12）。MapLibre のカスタムレイヤーに WebGL2 で、絵本風の雲の塊を描く。
 // 塊はいつも画面のほうを向き、上が白・下側に水色の影。画面の奥から手前の順に重ねる。
+// お店（3D の層）より後に描き、塊の根元の奥行きでお店と比べる（雲より奥のお店は雲に隠れる）。
 import { MercatorCoordinate } from 'maplibre-gl'
 import type { CustomLayerInterface, Map as MapLibreMap } from 'maplibre-gl'
 import { FOG_RESORT_DEG, POP_S, THIN_RADIUS_M } from '../config.ts'
@@ -62,6 +63,7 @@ void main() {
     return;
   }
   vec2 uv = mix(LO, HI, a_corner * 0.5 + 0.5);
+  // 奥行き（z）は塊の根元のまま。四角全体が根元と同じ奥行きになる
   gl_Position = c + vec4(uv * wpx / (u_viewport * 0.5) * c.w, 0.0, 0.0);
   v_uv = uv;
   v_seed = a_clump.w;
@@ -175,7 +177,7 @@ export function createFogLayer(): FogLayer {
   return {
     id: 'fog',
     type: 'custom',
-    renderingMode: '2d',
+    renderingMode: '3d', // お店の層と同じ奥行きの範囲を使う
     setClumps(o, cs) {
       origin = o
       clumps = cs
@@ -248,7 +250,10 @@ export function createFogLayer(): FogLayer {
       gl.uniform1f(uTime, now)
       gl.uniform3fv(uThin, thin)
       if (animEnd > now) map.triggerRepaint() // 動いている間だけ描き続ける
-      gl.disable(gl.DEPTH_TEST)
+      // お店が書いた奥行きと比べるだけで、雲は奥行きを書かない（雲どうしは奥から順に重ねる）
+      gl.enable(gl.DEPTH_TEST)
+      gl.depthFunc(gl.LEQUAL)
+      gl.depthMask(false)
       gl.disable(gl.CULL_FACE)
       gl.enable(gl.BLEND)
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
