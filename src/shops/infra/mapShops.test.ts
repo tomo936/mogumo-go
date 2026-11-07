@@ -7,9 +7,9 @@ const center = { lat: 35, lng: 139 }
 const north = (m: number) => ({ lat: 35 + m / 111200, lng: 139 })
 
 type F = { geometry: { type: 'Point'; coordinates: number[] }; properties: Record<string, unknown>; id?: number | string }
-const poi = (id: number | undefined, subclass: string, name: string | undefined, m: number): F => {
+const poi = (id: number | undefined, subclass: string, name: string | undefined, m: number, cls?: string): F => {
   const at = north(m)
-  return { id, geometry: { type: 'Point', coordinates: [at.lng, at.lat] }, properties: { subclass, name } }
+  return { id, geometry: { type: 'Point', coordinates: [at.lng, at.lat] }, properties: { subclass, name, class: cls } }
 }
 const source = (fs: F[]): FeatureSource => ({ querySourceFeatures: () => fs as never })
 
@@ -37,5 +37,10 @@ describe('extractMapShops', () => {
   })
   it('skips features without id', () => {
     expect(extractMapShops(source([poi(undefined, 'cafe', 'A', 100)]), center, 1000)).toEqual([])
+  })
+  it('鉄道の駅の点（地下鉄は除く）を stationsOut に集める', () => {
+    const out: { lat: number; lng: number }[] = []
+    extractMapShops(source([poi(1, 'station', '経堂', 100, 'railway'), poi(2, 'subway', '新宿', 200, 'railway'), poi(3, 'halt', '小駅', 300, 'railway')]), center, 1000, out)
+    expect(out.map((p) => Math.round((p.lat - 35) * 111200))).toEqual([100, 300])
   })
 })

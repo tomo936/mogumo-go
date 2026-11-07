@@ -2,7 +2,8 @@ import type { P } from '../../map/domain/geo.ts'
 import { SHOP_MAX_SIZE_M, SHOP_MIN_SIZE_M } from '../config.ts'
 
 // areaM2: 合わせた輪郭の広さ（輪郭なしは 0）
-export type Placement = { center: P; facingDeg: number; sizeM: number; onFootprint: boolean; areaM2: number }
+// ringIndex: 合わせた輪郭の footprints の番号（輪郭なしは null）
+export type Placement = { center: P; facingDeg: number; sizeM: number; onFootprint: boolean; areaM2: number; ringIndex: number | null }
 
 const SOUTH: P = { x: 0, y: -1 }
 
@@ -51,7 +52,7 @@ function free(road: P | null, roadDist: number, dir: P): Placement {
   const sizeM = SHOP_MIN_SIZE_M
   const need = sizeM / 2 + 4
   const back = road && roadDist < need ? need - roadDist : 0
-  return { center: { x: -dir.x * back || 0, y: -dir.y * back || 0 }, facingDeg: bearing(dir), sizeM, onFootprint: false, areaM2: 0 }
+  return { center: { x: -dir.x * back || 0, y: -dir.y * back || 0 }, facingDeg: bearing(dir), sizeM, onFootprint: false, areaM2: 0, ringIndex: null }
 }
 
 // 輪郭あり: その真ん中・大きさに合わせ、道路（無ければ南）に一番向いている辺を正面にする。
@@ -102,7 +103,7 @@ function fitFootprint(ring: P[], road: P | null, maxSizeM: number): Placement | 
     minS = Math.min(minS, v)
     maxS = Math.max(maxS, v)
   }
-  return { center: c, facingDeg: bearing(face), sizeM: clampSize(Math.min(maxF - minF, maxS - minS), maxSizeM), onFootprint: true, areaM2: Math.abs(area) }
+  return { center: c, facingDeg: bearing(face), sizeM: clampSize(Math.min(maxF - minF, maxS - minS), maxSizeM), onFootprint: true, areaM2: Math.abs(area), ringIndex: null }
 }
 
 // 店の点は原点。道路に正面を向け、建物の輪郭があればその真ん中・大きさ（maxSizeM まで）に合わせる
@@ -114,14 +115,17 @@ export function placeShop(roads: P[][], footprints: P[][], maxSizeM = SHOP_MAX_S
   const dir = usable ? { x: usable.x / roadDist, y: usable.y / roadDist } : SOUTH
   // 点を含む輪郭が複数（タイルの区切りで切られた同じ建物のかけら・重なった輪郭）なら、いちばん大きいもの
   let ring: P[] | undefined
+  let ringIndex: number | null = null
   let best = 0
-  for (const r of footprints) {
+  for (const [i, r] of footprints.entries()) {
     if (!contains({ x: 0, y: 0 }, r)) continue
     const a = Math.abs(r.reduce((s, q, i) => s + (q.x * r[(i + 1) % r.length].y - r[(i + 1) % r.length].x * q.y), 0) / 2)
     if (!ring || a > best) {
       ring = r
+      ringIndex = i
       best = a
     }
   }
-  return (ring && fitFootprint(ring, usable, maxSizeM)) || free(road, roadDist, dir)
+  const fitted = ring && fitFootprint(ring, usable, maxSizeM)
+  return fitted ? { ...fitted, ringIndex } : free(road, roadDist, dir)
 }

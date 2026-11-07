@@ -19,7 +19,8 @@ type Position = number[]
 type Box = { x0: number; y0: number; x1: number; y1: number }
 type Item = { pts: P[]; box: Box }
 // 読み込み済みタイルの道路と建物の輪郭（origin を原点にした m）。輪郭はズームの大きいタイルのものが先
-export type AreaFeatures = { roads: Item[]; footprints: (Item & { z: number })[] }
+// footprints の h はタイルの render_height（無ければ 10）
+export type AreaFeatures = { roads: Item[]; footprints: (Item & { z: number; h: number })[] }
 
 function segDist(a: P, b: P): number {
   const dx = b.x - a.x
@@ -81,13 +82,13 @@ export function extractFeatures(src: FeatureSource, origin: LatLng, rangeM: numb
     }
   }
 
-  const footprints: (Item & { z: number })[] = []
+  const footprints: (Item & { z: number; h: number })[] = []
   for (const f of src.querySourceFeatures(SOURCE, { sourceLayer: 'building' })) {
     const g = f.geometry
     const outers = g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map((p) => p[0]) : []
     for (const o of outers) {
       const it = item(o)
-      if (it) footprints.push({ ...it, z: f._z ?? 0 })
+      if (it) footprints.push({ ...it, z: f._z ?? 0, h: typeof f.properties.render_height === 'number' ? f.properties.render_height : 10 })
     }
   }
   // 低いズームの簡略な輪郭より、細かいタイルの輪郭を先に当てる
@@ -98,7 +99,7 @@ export function extractFeatures(src: FeatureSource, origin: LatLng, rangeM: numb
 export const NEAR_M = 60 // 店の置き方に使う道路・輪郭の範囲
 
 // 店の点 at のまわり rangeM 以内の道路と輪郭を、at を原点にずらして返す
-export function featuresNear(all: AreaFeatures, at: P, rangeM = NEAR_M): { roads: P[][]; footprints: P[][] } {
+export function featuresNear(all: AreaFeatures, at: P, rangeM = NEAR_M): { roads: P[][]; footprints: P[][]; heights: number[] } {
   const shift = (pts: P[]) => pts.map((p) => ({ x: p.x - at.x, y: p.y - at.y }))
   const roads: P[][] = []
   for (const r of all.roads) {
@@ -107,6 +108,7 @@ export function featuresNear(all: AreaFeatures, at: P, rangeM = NEAR_M): { roads
     if (minDist(pts) <= rangeM) roads.push(pts)
   }
   const footprints: P[][] = []
+  const heights: number[] = []
   let topZ: number | null = null // 点を含む輪郭の、いちばん細かいタイルのズーム（輪郭はズームの大きい順に並んでいる）
   for (const f of all.footprints) {
     if (boxDist(f.box, at) > rangeM) continue
@@ -115,7 +117,11 @@ export function featuresNear(all: AreaFeatures, at: P, rangeM = NEAR_M): { roads
       topZ ??= f.z
       if (f.z < topZ) continue // 同じ建物の簡略な形（ズームの小さいタイル）は使わない
       footprints.push(ring)
-    } else if (minDist(ring) <= rangeM) footprints.push(ring)
+      heights.push(f.h)
+    } else if (minDist(ring) <= rangeM) {
+      footprints.push(ring)
+      heights.push(f.h)
+    }
   }
-  return { roads, footprints }
+  return { roads, footprints, heights }
 }
