@@ -5,11 +5,13 @@ import type { PlacedShop } from './shopLayer.ts'
 import type { Shop } from '../domain/shop.ts'
 
 const made: { el: HTMLElement; removed: boolean }[] = []
+const offsets: number[][] = []
 vi.mock('maplibre-gl', () => ({
   Marker: class {
     rec: { el: HTMLElement; removed: boolean }
     constructor(opts: { element: HTMLElement }) { this.rec = { el: opts.element, removed: false }; made.push(this.rec) }
     setLngLat() { return this }
+    setOffset(o: number[]) { offsets.push(o); return this }
     addTo() { return this }
     remove() { this.rec.removed = true }
   },
@@ -17,7 +19,14 @@ vi.mock('maplibre-gl', () => ({
 
 let zoom = 17
 let zoomEnd: (() => void) | null = null
-const map = { getZoom: () => zoom, on: vi.fn((_e: string, h: () => void) => { zoomEnd = h }), off: vi.fn() } as unknown as MapLibreMap
+let ppm = 4 // 1m あたりの px
+let moved: (() => void) | null = null
+const map = {
+  getZoom: () => zoom,
+  project: (p: [number, number]) => ({ x: (p[0] - 139) * 91000 * ppm, y: 0 }),
+  on: vi.fn((e: string, h: () => void) => { if (e === 'zoomend') zoomEnd = h; else moved = h }),
+  off: vi.fn(),
+} as unknown as MapLibreMap
 const shop = (id: string): Shop => ({ id, name: id, lat: 35, lng: 139, kind: 'cafe', details: null, mapId: null })
 const bldg = (ids: string[], facility = false) => ({
   facility,
@@ -28,7 +37,9 @@ const live = () => made.filter((m) => !m.removed)
 
 beforeEach(() => {
   made.length = 0
+  offsets.length = 0
   zoom = 17
+  ppm = 4
 })
 
 test('ピンを押すと onTap([その店の id])、まとめたピンは onTap(全員の id)', () => {
@@ -99,4 +110,16 @@ test('大型の施設は2軒でもまとめたピン', () => {
   pins.update([bldg(['a', 'b'], true)], new Set(['a']))
   expect(live()[0].el.textContent).toContain('1/2')
   expect(live()[0].el.querySelectorAll('.bldg-pin')).toHaveLength(1)
+})
+
+test('ピンはビルの幅に合わせて縮み、ビルの屋根の上（大きさ×1.3）に出る。カメラが動けば合わせ直す', () => {
+  const pins = createBuildingPins(map, vi.fn())
+  pins.update([bldg(['a', 'b', 'c'])], new Set())
+  const inner = () => live()[0].el.querySelector<HTMLElement>('.bldg-pins__scale')!
+  expect(inner().style.transform).toMatch(/scale\(0\.5\d+\)/) // 16m*4px*0.9/98 ≈ 0.588
+  expect(offsets.at(-1)![1]).toBeCloseTo(-16 * 1.3 * 4, 0)
+  ppm = 2
+  moved!()
+  expect(offsets.at(-1)![1]).toBeCloseTo(-16 * 1.3 * 2, 0)
+  expect(inner().style.transform).toMatch(/scale\(0\.3\)/)
 })
