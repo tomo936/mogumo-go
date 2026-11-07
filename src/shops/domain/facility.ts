@@ -50,3 +50,20 @@ export const floors = (heightM: number) => Math.max(1, Math.round(heightM / FACI
 export function stationIn(parts: FacilityPart[], stations: P[]): P | null {
   return stations.find((s) => parts.some((p) => inside(s, p.pts))) ?? null
 }
+
+// 入口の位置: 真ん中から正面の向き（北0・時計回り）へ進んで、輪郭を出た所
+export function doorPoint(center: P, facingDeg: number, ring: P[]): P {
+  const r = (facingDeg * Math.PI) / 180
+  const dir = { x: Math.sin(r), y: Math.cos(r) }
+  const at = (t: number) => ({ x: center.x + dir.x * t, y: center.y + dir.y * t })
+  let t = 0
+  while (t < 500 && inside(at(t), ring)) t += 1
+  // 1m 刻みで出たので、最後の 1m を半分ずつ詰める
+  let lo = Math.max(0, t - 1)
+  for (let i = 0; i < 8; i++) {
+    const mid = (lo + t) / 2
+    if (inside(at(mid), ring)) lo = mid
+    else t = mid
+  }
+  return { x: center.x + dir.x * t, y: center.y + dir.y * t }
+}

@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { cuteHeight, facilityParts, floors, stationIn } from './facility.ts'
+import { cuteHeight, doorPoint, facilityParts, floors, stationIn } from './facility.ts'
 
 const rect = (cx: number, cy: number, w: number, h: number) => [
   { x: cx - w / 2, y: cy - h / 2 },
@@ -40,4 +40,10 @@ test('駅の点が部分の中なら返し、外なら null', () => {
   const parts = facilityParts(0, [rect(0, 0, 60, 40)], [20])
   expect(stationIn(parts, [{ x: 100, y: 0 }, { x: 5, y: 5 }])).toEqual({ x: 5, y: 5 })
   expect(stationIn(parts, [{ x: 100, y: 0 }])).toBeNull()
+})
+
+test('入口は真ん中から正面の向きへ進んで輪郭を出た所', () => {
+  const d = doorPoint({ x: 0, y: 0 }, 180, rect(0, 0, 60, 40)) // 南向き → 南の辺（y=-20）
+  expect(d.x).toBeCloseTo(0, 5)
+  expect(d.y).toBeCloseTo(-20, 0)
 })

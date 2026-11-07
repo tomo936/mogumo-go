@@ -7,7 +7,8 @@ import { cellKey } from '../../fog/domain/grid.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
 import { thinAmount, waveClumps } from '../../fog/domain/wave.ts'
 import { createFogLayer } from '../../fog/infra/fogLayer.ts'
-import { BUILDING_MAX_SIZE_M, FACILITY_MIN_AREA_M2, MAP_SHOPS_REEXTRACT_M, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
+import { BUILDING_MAX_SIZE_M, BUILDING_TOP_RATE, FACILITY_MIN_AREA_M2, FACILITY_NEAR_M, STATION_SIZE_M, MAP_SHOPS_REEXTRACT_M, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
+import { doorPoint, facilityParts, stationIn } from '../../shops/domain/facility.ts'
 import { groupShops } from '../../shops/domain/grouping.ts'
 import { mergeShops } from '../../shops/domain/merge.ts'
 import { placeShop } from '../../shops/domain/placement.ts'
@@ -17,6 +18,8 @@ import { extractFeatures, featuresNear, NEAR_M } from '../../shops/infra/mapFeat
 import type { AreaFeatures } from '../../shops/infra/mapFeatures.ts'
 import { extractMapShops } from '../../shops/infra/mapShops.ts'
 import { createBuildingPins } from '../../shops/infra/buildingPins.ts'
+import { createFacilityLayer } from '../../shops/infra/facilityLayer.ts'
+import type { PlacedFacility } from '../../shops/infra/facilityPick.ts'
 import type { PinnedBuilding } from '../../shops/infra/buildingPins.ts'
 import { createCheckMarks } from '../../shops/infra/checkMarks.ts'
 import { createShopLayer } from '../../shops/infra/shopLayer.ts'
@@ -46,7 +49,14 @@ type WorldMap = MapLibreMap
 const PLAYER_LAYERS = ['me-circle-fill', 'me-circle-line', 'me-shadow']
 
 // 店ごとの置き方。輪郭に合わせたときは、同じ建物の店がそろったときのビルの置き方（bldg）も持つ
-type Placed = { main: PlacedShop; bldg: PlacedShop | null; areaM2: number }
+// facility: 大型の形（輪郭が FACILITY_MIN_AREA_M2 以上のときだけ）。station: 小さい建物の輪郭に駅の点がある
+type Placed = {
+  main: PlacedShop
+  bldg: PlacedShop | null
+  areaM2: number
+  facility: { parts: { ring: LatLng[]; heightM: number }[]; station: LatLng | null; door: LatLng } | null
+  station: boolean
+}
 
 type World = {
   onPosition(p: LatLng): void
@@ -63,6 +73,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const cleared = clearedFromHome(deps.home)
   const fogLayer = createFogLayer()
   const shopLayer = createShopLayer()
+  const facilityLayer = createFacilityLayer()
   const checkMarks = createCheckMarks(map)
   const buildingPins = createBuildingPins(map, (ids) => deps.onPinTap(ids))
   let shownPlaced: PlacedShop[] = [] // いま層に渡している置き方（1軒の店だけ。✓ の印用）
@@ -96,6 +107,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   let last: LatLng | null = null
   let shownKey: string | null = null
   const placed = new Map<string, Placed>() // 店ごとの置き方（一度だけ計算）
+  let stations: LatLng[] = [] // 鉄道の駅の点（地図のお店と一緒に読む）
 
   const toPlaced = (shop: Shop, pl: ReturnType<typeof placeShop>): PlacedShop => {
     const c = localFrame(shop).back(pl.center)
@@ -111,7 +123,9 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     // 見える・見えないの計算は SHOP_REFRESH_M ごとに別でやる
     if (map.areTilesLoaded() && (!extractedAt || distanceMeters(extractedAt, p) >= MAP_SHOPS_REEXTRACT_M)) {
       extractedAt = p
-      mapShops = extractMapShops(map, p, SHOP_RADIUS_M)
+      const st: LatLng[] = []
+      mapShops = extractMapShops(map, p, SHOP_RADIUS_M, st)
+      stations = st
       shops = mergeShops(mapShops, hpShops)
     }
     // タイルは1回の更新で1回だけ読む（店ごとに読むと、店の数×タイルの大きさだけ重くなる）
@@ -125,7 +139,24 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         area ??= extractFeatures(map, p, SHOP_RADIUS_M + NEAR_M)
         const { roads, footprints } = featuresNear(area, frame.to(shop))
         const pl = placeShop(roads, footprints)
-        hit = { main: toPlaced(shop, pl), bldg: pl.onFootprint ? toPlaced(shop, placeShop(roads, footprints, BUILDING_MAX_SIZE_M)) : null, areaM2: pl.areaM2 }
+        const bldg = pl.onFootprint ? toPlaced(shop, placeShop(roads, footprints, BUILDING_MAX_SIZE_M)) : null
+        const sf = localFrame(shop)
+        const st = stations.map((q) => sf.to(q))
+        let facility: Placed['facility'] = null
+        if (bldg && pl.areaM2 >= FACILITY_MIN_AREA_M2) {
+          // 大型: 広めに集めた輪郭から、店の輪郭と重なる部分（タイルのかけら・高さ違い）を立ち上げる
+          const wide = featuresNear(area, frame.to(shop), FACILITY_NEAR_M)
+          const idx = placeShop(wide.roads, wide.footprints).ringIndex
+          if (idx !== null) {
+            const parts = facilityParts(idx, wide.footprints, wide.heights)
+            const s = stationIn(parts, st)
+            const d = doorPoint(sf.to(bldg), bldg.facingDeg, parts[0].pts)
+            facility = { parts: parts.map((q) => ({ ring: q.pts.map((v) => sf.back(v)), heightM: q.heightM })), station: s && sf.back(s), door: sf.back(d) }
+          }
+        }
+        const ring = pl.ringIndex !== null ? footprints[pl.ringIndex] : null
+        const station = !!ring && stationIn([{ pts: ring, heightM: 0 }], st) !== null
+        hit = { main: toPlaced(shop, pl), bldg, areaM2: pl.areaM2, facility, station }
         placed.set(shop.id, hit)
       }
       visible.push({ shop, hit })
@@ -136,16 +167,33 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     const out: PlacedShop[] = []
     const singles: PlacedShop[] = []
     const blds: PinnedBuilding[] = []
+    const facs: PlacedFacility[] = []
     let key = ''
     for (const ids of groups) {
       const members = ids.map((id) => byId.get(id)!)
       if (members.length === 1) {
         out.push(members[0].hit.main)
         singles.push(members[0].hit.main)
+      } else if (members[0].hit.facility) {
+        // 大型施設: 実際の形の立体。駅の点があれば入口の前に駅舎を添える
+        const f = members[0].hit.facility
+        const center = members[0].hit.bldg!
+        const topM = Math.max(...f.parts.map((q) => q.heightM)) + 0.5
+        facs.push({ id: `fac:${ids[0]}`, shopIds: ids, parts: f.parts, topM, facingDeg: center.facingDeg, door: f.door })
+        if (f.station) {
+          const r = (center.facingDeg * Math.PI) / 180
+          const at = localFrame(f.door).back({ x: Math.sin(r) * STATION_SIZE_M * 0.6, y: Math.cos(r) * STATION_SIZE_M * 0.6 })
+          out.push({ id: `sta:${ids[0]}`, model: 'station', shopIds: ids, lat: at.lat, lng: at.lng, facingDeg: center.facingDeg, sizeM: STATION_SIZE_M })
+        }
+        const cf = localFrame(center)
+        const placedF: PlacedShop = { ...center, id: `fac:${ids[0]}`, model: 'building', shopIds: ids }
+        blds.push({ placed: placedF, shops: members.map((m) => m.shop), facility: true, topM, spots: members.map((m) => ({ id: m.shop.id, ...cf.to(m.shop) })) })
       } else {
-        const placedB: PlacedShop = { ...members[0].hit.bldg!, id: `bldg:${ids[0]}`, model: 'building', shopIds: ids }
+        // ビル（駅の点があれば駅舎）
+        const station = members.some((m) => m.hit.station)
+        const placedB: PlacedShop = { ...members[0].hit.bldg!, id: `bldg:${ids[0]}`, model: station ? 'station' : 'building', shopIds: ids }
         out.push(placedB)
-        blds.push({ placed: placedB, shops: members.map((m) => m.shop), facility: members[0].hit.areaM2 >= FACILITY_MIN_AREA_M2 })
+        blds.push({ placed: placedB, shops: members.map((m) => m.shop), facility: false, topM: placedB.sizeM * (station ? 1 : BUILDING_TOP_RATE), spots: [] })
       }
       key += `${ids.join('+')},`
     }
@@ -155,6 +203,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     shownPlaced = singles
     shownBuildings = blds
     shopLayer.setShops(out)
+    facilityLayer.setFacilities(facs)
     updateMarks()
   }
   // ✓ の印（1軒の店）とビルのピン（✓ はピンの上に出す）を、済みの一覧に合わせて出し直す
@@ -281,7 +330,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       if (!fogCenter) {
         const below = PLAYER_LAYERS.find((id) => map.getLayer(id))
         map.addLayer(fogLayer, below)
-        map.addLayer(shopLayer, below) // お店は霧より上
+        map.addLayer(facilityLayer, below) // 大型施設は霧より上
+        map.addLayer(shopLayer, below) // お店は大型施設より上
         setFog(p)
       } else if (distanceMeters(fogCenter, p) >= FOG_REBUILD_M) {
         setFog(p)
@@ -291,7 +341,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       if (!refreshedAt || distanceMeters(refreshedAt, p) >= SHOP_REFRESH_M) refreshShops(p)
     },
     shopsNear: () => near,
-    pick: (point) => shopLayer.pick(point),
+    pick: (point) => shopLayer.pick(point) ?? facilityLayer.pick(point), // 手前に出やすい小さい模型を先に
     addCleared(cells, from) {
       if (disposed) return
       let added = false
@@ -329,7 +379,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       checkMarks.dispose()
       buildingPins.dispose()
       map.off('idle', onIdle)
-      for (const id of [fogLayer.id, shopLayer.id]) if (map.getLayer(id)) map.removeLayer(id)
+      for (const id of [fogLayer.id, facilityLayer.id, shopLayer.id]) if (map.getLayer(id)) map.removeLayer(id)
     },
   }
 }
