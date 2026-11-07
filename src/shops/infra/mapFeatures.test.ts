@@ -66,6 +66,26 @@ describe('extractFeatures + featuresNear', () => {
     expect(near.footprints[0][0].x).toBeCloseTo(-6, 0)
   })
 
+  it('点を含む輪郭のうち、ズームの小さいタイルのもの（簡略な形）は返さない', () => {
+    const src = source({
+      building: [
+        { geometry: { type: 'Polygon', coordinates: [sq(0, 0, 12)] }, properties: {}, _z: 13 },
+        { geometry: { type: 'Polygon', coordinates: [sq(0, 0, 6)] }, properties: {}, _z: 14 },
+      ],
+    })
+    expect(featuresNear(extractFeatures(src, origin, 1000), { x: 0, y: 0 }).footprints).toHaveLength(1)
+  })
+
+  it('同じズームで点を含む輪郭が2つ（タイルの区切りで切られたかけら）なら両方返す', () => {
+    const src = source({
+      building: [
+        { geometry: { type: 'Polygon', coordinates: [sq(0, 0, 6)] }, properties: {}, _z: 14 },
+        { geometry: { type: 'Polygon', coordinates: [sq(4, 0, 12)] }, properties: {}, _z: 14 },
+      ],
+    })
+    expect(featuresNear(extractFeatures(src, origin, 1000), { x: 0, y: 0 }).footprints).toHaveLength(2)
+  })
+
   it('タイルは1回だけ読み、店の数に比例して読み直さない（1回の更新で道路1回・建物1回）', () => {
     // 1タイル分くらいの量: 道路 3000 本・建物 6000 棟
     const many: Record<string, F[]> = { transportation: [], building: [] }

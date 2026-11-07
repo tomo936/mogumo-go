@@ -75,3 +75,9 @@ test('輪郭に合わせたときは輪郭の広さ（m²）、輪郭なしは 0
   expect(placeShop(roadNorth, [rect(2, -1, 20, 12)]).areaM2).toBeCloseTo(240, 5)
   expect(placeShop(roadNorth, []).areaM2).toBe(0)
 })
+
+test('点を含む輪郭が2つ（タイルの区切りのかけら）なら、大きい方に合わせる', () => {
+  const r = placeShop(roadNorth, [rect(2, 0, 10, 10), rect(20, 0, 60, 40)])
+  expect(r.center.x).toBeCloseTo(20, 1)
+  expect(r.areaM2).toBeCloseTo(2400, 5)
+})

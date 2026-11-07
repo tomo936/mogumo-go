@@ -19,7 +19,7 @@ type Position = number[]
 type Box = { x0: number; y0: number; x1: number; y1: number }
 type Item = { pts: P[]; box: Box }
 // 読み込み済みタイルの道路と建物の輪郭（origin を原点にした m）。輪郭はズームの大きいタイルのものが先
-export type AreaFeatures = { roads: Item[]; footprints: Item[] }
+export type AreaFeatures = { roads: Item[]; footprints: (Item & { z: number })[] }
 
 function segDist(a: P, b: P): number {
   const dx = b.x - a.x
@@ -107,10 +107,15 @@ export function featuresNear(all: AreaFeatures, at: P, rangeM = NEAR_M): { roads
     if (minDist(pts) <= rangeM) roads.push(pts)
   }
   const footprints: P[][] = []
+  let topZ: number | null = null // 点を含む輪郭の、いちばん細かいタイルのズーム（輪郭はズームの大きい順に並んでいる）
   for (const f of all.footprints) {
     if (boxDist(f.box, at) > rangeM) continue
     const ring = shift(f.pts)
-    if (contains(ring) || minDist(ring) <= rangeM) footprints.push(ring)
+    if (contains(ring)) {
+      topZ ??= f.z
+      if (f.z < topZ) continue // 同じ建物の簡略な形（ズームの小さいタイル）は使わない
+      footprints.push(ring)
+    } else if (minDist(ring) <= rangeM) footprints.push(ring)
   }
   return { roads, footprints }
 }
