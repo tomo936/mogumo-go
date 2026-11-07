@@ -2,11 +2,11 @@
 // 拡大中は店ごとのピンを少しずつずらして並べ、縮小中・多いときは1つ＋「済み/全部」にまとめる。
 import { Marker } from 'maplibre-gl'
 import type { Map as MapLibreMap } from 'maplibre-gl'
-import { localFrame } from '../../map/domain/geo.ts'
 import { BUILDING_TOP_RATE } from '../config.ts'
 import { BADGE_COLOR } from '../domain/badgeColor.ts'
 import { pinLayout, pinScale } from '../domain/pins.ts'
 import type { Shop } from '../domain/shop.ts'
+import { screenScale } from './screenScale.ts'
 import type { PlacedShop } from './shopLayer.ts'
 
 export type PinnedBuilding = { placed: PlacedShop; shops: Shop[]; facility: boolean } // facility: 大型の施設
@@ -36,12 +36,9 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
   // カメラに合わせて、ピンの大きさ（ビルの幅に収まる）と高さ（ビルの屋根の上）を合わせ直す
   const fit = () => {
     for (const { m, b, inner, count } of markers) {
-      const base = map.project([b.placed.lng, b.placed.lat])
-      const east = localFrame(b.placed).back({ x: 10, y: 0 })
-      const e = map.project([east.lng, east.lat])
-      const ppm = Math.hypot(e.x - base.x, e.y - base.y) / 10
-      inner.style.transform = `scale(${pinScale(b.placed.sizeM, ppm, count).toFixed(3).replace(/\.?0+$/, '')})`
-      m.setOffset([0, -b.placed.sizeM * BUILDING_TOP_RATE * ppm])
+      const { pxPerM, pxPerUpM } = screenScale((p) => map.project([p.lng, p.lat]), b.placed)
+      inner.style.transform = `scale(${pinScale(b.placed.sizeM, pxPerM, count).toFixed(3).replace(/\.?0+$/, '')})`
+      m.setOffset([0, -b.placed.sizeM * BUILDING_TOP_RATE * pxPerUpM])
     }
   }
 

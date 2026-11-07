@@ -23,7 +23,7 @@ let ppm = 4 // 1m あたりの px
 let moved: (() => void) | null = null
 const map = {
   getZoom: () => zoom,
-  project: (p: [number, number]) => ({ x: (p[0] - 139) * 91000 * ppm, y: 0 }),
+  project: (p: [number, number]) => ({ x: (p[0] - 139) * 91188 * ppm, y: -(p[1] - 35) * 111320 * ppm * 0.5 }),
   on: vi.fn((e: string, h: () => void) => { if (e === 'zoomend') zoomEnd = h; else moved = h }),
   off: vi.fn(),
 } as unknown as MapLibreMap
@@ -112,14 +112,14 @@ test('大型の施設は2軒でもまとめたピン', () => {
   expect(live()[0].el.querySelectorAll('.bldg-pin')).toHaveLength(1)
 })
 
-test('ピンはビルの幅に合わせて縮み、ビルの屋根の上（大きさ×1.3）に出る。カメラが動けば合わせ直す', () => {
+test('ピンはビルの幅に合わせて縮み、ビルの屋根の上（大きさ×1.3、傾きの分だけ縮む）に出る。カメラが動けば合わせ直す', () => {
   const pins = createBuildingPins(map, vi.fn())
   pins.update([bldg(['a', 'b', 'c'])], new Set())
   const inner = () => live()[0].el.querySelector<HTMLElement>('.bldg-pins__scale')!
   expect(inner().style.transform).toMatch(/scale\(0\.5\d+\)/) // 16m*4px*0.9/98 ≈ 0.588
-  expect(offsets.at(-1)![1]).toBeCloseTo(-16 * 1.3 * 4, 0)
+  expect(offsets.at(-1)![1]).toBeCloseTo(-16 * 1.3 * 4 * Math.sin(Math.PI / 3), 0)
   ppm = 2
   moved!()
-  expect(offsets.at(-1)![1]).toBeCloseTo(-16 * 1.3 * 2, 0)
+  expect(offsets.at(-1)![1]).toBeCloseTo(-16 * 1.3 * 2 * Math.sin(Math.PI / 3), 0)
   expect(inner().style.transform).toMatch(/scale\(0\.3\)/)
 })
