@@ -22,3 +22,5 @@
 - 2026-11-07 Claude Code: ビルの段を区切り（オーナー実機確認済み）。to-shiro/2026-11-07-building-owner-check.md を完了に。次は大型施設の段（新しい会話）。
 - 2026-11-07 Claude Code → シロ: 駅舎の見本を依頼（to-shiro/2026-11-07-station-art.md、状態: 未対応）。大型施設の段の設計 docs/superpowers/specs/2026-11-07-large-facility-design.md。
 - 2026-11-07 Claude Code: 大型施設（実際の輪郭の立体・散らばるピン・駅舎）を cycle1-building に実装し dev に反映。オーナーの実機確認待ち。
+- 2026-11-07 Claude Code → シロ: 駅の立体の見本を依頼（to-shiro/2026-11-07-station-shape-art.md、状態: 未対応）。駅舎の模型の依頼（2026-11-07-station-art.md）は取り下げ。
+- 2026-11-07 Claude Code: 区切りの線を消す・駅は輪郭どおり立体（仮の色）・大型施設と駅の名前の札（駅は駅名標の形）を dev に反映。駅の見た目はシロの見本待ち。

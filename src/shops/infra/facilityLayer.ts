@@ -7,6 +7,7 @@ import { localFrame } from '../../map/domain/geo.ts'
 import type { LatLng, P } from '../../map/domain/geo.ts'
 import { threeLayer } from '../../lib/threeLayer.ts'
 import { FACILITY_FLOOR_M } from '../config.ts'
+import { outerEdges } from '../domain/facility.ts'
 import { pickFacility } from './facilityPick.ts'
 import type { PlacedFacility } from './facilityPick.ts'
 import { screenScale } from './screenScale.ts'
@@ -20,18 +21,25 @@ const RED = '#e4745f'
 const BAY_M = 2.5 // 窓1つぶんの横幅
 const RIM_M = 0.5 // 屋根のふちの太さ
 
-// 窓の帯の絵（1枚 = 横 BAY_M × 縦 1階）。くり返して壁に貼る
-function wallTexture(): THREE.Texture {
+// 駅（仮。シロの見本 station-shape が来たら合わせ直す）: 明るいグレーの壁、緑のふち、縦長の窓
+const ST_WALL = '#f4f6f7'
+const ST_ROOF = '#dfe9ee'
+const ST_RIM = '#4fb3a6'
+
+// 窓の帯の絵（1枚 = 横 BAY_M × 縦 1階）。くり返して壁に貼る。駅は縦長の窓
+function wallTexture(station = false): THREE.Texture {
   const c = document.createElement('canvas')
   c.width = 64
   c.height = 90
   const g = c.getContext('2d')!
-  g.fillStyle = WALL
+  g.fillStyle = station ? ST_WALL : WALL
   g.fillRect(0, 0, 64, 90)
-  g.fillStyle = WOOD_L
-  g.fillRect(8, 22, 48, 44)
+  g.fillStyle = station ? '#c9d6dd' : WOOD_L
+  if (station) g.fillRect(22, 14, 20, 62)
+  else g.fillRect(8, 22, 48, 44)
   g.fillStyle = WINDOW
-  g.fillRect(12, 26, 40, 36)
+  if (station) g.fillRect(25, 17, 14, 56)
+  else g.fillRect(12, 26, 40, 36)
   g.fillStyle = 'rgba(255,255,255,0.45)'
   g.fillRect(14, 28, 10, 32)
   const t = new THREE.CanvasTexture(c)
@@ -82,7 +90,9 @@ export function createFacilityLayer(): CustomLayerInterface & {
   let origin: LatLng | null = null
   let objects: THREE.Object3D[] = []
   const geos: THREE.BufferGeometry[] = []
-  let mats: { wall: THREE.Material; roof: THREE.Material; wood: THREE.Material; awning: THREE.Material; green: THREE.Material; metal: THREE.Material } | null = null
+  type Mats = { wall: THREE.Material; roof: THREE.Material; wood: THREE.Material; awning: THREE.Material; green: THREE.Material; metal: THREE.Material }
+  let mats: Mats | null = null
+  let stMats: Pick<Mats, 'wall' | 'roof' | 'wood'> | null = null
 
   const clear = () => {
     for (const o of objects) scene?.remove(o)
@@ -100,32 +110,31 @@ export function createFacilityLayer(): CustomLayerInterface & {
 
   const build = () => {
     clear()
-    if (!scene || !origin || !mats) return
+    if (!scene || !origin || !mats || !stMats) return
     const frame = localFrame(origin)
     for (const f of list) {
+      const m = f.kind === 'station' ? stMats : mats
       const rims: THREE.BufferGeometry[] = []
-      for (const part of f.parts) {
-        const pts = part.ring.map((q) => frame.to(q))
-        const shape = new THREE.Shape(pts.map((p) => new THREE.Vector2(p.x, p.y)))
+      const parts = f.parts.map((part) => ({ pts: part.ring.map((q) => frame.to(q)), heightM: part.heightM }))
+      for (const part of parts) {
+        const shape = new THREE.Shape(part.pts.map((p) => new THREE.Vector2(p.x, p.y)))
         const body = new THREE.ExtrudeGeometry(shape, { depth: part.heightM, bevelEnabled: false })
         body.rotateX(-Math.PI / 2) // 形の面を地面へ（y=北 → z=南、押し出し → 上）
-        add(body, [mats.roof, mats.wall])
-        // 屋根のふち: 辺ごとの細い箱
-        for (let i = 1; i < pts.length; i++) {
-          const a = pts[i - 1]
-          const b = pts[i]
-          const len = Math.hypot(b.x - a.x, b.y - a.y)
-          if (len < 0.3) continue
-          const box = new THREE.BoxGeometry(len + RIM_M, RIM_M, RIM_M)
-          box.rotateY(Math.atan2(b.y - a.y, b.x - a.x))
-          box.translate((a.x + b.x) / 2, part.heightM + RIM_M / 2, -(a.y + b.y) / 2)
-          rims.push(box)
-        }
+        add(body, [m.roof, m.wall])
+      }
+      // 屋根のふち: 外側の辺だけ（つなぎ目に線を出さない）
+      for (const { a, b, heightM } of outerEdges(parts)) {
+        const len = Math.hypot(b.x - a.x, b.y - a.y)
+        if (len < 0.3) continue
+        const box = new THREE.BoxGeometry(len + RIM_M, RIM_M, RIM_M)
+        box.rotateY(Math.atan2(b.y - a.y, b.x - a.x))
+        box.translate((a.x + b.x) / 2, heightM + RIM_M / 2, -(a.y + b.y) / 2)
+        rims.push(box)
       }
       if (rims.length) {
         const merged = mergeGeometries(rims)
         for (const r of rims) r.dispose()
-        if (merged) add(merged, mats.wood)
+        if (merged) add(merged, m.wood)
       }
       // 入口の赤白しまのひさし（正面の辺の真ん中、高さ 3m）
       const door = frame.to(f.door)
@@ -169,15 +178,19 @@ export function createFacilityLayer(): CustomLayerInterface & {
       const awning = mat('#ffffff')
       awning.map = stripeTexture()
       mats = { wall, roof: mat(ROOF), wood: mat(WOOD), awning, green: mat('#7aa45e'), metal: mat('#a9b4c2') }
+      const stWall = mat(ST_WALL)
+      stWall.map = wallTexture(true)
+      stMats = { wall: stWall, roof: mat(ST_ROOF), wood: mat(ST_RIM) }
       build()
     },
     onRemove() {
       clear()
-      if (mats) for (const m of Object.values(mats)) {
+      for (const set of [mats, stMats]) if (set) for (const m of Object.values(set)) {
         ;(m as THREE.MeshStandardMaterial).map?.dispose()
         m.dispose()
       }
       mats = null
+      stMats = null
       scene = null
       map = null
     },

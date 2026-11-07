@@ -111,7 +111,7 @@ test('同じ建物に2軒あれば、ビル1つ（model building・id bldg:a・s
   // 建物の真ん中（自宅から北 16m）
   expect((out[0].lat - home.lat) * M).toBeCloseTo(16, 0)
   expect((out[0].lng - home.lng) * LNG_M).toBeCloseTo(0, 0)
-  expect(pinsUpdate).toHaveBeenLastCalledWith([{ placed: out[0], shops: [a, b], facility: false, topM: 14 * 1.3, spots: [] }], expect.any(Set))
+  expect(pinsUpdate).toHaveBeenLastCalledWith([{ placed: out[0], shops: [a, b], facility: false, topM: 14 * 1.3, spots: [], label: null }], expect.any(Set))
 })
 
 test('組の片方が霧の中なら、見えている1軒はふつうの店', async () => {
@@ -576,33 +576,55 @@ test('2,500m² 以上の2軒は facilityLayer に渡り、shopLayer にはビル
   expect(out.filter((s) => s.model === 'building')).toEqual([])
 })
 
-test('施設の中に駅の点があれば、shopLayer に model station の駅舎が出る（地下鉄は出ない）', async () => {
+const mallPoi = (x: number, y: number, name: string) => ({ id: 98, geometry: { type: 'Point', coordinates: ll(x, y) }, properties: { class: 'shop', subclass: 'department_store', name } })
+type Fac = { kind: string; name: string | null; shopIds: string[] }
+
+test('駅の点と百貨店の点が入った大きい建物は、駅（kind station）として1つ、名前は両方。駅舎の模型は出さない', async () => {
   let ab: Shop[] = []
   twoIn((s) => { ab = s })
-  tiles = { transportation: [roadFeature], building: [building(0, -10, 60, 50)], poi: [stationPoi(10, -10, 'subway')] }
-  const sub = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve(ab)) })
-  sub.world.onPosition(home)
-  await flush()
-  expect((vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]).some((s) => s.model === 'station')).toBe(false)
-  vi.clearAllMocks()
-  tiles = { transportation: [roadFeature], building: [building(0, -10, 60, 50)], poi: [stationPoi(10, -10)] }
+  tiles = { transportation: [roadFeature], building: [building(0, -10, 60, 50)], poi: [stationPoi(10, -10), mallPoi(-10, -10, '京王百貨店')] }
   const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve(ab)) })
   world.onPosition(home)
   await flush()
-  const st = (vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]).filter((s) => s.model === 'station')
-  expect(st).toHaveLength(1)
-  expect(st[0].shopIds).toEqual(['a', 'b'])
+  const facs = facilityLayer.setFacilities.mock.lastCall![0] as Fac[]
+  expect(facs.map((f) => [f.kind, f.name])).toEqual([['station', '駅・京王百貨店']])
+  expect((vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]).some((s) => s.model === 'station')).toBe(false)
+  expect(world.titleOf(['a', 'b'])).toBe('駅・京王百貨店')
 })
 
-test('2,500m² 未満の建物に駅の点があり2軒なら、ビルの代わりに駅舎', async () => {
+test('地下鉄の点は駅にしない（ふつうの大型施設）', async () => {
+  let ab: Shop[] = []
+  twoIn((s) => { ab = s })
+  tiles = { transportation: [roadFeature], building: [building(0, -10, 60, 50)], poi: [stationPoi(10, -10, 'subway')] }
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve(ab)) })
+  world.onPosition(home)
+  await flush()
+  expect((facilityLayer.setFacilities.mock.lastCall![0] as Fac[]).map((f) => f.kind)).toEqual(['facility'])
+})
+
+test('2,500m² 未満の建物でも、駅の点があり2軒なら駅として立体にする（ビルにしない）', async () => {
   tiles = { transportation: [roadFeature], building: [building(0, 16, 20, 12)], poi: [stationPoi(0, 16)] }
   const a: Shop = { id: 'a', name: 'a', lat: home.lat + 14 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe', details: null, mapId: null }
   const b: Shop = { id: 'b', name: 'b', lat: home.lat + 18 / M, lng: home.lng + 5 / LNG_M, kind: 'ramen', details: null, mapId: null }
   const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([a, b])) })
   world.onPosition(home)
   await flush()
-  const out = vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]
-  expect(out.map((s) => s.model)).toEqual(['station'])
+  expect((facilityLayer.setFacilities.mock.lastCall![0] as Fac[]).map((f) => [f.kind, f.name])).toEqual([['station', '駅']])
+  expect(vi.mocked(shopLayer.setShops).mock.lastCall![0]).toEqual([])
+})
+
+test('1つの駅の点が2つの建物に入っていたら、大きい方だけが駅', async () => {
+  // 小さい建物（20×12、2軒）と、それを含む大きい建物（60×50）が重なる。駅の点は両方の中
+  tiles = { transportation: [roadFeature], building: [building(0, 16, 20, 12), building(30, 16, 80, 60)], poi: [stationPoi(0, 16)] }
+  const a: Shop = { id: 'a', name: 'a', lat: home.lat + 14 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe', details: null, mapId: null }
+  const b: Shop = { id: 'b', name: 'b', lat: home.lat + 18 / M, lng: home.lng + 5 / LNG_M, kind: 'ramen', details: null, mapId: null }
+  const c: Shop = { id: 'c', name: 'c', lat: home.lat + 30 / M, lng: home.lng + 50 / LNG_M, kind: 'sushi', details: null, mapId: null }
+  const d: Shop = { id: 'd', name: 'd', lat: home.lat + 5 / M, lng: home.lng + 55 / LNG_M, kind: 'cafe', details: null, mapId: null }
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([a, b, c, d])) })
+  world.onPosition(home)
+  await flush()
+  const facs = facilityLayer.setFacilities.mock.lastCall![0] as Fac[]
+  expect(facs.filter((f) => f.kind === 'station')).toHaveLength(1)
 })
 
 test('同じ施設の店が何軒あっても、施設の形の計算は1回', async () => {

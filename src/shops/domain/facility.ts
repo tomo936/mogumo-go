@@ -45,19 +45,13 @@ function overlaps(a: P[], b: P[], ab: Box, bb: Box): boolean {
 export const cuteHeight = (h: number) => Math.max(FACILITY_MIN_H_M, Math.min(FACILITY_MAX_H_M, h * FACILITY_HEIGHT_RATE))
 
 // main と、main と形が重なる輪郭（タイルの区切りのかけら・高さ違いの部分。main の3倍より広いものは除く）。最初が main。
-// 同じ高さになった部分は少しずつ高くして、屋根がちらつかないようにする
+// 同じ高さの部分は同じ高さのまま（ずらすと段差の線が見える。同じ色なのでちらつきは見えない）
 export function facilityParts(mainIndex: number, rings: P[][], heights: number[]): FacilityPart[] {
   const main = rings[mainIndex]
   const mb = boxOf(main)
   const limit = area(main) * BIG_RATE
   const picked = [mainIndex, ...rings.flatMap((r, i) => (i !== mainIndex && overlaps(main, r, mb, boxOf(r)) && area(r) <= limit ? [i] : []))]
-  const used: number[] = []
-  return picked.map((i) => {
-    let h = cuteHeight(heights[i])
-    while (used.some((u) => Math.abs(u - h) < 0.01)) h = Math.round((h + 0.05) * 100) / 100
-    used.push(h)
-    return { pts: rings[i], heightM: h }
-  })
+  return picked.map((i) => ({ pts: rings[i], heightM: cuteHeight(heights[i]) }))
 }
 
 // 窓の帯の数
@@ -83,4 +77,34 @@ export function doorPoint(center: P, facingDeg: number, ring: P[]): P {
     else t = mid
   }
   return { x: center.x + dir.x * t, y: center.y + dir.y * t }
+}
+
+// 屋根のふちを付ける辺: ほかの部分の中に入っている辺（タイルの区切りのつなぎ目など）は除く
+export function outerEdges(parts: FacilityPart[]): { a: P; b: P; heightM: number }[] {
+  const out: { a: P; b: P; heightM: number }[] = []
+  parts.forEach((part, k) => {
+    for (let i = 1; i < part.pts.length; i++) {
+      const a = part.pts[i - 1]
+      const b = part.pts[i]
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+      if (parts.some((o, j) => j !== k && inside(mid, o.pts))) continue
+      out.push({ a, b, heightM: part.heightM })
+    }
+  })
+  return out
+}
+
+// 名前つきの点（駅・施設）。p は m
+export type Mark = { p: P; name: string; kind: 'station' | 'facility' }
+
+// 施設の種類（駅の点があれば駅）と名前の札。点は本体（parts[0]）の中にあるものだけ数える（重なった別の建物の点を拾わない）。
+// 駅の点は、それを含むもっと大きな輪郭（rings のうち parts でないもの）があればそちらの駅にする
+export function facilityLabel(parts: FacilityPart[], marks: Mark[], rings: P[][]): { kind: 'station' | 'facility'; name: string | null } {
+  const inParts = (p: P) => inside(p, parts[0].pts)
+  const mainArea = area(parts[0].pts)
+  const own = new Set(parts.map((q) => q.pts))
+  const stations = marks.filter((m) => m.kind === 'station' && inParts(m.p) && !rings.some((r) => !own.has(r) && area(r) > mainArea && inside(m.p, r)))
+  const facilities = marks.filter((m) => m.kind === 'facility' && inParts(m.p))
+  const names = [...stations.map((m) => (m.name.endsWith('駅') ? m.name : `${m.name}駅`)), ...facilities.map((m) => m.name)].filter((n, i, a) => n && n !== '駅駅' && a.indexOf(n) === i)
+  return { kind: stations.length ? 'station' : 'facility', name: names.length ? names.join('・') : null }
 }

@@ -5,12 +5,13 @@ import type { Shop } from '../../shops/domain/shop.ts'
 
 type Props = {
   shops: Shop[]
+  title?: string | null // 施設・駅の名前（無ければ「このビルのお店」）
   checkedIds: ReadonlySet<string>
   onPick: (shop: Shop) => void
   onClose: () => void
 }
 
-export function BuildingSheet({ shops, checkedIds, onPick, onClose }: Props) {
+export function BuildingSheet({ shops, checkedIds, title, onPick, onClose }: Props) {
   // 同じ建物なので距離はほぼ同じ。名前の順に並べる
   const sorted = [...shops].sort((a, b) => a.name.localeCompare(b.name, 'ja'))
   const done = shops.filter((s) => checkedIds.has(s.id)).length
@@ -20,7 +21,7 @@ export function BuildingSheet({ shops, checkedIds, onPick, onClose }: Props) {
         ×
       </button>
       <div className="bldg-sheet__head">
-        <h2 className="shop-sheet__name">このビルのお店</h2>
+        <h2 className="shop-sheet__name">{title ?? 'このビルのお店'}</h2>
         <span className="bldg-sheet__done">{`済み ${done}/${shops.length}`}</span>
       </div>
       <ul className="bldg-sheet__list">
