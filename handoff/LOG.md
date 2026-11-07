@@ -20,3 +20,4 @@
 - 2026-11-07 Claude Code: 実機確認（経堂）で、施設が複数の建物に分かれる問題（コルティ）と駅ナカの見せ方が宿題に。次の大型施設の段で扱う（session-handoff に記録）。
 - 2026-11-07 Claude Code: 経堂コルティが分かれた原因は地図タイルの区切りで切られた建物のかけら。点を含む輪郭のうち一番大きいものを使うように直して dev に反映。
 - 2026-11-07 Claude Code: ビルの段を区切り（オーナー実機確認済み）。to-shiro/2026-11-07-building-owner-check.md を完了に。次は大型施設の段（新しい会話）。
+- 2026-11-07 Claude Code → シロ: 駅舎の見本を依頼（to-shiro/2026-11-07-station-art.md、状態: 未対応）。大型施設の段の設計 docs/superpowers/specs/2026-11-07-large-facility-design.md。
