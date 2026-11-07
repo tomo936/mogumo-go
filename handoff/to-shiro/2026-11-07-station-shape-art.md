@@ -33,4 +33,5 @@
 
 ## 参考
 - いまの仮の見た目（大型施設と同じ形で駅も立ち上げている）: `art/prototypes/facility-map-kyodo.png`
+- Claude Code の大まかな案（参考。自由に変えてよい）: `art/prototypes/station-look-idea.png`（明るいグレーの壁＋屋根のふちに緑の帯、縦長の窓、入口に丸いひさし、時計の柱）
 - 決まったこと: 駅と施設は地図の輪郭どおりに分ける・まとめる（`art/prototypes/station-combine-mock.png`）。駅名は札で出す（文字はアプリ側で出すので、絵には入れない）。
