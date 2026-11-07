@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { cuteHeight, doorPoint, dropSharedParts, facilityLabel, facilityParts, floors, heightAt, outerEdges, stationIn } from './facility.ts'
+import { cuteHeight, doorPoint, dropSharedParts, facilityLabel, facilityParts, floors, heightAt, mergeFacilities, outerEdges, ringsOverlap, stationIn } from './facility.ts'
 
 const rect = (cx: number, cy: number, w: number, h: number) => [
   { x: cx - w / 2, y: cy - h / 2 },
@@ -94,4 +94,49 @@ test('ほかの施設の本体の輪郭や、先に出た施設の部分は描�
   expect(out[0].parts.map((q) => q.ring)).toEqual(['A', 'C'])
   expect(out[1]).toBe(b)
   expect(out[2].parts.map((q) => q.ring)).toEqual(['D'])
+})
+
+test('ringsOverlap: 形が重なれば true、離れていれば false', () => {
+  expect(ringsOverlap(rect(0, 0, 20, 20), rect(15, 0, 20, 20))).toBe(true)
+  expect(ringsOverlap(rect(0, 0, 20, 20), rect(50, 0, 20, 20))).toBe(false)
+})
+
+// 輪郭は文字で表し、形の重なりは表で与える
+const fac = (ids: string[], kind: 'facility' | 'station', name: string | null, rings: string[], door = ids[0]) => ({ ids, kind, name, door, parts: rings.map((ring) => ({ ring })) })
+const key = (r: string) => r
+const noOverlap = () => false
+
+test('mergeFacilities: 輪郭を共有する駅と名前の無い施設は1つの駅になる（駅の名前・入口、輪郭は重複なし、店は全員）', () => {
+  const station = fac(['osm:1', 'osm:2'], 'station', '経堂駅', ['A', 'B', 'C'])
+  const strip = fac(['hp:1', 'hp:2'], 'facility', null, ['B', 'A', 'D'])
+  const out = mergeFacilities([strip, station], key, noOverlap)
+  expect(out).toHaveLength(1)
+  expect(out[0].kind).toBe('station')
+  expect(out[0].name).toBe('経堂駅')
+  expect(out[0].door).toBe('osm:1')
+  expect(out[0].parts.map((q) => q.ring)).toEqual(['A', 'B', 'C', 'D'])
+  expect(out[0].ids).toEqual(['osm:1', 'osm:2', 'hp:1', 'hp:2'])
+})
+
+test('mergeFacilities: 輪郭は別でも形が重なればまとめる。駅が無ければ先の方が元になる', () => {
+  const a = fac(['a'], 'facility', null, ['A'])
+  const b = fac(['b'], 'facility', 'モール', ['B'])
+  const out = mergeFacilities([a, b], key, (x, y) => (x === 'A' && y === 'B') || (x === 'B' && y === 'A'))
+  expect(out).toHaveLength(1)
+  expect(out[0].kind).toBe('facility')
+  expect(out[0].door).toBe('a')
+  expect(out[0].name).toBe('モール') // 元に名前が無ければ、まとめた中の名前を使う
+  expect(out[0].ids).toEqual(['a', 'b'])
+})
+
+test('mergeFacilities: 重ならない施設はそのまま（同じもの）。つながりは間を通しても届く', () => {
+  const a = fac(['a'], 'facility', null, ['A'])
+  const b = fac(['b'], 'facility', null, ['B', 'X'])
+  const c = fac(['c'], 'station', '駅', ['X'])
+  const d = fac(['d'], 'facility', null, ['Z'])
+  const out = mergeFacilities([a, b, c, d], key, (x, y) => [x, y].sort().join() === 'A,B')
+  expect(out).toHaveLength(2)
+  expect(out[0].ids).toEqual(['c', 'a', 'b'])
+  expect(out[0].parts.map((q) => q.ring)).toEqual(['X', 'A', 'B'])
+  expect(out[1]).toBe(d)
 })

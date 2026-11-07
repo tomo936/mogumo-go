@@ -8,7 +8,7 @@ import type { Cell } from '../../fog/domain/grid.ts'
 import { thinAmount, waveClumps } from '../../fog/domain/wave.ts'
 import { createFogLayer } from '../../fog/infra/fogLayer.ts'
 import { BUILDING_MAX_SIZE_M, BUILDING_TOP_RATE, FACILITY_MIN_AREA_M2, FACILITY_NEAR_M, MAP_SHOPS_REEXTRACT_M, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
-import { doorPoint, dropSharedParts, facilityLabel, facilityParts, heightAt, stationIn } from '../../shops/domain/facility.ts'
+import { doorPoint, dropSharedParts, facilityLabel, facilityParts, heightAt, mergeFacilities, ringsOverlap, stationIn } from '../../shops/domain/facility.ts'
 import { groupShops } from '../../shops/domain/grouping.ts'
 import { mergeShops } from '../../shops/domain/merge.ts'
 import { placeShop } from '../../shops/domain/placement.ts'
@@ -200,7 +200,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     const singles: PlacedShop[] = []
     const blds: PinnedBuilding[] = []
     const facs: PlacedFacility[] = []
-    const facGroups: { ids: string[]; members: typeof visible; center: PlacedShop; f: NonNullable<Placed['facility']>; parts: NonNullable<Placed['facility']>['parts'] }[] = []
+    type FacGroup = NonNullable<Placed['facility']> & { ids: string[]; center: PlacedShop }
+    const facGroups: FacGroup[] = []
     let key = ''
     for (const ids of groups) {
       const members = ids.map((id) => byId.get(id)!)
@@ -209,8 +210,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         singles.push(members[0].hit.main)
       } else if (members[0].hit.facility) {
         // 大型施設・駅は、重なった輪郭を整理してからまとめて出す（下）
-        const f = members[0].hit.facility
-        facGroups.push({ ids, members, center: members[0].hit.bldg!, f, parts: f.parts })
+        facGroups.push({ ...members[0].hit.facility, ids, center: members[0].hit.bldg! })
       } else {
         const placedB: PlacedShop = { ...members[0].hit.bldg!, id: `bldg:${ids[0]}`, model: 'building', shopIds: ids }
         out.push(placedB)
@@ -218,9 +218,13 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       }
       key += `${ids.join('+')},`
     }
-    // 大型施設・駅: 実際の形の立体と、名前の札。同じ輪郭を2つの施設が描かないよう、駅を先に並べて重なりを外す
-    facGroups.sort((a, b) => Number(b.f.kind === 'station') - Number(a.f.kind === 'station'))
-    for (const { ids, members, center, f, parts } of dropSharedParts(facGroups, ringKey)) {
+    // 大型施設・駅: 実際の形の立体と、名前の札。輪郭を共有する・形が重なる施設は1つにまとめ（駅があれば駅）、
+    // 残りも同じ輪郭を2つの施設が描かないよう、駅を先に並べて重なりを外す
+    const merged = mergeFacilities(facGroups, ringKey, (a, b) => ringsOverlap(a.map((v) => frame.to(v)), b.map((v) => frame.to(v))))
+    merged.sort((a, b) => Number(b.kind === 'station') - Number(a.kind === 'station'))
+    for (const f of dropSharedParts(merged, ringKey)) {
+      const { ids, center, parts } = f
+      const members = ids.map((id) => byId.get(id)!)
       const cf = localFrame(center)
       const local = parts.map((q) => ({ pts: q.ring.map((v) => cf.to(v)), heightM: q.heightM }))
       const topM = Math.max(...parts.map((q) => q.heightM)) + 0.5
