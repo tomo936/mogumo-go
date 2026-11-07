@@ -28,8 +28,10 @@ const map = {
   off: vi.fn(),
 } as unknown as MapLibreMap
 const shop = (id: string): Shop => ({ id, name: id, lat: 35, lng: 139, kind: 'cafe', details: null, mapId: null })
-const bldg = (ids: string[], facility = false) => ({
+const bldg = (ids: string[], facility = false, spots: { id: string; x: number; y: number }[] = []) => ({
   facility,
+  topM: 16 * 1.3,
+  spots,
   placed: { id: `bldg:${ids[0]}`, model: 'building', shopIds: ids, lat: 35, lng: 139, facingDeg: 0, sizeM: 16 } as PlacedShop,
   shops: ids.map(shop),
 })
@@ -122,4 +124,35 @@ test('ピンはビルの幅に合わせて縮み、ビルの屋根の上（大�
   moved!()
   expect(offsets.at(-1)![1]).toBeCloseTo(-16 * 1.3 * 2 * Math.sin(Math.PI / 3), 0)
   expect(inner().style.transform).toMatch(/scale\(0\.3\)/)
+})
+
+test('施設・ズーム18は塊ごとのマーカー（近い2軒は1つのマーカーに2本）、ズーム17に戻すと1つにまとまる', () => {
+  const pins = createBuildingPins(map, vi.fn())
+  zoom = 18
+  const spots = [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 1, y: 0 }, { id: 'c', x: 30, y: 0 }]
+  pins.update([bldg(['a', 'b', 'c'], true, spots)], new Set())
+  expect(live()).toHaveLength(2)
+  expect(live()[0].el.querySelectorAll('.bldg-pin')).toHaveLength(2)
+  zoom = 17
+  zoomEnd!()
+  expect(live()).toHaveLength(1)
+  expect(live()[0].el.textContent).toContain('0/3')
+})
+
+test('同じ所に4軒以上なら「+4」の札、押すとその4軒の id', () => {
+  const onTap = vi.fn()
+  const pins = createBuildingPins(map, onTap)
+  zoom = 18
+  const spots = ['a', 'b', 'c', 'd'].map((id) => ({ id, x: 0, y: 0 }))
+  pins.update([bldg(['a', 'b', 'c', 'd'], true, spots)], new Set())
+  const more = live()[0].el.querySelector<HTMLElement>('.bldg-pin__more')!
+  expect(more.textContent).toBe('+4')
+  more.click()
+  expect(onTap).toHaveBeenLastCalledWith(['a', 'b', 'c', 'd'])
+})
+
+test('ピンの高さは topM を使う', () => {
+  const pins = createBuildingPins(map, vi.fn())
+  pins.update([{ ...bldg(['a', 'b']), topM: 30 }], new Set())
+  expect(offsets.at(-1)![1]).toBeCloseTo(-30 * 4 * Math.sin(Math.PI / 3), 0)
 })
