@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { pinLayout } from './pins.ts'
+import { pinLayout, pinScale } from './pins.ts'
 
 test('3軒・ズーム17は3つで、中央が一番高い', () => {
   const r = pinLayout(3, 17, false)
@@ -23,4 +23,14 @@ test('小さいビルに8軒なら5つ並べて残り3', () => {
 
 test('大型の施設は2軒でもズーム19でも collapsed', () => {
   expect(pinLayout(2, 19, true)).toBe('collapsed')
+})
+
+test('ピンの列がビルの幅（9割）に収まる大きさ', () => {
+  // 幅 16m・1m=4px のビル（64px）に3つ: 列の幅 34*2+30=98px → 64*0.9/98
+  expect(pinScale(16, 4, 3)).toBeCloseTo((64 * 0.9) / 98, 5)
+})
+
+test('近くても元の大きさより大きくせず、遠くても 0.3 より小さくしない', () => {
+  expect(pinScale(16, 40, 1)).toBe(1)
+  expect(pinScale(16, 0.1, 5)).toBe(0.3)
 })

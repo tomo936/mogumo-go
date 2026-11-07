@@ -274,3 +274,9 @@
   font-weight: 800;
   white-space: nowrap;
 }
+.bldg-pins__scale {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  transform-origin: 0 100%;
+}
