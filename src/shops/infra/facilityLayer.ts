@@ -21,10 +21,14 @@ const RED = '#e4745f'
 const BAY_M = 2.5 // 窓1つぶんの横幅
 const RIM_M = 0.5 // 屋根のふちの太さ
 
-// 駅（仮。シロの見本 station-shape が来たら合わせ直す）: 明るいグレーの壁、緑のふち、縦長の窓
-const ST_WALL = '#f4f6f7'
-const ST_ROOF = '#dfe9ee'
-const ST_RIM = '#4fb3a6'
+// 駅（シロの見本 art/reference/shops/station-shape-1〜3）: 明るいグレーの壁、屋根のふちに緑の帯（2段）、
+// 木枠の縦長の窓を等間隔、入口に赤白しまの丸いひさしと丸時計
+const ST_WALL = '#dcd8d1'
+const ST_LEDGE = '#cbc6bd'
+const ST_ROOF = '#ece6da'
+const ST_RIM = '#6faf62'
+const ST_FRAME = '#d39a5c'
+const ST_GLASS = '#bcdfee'
 
 // 窓の帯の絵（1枚 = 横 BAY_M × 縦 1階）。くり返して壁に貼る。駅は縦長の窓
 function wallTexture(station = false): THREE.Texture {
@@ -34,14 +38,23 @@ function wallTexture(station = false): THREE.Texture {
   const g = c.getContext('2d')!
   g.fillStyle = station ? ST_WALL : WALL
   g.fillRect(0, 0, 64, 90)
-  g.fillStyle = station ? '#c9d6dd' : WOOD_L
-  if (station) g.fillRect(22, 14, 20, 62)
-  else g.fillRect(8, 22, 48, 44)
-  g.fillStyle = WINDOW
-  if (station) g.fillRect(25, 17, 14, 56)
-  else g.fillRect(12, 26, 40, 36)
-  g.fillStyle = 'rgba(255,255,255,0.45)'
-  g.fillRect(14, 28, 10, 32)
+  if (station) {
+    g.fillStyle = ST_LEDGE // 階ごとのでっぱり
+    g.fillRect(0, 84, 64, 6)
+    g.fillStyle = ST_FRAME
+    g.fillRect(21, 16, 22, 60)
+    g.fillStyle = ST_GLASS
+    g.fillRect(25, 20, 14, 52)
+    g.fillStyle = 'rgba(255,255,255,0.5)'
+    g.fillRect(27, 22, 4, 46)
+  } else {
+    g.fillStyle = WOOD_L
+    g.fillRect(8, 22, 48, 44)
+    g.fillStyle = WINDOW
+    g.fillRect(12, 26, 40, 36)
+    g.fillStyle = 'rgba(255,255,255,0.45)'
+    g.fillRect(14, 28, 10, 32)
+  }
   const t = new THREE.CanvasTexture(c)
   t.wrapS = THREE.RepeatWrapping
   t.wrapT = THREE.RepeatWrapping
@@ -90,7 +103,7 @@ export function createFacilityLayer(): CustomLayerInterface & {
   let origin: LatLng | null = null
   let objects: THREE.Object3D[] = []
   const geos: THREE.BufferGeometry[] = []
-  type Mats = { wall: THREE.Material; roof: THREE.Material; wood: THREE.Material; awning: THREE.Material; green: THREE.Material; metal: THREE.Material }
+  type Mats = { wall: THREE.Material; roof: THREE.Material; wood: THREE.Material; awning: THREE.Material; green: THREE.Material; metal: THREE.Material; face: THREE.Material; ring: THREE.Material }
   let mats: Mats | null = null
   let stMats: Pick<Mats, 'wall' | 'roof' | 'wood'> | null = null
 
@@ -130,6 +143,13 @@ export function createFacilityLayer(): CustomLayerInterface & {
         box.rotateY(Math.atan2(b.y - a.y, b.x - a.x))
         box.translate((a.x + b.x) / 2, heightM + RIM_M / 2, -(a.y + b.y) / 2)
         rims.push(box)
+        if (f.kind === 'station') {
+          // 駅は緑の帯を2段（見本どおり、少し下にもう1本）
+          const band = new THREE.BoxGeometry(len + RIM_M, RIM_M * 0.6, RIM_M * 1.2)
+          band.rotateY(Math.atan2(b.y - a.y, b.x - a.x))
+          band.translate((a.x + b.x) / 2, heightM - RIM_M * 0.8, -(a.y + b.y) / 2)
+          rims.push(band)
+        }
       }
       if (rims.length) {
         const merged = mergeGeometries(rims)
@@ -140,12 +160,33 @@ export function createFacilityLayer(): CustomLayerInterface & {
       const door = frame.to(f.door)
       const rot = (f.facingDeg * Math.PI) / 180
       const out = { x: Math.sin(rot), y: Math.cos(rot) }
-      const awning = new THREE.BoxGeometry(5, 0.15, 1.6)
-      awning.rotateX(0.35)
-      awning.rotateY(-rot)
-      const c = at({ x: door.x + out.x * 0.8, y: door.y + out.y * 0.8 }, 3.2)
-      awning.translate(c.x, c.y, c.z)
-      add(awning, mats.awning)
+      if (f.kind === 'station') {
+        // 駅: 半円の丸いひさし（赤白しま）と、その上の丸時計。+z（南）向きに作って正面へ回す
+        const turn = Math.atan2(out.x, -out.y)
+        const dome = new THREE.SphereGeometry(2, 16, 8, 0, Math.PI, 0, Math.PI / 2)
+        dome.scale(1, 0.8, 0.9)
+        dome.rotateY(turn)
+        const d = at(door, 3)
+        dome.translate(d.x, d.y, d.z)
+        add(dome, mats.awning)
+        const top = Math.min(f.parts[0].heightM - 1.6, 6)
+        const k = at({ x: door.x + out.x * 0.15, y: door.y + out.y * 0.15 }, top)
+        const face = new THREE.CircleGeometry(1, 24)
+        face.rotateY(turn)
+        face.translate(k.x, k.y, k.z)
+        add(face, mats.face)
+        const ring = new THREE.TorusGeometry(1, 0.18, 8, 24)
+        ring.rotateY(turn)
+        ring.translate(k.x, k.y, k.z)
+        add(ring, mats.ring)
+      } else {
+        const awning = new THREE.BoxGeometry(5, 0.15, 1.6)
+        awning.rotateX(0.35)
+        awning.rotateY(-rot)
+        const c = at({ x: door.x + out.x * 0.8, y: door.y + out.y * 0.8 }, 3.2)
+        awning.translate(c.x, c.y, c.z)
+        add(awning, mats.awning)
+      }
       // 屋根の小物（main の真ん中が輪郭の中なら、植木と室外機）
       const main = f.parts[0]
       const pts = main.ring.map((q) => frame.to(q))
@@ -177,7 +218,7 @@ export function createFacilityLayer(): CustomLayerInterface & {
       wall.map = wallTexture()
       const awning = mat('#ffffff')
       awning.map = stripeTexture()
-      mats = { wall, roof: mat(ROOF), wood: mat(WOOD), awning, green: mat('#7aa45e'), metal: mat('#a9b4c2') }
+      mats = { wall, roof: mat(ROOF), wood: mat(WOOD), awning, green: mat('#7aa45e'), metal: mat('#a9b4c2'), face: mat('#fffdf7'), ring: mat(WOOD) }
       const stWall = mat(ST_WALL)
       stWall.map = wallTexture(true)
       stMats = { wall: stWall, roof: mat(ST_ROOF), wood: mat(ST_RIM) }
