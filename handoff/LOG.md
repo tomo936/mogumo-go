@@ -14,3 +14,4 @@
 - 2026-11-07 シロ: 大きい施設の依頼に納品（オーナー承認済み）。施設ピン（クローシュ＋フォーク＋ナイフ、128×128透明PNG）、見本1（L字の大きい施設）、見本2（細くて高い飲食ビル）。画像本体はセッション経由で送付し、配置先は依頼ファイルの納品メモに記載。依頼は完了に更新。
 - 2026-11-07 Claude Code: 大きい施設の素材3点を配置（art/pins/facility.png、art/reference/shops/facility-large.png・facility-large-2.png）。チャット経由で届いたため見本2は 1000×2000 に縮んでいる（元は 1120×2240）。
 - 2026-11-07 Claude Code: ビル（同じ建物に複数のお店）を `cycle1-building` に実装（模型・ピン・一覧）。to-claude/2026-11-07-building-and-other-shop.md を完了に。オーナーの確認事項を to-shiro/2026-11-07-building-owner-check.md に書いた（状態: 未対応）。大きい施設の素材3点は配置済みを確認（ffeedc7）、使うのは次の段。dev への反映はオーナーの OK 待ち。
+- 2026-11-07 Claude Code: オーナー OK でビルを dev に反映（14b1e0a）。模型・ピン・ビルの多さは実機で見てから決める（to-shiro/2026-11-07-building-owner-check.md は対応中）。
