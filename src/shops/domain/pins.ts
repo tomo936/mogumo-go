@@ -1,11 +1,12 @@
-import { PIN_COLLAPSE_ZOOM, PIN_FIT_RATE, PIN_GAP_PX, PIN_HEAD_PX, PIN_MAX_SPREAD, PIN_MIN_SCALE } from '../config.ts'
+import { FACILITY_SCATTER_ZOOM, PIN_COLLAPSE_ZOOM, PIN_FIT_RATE, PIN_GAP_PX, PIN_HEAD_PX, PIN_MAX_SPREAD, PIN_MIN_SCALE } from '../config.ts'
 
 const ARCH_PX = 8 // 真ん中のピンを端より上げる高さ
 
 // ビルの上のピンの並べ方（ビルの位置からの px のずれ）と、並べきれない残りの数。
-// 大型の施設・縮小しているときは 'collapsed'（1つ＋「済み/全部」）
-export function pinLayout(n: number, zoom: number, facility: boolean): { pins: { x: number; y: number }[]; more: number } | 'collapsed' {
-  if (facility || zoom < PIN_COLLAPSE_ZOOM) return 'collapsed'
+// 縮小しているとき・拡大前の大型の施設は 'collapsed'（1つ＋「済み/全部」）。大型の施設を拡大したら 'scatter'（屋根の上の各店の位置へ）
+export function pinLayout(n: number, zoom: number, facility: boolean): { pins: { x: number; y: number }[]; more: number } | 'collapsed' | 'scatter' {
+  if (facility) return zoom >= FACILITY_SCATTER_ZOOM ? 'scatter' : 'collapsed'
+  if (zoom < PIN_COLLAPSE_ZOOM) return 'collapsed'
   const shown = Math.min(n, PIN_MAX_SPREAD)
   const mid = (shown - 1) / 2
   const pins = Array.from({ length: shown }, (_, i) => {
@@ -20,4 +21,21 @@ export function pinScale(sizeM: number, pxPerM: number, count: number): number {
   const shown = Math.min(count, PIN_MAX_SPREAD)
   const row = (shown - 1) * PIN_GAP_PX + PIN_HEAD_PX
   return Math.max(PIN_MIN_SCALE, Math.min(1, (sizeM * pxPerM * PIN_FIT_RATE) / row))
+}
+
+// 近い店（gapM より近い）を1つの塊にする。塊の位置は店の位置の平均、並びは最初に出た順
+export function clusterSpots(spots: readonly { id: string; x: number; y: number }[], gapM: number): { ids: string[]; x: number; y: number }[] {
+  const out: { ids: string[]; x: number; y: number }[] = []
+  for (const s of spots) {
+    const hit = out.find((c) => Math.hypot(c.x - s.x, c.y - s.y) < gapM)
+    if (!hit) {
+      out.push({ ids: [s.id], x: s.x, y: s.y })
+      continue
+    }
+    const n = hit.ids.length
+    hit.x = (hit.x * n + s.x) / (n + 1)
+    hit.y = (hit.y * n + s.y) / (n + 1)
+    hit.ids.push(s.id)
+  }
+  return out
 }

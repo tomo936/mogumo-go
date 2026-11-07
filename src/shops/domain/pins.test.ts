@@ -1,9 +1,9 @@
 import { expect, test } from 'vitest'
-import { pinLayout, pinScale } from './pins.ts'
+import { clusterSpots, pinLayout, pinScale } from './pins.ts'
 
 test('3軒・ズーム17は3つで、中央が一番高い', () => {
   const r = pinLayout(3, 17, false)
-  if (r === 'collapsed') throw new Error('collapsed')
+  if (r === 'collapsed' || r === 'scatter') throw new Error(r)
   expect(r.pins.map((p) => p.x)).toEqual([-34, 0, 34])
   expect(r.pins[1].y).toBeLessThan(r.pins[0].y)
   expect(r.pins[0].y).toBe(r.pins[2].y)
@@ -16,13 +16,19 @@ test('ズーム15.9は collapsed', () => {
 
 test('小さいビルに8軒なら5つ並べて残り3', () => {
   const r = pinLayout(8, 19, false)
-  if (r === 'collapsed') throw new Error('collapsed')
+  if (r === 'collapsed' || r === 'scatter') throw new Error(r)
   expect(r.pins).toHaveLength(5)
   expect(r.more).toBe(3)
 })
 
-test('大型の施設は2軒でもズーム19でも collapsed', () => {
-  expect(pinLayout(2, 19, true)).toBe('collapsed')
+test('大型の施設は 17.5 未満で collapsed、17.5 以上で scatter', () => {
+  expect(pinLayout(2, 17.4, true)).toBe('collapsed')
+  expect(pinLayout(2, 18, true)).toBe('scatter')
+})
+
+test('clusterSpots: 1m の2軒は1つの塊（位置は平均）、30m 離れれば別', () => {
+  const r = clusterSpots([{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 1, y: 0 }, { id: 'c', x: 30, y: 0 }], 5)
+  expect(r).toEqual([{ ids: ['a', 'b'], x: 0.5, y: 0 }, { ids: ['c'], x: 30, y: 0 }])
 })
 
 test('ピンの列がビルの幅（9割）に収まる大きさ', () => {

@@ -66,6 +66,16 @@ describe('extractFeatures + featuresNear', () => {
     expect(near.footprints[0][0].x).toBeCloseTo(-6, 0)
   })
 
+  it('輪郭の高さ（render_height）を heights に、無ければ 10', () => {
+    const src = source({
+      building: [
+        { geometry: { type: 'Polygon', coordinates: [sq(0, 0, 6)] }, properties: { render_height: 24 }, _z: 14 },
+        { geometry: { type: 'Polygon', coordinates: [sq(30, 0, 6)] }, properties: {}, _z: 14 },
+      ],
+    })
+    expect(featuresNear(extractFeatures(src, origin, 1000), { x: 0, y: 0 }).heights).toEqual([24, 10])
+  })
+
   it('点を含む輪郭のうち、ズームの小さいタイルのもの（簡略な形）は返さない', () => {
     const src = source({
       building: [

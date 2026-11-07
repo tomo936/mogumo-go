@@ -33,7 +33,7 @@ test('輪郭なし: 東 5m の道路に向き、道路から下がる', () => {
 
 test('輪郭なし・道路なしでも例外なし', () => {
   const r = placeShop([], [])
-  expect(r).toEqual({ center: { x: 0, y: 0 }, facingDeg: 180, sizeM: 14, onFootprint: false, areaM2: 0 })
+  expect(r).toEqual({ center: { x: 0, y: 0 }, facingDeg: 180, sizeM: 14, onFootprint: false, areaM2: 0, ringIndex: null })
 })
 
 test('逆回りの輪郭でも同じ結果', () => {
@@ -80,4 +80,8 @@ test('点を含む輪郭が2つ（タイルの区切りのかけら）なら、�
   const r = placeShop(roadNorth, [rect(2, 0, 10, 10), rect(20, 0, 60, 40)])
   expect(r.center.x).toBeCloseTo(20, 1)
   expect(r.areaM2).toBeCloseTo(2400, 5)
+})
+
+test('選んだ輪郭の番号を返す（大きい方の 1）', () => {
+  expect(placeShop(roadNorth, [rect(2, 0, 10, 10), rect(20, 0, 60, 40)]).ringIndex).toBe(1)
 })
