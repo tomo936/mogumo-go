@@ -5,7 +5,7 @@
 最終更新: 2026-11-07 深夜（Claude Code）。区切りごとに上書きする。
 
 ## いまの状態
-- ブランチ **`cycle1-building`**（`cycle1-checkin` から分岐）に **ビル（同じ建物に複数のお店）** を実装（2026-11-07、オーナー就寝中にシロの依頼で進めた）。設計 `docs/superpowers/specs/2026-11-07-multi-shop-building-design.md`、計画 `docs/superpowers/plans/2026-11-07-multi-shop-building.md`。テスト 370 件・型・ビルド OK。**dev への反映はオーナーの OK 待ち**（確認事項は `handoff/to-shiro/2026-11-07-building-owner-check.md`）
+- ブランチ **`cycle1-building`**（`cycle1-checkin` から分岐）に **ビル（同じ建物に複数のお店）** を実装（2026-11-07、オーナー就寝中にシロの依頼で進めた）。設計 `docs/superpowers/specs/2026-11-07-multi-shop-building-design.md`、計画 `docs/superpowers/plans/2026-11-07-multi-shop-building.md`。テスト 370 件・型・ビルド OK。**dev に反映済み（14b1e0a）、実機確認待ち**（確認事項は `handoff/to-shiro/2026-11-07-building-owner-check.md`）
 - `cycle1-checkin`（ホットペッパー＋チェックイン）は完成・実機確認済みで dev に反映済み。本番 `main` は未反映（本人の OK まで出さない）
 - 開発用 Supabase `mogumo-go-dev` に置き済み: SQL 0002・0003、関数 `shops-hotpepper`・`checkin`。キー `HOTPEPPER_API_KEY` は Secrets
 - push: `git push` は Sandbox の外で動く設定。**単独のコマンドで実行する**。dev への反映は `git merge-tree --write-tree origin/dev <branch>` → `git commit-tree` → `git push origin <sha>:refs/heads/dev`
@@ -13,7 +13,7 @@
 
 ## 次にやること
 0. **オーナーの返事を待つ**（`handoff/to-shiro/2026-11-07-building-owner-check.md`: 模型の見た目・ピンの大きさと高さ・ビルの多さ・dev に出すか）。OK なら dev に反映 → 実機確認 → 直す
-1. **大きい施設（6軒以上）と縦長の飲食ビル**: 新しい会話で brainstorming から。今は仮にビルの模型＋まとめたピン。本人決定（2026-11-07）: 施設は実際の輪郭を立体にしてかわいく出す。遠くはピン1つ＋「済み/全部」、拡大でピンが屋根の上の各店の位置に散らばる（重なりは少しずらし、多ければ「+3」、住所の点に集まる店は一覧だけ）。縦長ビル（土地は小さく高い、6軒以上）は高さにタイルの render_height（少し縮めてよい）、拡大しても1つ＋数字、タップで階の順の一覧。素材: `art/pins/facility.png`、見本 `art/reference/shops/facility-large.png`・`facility-large-2.png`、色は `handoff/to-shiro/2026-11-07-large-facility-art.md` の末尾。決めること: チェックインの 50m を輪郭から測るか（サーバーの `checkin` も変わる、本人決定が要る）。実データ: 東京駅まわり 7km 四方で 6軒以上の建物は 86
+1. **大きい施設（6軒以上）と縦長の飲食ビル**: 新しい会話で brainstorming から。今は仮にビルの模型＋まとめたピン。**大型かどうかは輪郭の広さ 2,500m² 以上で決める（お店の数ではない、本人 OK 2026-11-07、設計書 §8）**。縦長ビルは「ビル＋ピン5つ＋N」になったので、縦長の特別扱いは不要。本人決定（2026-11-07）: 施設は実際の輪郭を立体にしてかわいく出す。遠くはピン1つ＋「済み/全部」、拡大でピンが屋根の上の各店の位置に散らばる（重なりは少しずらし、多ければ「+3」、住所の点に集まる店は一覧だけ）。縦長ビル（土地は小さく高い、6軒以上）は高さにタイルの render_height（少し縮めてよい）、拡大しても1つ＋数字、タップで階の順の一覧。素材: `art/pins/facility.png`、見本 `art/reference/shops/facility-large.png`・`facility-large-2.png`、色は `handoff/to-shiro/2026-11-07-large-facility-art.md` の末尾。決めること: チェックインの 50m を輪郭から測るか（サーバーの `checkin` も変わる、本人決定が要る）。実データ: 東京駅まわり 7km 四方で 6軒以上の建物は 86
 2. **そのあと「気配・デイリー」**（本人決定 2026-11-07）。決めること: 毎朝の件数（SPEC は3件）と選ぶ範囲（自宅 1km、圏外は今いる場所のまわり S10）、選び方はアプリ内が有力（U-10）、地図データだけの店のヒント、店名は 30m で明かす（S5・N-04）、1日の区切りは JST 0時。関係: SPEC S4・S5・S10、DB 設計 3.10 daily_hints。その次は図鑑
 3. 本番（`main`）へ出すかは本人に聞く（未回答。おすすめは見た目を凝る段のあと）。出すなら本番の Supabase にも SQL 0002・0003、関数2つ、キーが要る
 4. 見た目を凝る段（後で）: 灰色の「謎」の家、建物の向き、チープさ、演出の素材

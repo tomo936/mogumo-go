@@ -104,7 +104,7 @@ test('同じ建物に2軒あれば、ビル1つ（model building・id bldg:a・s
   // 建物の真ん中（自宅から北 16m）
   expect((out[0].lat - home.lat) * M).toBeCloseTo(16, 0)
   expect((out[0].lng - home.lng) * LNG_M).toBeCloseTo(0, 0)
-  expect(pinsUpdate).toHaveBeenLastCalledWith([{ placed: out[0], shops: [a, b] }], expect.any(Set))
+  expect(pinsUpdate).toHaveBeenLastCalledWith([{ placed: out[0], shops: [a, b], facility: false }], expect.any(Set))
 })
 
 test('組の片方が霧の中なら、見えている1軒はふつうの店', async () => {
@@ -534,4 +534,15 @@ test('霧の中の店が40mにあれば setThin(amount>0)、70mでは setThin([]
   } finally {
     spy.mockRestore()
   }
+})
+
+test('2,500m² 以上の建物の2軒は大型の施設（facility: true）', async () => {
+  tiles = { transportation: [roadFeature], building: [building(0, -10, 60, 50)] }
+  const a: Shop = { id: 'a', name: 'a', lat: home.lat + 5 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe', details: null, mapId: null }
+  const b: Shop = { id: 'b', name: 'b', lat: home.lat - 20 / M, lng: home.lng + 15 / LNG_M, kind: 'ramen', details: null, mapId: null }
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([a, b])) })
+  world.onPosition(home)
+  await flush()
+  const [blds] = pinsUpdate.mock.lastCall!
+  expect(blds).toEqual([expect.objectContaining({ facility: true })])
 })

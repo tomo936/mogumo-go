@@ -19,4 +19,5 @@ export const BUILDING_CENTER_RISE_RATE = 0.9 // ビルの当たりの中心は�
 export const BUILDING_PIN_OFFSET_PER_SIZE = 2.4 // ズーム17での目安: ピンを上へ sizeM*これ px
 export const PIN_GAP_PX = 34 // ビルの上のピンの横の間隔
 export const PIN_COLLAPSE_ZOOM = 16 // これより縮小したらピンを1つ＋「済み/全部」にまとめる
-export const PIN_MAX_SPREAD = 5 // ピンを全部並べる最大の数（これより多ければ常にまとめる）
+export const PIN_MAX_SPREAD = 5 // 小さいビルでピンを並べる最大の数（これより多ければ5つ＋「+N」）
+export const FACILITY_MIN_AREA_M2 = 2500 // 輪郭がこれ以上の広さで2軒以上なら大型の施設（本人 OK 2026-11-07）
