@@ -17,6 +17,11 @@ const facilityLayer = { id: 'facilities-3d', setFacilities: vi.fn(), pick: vi.fn
 vi.mock('../../shops/infra/facilityLayer.ts', () => ({ createFacilityLayer: () => facilityLayer }))
 vi.mock('../../shops/infra/buildingPins.ts', () => ({ createBuildingPins: () => ({ update: pinsUpdate, dispose: vi.fn() }) }))
 
+vi.mock('../../shops/domain/facility.ts', async (orig) => {
+  const a = await orig<typeof import('../../shops/domain/facility.ts')>()
+  return { ...a, facilityParts: vi.fn(a.facilityParts) }
+})
+import { facilityParts } from '../../shops/domain/facility.ts'
 vi.mock('../domain/geo.ts', async (orig) => {
   const a = await orig<typeof import('../domain/geo.ts')>()
   return { ...a, distanceMeters: vi.fn(a.distanceMeters) }
@@ -598,4 +603,14 @@ test('2,500m² 未満の建物に駅の点があり2軒なら、ビルの代わ�
   await flush()
   const out = vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]
   expect(out.map((s) => s.model)).toEqual(['station'])
+})
+
+test('同じ施設の店が何軒あっても、施設の形の計算は1回', async () => {
+  tiles = { transportation: [roadFeature], building: [building(0, -10, 60, 50)] }
+  let ab: Shop[] = []
+  twoIn((s) => { ab = s })
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve(ab)) })
+  world.onPosition(home)
+  await flush()
+  expect(vi.mocked(facilityParts)).toHaveBeenCalledTimes(1)
 })

@@ -9,14 +9,14 @@ import type { FeatureSource } from './mapFeatures.ts'
 const FOOD = new Set(['restaurant', 'cafe', 'fast_food', 'bar', 'pub', 'bakery', 'confectionery', 'ice_cream'])
 
 // 地図タイルの poi から飲食店を取り出す（center から radiusM 以内）。タイルの重なりで同じ店が複数回出るので id で1件にする。
-// stationsOut を渡すと、同じ読み込みで鉄道の駅の点（地下鉄は除く）も集める（poi を2回読まないため）
+// stationsOut を渡すと、同じ読み込みで鉄道の駅の点（station・halt。地下鉄・路面電車は除く）も集める（poi を2回読まないため）
 export function extractMapShops(src: FeatureSource, center: LatLng, radiusM: number, stationsOut?: LatLng[]): Shop[] {
   const seen = new Set<string>()
   const shops: Shop[] = []
   for (const f of src.querySourceFeatures(SOURCE, { sourceLayer: 'poi' })) {
     const subclass = f.properties.subclass
     const name = f.properties.name
-    if (stationsOut && f.properties.class === 'railway' && subclass !== 'subway' && f.geometry.type === 'Point') {
+    if (stationsOut && f.properties.class === 'railway' && (subclass === 'station' || subclass === 'halt') && f.geometry.type === 'Point') {
       const [lng, lat] = f.geometry.coordinates
       if (distanceMeters(center, { lat, lng }) <= radiusM) stationsOut.push({ lat, lng })
       continue

@@ -108,6 +108,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   let shownKey: string | null = null
   const placed = new Map<string, Placed>() // 店ごとの置き方（一度だけ計算）
   let stations: LatLng[] = [] // 鉄道の駅の点（地図のお店と一緒に読む）
+  const facilityCache: NonNullable<Placed['facility']>[] = [] // 計算済みの施設の形
 
   const toPlaced = (shop: Shop, pl: ReturnType<typeof placeShop>): PlacedShop => {
     const c = localFrame(shop).back(pl.center)
@@ -143,7 +144,11 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         const sf = localFrame(shop)
         const st = stations.map((q) => sf.to(q))
         let facility: Placed['facility'] = null
+        // 同じ施設の形をもう計算していれば使い回す（施設ごとに1回）
         if (bldg && pl.areaM2 >= FACILITY_MIN_AREA_M2) {
+          facility = facilityCache.find((f) => stationIn([{ pts: f.parts[0].ring.map((v) => sf.to(v)), heightM: 0 }], [{ x: 0, y: 0 }]) !== null) ?? null
+        }
+        if (!facility && bldg && pl.areaM2 >= FACILITY_MIN_AREA_M2) {
           // 大型: 広めに集めた輪郭から、店の輪郭と重なる部分（タイルのかけら・高さ違い）を立ち上げる
           const wide = featuresNear(area, frame.to(shop), FACILITY_NEAR_M)
           const idx = placeShop(wide.roads, wide.footprints).ringIndex
@@ -152,6 +157,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
             const s = stationIn(parts, st)
             const d = doorPoint(sf.to(bldg), bldg.facingDeg, parts[0].pts)
             facility = { parts: parts.map((q) => ({ ring: q.pts.map((v) => sf.back(v)), heightM: q.heightM })), station: s && sf.back(s), door: sf.back(d) }
+            facilityCache.push(facility)
           }
         }
         const ring = pl.ringIndex !== null ? footprints[pl.ringIndex] : null

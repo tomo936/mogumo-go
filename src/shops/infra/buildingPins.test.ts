@@ -156,3 +156,13 @@ test('ピンの高さは topM を使う', () => {
   pins.update([{ ...bldg(['a', 'b']), topM: 30 }], new Set())
   expect(offsets.at(-1)![1]).toBeCloseTo(-30 * 4 * Math.sin(Math.PI / 3), 0)
 })
+
+test('カメラが動いても大きさと高さが同じなら書き直さない', () => {
+  const pins = createBuildingPins(map, vi.fn())
+  zoom = 18
+  const spots = [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 30, y: 0 }]
+  pins.update([bldg(['a', 'b'], true, spots)], new Set())
+  const n = offsets.length
+  moved!()
+  expect(offsets.length).toBe(n)
+})

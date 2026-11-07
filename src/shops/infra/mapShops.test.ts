@@ -40,7 +40,7 @@ describe('extractMapShops', () => {
   })
   it('鉄道の駅の点（地下鉄は除く）を stationsOut に集める', () => {
     const out: { lat: number; lng: number }[] = []
-    extractMapShops(source([poi(1, 'station', '経堂', 100, 'railway'), poi(2, 'subway', '新宿', 200, 'railway'), poi(3, 'halt', '小駅', 300, 'railway')]), center, 1000, out)
+    extractMapShops(source([poi(1, 'station', '経堂', 100, 'railway'), poi(2, 'subway', '新宿', 200, 'railway'), poi(3, 'halt', '小駅', 300, 'railway'), poi(4, 'tram_stop', '停留所', 400, 'railway')]), center, 1000, out)
     expect(out.map((p) => Math.round((p.lat - 35) * 111200))).toEqual([100, 300])
   })
 })

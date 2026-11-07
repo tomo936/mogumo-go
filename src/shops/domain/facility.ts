@@ -19,8 +19,23 @@ function segsCross(a: P, b: P, c: P, d: P): boolean {
   return cross(c, d, a) * cross(c, d, b) < 0 && cross(a, b, c) * cross(a, b, d) < 0
 }
 
-// 2つの輪郭の形が重なるか（頂点がもう一方の中にある・辺が交わる）
-function overlaps(a: P[], b: P[]): boolean {
+type Box = { x0: number; y0: number; x1: number; y1: number }
+function boxOf(r: P[]): Box {
+  const b = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }
+  for (const p of r) {
+    b.x0 = Math.min(b.x0, p.x)
+    b.y0 = Math.min(b.y0, p.y)
+    b.x1 = Math.max(b.x1, p.x)
+    b.y1 = Math.max(b.y1, p.y)
+  }
+  return b
+}
+const area = (r: P[]) => Math.abs(r.reduce((s, q, i) => s + (q.x * r[(i + 1) % r.length].y - r[(i + 1) % r.length].x * q.y), 0) / 2)
+const BIG_RATE = 3 // main のこれ倍より広い輪郭は、隣の別の大きな建物とみなして入れない
+
+// 2つの輪郭の形が重なるか（頂点がもう一方の中にある・辺が交わる）。先に囲む箱で大まかにふるい分ける
+function overlaps(a: P[], b: P[], ab: Box, bb: Box): boolean {
+  if (ab.x1 < bb.x0 || bb.x1 < ab.x0 || ab.y1 < bb.y0 || bb.y1 < ab.y0) return false
   if (a.some((p) => inside(p, b)) || b.some((p) => inside(p, a))) return true
   for (let i = 1; i < a.length; i++) for (let j = 1; j < b.length; j++) if (segsCross(a[i - 1], a[i], b[j - 1], b[j])) return true
   return false
@@ -29,11 +44,13 @@ function overlaps(a: P[], b: P[]): boolean {
 // タイルの高さを、かわいく見える高さに縮める
 export const cuteHeight = (h: number) => Math.max(FACILITY_MIN_H_M, Math.min(FACILITY_MAX_H_M, h * FACILITY_HEIGHT_RATE))
 
-// main と、main と形が重なる輪郭（タイルの区切りのかけら・高さ違いの部分）。最初が main。
+// main と、main と形が重なる輪郭（タイルの区切りのかけら・高さ違いの部分。main の3倍より広いものは除く）。最初が main。
 // 同じ高さになった部分は少しずつ高くして、屋根がちらつかないようにする
 export function facilityParts(mainIndex: number, rings: P[][], heights: number[]): FacilityPart[] {
   const main = rings[mainIndex]
-  const picked = [mainIndex, ...rings.flatMap((r, i) => (i !== mainIndex && overlaps(main, r) ? [i] : []))]
+  const mb = boxOf(main)
+  const limit = area(main) * BIG_RATE
+  const picked = [mainIndex, ...rings.flatMap((r, i) => (i !== mainIndex && overlaps(main, r, mb, boxOf(r)) && area(r) <= limit ? [i] : []))]
   const used: number[] = []
   return picked.map((i) => {
     let h = cuteHeight(heights[i])

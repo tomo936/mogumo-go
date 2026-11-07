@@ -43,7 +43,7 @@ function moreTag(n: number, onClick: () => void): HTMLButtonElement {
   return more
 }
 
-type Shown = { m: Marker; b: PinnedBuilding; at: LatLng; inner: HTMLElement; count: number; sizeM: number }
+type Shown = { m: Marker; b: PinnedBuilding; at: LatLng; inner: HTMLElement; count: number; sizeM: number; last: string }
 
 export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) => void) {
   let markers: Shown[] = []
@@ -61,11 +61,22 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
       .join(',')
 
   // カメラに合わせて、ピンの大きさ（建物の幅に収まる）と高さ（屋根の上）を合わせ直す
+  // 縮み具合は建物ごとに1回だけ測り、前と同じなら書き直さない（散らばったピンは数十個になるため）
   const fit = () => {
-    for (const { m, b, at, inner, count, sizeM } of markers) {
-      const { pxPerM, pxPerUpM } = screenScale((p) => map.project([p.lng, p.lat]), at)
-      inner.style.transform = `scale(${pinScale(sizeM, pxPerM, count).toFixed(3).replace(/\.?0+$/, '')})`
-      m.setOffset([0, -b.topM * pxPerUpM])
+    const scaleOf = new Map<PinnedBuilding, ReturnType<typeof screenScale>>()
+    for (const s of markers) {
+      let sc = scaleOf.get(s.b)
+      if (!sc) {
+        sc = screenScale((p) => map.project([p.lng, p.lat]), s.b.placed)
+        scaleOf.set(s.b, sc)
+      }
+      const scale = pinScale(s.sizeM, sc.pxPerM, s.count).toFixed(3).replace(/\.?0+$/, '')
+      const offset = Math.round(-s.b.topM * sc.pxPerUpM * 10) / 10
+      const key = `${scale}|${offset}`
+      if (key === s.last) continue
+      s.last = key
+      s.inner.style.transform = `scale(${scale})`
+      s.m.setOffset([0, offset])
     }
   }
 
@@ -78,7 +89,7 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
     outer.addEventListener('pointerdown', (e) => e.stopPropagation()) // 地図のタップ（建物の当たり判定）を走らせない
     const count = fill(el)
     const m = new Marker({ element: outer, anchor: 'bottom' }).setLngLat([at.lng, at.lat]).addTo(map)
-    return { m, b, at, inner: el, count, sizeM }
+    return { m, b, at, inner: el, count, sizeM, last: '' }
   }
 
   const collapsed = (b: PinnedBuilding) => (el: HTMLElement) => {

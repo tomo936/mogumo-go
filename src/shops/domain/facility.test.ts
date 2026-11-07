@@ -47,3 +47,9 @@ test('入口は真ん中から正面の向きへ進んで輪郭を出た所', ()
   expect(d.x).toBeCloseTo(0, 5)
   expect(d.y).toBeCloseTo(-20, 0)
 })
+
+test('main の3倍より広い重なりの輪郭（隣の巨大な輪郭）は入れない', () => {
+  const parts = facilityParts(0, [rect(0, 0, 60, 40), rect(50, 0, 200, 200), rect(25, 0, 20, 20)], [20, 20, 30])
+  expect(parts).toHaveLength(2)
+  expect(parts[1].pts).toEqual(rect(25, 0, 20, 20))
+})
