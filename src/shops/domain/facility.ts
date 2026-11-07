@@ -123,6 +123,50 @@ export function dropSharedParts<R, F extends { parts: { ring: R }[] }>(list: F[]
   })
 }
 
+// 2つの輪郭の形が重なるか（施設どうしをまとめる判定用）
+export const ringsOverlap = (a: P[], b: P[]) => overlaps(a, b, boxOf(a), boxOf(b))
+
+// 輪郭を共有する・形が重なる施設どうしを1つにまとめる（駅にくっついた店が、駅と重なった別の建物にならないように）。
+// つながりは間を通しても届く。元は駅（無ければ先の方）で、種類・名前・入口などは元のまま。名前が無ければまとめた中の名前を使う。
+// 輪郭は元の分から順に重複を除いて合わせ、ids は元から順にすべて合わせる。まとめたものは、まとめた中でいちばん先の位置に出す
+export function mergeFacilities<R, F extends { ids: string[]; kind: 'facility' | 'station'; name: string | null; parts: { ring: R }[] }>(
+  list: F[],
+  key: (ring: R) => string,
+  overlap: (a: R, b: R) => boolean,
+): F[] {
+  const root = list.map((_, i) => i)
+  const find = (i: number): number => (root[i] === i ? i : (root[i] = find(root[i])))
+  const touch = (a: F, b: F) => {
+    const ka = new Set(a.parts.map((q) => key(q.ring)))
+    return b.parts.some((q) => ka.has(key(q.ring))) || a.parts.some((p) => b.parts.some((q) => overlap(p.ring, q.ring)))
+  }
+  for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) if (find(i) !== find(j) && touch(list[i], list[j])) root[find(j)] = find(i)
+  const out: F[] = []
+  const done = new Set<number>()
+  list.forEach((_, i) => {
+    const r = find(i)
+    if (done.has(r)) return
+    done.add(r)
+    const members = list.filter((_, j) => find(j) === r)
+    if (members.length === 1) {
+      out.push(members[0])
+      return
+    }
+    const lead = members.find((f) => f.kind === 'station') ?? members[0]
+    const ordered = [lead, ...members.filter((f) => f !== lead)]
+    const seen = new Set<string>()
+    const parts: F['parts'] = []
+    for (const q of ordered.flatMap((f) => f.parts)) {
+      if (seen.has(key(q.ring))) continue
+      seen.add(key(q.ring))
+      parts.push(q)
+    }
+    const name = lead.name ?? ordered.find((f) => f.name)?.name ?? null
+    out.push({ ...lead, name, ids: ordered.flatMap((f) => f.ids), parts })
+  })
+  return out
+}
+
 // 屋根のふちを付ける辺: ほかの部分の中に入っている辺（タイルの区切りのつなぎ目など）は除く
 export function outerEdges(parts: FacilityPart[]): { a: P; b: P; heightM: number }[] {
   const out: { a: P; b: P; heightM: number }[] = []
