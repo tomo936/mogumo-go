@@ -62,21 +62,65 @@ export function stationIn(parts: FacilityPart[], stations: P[]): P | null {
   return stations.find((s) => parts.some((p) => inside(s, p.pts))) ?? null
 }
 
-// 入口の位置: 真ん中から正面の向き（北0・時計回り）へ進んで、輪郭を出た所
+// 入口の位置: 真ん中から正面の向き（北0・時計回り）へ進んで、輪郭を出た最初の所。
+// 真ん中が輪郭の外（凹んだ形）でその向きに壁が無いときは、真ん中にいちばん近い壁の上
 export function doorPoint(center: P, facingDeg: number, ring: P[]): P {
   const r = (facingDeg * Math.PI) / 180
   const dir = { x: Math.sin(r), y: Math.cos(r) }
   const at = (t: number) => ({ x: center.x + dir.x * t, y: center.y + dir.y * t })
-  let t = 0
-  while (t < 500 && inside(at(t), ring)) t += 1
-  // 1m 刻みで出たので、最後の 1m を半分ずつ詰める
-  let lo = Math.max(0, t - 1)
-  for (let i = 0; i < 8; i++) {
-    const mid = (lo + t) / 2
-    if (inside(at(mid), ring)) lo = mid
-    else t = mid
+  const ts: number[] = []
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const a = ring[j]
+    const e = { x: ring[i].x - a.x, y: ring[i].y - a.y }
+    const den = dir.x * e.y - dir.y * e.x
+    if (Math.abs(den) < 1e-9) continue
+    const w = { x: a.x - center.x, y: a.y - center.y }
+    const t = (w.x * e.y - w.y * e.x) / den
+    const u = (w.x * dir.y - w.y * dir.x) / den
+    if (t > 0 && u >= 0 && u <= 1) ts.push(t)
   }
-  return { x: center.x + dir.x * t, y: center.y + dir.y * t }
+  ts.sort((a, b) => a - b)
+  const exit = ts.find((t) => inside(at(Math.max(0, t - 0.01)), ring) && !inside(at(t + 0.01), ring))
+  if (exit !== undefined) return at(exit)
+  let best = center
+  let bestD = Infinity
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const a = ring[j]
+    const b = ring[i]
+    const ex = b.x - a.x
+    const ey = b.y - a.y
+    const len2 = ex * ex + ey * ey
+    const k = len2 ? Math.max(0, Math.min(1, ((center.x - a.x) * ex + (center.y - a.y) * ey) / len2)) : 0
+    const q = { x: a.x + ex * k, y: a.y + ey * k }
+    const d = Math.hypot(q.x - center.x, q.y - center.y)
+    if (d < bestD) {
+      bestD = d
+      best = q
+    }
+  }
+  return best
+}
+
+// 点の上の屋根の高さ: 点を含む部分のうちいちばん高いもの（どれにも入らなければ本体の高さ）
+export function heightAt(parts: FacilityPart[], p: P): number {
+  const hs = parts.filter((q) => inside(p, q.pts)).map((q) => q.heightM)
+  return hs.length ? Math.max(...hs) : parts[0].heightM
+}
+
+// 2つの施設が同じ輪郭を描かないようにする。どれかの施設の本体（parts[0]）の輪郭はその施設のもの、
+// それ以外の重なりの部分は先に出た施設のもの。key は輪郭を見分ける文字列
+export function dropSharedParts<R, F extends { parts: { ring: R }[] }>(list: F[], key: (ring: R) => string): F[] {
+  const mains = new Set(list.map((f) => key(f.parts[0].ring)))
+  const used = new Set<string>()
+  return list.map((f) => {
+    const parts = f.parts.filter((q, i) => {
+      const k = key(q.ring)
+      if (i > 0 && (mains.has(k) || used.has(k))) return false
+      used.add(k)
+      return true
+    })
+    return parts.length === f.parts.length ? f : { ...f, parts }
+  })
 }
 
 // 屋根のふちを付ける辺: ほかの部分の中に入っている辺（タイルの区切りのつなぎ目など）は除く

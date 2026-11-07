@@ -26,3 +26,13 @@ test('屋根の高さの所（地面の輪郭より上）を押しても当た�
   expect(pickFacility([fac], { x: 0, y: -60 }, project, () => 0)).toBeNull()
   expect(pickFacility([fac], { x: 0, y: -60 }, project, () => 30)?.id).toBe('fac:a')
 })
+
+test('屋根は部分ごとの高さで判定する（低い部分の上の高い所は外れ、高い部分の上は当たり）', () => {
+  // 低い本体（高さ 2m、東西 60m × 南北 40m）と、北東の角の高い部分（高さ 20m、10m 四方）。1m 上がると 1px 上
+  const two: PlacedFacility = { ...fac, parts: [{ ring: ring(0, 0, 60, 40), heightM: 2 }, { ring: ring(25, 15, 10, 10), heightM: 20 }] }
+  const up = (_: PlacedFacility, h: number) => h
+  // 北の端はどちらも y=-40px。低い所の 10px 上は外れ（本体の屋根は 2px 上まで）
+  expect(pickFacility([two], { x: -40, y: -50 }, project, up)).toBeNull()
+  // 高い部分の 10px 上は当たり（屋根は 20px 上まで）
+  expect(pickFacility([two], { x: 50, y: -50 }, project, up)?.id).toBe('fac:a')
+})

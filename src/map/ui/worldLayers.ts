@@ -8,7 +8,7 @@ import type { Cell } from '../../fog/domain/grid.ts'
 import { thinAmount, waveClumps } from '../../fog/domain/wave.ts'
 import { createFogLayer } from '../../fog/infra/fogLayer.ts'
 import { BUILDING_MAX_SIZE_M, BUILDING_TOP_RATE, FACILITY_MIN_AREA_M2, FACILITY_NEAR_M, MAP_SHOPS_REEXTRACT_M, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
-import { doorPoint, facilityLabel, facilityParts, stationIn } from '../../shops/domain/facility.ts'
+import { doorPoint, dropSharedParts, facilityLabel, facilityParts, heightAt, stationIn } from '../../shops/domain/facility.ts'
 import { groupShops } from '../../shops/domain/grouping.ts'
 import { mergeShops } from '../../shops/domain/merge.ts'
 import { placeShop } from '../../shops/domain/placement.ts'
@@ -49,12 +49,22 @@ type WorldMap = MapLibreMap
 // 自分の位置の印（MapView で下から順に足す）。霧とお店はこれより下に入れる
 const PLAYER_LAYERS = ['me-circle-fill', 'me-circle-line', 'me-shadow']
 
+// 輪郭を見分ける文字列（別々の店の座標から戻したので、頂点数と最初の頂点を 1e-5 度に丸めて比べる）
+const ringKey = (ring: LatLng[]) => `${ring.length}:${ring[0].lat.toFixed(5)},${ring[0].lng.toFixed(5)}`
+// 点が輪郭（緯度経度）の中にあるか
+const ringHas = (ring: LatLng[], p: LatLng) => {
+  const f = localFrame(p)
+  return stationIn([{ pts: ring.map((v) => f.to(v)), heightM: 0 }], [{ x: 0, y: 0 }]) !== null
+}
+
 // 店ごとの置き方。輪郭に合わせたときは、同じ建物の店がそろったときのビルの置き方（bldg）も持つ
 // facility: 実際の形で立体にする建物（輪郭が FACILITY_MIN_AREA_M2 以上か、駅の点を含むときだけ）
+// ring: 店が乗った輪郭（bldg があるときだけ。後から駅の点が見つかったときの置き直し用）
 type Placed = {
   main: PlacedShop
   bldg: PlacedShop | null
   areaM2: number
+  ring: LatLng[] | null
   facility: { parts: { ring: LatLng[]; heightM: number }[]; door: LatLng; kind: 'facility' | 'station'; name: string | null } | null
 }
 
@@ -111,6 +121,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const placed = new Map<string, Placed>() // 店ごとの置き方（一度だけ計算）
   let landmarks: Landmark[] = [] // 駅と施設の名前つきの点（地図のお店と一緒に読む）
   const facilityCache: NonNullable<Placed['facility']>[] = [] // 計算済みの施設の形
+  const seenStations = new Set<string>() // これまでに読んだ駅の点（名前＋丸めた位置）
 
   const toPlaced = (shop: Shop, pl: ReturnType<typeof placeShop>): PlacedShop => {
     const c = localFrame(shop).back(pl.center)
@@ -130,6 +141,20 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       mapShops = extractMapShops(map, p, SHOP_RADIUS_M, lm)
       landmarks = lm
       shops = mergeShops(mapShops, hpShops)
+      // 新しく読めた駅の点があれば、それを含む輪郭の店と施設を置き直す（古い点で計算したままだと駅にならない）
+      for (const m of lm) {
+        const k = `${m.name}@${m.lat.toFixed(5)},${m.lng.toFixed(5)}`
+        if (m.kind !== 'station' || seenStations.has(k)) continue
+        seenStations.add(k)
+        const stale = facilityCache.filter((f) => f.kind === 'facility' && ringHas(f.parts[0].ring, m))
+        for (const f of stale) facilityCache.splice(facilityCache.indexOf(f), 1)
+        for (const [id, hit] of placed) {
+          if ((hit.ring && ringHas(hit.ring, m)) || (hit.facility && stale.includes(hit.facility))) {
+            placed.delete(id)
+            shownKey = null
+          }
+        }
+      }
     }
     // タイルは1回の更新で1回だけ読む（店ごとに読むと、店の数×タイルの大きさだけ重くなる）
     let area: AreaFeatures | null = null
@@ -163,7 +188,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
             facilityCache.push(facility)
           }
         }
-        hit = { main: toPlaced(shop, pl), bldg, areaM2: pl.areaM2, facility }
+        hit = { main: toPlaced(shop, pl), bldg, areaM2: pl.areaM2, ring: bldg && ring ? ring.map((v) => sf.back(v)) : null, facility }
         placed.set(shop.id, hit)
       }
       visible.push({ shop, hit })
@@ -175,6 +200,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     const singles: PlacedShop[] = []
     const blds: PinnedBuilding[] = []
     const facs: PlacedFacility[] = []
+    const facGroups: { ids: string[]; members: typeof visible; center: PlacedShop; f: NonNullable<Placed['facility']>; parts: NonNullable<Placed['facility']>['parts'] }[] = []
     let key = ''
     for (const ids of groups) {
       const members = ids.map((id) => byId.get(id)!)
@@ -182,24 +208,32 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         out.push(members[0].hit.main)
         singles.push(members[0].hit.main)
       } else if (members[0].hit.facility) {
-        // 大型施設・駅: 実際の形の立体と、名前の札
+        // 大型施設・駅は、重なった輪郭を整理してからまとめて出す（下）
         const f = members[0].hit.facility
-        const center = members[0].hit.bldg!
-        const topM = Math.max(...f.parts.map((q) => q.heightM)) + 0.5
-        facs.push({ id: `fac:${ids[0]}`, kind: f.kind, name: f.name, shopIds: ids, parts: f.parts, topM, facingDeg: center.facingDeg, door: f.door })
-        const cf = localFrame(center)
-        const placedF: PlacedShop = { ...center, id: `fac:${ids[0]}`, model: 'building', shopIds: ids }
-        blds.push({
-          placed: placedF, shops: members.map((m) => m.shop), facility: true, topM,
-          spots: members.map((m) => ({ id: m.shop.id, ...cf.to(m.shop) })),
-          label: f.name ? { text: f.name, station: f.kind === 'station' } : null,
-        })
+        facGroups.push({ ids, members, center: members[0].hit.bldg!, f, parts: f.parts })
       } else {
         const placedB: PlacedShop = { ...members[0].hit.bldg!, id: `bldg:${ids[0]}`, model: 'building', shopIds: ids }
         out.push(placedB)
         blds.push({ placed: placedB, shops: members.map((m) => m.shop), facility: false, topM: placedB.sizeM * BUILDING_TOP_RATE, spots: [], label: null })
       }
       key += `${ids.join('+')},`
+    }
+    // 大型施設・駅: 実際の形の立体と、名前の札。同じ輪郭を2つの施設が描かないよう、駅を先に並べて重なりを外す
+    facGroups.sort((a, b) => Number(b.f.kind === 'station') - Number(a.f.kind === 'station'))
+    for (const { ids, members, center, f, parts } of dropSharedParts(facGroups, ringKey)) {
+      const cf = localFrame(center)
+      const local = parts.map((q) => ({ pts: q.ring.map((v) => cf.to(v)), heightM: q.heightM }))
+      const topM = Math.max(...parts.map((q) => q.heightM)) + 0.5
+      facs.push({ id: `fac:${ids[0]}`, kind: f.kind, name: f.name, shopIds: ids, parts, topM, facingDeg: center.facingDeg, door: f.door })
+      const placedF: PlacedShop = { ...center, id: `fac:${ids[0]}`, model: 'building', shopIds: ids }
+      blds.push({
+        placed: placedF, shops: members.map((m) => m.shop), facility: true, topM,
+        spots: members.map((m) => {
+          const at = cf.to(m.shop)
+          return { id: m.shop.id, ...at, topM: heightAt(local, at) + 0.5 }
+        }),
+        label: f.name ? { text: f.name, station: f.kind === 'station' } : null,
+      })
     }
     near = visible.map((v) => v.shop)
     if (key === shownKey) return // 顔ぶれが変わったときだけ層を作り直す

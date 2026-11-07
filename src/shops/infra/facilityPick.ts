@@ -27,13 +27,12 @@ function inside(p: Pt, ring: Pt[]): boolean {
   return c
 }
 
-// 地面の輪郭か、屋根（地面の輪郭を upPx(施設) だけ上にずらしたもの）の中を押したら当たり
-export function pickFacility(list: readonly PlacedFacility[], tap: Pt, project: Project, upPx: (f: PlacedFacility) => number): PlacedFacility | null {
+// 地面の輪郭か、屋根（地面の輪郭を upPx(施設, その部分の高さ) だけ上にずらしたもの）の中を押したら当たり
+export function pickFacility(list: readonly PlacedFacility[], tap: Pt, project: Project, upPx: (f: PlacedFacility, heightM: number) => number): PlacedFacility | null {
   for (const f of list) {
-    const up = upPx(f)
     for (const part of f.parts) {
       const ring = part.ring.map(project)
-      if (inside(tap, ring) || inside({ x: tap.x, y: tap.y + up }, ring)) return f
+      if (inside(tap, ring) || inside({ x: tap.x, y: tap.y + upPx(f, part.heightM) }, ring)) return f
     }
   }
   return null

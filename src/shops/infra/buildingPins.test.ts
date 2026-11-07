@@ -28,11 +28,11 @@ const map = {
   off: vi.fn(),
 } as unknown as MapLibreMap
 const shop = (id: string): Shop => ({ id, name: id, lat: 35, lng: 139, kind: 'cafe', details: null, mapId: null })
-const bldg = (ids: string[], facility = false, spots: { id: string; x: number; y: number }[] = []) => ({
+const bldg = (ids: string[], facility = false, spots: { id: string; x: number; y: number; topM?: number }[] = []) => ({
   facility,
   label: null as { text: string; station: boolean } | null,
   topM: 16 * 1.3,
-  spots,
+  spots: spots.map((s) => ({ topM: 16 * 1.3, ...s })),
   placed: { id: `bldg:${ids[0]}`, model: 'building', shopIds: ids, lat: 35, lng: 139, facingDeg: 0, sizeM: 16 } as PlacedShop,
   shops: ids.map(shop),
 })
@@ -156,6 +156,16 @@ test('ピンの高さは topM を使う', () => {
   const pins = createBuildingPins(map, vi.fn())
   pins.update([{ ...bldg(['a', 'b']), topM: 30 }], new Set())
   expect(offsets.at(-1)![1]).toBeCloseTo(-30 * 4 * Math.sin(Math.PI / 3), 0)
+})
+
+test('散らばったピンは、塊の店の屋根のうち一番高い所に出る', () => {
+  const pins = createBuildingPins(map, vi.fn())
+  zoom = 18
+  const spots = [{ id: 'a', x: 0, y: 0, topM: 5 }, { id: 'b', x: 1, y: 0, topM: 12 }, { id: 'c', x: 30, y: 0, topM: 5 }]
+  pins.update([{ ...bldg(['a', 'b', 'c'], true, spots), topM: 30 }], new Set())
+  const up = 4 * Math.sin(Math.PI / 3)
+  expect(offsets.at(-2)![1]).toBeCloseTo(-12 * up, 0) // a と b の塊は高い方の b
+  expect(offsets.at(-1)![1]).toBeCloseTo(-5 * up, 0)
 })
 
 test('カメラが動いても大きさと高さが同じなら書き直さない', () => {

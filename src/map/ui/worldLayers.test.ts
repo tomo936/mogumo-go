@@ -579,7 +579,7 @@ test('2,500m² 以上の2軒は facilityLayer に渡り、shopLayer にはビル
 const mallPoi = (x: number, y: number, name: string) => ({ id: 98, geometry: { type: 'Point', coordinates: ll(x, y) }, properties: { class: 'shop', subclass: 'department_store', name } })
 type Fac = { kind: string; name: string | null; shopIds: string[] }
 
-test('駅の点と百貨店の点が入った大きい建物は、駅（kind station）として1つ、名前は両方。駅舎の模型は出さない', async () => {
+test('駅の点と百貨店の点が入った大きい建物は、駅（kind station）として1つ、名前は両方', async () => {
   let ab: Shop[] = []
   twoIn((s) => { ab = s })
   tiles = { transportation: [roadFeature], building: [building(0, -10, 60, 50)], poi: [stationPoi(10, -10), mallPoi(-10, -10, '京王百貨店')] }
@@ -588,7 +588,6 @@ test('駅の点と百貨店の点が入った大きい建物は、駅（kind sta
   await flush()
   const facs = facilityLayer.setFacilities.mock.lastCall![0] as Fac[]
   expect(facs.map((f) => [f.kind, f.name])).toEqual([['station', '駅・京王百貨店']])
-  expect((vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]).some((s) => s.model === 'station')).toBe(false)
   expect(world.titleOf(['a', 'b'])).toBe('駅・京王百貨店')
 })
 

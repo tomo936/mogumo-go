@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { cuteHeight, doorPoint, facilityLabel, facilityParts, floors, outerEdges, stationIn } from './facility.ts'
+import { cuteHeight, doorPoint, dropSharedParts, facilityLabel, facilityParts, floors, heightAt, outerEdges, stationIn } from './facility.ts'
 
 const rect = (cx: number, cy: number, w: number, h: number) => [
   { x: cx - w / 2, y: cy - h / 2 },
@@ -67,4 +67,31 @@ test('駅の点は本体（最初の部分）の中にあるときだけ駅。�
   const marks = [{ p: { x: 55, y: 0 }, name: '経堂', kind: 'station' as const }]
   expect(facilityLabel(parts, marks, [])).toEqual({ kind: 'facility', name: null })
   expect(facilityLabel(parts, [{ ...marks[0], p: { x: 0, y: 0 } }], [])).toEqual({ kind: 'station', name: '経堂駅' })
+})
+
+test('真ん中が輪郭の外（コの字）で正面に壁があれば、外から入って出る所ではなく最初に出る所', () => {
+  // コの字（北が開いた形）。真ん中 (0,0) はくぼみの中
+  const u = [{ x: -20, y: -20 }, { x: 20, y: -20 }, { x: 20, y: 20 }, { x: 10, y: 20 }, { x: 10, y: -10 }, { x: -10, y: -10 }, { x: -10, y: 20 }, { x: -20, y: 20 }]
+  const d = doorPoint({ x: 0, y: 0 }, 180, u) // 南へ: y=-10 で入り y=-20 で出る
+  expect(d.y).toBeCloseTo(-20, 5)
+  const n = doorPoint({ x: 0, y: -2 }, 0, u) // 北へ: 壁が無い → いちばん近い壁（y=-10 の辺）
+  expect(n.y).toBeCloseTo(-10, 5)
+  expect(n.x).toBeCloseTo(0, 5)
+})
+
+test('点の上の屋根の高さは、その点を含む部分のうちいちばん高いもの', () => {
+  const parts = [{ pts: rect(0, 0, 60, 40), heightM: 10 }, { pts: rect(20, 0, 10, 10), heightM: 30 }]
+  expect(heightAt(parts, { x: -20, y: 0 })).toBe(10)
+  expect(heightAt(parts, { x: 20, y: 0 })).toBe(30)
+  expect(heightAt(parts, { x: 500, y: 0 })).toBe(10)
+})
+
+test('ほかの施設の本体の輪郭や、先に出た施設の部分は描かない', () => {
+  const a = { id: 'station', parts: [{ ring: 'A' }, { ring: 'B' }, { ring: 'C' }] }
+  const b = { id: 'tower', parts: [{ ring: 'B' }] }
+  const c = { id: 'other', parts: [{ ring: 'D' }, { ring: 'C' }] }
+  const out = dropSharedParts([a, b, c], (r: string) => r)
+  expect(out[0].parts.map((q) => q.ring)).toEqual(['A', 'C'])
+  expect(out[1]).toBe(b)
+  expect(out[2].parts.map((q) => q.ring)).toEqual(['D'])
 })

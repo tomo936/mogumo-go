@@ -8,8 +8,8 @@ const KINDS = [
 ]
 
 describe('3D 素材', () => {
-  it('店の glb が 13 種＋ビル＋駅舎そろっている', () => {
+  it('店の glb が 13 種＋ビルそろっている', () => {
     const names = Object.keys(shops).map((p) => p.replace('./shops/', '').replace('.glb', ''))
-    expect(names.sort()).toEqual([...KINDS, 'building', 'station'].sort())
+    expect(names.sort()).toEqual([...KINDS, 'building'].sort())
   })
 })
