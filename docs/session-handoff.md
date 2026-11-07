@@ -9,7 +9,7 @@
 - `cycle1-checkin`（ホットペッパー＋チェックイン）は完成・実機確認済みで dev に反映済み。本番 `main` は未反映（本人の OK まで出さない）
 - 開発用 Supabase `mogumo-go-dev` に置き済み: SQL 0002・0003、関数 `shops-hotpepper`・`checkin`。キー `HOTPEPPER_API_KEY` は Secrets
 - push: `git push` は Sandbox の外で動く設定。**単独のコマンドで実行する**。dev への反映は `git merge-tree --write-tree origin/dev <branch>` → `git commit-tree` → `git push origin <sha>:refs/heads/dev`
-- 進め方（2026-11-07 改定）: リーダー（メインの会話）はクリアせず全体を持つ。重い作業はサブ（実装役・テスト役など）に渡し、サブは毎回まっさらから始める。区切りでこのメモは更新する／小さい指摘は最後にまとめて直す／再確認は安いモデル／小さい手順はまとめる／試作の画像は少なく
+- 進め方: CLAUDE.md「トークンの節約」を参照（リーダーはクリアしない・段の終わりはこのメモを更新してから compact・サブには2回失敗で打ち切りの一文）
 
 ## 次にやること
 0. **ビルと大型施設・駅は完了（2026-11-07、オーナー「いいね」）**。ブランチ `cycle1-building`、dev に反映済み（`6a0acdd`）、main は未反映。設計 `docs/superpowers/specs/2026-11-07-multi-shop-building-design.md`・`2026-11-07-large-facility-design.md`（§8 が駅の最終決定）。できたこと: 2〜5軒のビル（ピン並べ・+N）、2,500m² 以上の大型施設は実際の輪郭を立体（`src/shops/infra/facilityLayer.ts`、見本 `facility-large.png`）、駅の点を含む建物は駅として立体（シロの見本 `station-shape-1〜3.webp`：グレーの壁・緑の帯2段・縦長の窓・丸いひさし・時計）、駅と施設は地図の輪郭どおり（1つの輪郭なら名前は両方）、名前の札（施設は白い丸、駅は駅名標の形）、拡大でピンが屋根の上に散らばる。チェックインはお店の点から 50m のまま（本人決定）
