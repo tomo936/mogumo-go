@@ -14,7 +14,7 @@ vi.mock('maplibre-gl', () => ({
   },
 }))
 
-const shop = (id: string, lng: number, sizeM = 10): PlacedShop => ({ id, kind: 'ramen', lat: 35, lng, facingDeg: 0, sizeM })
+const shop = (id: string, lng: number, sizeM = 10): PlacedShop => ({ id, model: 'ramen', shopIds: [id], lat: 35, lng, facingDeg: 0, sizeM })
 const map = {} as MapLibreMap
 
 test('済みの店だけに印を付け、動かし、外し、dispose で全部消す', () => {

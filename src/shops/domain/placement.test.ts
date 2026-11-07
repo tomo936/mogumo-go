@@ -65,3 +65,8 @@ test('辺がどれも 2m 未満の小さい輪郭は、輪郭なしの決まり�
   expect(r.facingDeg).toBeCloseTo(90, 0)
   expect(r.center.x).toBeCloseTo(-6, 1)
 })
+
+test('大きな輪郭（30m角）は maxSizeM=22 なら 22、既定なら 18', () => {
+  expect(placeShop(roadNorth, [rect(0, 0, 30, 30)], 22).sizeM).toBe(22)
+  expect(placeShop(roadNorth, [rect(0, 0, 30, 30)]).sizeM).toBe(18)
+})

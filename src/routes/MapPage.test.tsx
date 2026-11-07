@@ -11,7 +11,7 @@ vi.mock('../checkin/ui/confetti.ts', () => ({ startConfetti: () => () => {} }))
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }))
 const mounts: ((e: LocationEvent) => void)[] = []
 const shopErrors: (() => void)[] = []
-const handlers: { select: (s: Shop | null) => void; position: (p: LatLng) => void }[] = []
+const handlers: { select: (s: Shop | null) => void; building: (s: Shop[] | null) => void; position: (p: LatLng) => void }[] = []
 const checkinCalls: { id: string; cells: unknown[] }[] = []
 const unfocusCalls: number[] = []
 const postCheckin = vi.fn()
@@ -19,15 +19,15 @@ vi.mock('../checkin/infra/checkinApi.ts', () => ({ postCheckin: (...a: unknown[]
 vi.mock('../map/ui/MapView.tsx', async () => {
   const { useEffect, useImperativeHandle } = await import('react')
   return {
-    MapView: ({ onStatus, onShopsError, onSelectShop, onPosition, ref }: {
+    MapView: ({ onStatus, onShopsError, onSelectShop, onSelectBuilding, onPosition, ref }: {
       onStatus: (e: LocationEvent) => void; onShopsError: () => void
-      onSelectShop: (s: Shop | null) => void; onPosition: (p: LatLng) => void
+      onSelectShop: (s: Shop | null) => void; onSelectBuilding: (s: Shop[] | null) => void; onPosition: (p: LatLng) => void
       ref?: React.Ref<{ checkin(shop: Shop, cells: unknown[]): void }>
     }) => {
       useEffect(() => { mounts.push(onStatus) }, [onStatus])
       useEffect(() => { shopErrors.push(onShopsError) }, [onShopsError])
-      useEffect(() => { handlers.push({ select: onSelectShop, position: onPosition }) }, [onSelectShop, onPosition])
-      useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false }), [])
+      useEffect(() => { handlers.push({ select: onSelectShop, building: onSelectBuilding, position: onPosition }) }, [onSelectShop, onSelectBuilding, onPosition])
+      useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false, checked: () => new Set<string>() }), [])
       return <div data-testid="map-view" />
     },
   }
@@ -171,4 +171,20 @@ test('ホットペッパーのクレジットがいつも出ていて、規約�
     </AuthContext.Provider>,
   )
   expect(screen.getByRole('link', { name: 'Powered by ホットペッパーグルメ Webサービス' })).toHaveAttribute('href', 'http://webservice.recruit.co.jp/')
+})
+
+test('一覧で店を選ぶと、一覧が閉じてお店のシートが出る', async () => {
+  render(
+    <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+      <MapPage />
+    </AuthContext.Provider>,
+  )
+  const a: Shop = { id: 'a', name: 'カフェ花', lat: 35, lng: 139, kind: 'cafe', details: null, mapId: null }
+  const b: Shop = { id: 'b', name: 'らーめん太郎', lat: 35, lng: 139, kind: 'ramen', details: null, mapId: null }
+  act(() => handlers[handlers.length - 1].position({ lat: 35, lng: 139 }))
+  act(() => handlers[handlers.length - 1].building([a, b]))
+  expect(screen.getByRole('region', { name: 'ビルのお店' })).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: /らーめん太郎/ }))
+  expect(screen.queryByRole('region', { name: 'ビルのお店' })).toBeNull()
+  expect(screen.getByRole('region', { name: 'お店の情報' })).toBeInTheDocument()
 })

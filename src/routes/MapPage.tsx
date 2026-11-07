@@ -9,6 +9,7 @@ import type { LatLng } from '../map/domain/geo.ts'
 import { farFromHome } from '../checkin/domain/far.ts'
 import { postCheckin } from '../checkin/infra/checkinApi.ts'
 import { CheckinEffect } from '../checkin/ui/CheckinEffect.tsx'
+import { BuildingSheet } from '../checkin/ui/BuildingSheet.tsx'
 import { ShopSheet } from '../checkin/ui/ShopSheet.tsx'
 import type { CheckinError } from '../checkin/ui/ShopSheet.tsx'
 import type { Shop } from '../shops/domain/shop.ts'
@@ -33,6 +34,7 @@ export function MapPage() {
 
   const mapRef = useRef<MapViewHandle>(null)
   const [selected, setSelected] = useState<Shop | null>(null)
+  const [building, setBuilding] = useState<{ shops: Shop[]; checked: ReadonlySet<string> } | null>(null)
   const [me, setMe] = useState<LatLng | null>(null)
   const [busy, setBusy] = useState(false)
   const [checkinError, setCheckinError] = useState<CheckinError | null>(null)
@@ -51,6 +53,13 @@ export function MapPage() {
     setDoneToday(shop ? (mapRef.current?.isCheckedToday(shop) ?? false) : false)
     setCheckinError(null)
     if (!shop) mapRef.current?.unfocus() // 板を閉じたらカメラを自分に戻す
+  }, [])
+
+  // ビルの一覧（済みの印は開いたときに地図に聞いておく）
+  const selectBuilding = useCallback((shops: Shop[] | null) => {
+    if (busyRef.current && shops) return
+    setBuilding(shops ? { shops, checked: mapRef.current?.checked() ?? new Set<string>() } : null)
+    if (shops) setSelected(null)
   }, [])
 
   const checkin = async () => {
@@ -85,8 +94,23 @@ export function MapPage() {
         home={home}
         onShopsError={() => setShopsError(true)}
         onSelectShop={select}
+        onSelectBuilding={selectBuilding}
         onPosition={setMe}
       />
+      {building && !selected && (
+        <BuildingSheet
+          shops={building.shops}
+          checkedIds={building.checked}
+          onPick={(shop) => {
+            setBuilding(null)
+            select(shop)
+          }}
+          onClose={() => {
+            setBuilding(null)
+            mapRef.current?.unfocus()
+          }}
+        />
+      )}
       {selected && me && (
         <ShopSheet
           shop={selected}

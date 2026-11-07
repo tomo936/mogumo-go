@@ -1009,7 +1009,72 @@ def cafe():
         cube((0.16, 0.14, 0.12), (x, y, 0.1), POT, bevel=0.02)
         for k in range(4): sphere(0.06, (x + (k - 1.5) * 0.03, y, 0.22 + (k % 2) * 0.04), LEAF, scale=(0.6, 0.6, 1.2), seg=10)
 
-{'ramen': ramen, 'sushi': sushi, 'chinese': chinese, 'yakiniku': yakiniku, 'western': western, 'cake': cake, 'bakery': bakery, 'mystery': mystery, 'soba': soba, 'izakaya': izakaya, 'washoku': washoku, 'curry': curry, 'cafe': cafe}[KIND]()
+# ── ビル（同じ建物に複数のお店。見本 art/reference/shops/building-multi.png） ──────
+def building():
+    WALL = mat('#eedfc2'); LINE = mat('#dccaa6'); RIM = mat('#ead9b8'); FRAME = mat('#e2cfaa')
+    GLOW = mat('#f9d9a2', 0.7, emit=0.65); CURT = mat('#fffaf2'); WOOD = mat('#b8794a'); WOOD_D = mat('#8f5a36')
+    INSIDE = mat('#f5c27a', 0.8, emit=0.6); WHITE = mat('#f9f5ee'); RED = mat('#c95a52')
+    METAL = mat('#a9b4c2', 0.5); METAL_D = mat('#8e99a8', 0.5); GLASS = mat('#fdeccb', 0.6, emit=0.25)
+    W = D = 1.9; F1 = 0.95; FL = 0.92; H = F1 + 2 * FL + 0.05
+    cube((W, D, H), (0, 0, H / 2), WALL, bevel=0.05, seg=3)
+    # 面ごとの置き方: ローカルは「外向き = -Y、壁の面 = y=0、横 = x」
+    ROT = {'front': 0.0, 'left': -math.pi / 2, 'back': math.pi, 'right': math.pi / 2}
+    def face_M(face, u, z):
+        a = ROT[face]; x, y = u, -D / 2
+        return M_at(x * math.cos(a) - y * math.sin(a), x * math.sin(a) + y * math.cos(a), z, rz=a)
+    # タイルの横の目地（2階より上、4面）
+    for face in ROT:
+        objs = [cube((W - 0.04, 0.03, 0.022), (0, -0.005, z), LINE, bevel=0.008, seg=1) for z in [F1 + 0.04 + k * 0.26 for k in range(7)]]
+        xform(objs, face_M(face, 0, 0))
+    # 窓（明かり＋カーテン）: 2・3階に各面2つ
+    def window(face, u, z):
+        w, h = 0.44, 0.52
+        objs = [cube((w + 0.12, 0.1, h + 0.12), (0, 0, 0), FRAME, bevel=0.04, seg=3),
+                cube((w, 0.105, h), (0, -0.004, 0), GLOW, bevel=0.01)]
+        for sx in (-1, 1):
+            objs.append(cube((0.13, 0.11, h - 0.04), (sx * (w / 2 - 0.07), -0.006, 0.0), CURT, bevel=0.03, seg=2))
+        xform(objs, face_M(face, u, z))
+    for face in ROT:
+        for z in (F1 + FL * 0.5, F1 + FL * 1.5):
+            for u in (-0.45, 0.45): window(face, u, z)
+    # 1階のお店の正面: 張り出したショーケース（汎用の中身: 明かり・カウンター・小さなテーブル）＋戸＋ひさし
+    def storefront(face, awn_c1, awn_c2):
+        objs = []
+        SX, SW, SH, SZ, DEP = 0.25, 1.0, 0.62, 0.42, 0.22   # ショーケースの中心・幅・高さ・中心の高さ・奥行き
+        objs.append(cube((SW, 0.02, SH), (SX, -0.01, SZ), INSIDE, bevel=0.005))                       # 奥の明かり
+        for sx in (-1, 1): objs.append(cube((0.06, DEP, SH + 0.06), (SX + sx * SW / 2, -DEP / 2, SZ), WOOD, bevel=0.02))
+        objs.append(cube((SW + 0.12, DEP + 0.06, 0.08), (SX, -DEP / 2, SZ - SH / 2 - 0.04), WOOD, bevel=0.02))  # 台
+        objs.append(cube((SW + 0.12, DEP + 0.04, 0.06), (SX, -DEP / 2, SZ + SH / 2 + 0.03), WOOD, bevel=0.02))  # 上の枠
+        objs.append(cube((SW - 0.1, 0.12, 0.16), (SX, -0.08, SZ - SH / 2 + 0.08), WOOD_D, bevel=0.02))          # カウンター
+        objs.append(cube((SW - 0.06, 0.13, 0.025), (SX, -0.08, SZ - SH / 2 + 0.17), WHITE, bevel=0.008))
+        for dx in (-0.25, 0.22):                                                                         # カウンターの上の小物（丸い皿の形だけ）
+            o = cyl(0.06, 0.02, (SX + dx, -0.08, SZ - SH / 2 + 0.195), CURT, verts=14, bevel=0.005); objs.append(o)
+        objs.append(cyl(0.09, 0.02, (SX + 0.05, -0.16, SZ + 0.02), WOOD, verts=16, bevel=0.005))              # 小さなテーブル
+        objs.append(cyl(0.015, 0.2, (SX + 0.05, -0.16, SZ - 0.08), WOOD_D, verts=8, bevel=0))
+        # 戸（ガラスの明かり）
+        DXu = -0.62
+        objs += [cube((0.4, 0.08, 0.78), (DXu, -0.01, 0.41), WOOD_D, bevel=0.02),
+                 cube((0.28, 0.085, 0.56), (DXu, -0.015, 0.47), GLASS, bevel=0.008)]
+        objs.append(sphere(0.022, (DXu + 0.13, -0.06, 0.4), METAL, seg=8))
+        xform(objs, face_M(face, 0, 0))
+        awning(1.62, 9, 0.38, 0.5, awn_c1, awn_c2, face_M(face, -0.05, 0.9).__matmul__(M_at(0, -0.02, 0)))
+    storefront('left', WHITE, WHITE)
+    storefront('front', RED, RED)
+    # 屋上: ふち＋貯水タンク＋室外機
+    for (sx, sy, lx, ly) in ((0, -1, W + 0.04, 0.12), (0, 1, W + 0.04, 0.12), (-1, 0, 0.12, D - 0.2), (1, 0, 0.12, D - 0.2)):
+        cube((lx, ly, 0.12), (sx * (W / 2 - 0.04), sy * (D / 2 - 0.04), H + 0.05), RIM, bevel=0.04, seg=3)
+    TX, TY = -0.45, 0.4
+    cyl(0.24, 0.34, (TX, TY, H + 0.2), METAL, verts=24, bevel=0.03)
+    cyl(0.25, 0.04, (TX, TY, H + 0.38), METAL_D, verts=24, bevel=0.015)
+    cyl(0.06, 0.05, (TX, TY, H + 0.42), METAL_D, verts=12, bevel=0.01)
+    cyl(0.03, 0.3, (TX - 0.3, TY, H + 0.15), METAL_D, verts=8, bevel=0)
+    cube((0.24, 0.05, 0.05), (TX - 0.2, TY, H + 0.29), METAL_D, bevel=0.01)
+    for (x, y) in ((0.4, -0.35), (0.62, -0.35), (0.51, -0.12)):
+        cube((0.2, 0.18, 0.16), (x, y, H + 0.1), METAL, bevel=0.025)
+        for k in range(3): cube((0.14, 0.01, 0.015), (x, y - 0.092, H + 0.06 + k * 0.035), METAL_D, bevel=0)
+
+
+{'building': building, 'ramen': ramen, 'sushi': sushi, 'chinese': chinese, 'yakiniku': yakiniku, 'western': western, 'cake': cake, 'bakery': bakery, 'mystery': mystery, 'soba': soba, 'izakaya': izakaya, 'washoku': washoku, 'curry': curry, 'cafe': cafe}[KIND]()
 # 曲線（瓦の筋など）は glb に入らないので形に変えておく
 for o in list(bpy.data.objects):
     if o.type == 'CURVE':

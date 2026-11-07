@@ -8,10 +8,13 @@ import type { ShopKind } from '../domain/shop.ts'
 import { threeLayer } from '../../lib/threeLayer.ts'
 import { pickShop } from './pickShop.ts'
 
-export type PlacedShop = { id: string; kind: ShopKind; lat: number; lng: number; facingDeg: number; sizeM: number }
+// 地図に置く建物1つ。1軒の店は model がその種類・shopIds が [id]。
+// ビル（同じ建物の複数の店）は model 'building'・id 'bldg:<先頭の店 id>'・shopIds に全員
+export type ModelName = ShopKind | 'building'
+export type PlacedShop = { id: string; model: ModelName; shopIds: string[]; lat: number; lng: number; facingDeg: number; sizeM: number }
 
 const URLS = import.meta.glob<string>('../../assets/shops/*.glb', { query: '?url', import: 'default' })
-const urlOf = (kind: ShopKind) => URLS[`../../assets/shops/${kind}.glb`]
+const urlOf = (model: ModelName) => URLS[`../../assets/shops/${model}.glb`]
 
 // 読み込んだ模型: 部品ごとの形・材質と、模型の根元からの行列
 type Part = { geo: THREE.BufferGeometry; mat: THREE.Material | THREE.Material[]; local: THREE.Matrix4 }
@@ -19,11 +22,11 @@ type Model = { parts: Part[]; unit: number } // unit: 模型の幅（東西・�
 
 export function createShopLayer(): CustomLayerInterface & {
   setShops(shops: PlacedShop[]): void
-  pick(point: { x: number; y: number }): string | null
+  pick(point: { x: number; y: number }): string[] | null
 } {
   let scene: THREE.Scene | null = null
   let map: MapLibreMap | null = null
-  const models = new Map<ShopKind, Model | null>() // null = 読み込み中か失敗
+  const models = new Map<ModelName, Model | null>() // null = 読み込み中か失敗
   let meshes: THREE.InstancedMesh[] = []
   let shops: PlacedShop[] = []
   let origin: LatLng | null = null
@@ -36,7 +39,7 @@ export function createShopLayer(): CustomLayerInterface & {
     meshes = []
   }
 
-  const load = (kind: ShopKind) => {
+  const load = (kind: ModelName) => {
     const url = urlOf(kind)
     models.set(kind, null)
     if (!url) return
@@ -64,13 +67,13 @@ export function createShopLayer(): CustomLayerInterface & {
     clear()
     if (!scene || !origin) return
     const frame = localFrame(origin)
-    const byKind = new Map<ShopKind, PlacedShop[]>()
+    const byKind = new Map<ModelName, PlacedShop[]>()
     for (const s of shops) {
-      if (!models.has(s.kind)) load(s.kind)
-      if (!models.get(s.kind)) continue
-      const list = byKind.get(s.kind)
+      if (!models.has(s.model)) load(s.model)
+      if (!models.get(s.model)) continue
+      const list = byKind.get(s.model)
       if (list) list.push(s)
-      else byKind.set(s.kind, [s])
+      else byKind.set(s.model, [s])
     }
     const m = new THREE.Matrix4()
     const q = new THREE.Quaternion()
@@ -134,12 +137,12 @@ export function createShopLayer(): CustomLayerInterface & {
       origin = next.length ? { lat: next[0].lat, lng: next[0].lng } : null
       build()
     },
-    // 画面の点で押された店の id（建物が出ている店だけ）
+    // 画面の点で押された建物の店の id（ビルなら全員。建物が出ているものだけ）
     pick(point) {
       if (!map) return null
       const m = map
-      const drawn = shops.filter((s) => models.get(s.kind))
-      return pickShop(drawn, point, (p) => m.project([p.lng, p.lat]))
+      const drawn = shops.filter((s) => models.get(s.model))
+      return pickShop(drawn, point, (p) => m.project([p.lng, p.lat]))?.shopIds ?? null
     },
   }
 }
