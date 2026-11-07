@@ -112,6 +112,16 @@ export function placeShop(roads: P[][], footprints: P[][], maxSizeM = SHOP_MAX_S
   // 道路が無い・重なりすぎ（0.5m 以下）のときは南向き
   const usable = road && roadDist > 0.5 ? road : null
   const dir = usable ? { x: usable.x / roadDist, y: usable.y / roadDist } : SOUTH
-  const ring = footprints.find((r) => contains({ x: 0, y: 0 }, r))
+  // 点を含む輪郭が複数（タイルの区切りで切られた同じ建物のかけら・重なった輪郭）なら、いちばん大きいもの
+  let ring: P[] | undefined
+  let best = 0
+  for (const r of footprints) {
+    if (!contains({ x: 0, y: 0 }, r)) continue
+    const a = Math.abs(r.reduce((s, q, i) => s + (q.x * r[(i + 1) % r.length].y - r[(i + 1) % r.length].x * q.y), 0) / 2)
+    if (!ring || a > best) {
+      ring = r
+      best = a
+    }
+  }
   return (ring && fitFootprint(ring, usable, maxSizeM)) || free(road, roadDist, dir)
 }
