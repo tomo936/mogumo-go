@@ -12,14 +12,14 @@ import type { Shop } from '../domain/shop.ts'
 import { screenScale } from './screenScale.ts'
 import type { PlacedShop } from './shopLayer.ts'
 
-// facility: 大型の施設。topM: 屋根の高さ（m）。spots: 施設の店の位置（placed からの m、x=東・y=北。ビルは []）
+// facility: 大型の施設。topM: 屋根の高さ（m）。spots: 施設の店の位置（placed からの m、x=東・y=北）と、その上の屋根の高さ（m。ビルは []）
 // label: 名前の札（station なら駅名標の形）
 export type PinnedBuilding = {
   placed: PlacedShop
   shops: Shop[]
   facility: boolean
   topM: number
-  spots: { id: string; x: number; y: number }[]
+  spots: { id: string; x: number; y: number; topM: number }[]
   label: { text: string; station: boolean } | null
 }
 
@@ -51,7 +51,8 @@ function moreTag(n: number, onClick: () => void): HTMLButtonElement {
   return more
 }
 
-type Shown = { m: Marker; b: PinnedBuilding; at: LatLng; inner: HTMLElement; count: number; sizeM: number; last: string }
+// topM: ピンを浮かせる高さ（m）。散らばったピンは塊の店の屋根のうち一番高いもの、それ以外は b.topM
+type Shown = { m: Marker; b: PinnedBuilding; at: LatLng; inner: HTMLElement; count: number; sizeM: number; topM: number; last: string }
 
 export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) => void) {
   let markers: Shown[] = []
@@ -79,7 +80,7 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
         scaleOf.set(s.b, sc)
       }
       const scale = pinScale(s.sizeM, sc.pxPerM, s.count).toFixed(3).replace(/\.?0+$/, '')
-      const offset = Math.round(-s.b.topM * sc.pxPerUpM * 10) / 10
+      const offset = Math.round(-s.topM * sc.pxPerUpM * 10) / 10
       const key = `${scale}|${offset}`
       if (key === s.last) continue
       s.last = key
@@ -88,7 +89,7 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
     }
   }
 
-  const marker = (b: PinnedBuilding, at: LatLng, fill: (el: HTMLElement) => number, sizeM: number): Shown => {
+  const marker = (b: PinnedBuilding, at: LatLng, fill: (el: HTMLElement) => number, sizeM: number, topM = b.topM): Shown => {
     const outer = document.createElement('div')
     outer.className = 'bldg-pins'
     const el = document.createElement('div')
@@ -97,7 +98,7 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
     outer.addEventListener('pointerdown', (e) => e.stopPropagation()) // 地図のタップ（建物の当たり判定）を走らせない
     const count = fill(el)
     const m = new Marker({ element: outer, anchor: 'bottom' }).setLngLat([at.lng, at.lat]).addTo(map)
-    return { m, b, at, inner: el, count, sizeM, last: '' }
+    return { m, b, at, inner: el, count, sizeM, topM, last: '' }
   }
 
   const nameTag = (b: PinnedBuilding): HTMLElement | null => {
@@ -149,14 +150,16 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
         const { pxPerM } = screenScale((p) => map.project([p.lng, p.lat]), home)
         const frame = localFrame(home)
         const byId = new Map(b.shops.map((s) => [s.id, s]))
+        const topOf = new Map(b.spots.map((s) => [s.id, s.topM]))
         for (const c of clusterSpots(b.spots, FACILITY_CLUSTER_PX / (pxPerM || 1))) {
           const at = frame.back({ x: c.x, y: c.y })
           const shops = c.ids.map((id) => byId.get(id)!).filter(Boolean)
+          const topM = Math.max(...c.ids.map((id) => topOf.get(id) ?? b.topM))
           if (shops.length >= 4) {
-            markers.push(marker(b, at, (el) => (el.appendChild(moreTag(shops.length, () => onTap(c.ids))), 1), SCATTER_SIZE_M))
+            markers.push(marker(b, at, (el) => (el.appendChild(moreTag(shops.length, () => onTap(c.ids))), 1), SCATTER_SIZE_M, topM))
           } else {
             const mid = (shops.length - 1) / 2
-            markers.push(marker(b, at, row(shops, shops.map((_, i) => ({ x: (i - mid) * PIN_GAP_PX, y: 0 }))), SCATTER_SIZE_M))
+            markers.push(marker(b, at, row(shops, shops.map((_, i) => ({ x: (i - mid) * PIN_GAP_PX, y: 0 }))), SCATTER_SIZE_M, topM))
           }
         }
       } else {

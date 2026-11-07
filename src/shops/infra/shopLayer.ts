@@ -10,7 +10,7 @@ import { pickShop } from './pickShop.ts'
 
 // 地図に置く建物1つ。1軒の店は model がその種類・shopIds が [id]。
 // ビル（同じ建物の複数の店）は model 'building'・id 'bldg:<先頭の店 id>'・shopIds に全員
-export type ModelName = ShopKind | 'building' | 'station'
+export type ModelName = ShopKind | 'building'
 export type PlacedShop = { id: string; model: ModelName; shopIds: string[]; lat: number; lng: number; facingDeg: number; sizeM: number }
 
 const URLS = import.meta.glob<string>('../../assets/shops/*.glb', { query: '?url', import: 'default' })

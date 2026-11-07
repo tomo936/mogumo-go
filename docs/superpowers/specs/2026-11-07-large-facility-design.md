@@ -36,7 +36,7 @@
 - `src/shops/infra/mapFeatures.ts`: 輪郭と一緒に `render_height` と、駅の点（poi 層の railway/station）を取り出す。
 - `src/shops/infra/facilityLayer.ts`（新規）か `shopLayer` の拡張: 施設の立体を描く。三角形の数は施設1つで数千まで（輪郭の点の数に比例）。
 - `buildingPins.ts`: 施設は、拡大（`FACILITY_SCATTER_ZOOM`、例 17.5）でピンを散らばらせる。縮小では今の「1つ＋済み/全部」。ピンの絵はまず仮の丸で、施設ピンは `art/pins/facility.png` を使う。
-- 駅舎の飾りと小さい駅の駅舎の模型: `src/assets/shops/station.glb`（Blender、シロの見本が来るまで仮）。
+- 駅舎の飾りと小さい駅の駅舎の模型: `src/assets/shops/station.glb`（Blender、シロの見本が来るまで仮）。※ 駅舎の模型は取り下げ、`station.glb` は削除済み（2026-11-07）。
 
 ### ui
 - 施設をタップ → 今の一覧のシート（名前の順、長ければスクロール）。散らばったピンをタップ → そのお店のシート。

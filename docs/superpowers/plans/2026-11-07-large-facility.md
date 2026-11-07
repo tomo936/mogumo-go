@@ -52,6 +52,8 @@
 
 ### Task 3: 仮の駅舎の模型
 
+※ 取り下げ。`station.glb` は削除済み（2026-11-07）。
+
 **Files:** Modify `art/prototypes/blender-shops.py`（`KIND=station`）、Create `src/assets/shops/station.glb`、Modify `src/assets/assets.test.ts`（13種＋building＋station）
 
 - [ ] 駅舎: クリーム壁・赤茶の三角屋根・正面の丸い時計・改札の入口のひさし・横にホームの屋根少し。正面は -Y。`LIGHT=1 TARGET=7000` で書き出す

@@ -250,7 +250,7 @@ export function createFacilityLayer(): CustomLayerInterface & {
       if (!map) return null
       const m = map
       const project = (p: { lat: number; lng: number }) => m.project([p.lng, p.lat])
-      const hit = pickFacility(list, point, project, (f) => f.topM * screenScale(project, f.door).pxPerUpM)
+      const hit = pickFacility(list, point, project, (f, heightM) => heightM * screenScale(project, f.door).pxPerUpM)
       return hit?.shopIds ?? null
     },
   }
