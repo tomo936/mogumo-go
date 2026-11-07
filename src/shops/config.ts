@@ -24,3 +24,12 @@ export const PIN_GAP_PX = 34 // ビルの上のピンの横の間隔
 export const PIN_COLLAPSE_ZOOM = 16 // これより縮小したらピンを1つ＋「済み/全部」にまとめる
 export const PIN_MAX_SPREAD = 5 // 小さいビルでピンを並べる最大の数（これより多ければ5つ＋「+N」）
 export const FACILITY_MIN_AREA_M2 = 2500 // 輪郭がこれ以上の広さで2軒以上なら大型の施設（本人 OK 2026-11-07）
+// 大型施設（実際の輪郭を立ち上げる）
+export const FACILITY_HEIGHT_RATE = 0.5 // タイルの高さをこの割合に縮める（かわいく見せる）
+export const FACILITY_MIN_H_M = 6
+export const FACILITY_MAX_H_M = 30
+export const FACILITY_FLOOR_M = 3.5 // 窓の帯1本ぶんの高さ
+export const FACILITY_SCATTER_ZOOM = 17.5 // これ以上拡大したら、ピンを屋根の上の各店の位置に散らばらせる
+export const FACILITY_CLUSTER_PX = 22 // 画面でこれより近い店のピンは1つの塊にする
+export const FACILITY_NEAR_M = 200 // 施設の形を集める範囲（店の点から）
+export const STATION_SIZE_M = 12 // 駅舎の模型の大きさ
