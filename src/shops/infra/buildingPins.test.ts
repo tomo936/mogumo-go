@@ -19,7 +19,8 @@ let zoom = 17
 let zoomEnd: (() => void) | null = null
 const map = { getZoom: () => zoom, on: vi.fn((_e: string, h: () => void) => { zoomEnd = h }), off: vi.fn() } as unknown as MapLibreMap
 const shop = (id: string): Shop => ({ id, name: id, lat: 35, lng: 139, kind: 'cafe', details: null, mapId: null })
-const bldg = (ids: string[]) => ({
+const bldg = (ids: string[], facility = false) => ({
+  facility,
   placed: { id: `bldg:${ids[0]}`, model: 'building', shopIds: ids, lat: 35, lng: 139, facingDeg: 0, sizeM: 16 } as PlacedShop,
   shops: ids.map(shop),
 })
@@ -79,4 +80,23 @@ test('ズームが変わってもまとめ方が同じなら作り直さない',
   zoom = 18
   zoomEnd!()
   expect(made).toHaveLength(1)
+})
+
+test('6軒以上の小さいビルは5つ＋「+N」、+N を押すと全員の id', () => {
+  const onTap = vi.fn()
+  const pins = createBuildingPins(map, onTap)
+  pins.update([bldg(['a', 'b', 'c', 'd', 'e', 'f', 'g'])], new Set())
+  const el = live()[0].el
+  expect(el.querySelectorAll('.bldg-pin')).toHaveLength(5)
+  const more = el.querySelector<HTMLElement>('.bldg-pin__more')!
+  expect(more.textContent).toBe('+2')
+  more.click()
+  expect(onTap).toHaveBeenLastCalledWith(['a', 'b', 'c', 'd', 'e', 'f', 'g'])
+})
+
+test('大型の施設は2軒でもまとめたピン', () => {
+  const pins = createBuildingPins(map, vi.fn())
+  pins.update([bldg(['a', 'b'], true)], new Set(['a']))
+  expect(live()[0].el.textContent).toContain('1/2')
+  expect(live()[0].el.querySelectorAll('.bldg-pin')).toHaveLength(1)
 })

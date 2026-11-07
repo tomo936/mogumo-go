@@ -1,7 +1,8 @@
 import type { P } from '../../map/domain/geo.ts'
 import { SHOP_MAX_SIZE_M, SHOP_MIN_SIZE_M } from '../config.ts'
 
-export type Placement = { center: P; facingDeg: number; sizeM: number; onFootprint: boolean }
+// areaM2: 合わせた輪郭の広さ（輪郭なしは 0）
+export type Placement = { center: P; facingDeg: number; sizeM: number; onFootprint: boolean; areaM2: number }
 
 const SOUTH: P = { x: 0, y: -1 }
 
@@ -50,7 +51,7 @@ function free(road: P | null, roadDist: number, dir: P): Placement {
   const sizeM = SHOP_MIN_SIZE_M
   const need = sizeM / 2 + 4
   const back = road && roadDist < need ? need - roadDist : 0
-  return { center: { x: -dir.x * back || 0, y: -dir.y * back || 0 }, facingDeg: bearing(dir), sizeM, onFootprint: false }
+  return { center: { x: -dir.x * back || 0, y: -dir.y * back || 0 }, facingDeg: bearing(dir), sizeM, onFootprint: false, areaM2: 0 }
 }
 
 // 輪郭あり: その真ん中・大きさに合わせ、道路（無ければ南）に一番向いている辺を正面にする。
@@ -101,7 +102,7 @@ function fitFootprint(ring: P[], road: P | null, maxSizeM: number): Placement | 
     minS = Math.min(minS, v)
     maxS = Math.max(maxS, v)
   }
-  return { center: c, facingDeg: bearing(face), sizeM: clampSize(Math.min(maxF - minF, maxS - minS), maxSizeM), onFootprint: true }
+  return { center: c, facingDeg: bearing(face), sizeM: clampSize(Math.min(maxF - minF, maxS - minS), maxSizeM), onFootprint: true, areaM2: Math.abs(area) }
 }
 
 // 店の点は原点。道路に正面を向け、建物の輪郭があればその真ん中・大きさ（maxSizeM まで）に合わせる

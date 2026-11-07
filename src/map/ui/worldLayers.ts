@@ -7,7 +7,7 @@ import { cellKey } from '../../fog/domain/grid.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
 import { thinAmount, waveClumps } from '../../fog/domain/wave.ts'
 import { createFogLayer } from '../../fog/infra/fogLayer.ts'
-import { BUILDING_MAX_SIZE_M, MAP_SHOPS_REEXTRACT_M, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
+import { BUILDING_MAX_SIZE_M, FACILITY_MIN_AREA_M2, MAP_SHOPS_REEXTRACT_M, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
 import { groupShops } from '../../shops/domain/grouping.ts'
 import { mergeShops } from '../../shops/domain/merge.ts'
 import { placeShop } from '../../shops/domain/placement.ts'
@@ -46,7 +46,7 @@ type WorldMap = MapLibreMap
 const PLAYER_LAYERS = ['me-circle-fill', 'me-circle-line', 'me-shadow']
 
 // 店ごとの置き方。輪郭に合わせたときは、同じ建物の店がそろったときのビルの置き方（bldg）も持つ
-type Placed = { main: PlacedShop; bldg: PlacedShop | null }
+type Placed = { main: PlacedShop; bldg: PlacedShop | null; areaM2: number }
 
 type World = {
   onPosition(p: LatLng): void
@@ -125,7 +125,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         area ??= extractFeatures(map, p, SHOP_RADIUS_M + NEAR_M)
         const { roads, footprints } = featuresNear(area, frame.to(shop))
         const pl = placeShop(roads, footprints)
-        hit = { main: toPlaced(shop, pl), bldg: pl.onFootprint ? toPlaced(shop, placeShop(roads, footprints, BUILDING_MAX_SIZE_M)) : null }
+        hit = { main: toPlaced(shop, pl), bldg: pl.onFootprint ? toPlaced(shop, placeShop(roads, footprints, BUILDING_MAX_SIZE_M)) : null, areaM2: pl.areaM2 }
         placed.set(shop.id, hit)
       }
       visible.push({ shop, hit })
@@ -145,7 +145,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       } else {
         const placedB: PlacedShop = { ...members[0].hit.bldg!, id: `bldg:${ids[0]}`, model: 'building', shopIds: ids }
         out.push(placedB)
-        blds.push({ placed: placedB, shops: members.map((m) => m.shop) })
+        blds.push({ placed: placedB, shops: members.map((m) => m.shop), facility: members[0].hit.areaM2 >= FACILITY_MIN_AREA_M2 })
       }
       key += `${ids.join('+')},`
     }

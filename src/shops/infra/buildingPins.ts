@@ -8,7 +8,7 @@ import { pinLayout } from '../domain/pins.ts'
 import type { Shop } from '../domain/shop.ts'
 import type { PlacedShop } from './shopLayer.ts'
 
-export type PinnedBuilding = { placed: PlacedShop; shops: Shop[] }
+export type PinnedBuilding = { placed: PlacedShop; shops: Shop[]; facility: boolean } // facility: 大型の施設
 
 function pin(color: string, label: string, onClick: () => void): HTMLButtonElement {
   const b = document.createElement('button')
@@ -30,16 +30,16 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
   let checked: ReadonlySet<string> = new Set()
   let collapsedKey = ''
 
-  const keyOf = () => buildings.map((b) => (pinLayout(b.shops.length, map.getZoom()) === 'collapsed' ? 1 : 0)).join('')
+  const keyOf = () => buildings.map((b) => (pinLayout(b.shops.length, map.getZoom(), b.facility) === 'collapsed' ? 1 : 0)).join('')
 
   const render = () => {
     for (const m of markers) m.remove()
     collapsedKey = keyOf()
-    markers = buildings.map(({ placed, shops }) => {
+    markers = buildings.map(({ placed, shops, facility }) => {
       const el = document.createElement('div')
       el.className = 'bldg-pins'
       el.addEventListener('pointerdown', (e) => e.stopPropagation()) // 地図のタップ（建物の当たり判定）を走らせない
-      const layout = pinLayout(shops.length, map.getZoom())
+      const layout = pinLayout(shops.length, map.getZoom(), facility)
       if (layout === 'collapsed') {
         const done = shops.filter((s) => checked.has(s.id)).length
         const p = pin('#ffffff', '🍽', () => onTap(shops.map((s) => s.id)))
@@ -50,12 +50,25 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
         p.prepend(count)
         el.appendChild(p)
       } else {
-        shops.forEach((s, i) => {
+        layout.pins.forEach((at, i) => {
+          const s = shops[i]
           const p = pin(BADGE_COLOR[s.kind], checked.has(s.id) ? '✓' : '', () => onTap([s.id]))
-          p.style.transform = `translate(${layout[i].x}px, ${layout[i].y}px)`
+          p.style.transform = `translate(${at.x}px, ${at.y}px)`
           if (checked.has(s.id)) p.classList.add('bldg-pin--done')
           el.appendChild(p)
         })
+        if (layout.more > 0) {
+          // 並べきれないお店の数。押すと全部の一覧
+          const more = document.createElement('button')
+          more.type = 'button'
+          more.className = 'bldg-pin__more'
+          more.textContent = `+${layout.more}`
+          more.addEventListener('click', (e) => {
+            e.stopPropagation()
+            onTap(shops.map((s) => s.id))
+          })
+          el.appendChild(more)
+        }
       }
       return new Marker({ element: el, offset: [0, -placed.sizeM * BUILDING_PIN_OFFSET_PER_SIZE], anchor: 'bottom' })
         .setLngLat([placed.lng, placed.lat])

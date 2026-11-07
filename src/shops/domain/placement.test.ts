@@ -33,7 +33,7 @@ test('輪郭なし: 東 5m の道路に向き、道路から下がる', () => {
 
 test('輪郭なし・道路なしでも例外なし', () => {
   const r = placeShop([], [])
-  expect(r).toEqual({ center: { x: 0, y: 0 }, facingDeg: 180, sizeM: 14, onFootprint: false })
+  expect(r).toEqual({ center: { x: 0, y: 0 }, facingDeg: 180, sizeM: 14, onFootprint: false, areaM2: 0 })
 })
 
 test('逆回りの輪郭でも同じ結果', () => {
@@ -69,4 +69,9 @@ test('辺がどれも 2m 未満の小さい輪郭は、輪郭なしの決まり�
 test('大きな輪郭（30m角）は maxSizeM=22 なら 22、既定なら 18', () => {
   expect(placeShop(roadNorth, [rect(0, 0, 30, 30)], 22).sizeM).toBe(22)
   expect(placeShop(roadNorth, [rect(0, 0, 30, 30)]).sizeM).toBe(18)
+})
+
+test('輪郭に合わせたときは輪郭の広さ（m²）、輪郭なしは 0', () => {
+  expect(placeShop(roadNorth, [rect(2, -1, 20, 12)]).areaM2).toBeCloseTo(240, 5)
+  expect(placeShop(roadNorth, []).areaM2).toBe(0)
 })
