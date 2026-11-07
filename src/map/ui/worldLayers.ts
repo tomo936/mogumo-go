@@ -7,14 +7,14 @@ import { cellKey } from '../../fog/domain/grid.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
 import { thinAmount, waveClumps } from '../../fog/domain/wave.ts'
 import { createFogLayer } from '../../fog/infra/fogLayer.ts'
-import { BUILDING_MAX_SIZE_M, BUILDING_TOP_RATE, FACILITY_MIN_AREA_M2, FACILITY_NEAR_M, LAYER_UPDATE_MS, LOD_MARGIN_M, LOD_MAX_DETAILED, LOD_NEAR_M, MAP_SHOPS_REEXTRACT_M, MAX_SHOP_MODELS, PLACE_BUDGET_MS, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
+import { BUILDING_MAX_SIZE_M, BUILDING_TOP_RATE, FACILITY_MIN_AREA_M2, FACILITY_NEAR_M, LAYER_UPDATE_MS, LOD_CAMERA_MIN_ZOOM, LOD_CAMERA_MOVE_M, LOD_MARGIN_M, LOD_MAX_DETAILED, LOD_NEAR_M, MAP_SHOPS_REEXTRACT_M, MAX_SHOP_MODELS, PLACE_BUDGET_MS, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
 import { doorPoint, dropSharedParts, enoughShops, facilityLabel, facilityParts, heightAt, mergeFacilities, ringsOverlap, stationIn } from '../../shops/domain/facility.ts'
 import { groupShops } from '../../shops/domain/grouping.ts'
 import { capModels, pickDetailed } from '../../shops/domain/lod.ts'
 import { mergeShops } from '../../shops/domain/merge.ts'
 import { placeShop } from '../../shops/domain/placement.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
-import { visibleShops } from '../../shops/domain/visibility.ts'
+import { modelPlace, visibleShops } from '../../shops/domain/visibility.ts'
 import { extractFeatures, featuresNear, NEAR_M } from '../../shops/infra/mapFeatures.ts'
 import type { AreaFeatures } from '../../shops/infra/mapFeatures.ts'
 import { extractMapShops } from '../../shops/infra/mapShops.ts'
@@ -76,6 +76,7 @@ type World = {
   onPosition(p: LatLng): void
   shopsNear(): Shop[]
   pick(point: { x: number; y: number }): string[] | null // 押された建物の店の id（ビルなら全員）
+  focus(shopIds: string[] | null): void // タップして選んだ店（その建物は必ず詳しい模型）。閉じたら null
   addCleared(cells: Cell[], from: LatLng): void
   markChecked(shopId: string, mapId?: string | null): void
   titleOf(shopIds: string[]): string | null // 施設・駅の名前（ビルや名前の無い施設は null）
@@ -87,7 +88,8 @@ type World = {
 export function attachWorld(map: WorldMap, deps: Deps): World {
   const cleared = clearedFromHome(deps.home)
   const fogLayer = createFogLayer()
-  const shopLayer = createShopLayer()
+  const shopLayer = createShopLayer('shops-3d') // 晴れた所の店（雲と奥行きを比べる）
+  const fogShopLayer = createShopLayer('shops-3d-fog') // 霧の中の近い店（今までどおり雲の上に描く）
   const facilityLayer = createFacilityLayer()
   const checkMarks = createCheckMarks(map)
   const buildingPins = createBuildingPins(map, (ids) => deps.onPinTap(ids))
@@ -137,6 +139,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   let frameId: number | null = null // 次のコマの予約
   let layerAt = 0 // 最後に層を作り直そうとした時刻（ms）
   let lastDetailed: ReadonlySet<string> = new Set() // 前回詳しい模型で出した物の id
+  let focusIds: ReadonlySet<string> = new Set() // タップして選んだ店の id
+  let cameraAt: LatLng | null = null // 詳しい模型を選んだときのカメラの真ん中（拡大していないときは null）
   let refreshedAt: LatLng | null = null
   let extractedAt: LatLng | null = null
   const refreshShops = (p: LatLng) => {
@@ -265,9 +269,13 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       const members = ids.map((id) => byId.get(id)!)
       const fac = members[0].hit.facility
       const facility = !!fac && (members.length > 1 || hasEnoughShops(fac))
-      return { ids, members, facility, d: distanceMeters(p, members.length === 1 ? members[0].hit.main : members[0].hit.bldg!) }
-    })
+      const center = members.length === 1 ? members[0].hit.main : members[0].hit.bldg!
+      // 施設は実際の輪郭で出すので今までどおり。それ以外は模型の中心が霧のセルなら出さない
+      const place = facility ? null : modelPlace(center, members.map((m) => m.shop), p, cleared)
+      return { ids, members, facility, place, d: distanceMeters(p, center) }
+    }).filter((g) => g.facility || g.place)
     const out: PlacedShop[] = []
+    const inFog = new Set<string>() // 霧の中の近い店の模型の id
     const singles: PlacedShop[] = []
     const blds: PinnedBuilding[] = []
     const facs: PlacedFacility[] = []
@@ -275,22 +283,30 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     const facGroups: FacGroup[] = []
     let key = ''
     // 安全のための模型の数の上限（施設は数えない。ふだんは届かない）
-    for (const { ids, members, facility } of capModels(sorted, MAX_SHOP_MODELS)) {
+    for (const { ids, members, facility, place } of capModels(sorted, MAX_SHOP_MODELS)) {
       if (facility) {
         // 大型施設・駅は、重なった輪郭を整理してからまとめて出す（下）
         facGroups.push({ ...members[0].hit.facility!, ids, center: members[0].hit.bldg! })
       } else if (members.length === 1) {
         out.push(members[0].hit.main)
         singles.push(members[0].hit.main)
+        if (place === 'fog') inFog.add(members[0].hit.main.id)
       } else {
         const placedB: PlacedShop = { ...members[0].hit.bldg!, id: `bldg:${ids[0]}`, model: 'building', shopIds: ids }
         out.push(placedB)
+        if (place === 'fog') inFog.add(placedB.id)
         blds.push({ placed: placedB, shops: members.map((m) => m.shop), facility: false, topM: placedB.sizeM * BUILDING_TOP_RATE, spots: [], label: null })
       }
-      key += `${ids.join('+')},`
+      key += `${ids.join('+')}${place === 'fog' ? '~' : ''},`
     }
-    // 近い店は詳しい模型、遠い店は軽い模型（前回詳しかった店は少し遠くまで詳しいまま）
-    const detailed = pickDetailed(out.map((s) => ({ id: s.id, d: distanceMeters(p, s) })), lastDetailed, LOD_NEAR_M, LOD_MARGIN_M, LOD_MAX_DETAILED)
+    // 自分かカメラの真ん中（拡大しているとき）に近い店と、選んだ店は詳しい模型、遠い店は軽い模型
+    // （前回詳しかった店は少し遠くまで詳しいまま）
+    cameraAt = cameraCenter()
+    const cam = cameraAt
+    const detailed = pickDetailed(
+      out.map((s) => ({ id: s.id, d: distanceMeters(p, s), dCam: cam ? distanceMeters(cam, s) : undefined, must: s.shopIds.some((id) => focusIds.has(id)) })),
+      lastDetailed, LOD_NEAR_M, LOD_MARGIN_M, LOD_MAX_DETAILED,
+    )
     lastDetailed = detailed
     const drawn = out.map((s) => (detailed.has(s.id) ? s : { ...s, light: true }))
     key += `|${drawn.filter((s) => s.light).map((s) => s.id).join(',')}`
@@ -321,7 +337,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     shownPlaced = singles
     shownBuildings = blds
     shownFacilities = facs
-    shopLayer.setShops(drawn)
+    shopLayer.setShops(drawn.filter((s) => !inFog.has(s.id)))
+    fogShopLayer.setShops(drawn.filter((s) => inFog.has(s.id)))
     facilityLayer.setFacilities(facs)
     updateMarks()
   }
@@ -425,6 +442,19 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     if (last) refreshShops(last)
   }
   map.on('idle', onIdle)
+  // カメラが動き終わったら、詳しい模型を選び直す（ついて歩くときは毎コマ来るので、真ん中が動いた・拡大の境を越えたときだけ）
+  const cameraCenter = (): LatLng | null => {
+    if (map.getZoom() < LOD_CAMERA_MIN_ZOOM) return null
+    const c = map.getCenter()
+    return { lat: c.lat, lng: c.lng }
+  }
+  const onMoveEnd = () => {
+    if (!refreshedAt) return
+    const c = cameraCenter()
+    if (!c === !cameraAt && (!c || !cameraAt || distanceMeters(c, cameraAt) < LOD_CAMERA_MOVE_M)) return
+    showShops(refreshedAt)
+  }
+  map.on('moveend', onMoveEnd)
 
   // 保存済みの晴れたセルを足す（波なし）。失敗したら自宅まわりだけのまま
   deps.loadProgress().then(
@@ -448,9 +478,11 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       last = p
       if (!fogCenter) {
         const below = PLAYER_LAYERS.find((id) => map.getLayer(id))
+        // 下から 大型施設 → お店 → 霧 → 霧の中の近い店。霧はお店の奥行きと比べて描くので、お店より後
+        map.addLayer(facilityLayer, below)
+        map.addLayer(shopLayer, below)
         map.addLayer(fogLayer, below)
-        map.addLayer(facilityLayer, below) // 大型施設は霧より上
-        map.addLayer(shopLayer, below) // お店は大型施設より上
+        map.addLayer(fogShopLayer, below)
         setFog(p)
       } else if (distanceMeters(fogCenter, p) >= FOG_REBUILD_M) {
         setFog(p)
@@ -461,7 +493,11 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     },
     shopsNear: () => near,
     titleOf: (ids) => shownFacilities.find((f) => f.shopIds.includes(ids[0]))?.name ?? null,
-    pick: (point) => shopLayer.pick(point) ?? facilityLayer.pick(point), // 手前に出やすい小さい模型を先に
+    pick: (point) => fogShopLayer.pick(point) ?? shopLayer.pick(point) ?? facilityLayer.pick(point), // 手前に出やすい小さい模型を先に
+    focus(shopIds) {
+      focusIds = new Set(shopIds ?? [])
+      if (refreshedAt && !disposed) showShops(refreshedAt)
+    },
     addCleared(cells, from) {
       if (disposed) return
       let added = false
@@ -500,7 +536,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       checkMarks.dispose()
       buildingPins.dispose()
       map.off('idle', onIdle)
-      for (const id of [fogLayer.id, facilityLayer.id, shopLayer.id]) if (map.getLayer(id)) map.removeLayer(id)
+      map.off('moveend', onMoveEnd)
+      for (const id of [fogLayer.id, facilityLayer.id, shopLayer.id, fogShopLayer.id]) if (map.getLayer(id)) map.removeLayer(id)
     },
   }
 }

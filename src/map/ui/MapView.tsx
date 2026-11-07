@@ -203,6 +203,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       if (at) {
         const zoom = focusRef.current ? map.getZoom() : Math.min(map.getZoom() + TAP_ZOOM_STEP, MAX_ZOOM)
         focusRef.current = { lat: at.lat, lng: at.lng }
+        s.world?.focus(found.map((sh) => sh.id)) // 選んだ建物は遠くても詳しい模型に
         map.easeTo({ center: [at.lng, at.lat], zoom, duration: 500 })
       } else {
         unfocusRef.current()
@@ -213,6 +214,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       if (!focusRef.current) return
       focusRef.current = null
       s.shown = null
+      s.world?.focus(null)
       if (s.current) map.easeTo({ center: [s.current.lng, s.current.lat], duration: 500 })
     }
     // 毎コマ、表示位置を目標へ寄せてカメラを動かす

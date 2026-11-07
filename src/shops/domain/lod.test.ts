@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { capModels, pickDetailed } from './lod.ts'
 
 const none = new Set<string>()
-const pick = (items: { id: string; d: number }[], prev: Set<string> = none, max = 40) => [...pickDetailed(items, prev, 150, 30, max)].sort()
+const pick = (items: { id: string; d: number; dCam?: number; must?: boolean }[], prev: Set<string> = none, max = 40) => [...pickDetailed(items, prev, 150, 30, max)].sort()
 
 describe('pickDetailed（どの店を詳しい模型にするか）', () => {
   it('150m 以内は詳しい・それより遠いと軽い', () => {
@@ -33,6 +33,25 @@ describe('pickDetailed（どの店を詳しい模型にするか）', () => {
 
   it('空なら空', () => {
     expect(pick([])).toEqual([])
+  })
+
+  it('カメラの真ん中から近い店も詳しい（自分から 279m でも、カメラから 10m なら詳しい）', () => {
+    expect(pick([{ id: 'a', d: 279, dCam: 10 }, { id: 'b', d: 279, dCam: 200 }])).toEqual(['a'])
+  })
+
+  it('自分とカメラの近い方の距離で比べ、上限は合わせて数える', () => {
+    // a: 自分から 20m、b: カメラから 30m、c: カメラから 140m。上限2なら a と b
+    const items = [{ id: 'c', d: 400, dCam: 140 }, { id: 'b', d: 300, dCam: 30 }, { id: 'a', d: 20, dCam: 300 }]
+    expect(pick(items, none, 2)).toEqual(['a', 'b'])
+  })
+
+  it('カメラから近い店にも余裕が効く（前回詳しければカメラから 179m でも詳しい）', () => {
+    expect(pick([{ id: 'a', d: 500, dCam: 179 }], new Set(['a']))).toEqual(['a'])
+  })
+
+  it('選んだ店は遠くても必ず詳しい（上限の中に入る）', () => {
+    const items = [{ id: 'a', d: 10 }, { id: 'b', d: 20 }, { id: 'sel', d: 800, must: true }]
+    expect(pick(items, none, 2)).toEqual(['a', 'sel'])
   })
 })
 

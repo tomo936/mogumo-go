@@ -7,9 +7,10 @@ import { cellOf } from '../../fog/domain/grid.ts'
 import type { LatLng } from '../domain/geo.ts'
 
 const fogLayer = { id: 'fog', setClumps: vi.fn(), setThin: vi.fn() }
-const shopLayer = { id: 'shops-3d', setShops: vi.fn() }
+const shopLayer = { id: 'shops-3d', setShops: vi.fn(), pick: vi.fn(() => null) }
+const fogShopLayer = { id: 'shops-3d-fog', setShops: vi.fn(), pick: vi.fn(() => null) } // 霧の中の近い店（雲の上に描く）
 vi.mock('../../fog/infra/fogLayer.ts', () => ({ createFogLayer: () => fogLayer }))
-vi.mock('../../shops/infra/shopLayer.ts', () => ({ createShopLayer: () => shopLayer }))
+vi.mock('../../shops/infra/shopLayer.ts', () => ({ createShopLayer: (id: string) => (id === 'shops-3d' ? shopLayer : fogShopLayer) }))
 const marksUpdate = vi.fn()
 const pinsUpdate = vi.fn()
 vi.mock('../../shops/infra/checkMarks.ts', () => ({ createCheckMarks: () => ({ update: marksUpdate, dispose: vi.fn() }) }))
@@ -47,11 +48,19 @@ const querySourceFeatures = vi.fn((_s: string, o: { sourceLayer: string }) => ti
 
 let tilesLoaded = true
 let idleHandler: (() => void) | null = null
+let moveEndHandler: (() => void) | null = null
+let zoom = 16 // カメラ（拡大していないので、詳しい模型はふだん自分の位置だけで選ぶ）
+let center: LatLng = { lat: 35.68, lng: 139.76 }
 const fakeMap = () => ({
   addLayer: vi.fn(), removeLayer: vi.fn(), getLayer: vi.fn(() => true),
   areTilesLoaded: () => tilesLoaded,
   querySourceFeatures,
-  on: vi.fn((_e: string, h: () => void) => { idleHandler = h }),
+  getZoom: () => zoom,
+  getCenter: () => center,
+  on: vi.fn((e: string, h: () => void) => {
+    if (e === 'idle') idleHandler = h
+    if (e === 'moveend') moveEndHandler = h
+  }),
   off: vi.fn(),
 }) as unknown as MapLibreMap
 // 道路・建物の読み込み回数（お店の poi 読みは数えない）
@@ -72,6 +81,9 @@ beforeEach(() => {
   vi.spyOn(performance, 'now').mockReturnValue(1000) // 時計は止めておく（置き方の計算が1回で終わる）
   tilesLoaded = true
   idleHandler = null
+  moveEndHandler = null
+  zoom = 16
+  center = home
   tiles = { transportation: [roadFeature], building: [] }
 })
 
@@ -87,15 +99,15 @@ test('最初の位置で霧とお店の層が作られ、fetchHotpepper が現�
   const { world, fetchHotpepper, map } = setup()
   world.onPosition(home)
   expect(fogLayer.setClumps).toHaveBeenCalledTimes(1)
-  expect(map.addLayer).toHaveBeenCalledTimes(3)
+  expect(map.addLayer).toHaveBeenCalledTimes(4)
   expect(fetchHotpepper).toHaveBeenCalledTimes(1)
 })
 
-test('霧・大型施設・お店は自分の位置の印より下に入れ、この順で上に重なる', () => {
+test('大型施設・お店・霧・霧の中の近い店は自分の位置の印より下に入れ、この順で上に重なる', () => {
   const { world, map } = setup()
   vi.mocked(map.getLayer).mockImplementation(((id: string) => (id === 'me-circle-line' || id === 'me-shadow' ? {} : undefined)) as never)
   world.onPosition(home)
-  expect(vi.mocked(map.addLayer).mock.calls).toEqual([[fogLayer, 'me-circle-line'], [facilityLayer, 'me-circle-line'], [shopLayer, 'me-circle-line']])
+  expect(vi.mocked(map.addLayer).mock.calls).toEqual([[facilityLayer, 'me-circle-line'], [shopLayer, 'me-circle-line'], [fogLayer, 'me-circle-line'], [fogShopLayer, 'me-circle-line']])
 })
 
 test('店が何軒あっても、1回の更新でタイルを読むのは道路1回・建物1回', async () => {
@@ -130,7 +142,7 @@ test('組の片方が霧の中なら、見えている1軒はふつうの店', a
   const { world } = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([a, b])) })
   world.onPosition(home)
   await flush()
-  const out = vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]
+  const out = vi.mocked(fogShopLayer.setShops).mock.lastCall![0] as PlacedShop[] // 霧の中の近い店なので雲の上の層
   expect(out.map((s) => [s.id, s.model])).toEqual([['a', 'cafe']])
 })
 
@@ -665,7 +677,7 @@ test('大きい建物でも、読み込んだ店が全部で1軒なら施設に�
   world.onPosition(home)
   await flush()
   expect(facilityLayer.setFacilities).toHaveBeenLastCalledWith([])
-  expect((vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]).map((s) => s.id)).toEqual(['a'])
+  expect((vi.mocked(fogShopLayer.setShops).mock.lastCall![0] as PlacedShop[]).map((s) => s.id)).toEqual(['a'])
 })
 
 // 自宅の北 y m・東 x m の cafe（自宅まわり 200m は晴れ）
@@ -700,6 +712,58 @@ test('詳しい・軽いの切りかえには余裕があり、切りかえた�
   expect((vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[])[0].light).toBe(true)
   world.onPosition(north(-15)) // 155m: 前回軽いので軽いまま
   expect(vi.mocked(shopLayer.setShops).mock.calls.length).toBe(n + 1)
+})
+
+test('霧の中の近い店は雲の上の層、晴れた所の店は雲の下の層に渡る', async () => {
+  const fogShop: Shop = { ...at('fog', 0), lat: home.lat - 230 / M } // 自宅の南 230m（霧）
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([at('clear', 20), fogShop])) })
+  world.onPosition(north(-200)) // 霧の店から 30m・晴れた店から 220m
+  await flush()
+  expect((vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]).map((s) => s.id)).toEqual(['clear'])
+  expect((vi.mocked(fogShopLayer.setShops).mock.lastCall![0] as PlacedShop[]).map((s) => s.id)).toEqual(['fog'])
+})
+
+test('店の点は晴れたセルでも、模型の中心（輪郭の真ん中）が霧のセルなら出さない', async () => {
+  // 輪郭は北 175〜285m（真ん中 230m は霧）。店の点は 180m（晴れ）
+  tiles = { transportation: [roadFeature], building: [building(0, 230, 20, 110)] }
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([at('near', 20), at('edge', 180)])) })
+  world.onPosition(home)
+  await flush()
+  expect((vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]).map((s) => s.id)).toEqual(['near'])
+  expect(vi.mocked(fogShopLayer.setShops).mock.lastCall![0]).toEqual([])
+})
+
+test('拡大しているとき、カメラが動き終わったらカメラの真ん中から近い店も詳しい模型にする', async () => {
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([at('a', 150)])) })
+  world.onPosition(north(-150)) // a まで 300m
+  await flush()
+  const light = () => (vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[])[0].light
+  expect(light()).toBe(true)
+  center = north(140)
+  moveEndHandler!() // 拡大していない（16）ので変わらない
+  expect(light()).toBe(true)
+  zoom = 17
+  moveEndHandler!()
+  expect(light()).toBeFalsy()
+  const n = vi.mocked(shopLayer.setShops).mock.calls.length
+  center = north(135)
+  moveEndHandler!() // 5m しか動いていないので選び直さない
+  expect(vi.mocked(shopLayer.setShops).mock.calls.length).toBe(n)
+  zoom = 16.5
+  moveEndHandler!() // 縮小したら自分の位置だけで選ぶ
+  expect(light()).toBe(true)
+})
+
+test('タップして選んだ店は遠くても詳しい模型にし、閉じたら戻す', async () => {
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([at('a', 150)])) })
+  world.onPosition(north(-150))
+  await flush()
+  const light = () => (vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[])[0].light
+  expect(light()).toBe(true)
+  world.focus(['a'])
+  expect(light()).toBeFalsy()
+  world.focus(null)
+  expect(light()).toBe(true)
 })
 
 test('たくさんの店は、最初の呼び出しで一部を置き、コマを進めると全部が置かれる', async () => {
