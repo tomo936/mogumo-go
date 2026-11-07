@@ -50,13 +50,14 @@ describe('visibleShops', () => {
     expect(visibleShops([far], me, cleared)).toEqual([])
   })
 
-  it('50軒の晴れた店から近い順に40軒', () => {
+  it('500軒の晴れた店は上限なく全部、近い順で返る', () => {
     const cleared = clearedFromHome(me)
-    const shops = Array.from({ length: 50 }, (_, i) => shop(`s${i}`, 150 - i * 3)).reverse()
+    const shops = Array.from({ length: 500 }, (_, i) => shop(`s${i}`, 150 - i * 0.25)).reverse()
     const r = visibleShops(shops, me, cleared)
-    expect(r).toHaveLength(40)
-    expect(r[0].id).toBe('s49')
-    expect(shops).toHaveLength(50)
+    expect(r).toHaveLength(500)
+    expect(r[0].id).toBe('s499')
+    expect(r[499].id).toBe('s0')
+    expect(shops).toHaveLength(500)
   })
 
   it('空配列で空', () => {

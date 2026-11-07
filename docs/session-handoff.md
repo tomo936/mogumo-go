@@ -20,6 +20,7 @@
 5. あとでやること: 閉店・名前違いのお店を知らせる仕組み。ポコタンのチュートリアル（Live2D、`origin/add-pokotan-live2d`）は**ほかの機能より後**
 
 ## 本人待ち・シロ待ち
+- 本人: LOD 設計メモ（`docs/superpowers/specs/2026-11-07-shop-lod-design.md`）§7 の4番「ピンが150個を超えたときの対策」は、本人が帰ってから相談する（2026-11-07）。実装は実装役が進行中
 - シロ: 連携は `handoff/`。作成中＝お店のピンのアイコン 13種（届いたらビルのピンの仮の丸を差し替える。色は `src/shops/domain/badgeColor.ts`）、女の子の歩行の絵。未対応＝チェックイン演出の素材4種（`handoff/to-shiro/2026-11-06-checkin-effect-art.md`）、ビルのオーナー確認（`handoff/to-shiro/2026-11-07-building-owner-check.md`）
 
 ## 道具の置き場所（この会話の作業用フォルダ。再起動で消えることがある）

@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { cuteHeight, doorPoint, dropSharedParts, facilityLabel, facilityParts, floors, heightAt, mergeFacilities, outerEdges, ringsOverlap, stationIn } from './facility.ts'
+import { cuteHeight, doorPoint, dropSharedParts, enoughShops, facilityLabel, facilityParts, floors, heightAt, mergeFacilities, outerEdges, ringsOverlap, shopsInRing, stationIn } from './facility.ts'
 
 const rect = (cx: number, cy: number, w: number, h: number) => [
   { x: cx - w / 2, y: cy - h / 2 },
@@ -139,4 +139,17 @@ test('mergeFacilities: 重ならない施設はそのまま（同じもの）。
   expect(out[0].ids).toEqual(['c', 'a', 'b'])
   expect(out[0].parts.map((q) => q.ring)).toEqual(['X', 'A', 'B'])
   expect(out[1]).toBe(d)
+})
+
+test('輪郭の中にある店の数: 中の2軒・外の1軒で 2、外だけなら 0', () => {
+  const ring = rect(0, 0, 60, 40)
+  expect(shopsInRing(ring, [{ x: 1, y: 1 }, { x: -20, y: 10 }, { x: 100, y: 0 }])).toBe(2)
+  expect(shopsInRing(ring, [{ x: 100, y: 0 }, { x: 0, y: 50 }])).toBe(0)
+})
+
+test('施設にするかは、見えている数ではなく読み込んだ全部の店の数で決める', () => {
+  const ring = rect(0, 0, 60, 40)
+  // 見えているのは1軒（a）だけでも、霧の中の b を含めて2軒なら施設
+  expect(enoughShops(ring, [{ x: 1, y: 1 }, { x: 20, y: -10 }])).toBe(true)
+  expect(enoughShops(ring, [{ x: 1, y: 1 }, { x: 200, y: 0 }])).toBe(false)
 })

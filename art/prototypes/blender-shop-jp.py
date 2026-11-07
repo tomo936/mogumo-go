@@ -26,9 +26,11 @@ def mat(color, rough=0.72, emit=0.0):
     if emit: b.inputs['Emission Color'].default_value = (*srgb(color), 1); b.inputs['Emission Strength'].default_value = emit
     MATS[k] = m; return m
 
+LO = bool(os.environ.get('LOD'))   # 遠く用の軽い版: 角の丸めを付けず、丸い形の分割を半分にする（blender-lod.py）
+
 def finish(o, m, bevel=0.0, seg=2):
     o.data.materials.clear(); o.data.materials.append(m)
-    if bevel:
+    if bevel and not LO:
         b = o.modifiers.new('bevel', 'BEVEL'); b.width = bevel; b.segments = seg; b.limit_method = 'ANGLE'; b.harden_normals = False
     for p in o.data.polygons: p.use_smooth = True
     return o
@@ -39,15 +41,18 @@ def cube(size, loc, m, bevel=0.03, seg=2, rot=(0, 0, 0)):
     return finish(o, m, bevel, seg)
 
 def cyl(r, h, loc, m, rot=(0, 0, 0), verts=20, bevel=0.015):
+    if LO: verts = max(6, verts // 2)
     bpy.ops.mesh.primitive_cylinder_add(radius=r, depth=h, location=loc, rotation=rot, vertices=verts)
     return finish(bpy.context.object, m, bevel)
 
 def sphere(r, loc, m, scale=(1, 1, 1), seg=16):
+    if LO: seg = max(6, seg // 2)
     bpy.ops.mesh.primitive_uv_sphere_add(radius=r, location=loc, segments=seg, ring_count=seg // 2)
     o = bpy.context.object; o.scale = scale; bpy.ops.object.transform_apply(scale=True)
     return finish(o, m)
 
 def lathe(prof, loc, m, steps=20):
+    if LO: steps = max(6, steps // 2)
     me = bpy.data.meshes.new('l'); bm = bmesh.new()
     vs = [bm.verts.new((r, 0, z)) for r, z in prof]; es = [bm.edges.new((vs[i], vs[i + 1])) for i in range(len(vs) - 1)]
     bmesh.ops.spin(bm, geom=vs + es, cent=(0, 0, 0), axis=(0, 0, 1), angle=math.tau, steps=steps, use_duplicate=False)
@@ -274,6 +279,10 @@ cube((0.34, 0.34, 0.1), (cx, cy, cz + 0.4), GREY if SOBA else BRICK, bevel=0.03)
 cube((0.2, 0.2, 0.12), (cx, cy, cz + 0.42), DARK, bevel=0.01)
 for k, (dx, dz, r) in enumerate([(0.0, 0.62, 0.09), (0.06, 0.78, 0.12), (0.02, 0.98, 0.15), (0.1, 1.2, 0.11)]):
     sphere(r, (cx + dx, cy, cz + dz), STEAM, seg=16)
+
+# ── 遠く用のさらに軽い glb（LOD=1）: 作り方は blender-lod.py（blender-shops.py と共通） ──
+if os.environ.get('LOD'):
+    exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'blender-lod.py'), encoding='utf-8').read())
 
 # ── 軽い glb（アプリ用）: LIGHT=1 のときはレンダリングせず、形をつなげて 1 万三角形以内に減らして書く ──
 if os.environ.get('LIGHT'):

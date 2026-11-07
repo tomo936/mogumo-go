@@ -7,9 +7,10 @@ import { cellKey } from '../../fog/domain/grid.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
 import { thinAmount, waveClumps } from '../../fog/domain/wave.ts'
 import { createFogLayer } from '../../fog/infra/fogLayer.ts'
-import { BUILDING_MAX_SIZE_M, BUILDING_TOP_RATE, FACILITY_MIN_AREA_M2, FACILITY_NEAR_M, MAP_SHOPS_REEXTRACT_M, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
-import { doorPoint, dropSharedParts, facilityLabel, facilityParts, heightAt, mergeFacilities, ringsOverlap, stationIn } from '../../shops/domain/facility.ts'
+import { BUILDING_MAX_SIZE_M, BUILDING_TOP_RATE, FACILITY_MIN_AREA_M2, FACILITY_NEAR_M, LAYER_UPDATE_MS, LOD_MARGIN_M, LOD_MAX_DETAILED, LOD_NEAR_M, MAP_SHOPS_REEXTRACT_M, MAX_SHOP_MODELS, PLACE_BUDGET_MS, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
+import { doorPoint, dropSharedParts, enoughShops, facilityLabel, facilityParts, heightAt, mergeFacilities, ringsOverlap, stationIn } from '../../shops/domain/facility.ts'
 import { groupShops } from '../../shops/domain/grouping.ts'
+import { capModels, pickDetailed } from '../../shops/domain/lod.ts'
 import { mergeShops } from '../../shops/domain/merge.ts'
 import { placeShop } from '../../shops/domain/placement.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
@@ -67,6 +68,9 @@ type Placed = {
   ring: LatLng[] | null
   facility: { parts: { ring: LatLng[]; heightM: number }[]; door: LatLng; kind: 'facility' | 'station'; name: string | null } | null
 }
+
+// 置き方の計算待ちの列と、そのために取り出した道路・建物（p を原点にした m）
+type Work = { p: LatLng; frame: ReturnType<typeof localFrame>; area: AreaFeatures | null; queue: Shop[] }
 
 type World = {
   onPosition(p: LatLng): void
@@ -128,6 +132,11 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     return { id: shop.id, model: shop.kind, shopIds: [shop.id], lat: c.lat, lng: c.lng, facingDeg: pl.facingDeg, sizeM: pl.sizeM }
   }
 
+  let shownVisible: Shop[] = [] // 最後の更新で見えていた店（近い順。置き方が未計算の店も含む）
+  let work: Work | null = null // 置き方の計算待ち
+  let frameId: number | null = null // 次のコマの予約
+  let layerAt = 0 // 最後に層を作り直そうとした時刻（ms）
+  let lastDetailed: ReadonlySet<string> = new Set() // 前回詳しい模型で出した物の id
   let refreshedAt: LatLng | null = null
   let extractedAt: LatLng | null = null
   const refreshShops = (p: LatLng) => {
@@ -156,46 +165,108 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         }
       }
     }
-    // タイルは1回の更新で1回だけ読む（店ごとに読むと、店の数×タイルの大きさだけ重くなる）
-    let area: AreaFeatures | null = null
+    // 見える店（近い順）。まだ置き方を計算していない店は近い順の列に入れ、1コマ PLACE_BUDGET_MS ずつ計算する
+    // （初めての場所や霧が大きく晴れた直後に、数百軒を一度に計算して画面が止まらないように）。最初の分はこの場で計算する
+    shownVisible = visibleShops(shops, p, cleared)
+    if (!map.areTilesLoaded()) {
+      work = null // タイル読み込み中は置かない。idle のときにやり直す
+    } else {
+      const queue = shownVisible.filter((s) => !placed.has(s.id))
+      // 地図から取り出した道路・建物は、列を計算し終えるまで使い回す（動いたら作り直す）
+      work = work && distanceMeters(work.p, p) < SHOP_REFRESH_M ? { ...work, queue } : { p, frame: localFrame(p), area: null, queue }
+    }
+    placeSome()
+    showShops(p)
+    if (work) nextFrame()
+  }
+
+  // 列の店の置き方を、PLACE_BUDGET_MS まで計算する（最低1軒）。列が空になったら取り出した道路・建物も捨てる
+  const placeSome = () => {
+    if (!work) return
+    const t0 = performance.now()
+    while (work.queue.length) {
+      const shop = work.queue.shift()!
+      if (!placed.has(shop.id)) placeOne(shop, work)
+      if (performance.now() - t0 >= PLACE_BUDGET_MS) break
+    }
+    if (!work.queue.length) work = null
+  }
+
+  // 次のコマで続きを計算する。層の作り直しは LAYER_UPDATE_MS ごとと、列が空になったときだけ（毎コマ作り直すと重い）
+  const nextFrame = () => {
+    if (frameId !== null || disposed) return
+    frameId = requestAnimationFrame(() => {
+      frameId = null
+      if (disposed) return
+      placeSome()
+      if (refreshedAt && (!work || performance.now() - layerAt >= LAYER_UPDATE_MS)) showShops(refreshedAt)
+      if (work) nextFrame()
+    })
+  }
+
+  // 1軒の店の置き方（道路向き・建物の輪郭に合わせる）と、大型施設・駅の形を計算して覚える
+  const placeOne = (shop: Shop, w: Work) => {
+    // タイルは1回の列で1回だけ読む（店ごとに読むと、店の数×タイルの大きさだけ重くなる）
+    w.area ??= extractFeatures(map, w.p, SHOP_RADIUS_M + NEAR_M)
+    const area = w.area
+    const frame = w.frame
+    const { roads, footprints } = featuresNear(area, frame.to(shop))
+    const pl = placeShop(roads, footprints)
+    const bldg = pl.onFootprint ? toPlaced(shop, placeShop(roads, footprints, BUILDING_MAX_SIZE_M)) : null
+    const sf = localFrame(shop)
+    const marks = landmarks.map((m) => ({ p: sf.to(m), name: m.name, kind: m.kind }))
+    const ring = pl.ringIndex !== null ? footprints[pl.ringIndex] : null
+    const hasStation = !!ring && stationIn([{ pts: ring, heightM: 0 }], marks.filter((m) => m.kind === 'station').map((m) => m.p)) !== null
+    const solid = !!bldg && (pl.areaM2 >= FACILITY_MIN_AREA_M2 || hasStation)
+    let facility: Placed['facility'] = null
+    // 同じ施設の形をもう計算していれば使い回す（施設ごとに1回）
+    if (solid) facility = facilityCache.find((f) => stationIn([{ pts: f.parts[0].ring.map((v) => sf.to(v)), heightM: 0 }], [{ x: 0, y: 0 }]) !== null) ?? null
+    if (!facility && solid && bldg) {
+      // 広めに集めた輪郭から、店の輪郭と重なる部分（タイルのかけら・高さ違い）を立ち上げる
+      const wide = featuresNear(area, frame.to(shop), FACILITY_NEAR_M)
+      const idx = placeShop(wide.roads, wide.footprints).ringIndex
+      if (idx !== null) {
+        const parts = facilityParts(idx, wide.footprints, wide.heights)
+        const label = facilityLabel(parts, marks, wide.footprints)
+        const d = doorPoint(sf.to(bldg), bldg.facingDeg, parts[0].pts)
+        facility = { parts: parts.map((q) => ({ ring: q.pts.map((v) => sf.back(v)), heightM: q.heightM })), door: sf.back(d), ...label }
+        facilityCache.push(facility)
+      }
+    }
+    placed.set(shop.id, { main: toPlaced(shop, pl), bldg, areaM2: pl.areaM2, ring: bldg && ring ? ring.map((v) => sf.back(v)) : null, facility })
+  }
+
+  // 施設の輪郭の中に、読み込んだ全部の店（霧の中も含む）が2軒以上あるか。店の一覧が変わったときだけ数え直す
+  const facilityFull = new Map<NonNullable<Placed['facility']>, { list: Shop[]; ok: boolean }>()
+  const hasEnoughShops = (f: NonNullable<Placed['facility']>) => {
+    const c = facilityFull.get(f)
+    if (c && c.list === shops) return c.ok
+    const ring = f.parts[0].ring
+    const rf = localFrame(ring[0])
+    const ok = enoughShops(ring.map((v) => rf.to(v)), shops.map((s) => rf.to(s)))
+    facilityFull.set(f, { list: shops, ok })
+    return ok
+  }
+
+  // 置き方が分かっている見えている店を組にして、層・ピン・✓ を出す（顔ぶれが変わったときだけ作り直す）
+  const showShops = (p: LatLng) => {
+    layerAt = performance.now()
     const frame = localFrame(p)
     const visible: { shop: Shop; hit: Placed }[] = []
-    for (const shop of visibleShops(shops, p, cleared)) { // 近い順
-      let hit = placed.get(shop.id)
-      if (!hit) {
-        if (!map.areTilesLoaded()) continue // タイル読み込み中は置かない。idle のときにやり直す
-        area ??= extractFeatures(map, p, SHOP_RADIUS_M + NEAR_M)
-        const { roads, footprints } = featuresNear(area, frame.to(shop))
-        const pl = placeShop(roads, footprints)
-        const bldg = pl.onFootprint ? toPlaced(shop, placeShop(roads, footprints, BUILDING_MAX_SIZE_M)) : null
-        const sf = localFrame(shop)
-        const marks = landmarks.map((m) => ({ p: sf.to(m), name: m.name, kind: m.kind }))
-        const ring = pl.ringIndex !== null ? footprints[pl.ringIndex] : null
-        const hasStation = !!ring && stationIn([{ pts: ring, heightM: 0 }], marks.filter((m) => m.kind === 'station').map((m) => m.p)) !== null
-        const solid = !!bldg && (pl.areaM2 >= FACILITY_MIN_AREA_M2 || hasStation)
-        let facility: Placed['facility'] = null
-        // 同じ施設の形をもう計算していれば使い回す（施設ごとに1回）
-        if (solid) facility = facilityCache.find((f) => stationIn([{ pts: f.parts[0].ring.map((v) => sf.to(v)), heightM: 0 }], [{ x: 0, y: 0 }]) !== null) ?? null
-        if (!facility && solid && bldg) {
-          // 広めに集めた輪郭から、店の輪郭と重なる部分（タイルのかけら・高さ違い）を立ち上げる
-          const wide = featuresNear(area, frame.to(shop), FACILITY_NEAR_M)
-          const idx = placeShop(wide.roads, wide.footprints).ringIndex
-          if (idx !== null) {
-            const parts = facilityParts(idx, wide.footprints, wide.heights)
-            const label = facilityLabel(parts, marks, wide.footprints)
-            const d = doorPoint(sf.to(bldg), bldg.facingDeg, parts[0].pts)
-            facility = { parts: parts.map((q) => ({ ring: q.pts.map((v) => sf.back(v)), heightM: q.heightM })), door: sf.back(d), ...label }
-            facilityCache.push(facility)
-          }
-        }
-        hit = { main: toPlaced(shop, pl), bldg, areaM2: pl.areaM2, ring: bldg && ring ? ring.map((v) => sf.back(v)) : null, facility }
-        placed.set(shop.id, hit)
-      }
-      visible.push({ shop, hit })
+    for (const shop of shownVisible) {
+      const hit = placed.get(shop.id)
+      if (hit) visible.push({ shop, hit })
     }
     // 同じ建物（輪郭に合わせた中心がそろう）の見えている店を1組にする
     const byId = new Map(visible.map((v) => [v.shop.id, v]))
     const groups = groupShops(visible.map(({ shop, hit }) => ({ id: shop.id, footprintCenter: hit.bldg ? frame.to(hit.main) : null })))
+    // 組ごとの出し方。施設（大型施設・駅）は、見えている店が1軒でも、読み込んだ全部の店で2軒以上なら施設として出す
+    const sorted = groups.map((ids) => {
+      const members = ids.map((id) => byId.get(id)!)
+      const fac = members[0].hit.facility
+      const facility = !!fac && (members.length > 1 || hasEnoughShops(fac))
+      return { ids, members, facility, d: distanceMeters(p, members.length === 1 ? members[0].hit.main : members[0].hit.bldg!) }
+    })
     const out: PlacedShop[] = []
     const singles: PlacedShop[] = []
     const blds: PinnedBuilding[] = []
@@ -203,14 +274,14 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     type FacGroup = NonNullable<Placed['facility']> & { ids: string[]; center: PlacedShop }
     const facGroups: FacGroup[] = []
     let key = ''
-    for (const ids of groups) {
-      const members = ids.map((id) => byId.get(id)!)
-      if (members.length === 1) {
+    // 安全のための模型の数の上限（施設は数えない。ふだんは届かない）
+    for (const { ids, members, facility } of capModels(sorted, MAX_SHOP_MODELS)) {
+      if (facility) {
+        // 大型施設・駅は、重なった輪郭を整理してからまとめて出す（下）
+        facGroups.push({ ...members[0].hit.facility!, ids, center: members[0].hit.bldg! })
+      } else if (members.length === 1) {
         out.push(members[0].hit.main)
         singles.push(members[0].hit.main)
-      } else if (members[0].hit.facility) {
-        // 大型施設・駅は、重なった輪郭を整理してからまとめて出す（下）
-        facGroups.push({ ...members[0].hit.facility, ids, center: members[0].hit.bldg! })
       } else {
         const placedB: PlacedShop = { ...members[0].hit.bldg!, id: `bldg:${ids[0]}`, model: 'building', shopIds: ids }
         out.push(placedB)
@@ -218,6 +289,11 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       }
       key += `${ids.join('+')},`
     }
+    // 近い店は詳しい模型、遠い店は軽い模型（前回詳しかった店は少し遠くまで詳しいまま）
+    const detailed = pickDetailed(out.map((s) => ({ id: s.id, d: distanceMeters(p, s) })), lastDetailed, LOD_NEAR_M, LOD_MARGIN_M, LOD_MAX_DETAILED)
+    lastDetailed = detailed
+    const drawn = out.map((s) => (detailed.has(s.id) ? s : { ...s, light: true }))
+    key += `|${drawn.filter((s) => s.light).map((s) => s.id).join(',')}`
     // 大型施設・駅: 実際の形の立体と、名前の札。輪郭を共有する・形が重なる施設は1つにまとめ（駅があれば駅）、
     // 残りも同じ輪郭を2つの施設が描かないよう、駅を先に並べて重なりを外す
     const merged = mergeFacilities(facGroups, ringKey, (a, b) => ringsOverlap(a.map((v) => frame.to(v)), b.map((v) => frame.to(v))))
@@ -245,7 +321,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     shownPlaced = singles
     shownBuildings = blds
     shownFacilities = facs
-    shopLayer.setShops(out)
+    shopLayer.setShops(drawn)
     facilityLayer.setFacilities(facs)
     updateMarks()
   }
@@ -420,6 +496,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     },
     dispose() {
       disposed = true
+      if (frameId !== null) cancelAnimationFrame(frameId)
       checkMarks.dispose()
       buildingPins.dispose()
       map.off('idle', onIdle)

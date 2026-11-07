@@ -1,7 +1,6 @@
 // お店まわりの調整値。何も import しない。
 export const SHOP_RADIUS_M = 1000
 export const SHOP_REFETCH_M = 500
-export const MAX_SHOPS = 40
 export const SHOP_MIN_SIZE_M = 14
 export const SHOP_MAX_SIZE_M = 18 // 建物の大きさは「少し違う」くらいに収める（本人 2026-11-06）
 export const SHOP_RETRY_WAIT_MS = 3000
@@ -33,3 +32,10 @@ export const FACILITY_SCATTER_ZOOM = 17.5 // これ以上拡大したら、ピ�
 export const FACILITY_CLUSTER_PX = 22 // 画面でこれより近い店のピンは1つの塊にする
 export const FACILITY_NEAR_M = 200 // 施設の形を集める範囲（店の点から）
 export const STATION_SIZE_M = 12 // 駅舎の模型の大きさ
+// 見える範囲のお店を全部出す（LOD）
+export const MAX_SHOP_MODELS = 400 // 安全のための模型の数の上限（施設の店は数えない。ビルは1つで1）
+export const LOD_NEAR_M = 150 // これより近い店は詳しい模型、遠い店は軽い模型
+export const LOD_MARGIN_M = 30 // 切りかえの余裕。前回詳しかった店はこの分だけ遠くまで詳しいまま
+export const LOD_MAX_DETAILED = 40 // 詳しい模型の最大の数
+export const PLACE_BUDGET_MS = 6 // 置き方の計算に1コマで使ってよい時間
+export const LAYER_UPDATE_MS = 250 // 計算中に層を作り直す間隔
