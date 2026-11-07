@@ -1074,7 +1074,42 @@ def building():
         for k in range(3): cube((0.14, 0.01, 0.015), (x, y - 0.092, H + 0.06 + k * 0.035), METAL_D, bevel=0)
 
 
-{'building': building, 'ramen': ramen, 'sushi': sushi, 'chinese': chinese, 'yakiniku': yakiniku, 'western': western, 'cake': cake, 'bakery': bakery, 'mystery': mystery, 'soba': soba, 'izakaya': izakaya, 'washoku': washoku, 'curry': curry, 'cafe': cafe}[KIND]()
+# ── 駅舎（仮。シロの見本 art/reference/shops/station.png が来たら合わせ直す） ──────
+def station():
+    WALL = mat('#f6ead7'); WOOD = mat('#8e5c42'); WOOD_L = mat('#b7a08a'); ROOF = mat('#c9604c'); ROOF_D = mat('#a94d3d')
+    GLASS = mat('#91cfe7', 0.4); GLOW = mat('#fbe2ae', 0.7, emit=0.5); WHITE = mat('#fbf7ef'); RED = mat('#e4745f')
+    CLOCK = mat('#fffdf7'); HAND = mat('#4a3a30'); METAL = mat('#9fb0c2', 0.5); LEAF = mat('#7aa45e'); POT = mat('#c4835a')
+    W, D, H = 1.9, 1.3, 1.0; FY = -D / 2
+    cube((W, D, H), (0, 0, H / 2), WALL, bevel=0.04, seg=3)
+    cube((W + 0.06, D + 0.06, 0.12), (0, 0, 0.06), WOOD, bevel=0.03)
+    # 三角屋根（妻が正面）
+    gable_roof(W, D, H, 0.55, 0.12, 0.12, ROOF, ROOF_D, WOOD)
+    for (gy, sy) in ((-D / 2 + 0.001, -1), (D / 2 - 0.001, 1)): gable_wall(W, gy, H, math.tan(0.55) * W / 2, WALL, sy)
+    # 妻の丸い時計
+    cyl(0.2, 0.06, (0, FY - 0.04, H + 0.28), WOOD, rot=(math.pi / 2, 0, 0), verts=28, bevel=0.01)
+    cyl(0.165, 0.065, (0, FY - 0.05, H + 0.28), CLOCK, rot=(math.pi / 2, 0, 0), verts=28, bevel=0.005)
+    cube((0.02, 0.02, 0.12), (0, FY - 0.09, H + 0.33), HAND, bevel=0); cube((0.09, 0.02, 0.02), (0.04, FY - 0.09, H + 0.28), HAND, bevel=0)
+    # 改札の入口（ガラス戸＋明かり）と左右の窓
+    cube((0.7, 0.08, 0.72), (0, FY - 0.01, 0.48), WOOD, bevel=0.02)
+    cube((0.58, 0.085, 0.62), (0, FY - 0.015, 0.47), GLOW, bevel=0.008)
+    cube((0.02, 0.09, 0.62), (0, FY - 0.03, 0.47), WOOD, bevel=0)
+    for x in (-0.68, 0.68):
+        cube((0.36, 0.08, 0.36), (x, FY - 0.01, 0.6), WOOD_L, bevel=0.02); cube((0.28, 0.085, 0.28), (x, FY - 0.015, 0.6), GLASS, bevel=0.006)
+    # 入口のひさし（赤白しま）
+    awning(1.0, 8, 0.32, 0.45, RED, WHITE, M_at(0, FY - 0.03, 0.9))
+    # 横にホームの屋根（柱＋平らな屋根）
+    for y in (-0.45, 0.45):
+        cyl(0.03, 0.85, (W / 2 + 0.75, y, 0.43), METAL, verts=10, bevel=0)
+    cube((1.3, 1.25, 0.06), (W / 2 + 0.7, 0, 0.88), WOOD_L, bevel=0.02)
+    cube((1.1, 0.45, 0.12), (W / 2 + 0.7, 0, 0.06), mat('#d9d2c8'), bevel=0.02)   # ホーム
+    # ベンチと植木
+    cube((0.4, 0.12, 0.04), (W / 2 + 0.7, 0.05, 0.3), WOOD, bevel=0.01)
+    for (x, y) in ((-0.75, FY - 0.25), (0.75, FY - 0.25)):
+        lathe([(0, 0), (0.07, 0), (0.09, 0.14), (0.1, 0.155), (0, 0.155)], (x, y, 0.0), POT, steps=14)
+        for k in range(4): sphere(0.06, (x + math.cos(k * 1.57) * 0.03, y + math.sin(k * 1.57) * 0.03, 0.24 + (k % 2) * 0.04), LEAF, seg=8)
+
+
+{'station': station, 'building': building, 'ramen': ramen, 'sushi': sushi, 'chinese': chinese, 'yakiniku': yakiniku, 'western': western, 'cake': cake, 'bakery': bakery, 'mystery': mystery, 'soba': soba, 'izakaya': izakaya, 'washoku': washoku, 'curry': curry, 'cafe': cafe}[KIND]()
 # 曲線（瓦の筋など）は glb に入らないので形に変えておく
 for o in list(bpy.data.objects):
     if o.type == 'CURVE':
