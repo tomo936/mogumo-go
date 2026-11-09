@@ -3,26 +3,25 @@ import { dragHeight, sheetStop } from './sheetDrag.ts'
 
 describe('sheetStop', () => {
   it('上に引いたら全画面', () => {
-    expect(sheetStop('small', -60, 400, 260)).toBe('full')
-    expect(sheetStop('full', -60, 800, 260)).toBe('full')
+    expect(sheetStop('small', -60)).toBe('full')
+    expect(sheetStop('full', -60)).toBe('full')
   })
-  it('小さい段で下に引いたら閉じる', () => {
-    expect(sheetStop('small', 60, 200, 260)).toBe('close')
-  })
-  it('全画面で下に引いたら小さく、一気に下まで引いたら閉じる', () => {
-    expect(sheetStop('full', 300, 500, 260)).toBe('small')
-    expect(sheetStop('full', 700, 100, 260)).toBe('close')
+  it('下に引いても閉じない（小さい段のまま／全画面なら小さい段へ）', () => {
+    expect(sheetStop('small', 200)).toBe('small')
+    expect(sheetStop('full', 300)).toBe('small')
+    expect(sheetStop('full', 900)).toBe('small')
   })
   it('少しだけなら元の段', () => {
-    expect(sheetStop('small', -20, 280, 260)).toBe('small')
-    expect(sheetStop('full', 20, 780, 260)).toBe('full')
+    expect(sheetStop('small', -20)).toBe('small')
+    expect(sheetStop('full', 20)).toBe('full')
   })
 })
 
 describe('dragHeight', () => {
-  it('指についてくる。0〜画面の高さに収める', () => {
-    expect(dragHeight(260, -100, 800)).toBe(360)
-    expect(dragHeight(260, 400, 800)).toBe(0)
-    expect(dragHeight(700, -300, 800)).toBe(800)
+  it('指についてくる。小さい段〜画面の高さに収める', () => {
+    expect(dragHeight(260, -100, 260, 800)).toBe(360)
+    expect(dragHeight(260, 400, 260, 800)).toBe(260) // 小さい段で下へ引いても動かない
+    expect(dragHeight(700, 900, 260, 800)).toBe(260)
+    expect(dragHeight(700, -300, 260, 800)).toBe(800)
   })
 })

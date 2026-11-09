@@ -60,7 +60,7 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
   const sectionRef = useRef<HTMLElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const [smallH, setSmallH] = useState(0) // 小さい段の高さ（引き始めに測る）
-  const drag = useRef<{ from: 'small' | 'full'; startY: number; startH: number; moved: boolean } | null>(null)
+  const drag = useRef<{ from: 'small' | 'full'; startY: number; startH: number; smallH: number; moved: boolean } | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current)
@@ -107,8 +107,9 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
     }, SETTLE_MS)
   }
   const begin = (y: number) => {
-    if (!expanded && height === null) setSmallH(currentH())
-    drag.current = { from: expanded ? 'full' : 'small', startY: y, startH: currentH(), moved: false }
+    const small = !expanded && height === null ? currentH() : smallH
+    setSmallH(small)
+    drag.current = { from: expanded ? 'full' : 'small', startY: y, startH: currentH(), smallH: small, moved: false }
   }
   // 引いているなら true（呼び出し側でスクロールなどを止める）
   const move = (y: number): boolean => {
@@ -120,7 +121,7 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
       g.moved = true
     }
     setSettling(null)
-    setHeight(dragHeight(g.startH, dy, fullH()))
+    setHeight(dragHeight(g.startH, dy, g.smallH, fullH()))
     return true
   }
   const end = (y: number | null) => {
@@ -129,7 +130,7 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
     if (!g?.moved) return
     if (y === null) return settle(g.from)
     const dy = y - g.startY
-    settle(sheetStop(g.from, dy, dragHeight(g.startH, dy, fullH()), smallH))
+    settle(sheetStop(g.from, dy))
   }
   const live = useRef({ begin, move, end })
   useEffect(() => {
