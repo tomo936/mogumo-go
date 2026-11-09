@@ -7,7 +7,11 @@ import type { MapViewHandle } from '../map/ui/MapView.tsx'
 import { distanceMeters } from '../map/domain/geo.ts'
 import type { LatLng } from '../map/domain/geo.ts'
 import { farFromHome } from '../checkin/domain/far.ts'
-import { postCheckin } from '../checkin/infra/checkinApi.ts'
+import { loadProgress, postCheckin } from '../checkin/infra/checkinApi.ts'
+import { profileRepo } from '../setup/infra/profileRepo.ts'
+import { levelFor } from '../zukan/domain/level.ts'
+import { MapHud } from '../map/ui/MapHud.tsx'
+import type { StarterId } from '../setup/infra/profileRepo.ts'
 import { CheckinEffect } from '../checkin/ui/CheckinEffect.tsx'
 import { BuildingSheet } from '../checkin/ui/BuildingSheet.tsx'
 import { ShopSheet } from '../checkin/ui/ShopSheet.tsx'
@@ -16,7 +20,6 @@ import type { Visits } from '../checkin/domain/visits.ts'
 import type { Shop } from '../shops/domain/shop.ts'
 import { shopSourceEnabled } from '../shops/infra/hotpepper.ts'
 import { guideShops, hintPosition, matchesShop } from '../hints/domain/hint.ts'
-import { ExploreButton } from '../hints/ui/ExploreButton.tsx'
 import { ExploreSheet } from '../hints/ui/ExploreSheet.tsx'
 import { Zukan } from '../zukan/ui/Zukan.tsx'
 import { zukanToShop } from '../zukan/domain/zukan.ts'
@@ -125,6 +128,19 @@ export function MapPage() {
     hints.openSheet()
   }
   const [zukanOpen, setZukanOpen] = useState(false) // 図鑑（探索シートの入口から開く）
+  const [profile, setProfile] = useState<{ nickname: string; starterId: StarterId } | null>(null)
+  const [visitedCount, setVisitedCount] = useState(0) // プレイヤーのレベルの元（行ったお店の数）
+  const [soonName, setSoonName] = useState<string | null>(null) // まだ作っていない画面の名前（短く出す）
+  useEffect(() => {
+    if (!userId) return
+    profileRepo.load(userId).then(setProfile).catch(() => setProfile(null))
+    loadProgress().then((p) => setVisitedCount(p.visitsByShop.size)).catch(() => {})
+  }, [userId])
+  useEffect(() => {
+    if (!soonName) return
+    const t = setTimeout(() => setSoonName(null), 1600)
+    return () => clearTimeout(t)
+  }, [soonName])
   const [locateShopId, setLocateShopId] = useState<string | null>(null)
   const closeExplore = () => {
     setExploreOpen(false)
@@ -263,6 +279,7 @@ export function MapPage() {
           }}
           onRegen={hints.regen}
           onRetry={hints.retry}
+          placement="top"
           onOpenZukan={() => {
             closeExplore()
             setZukanOpen(true)
@@ -293,27 +310,30 @@ export function MapPage() {
       <div className="map-overlay">
         <LocationOverlay status={status} onRetry={retry} onReload={() => window.location.reload()} />
         {shopsError && <p className="location-banner">お店を読み込めませんでした</p>}
-        <div className="map-actions">
-          <button
-            type="button"
-            className="pins-toggle"
-            aria-label={pinsHidden ? 'ピンを出す' : 'ピンを隠す'}
-            aria-pressed={pinsHidden}
-            onClick={togglePins}
-          >
-            {pinsHidden ? '🚫' : '📍'}
-          </button>
-          <CreditsButton />
-          <button type="button" onClick={() => void signOut()}>
-            ログアウト
-          </button>
-        </div>
-        {!exploreOpen && !pickedHint && !selected && !building && (
-          <ExploreButton
-            remaining={hints.set ? hints.set.hints.filter((h) => !h.completed).length : null}
-            onClick={openExplore}
-          />
-        )}
+        <MapHud
+          nickname={profile?.nickname ?? null}
+          starterId={profile?.starterId ?? 101}
+          level={levelFor(visitedCount).level}
+          hintsRemaining={hints.set ? hints.set.hints.filter((h) => !h.completed).length : null}
+          hintOpen={exploreOpen}
+          onHintTap={() => (exploreOpen ? closeExplore() : openExplore())}
+          onZukan={() => {
+            closeExplore()
+            setZukanOpen(true)
+          }}
+          onSoon={(name) => setSoonName(name)}
+          pinsHidden={pinsHidden}
+          onTogglePins={togglePins}
+          settings={
+            <div className="hud-settings__list">
+              <CreditsButton />
+              <button type="button" className="hud-settings__item" onClick={() => void signOut()}>
+                ログアウト
+              </button>
+            </div>
+          }
+        />
+        {soonName && <p className="hud-soon" role="status">{`${soonName}は準備中です`}</p>}
         <a className="hp-credit" href="http://webservice.recruit.co.jp/" target="_blank" rel="noreferrer">
           Powered by ホットペッパーグルメ Webサービス
         </a>

@@ -10,7 +10,7 @@ import { routes } from './router.tsx'
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }))
 // 地図（WebGL）はテスト環境で描けないので、器だけの偽物にする
 // 初回設定は済んでいる人として扱う
-vi.mock('../setup/infra/profileRepo.ts', () => ({ profileRepo: { exists: async () => true, create: async () => {} } }))
+vi.mock('../setup/infra/profileRepo.ts', () => ({ profileRepo: { exists: async () => true, load: async () => null, create: async () => {} } }))
 vi.mock('../setup/infra/homeStore.ts', () => ({ loadHome: () => ({ lat: 35, lng: 139 }), saveHome: () => {} }))
 vi.mock('../map/ui/MapView.tsx', () => ({ MapView: () => <div data-testid="map-view" /> }))
 
@@ -54,6 +54,8 @@ test('読み込み中はログイン画面へ飛ばさない', () => {
 test('ログイン済みで / を開くと地図とログアウト', async () => {
   renderAt('/', { session })
   expect(await screen.findByTestId('map-view')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'メニュー' }))
+  await userEvent.click(screen.getByRole('button', { name: /設定/ }))
   expect(screen.getByRole('button', { name: 'ログアウト' })).toBeInTheDocument()
 })
 
@@ -75,6 +77,8 @@ test('ログインボタンで signInWithGoogle が呼ばれる', async () => {
 
 test('ログアウトボタンで signOut が呼ばれる', async () => {
   const auth = renderAt('/', { session })
+  await userEvent.click(await screen.findByRole('button', { name: 'メニュー' }))
+  await userEvent.click(screen.getByRole('button', { name: /設定/ }))
   await userEvent.click(await screen.findByRole('button', { name: 'ログアウト' }))
   expect(auth.signOut).toHaveBeenCalledTimes(1)
 })
