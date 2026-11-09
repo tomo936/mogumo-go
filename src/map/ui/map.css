@@ -195,8 +195,8 @@
   color: #6b4a2b;
 }
 .hud-fan__disc {
-  width: 58px; /* MapHud.tsx の DISC */
-  height: 58px;
+  width: 54px; /* MapHud.tsx の DISC */
+  height: 54px;
   border-radius: 50%;
   background: #fffdf7;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
