@@ -21,10 +21,13 @@ let zoom = 17
 let zoomEnd: (() => void) | null = null
 let ppm = 4 // 1m あたりの px
 let moved: (() => void) | null = null
+const handlers = new Map<string, (e?: { originalEvent?: unknown }) => void>()
+const container = document.createElement('div')
 const map = {
+  getContainer: () => container,
   getZoom: () => zoom,
   project: (p: [number, number]) => ({ x: (p[0] - 139) * 91188 * ppm, y: -(p[1] - 35) * 111320 * ppm * 0.5 }),
-  on: vi.fn((e: string, h: () => void) => { if (e === 'zoomend') zoomEnd = h; else moved = h }),
+  on: vi.fn((e: string, h: () => void) => { if (e === 'zoomend') zoomEnd = h; else if (e === 'render') moved = h; else handlers.set(e, h) }),
   off: vi.fn(),
 } as unknown as MapLibreMap
 const shop = (id: string): Shop => ({ id, name: id, lat: 35, lng: 139, kind: 'cafe', details: null, mapId: null })
@@ -187,4 +190,25 @@ test('名前の札を出す（駅は駅名標の形）。縮小でも拡大で�
   zoom = 18
   zoomEnd!()
   expect(names()).toHaveLength(1)
+})
+
+test('指で動かしている間だけ隠す（movestart に originalEvent があるとき）。自動の動きでは隠さない', () => {
+  createBuildingPins(map, vi.fn())
+  handlers.get('movestart')!({}) // カメラの自動追従（originalEvent なし）
+  expect(container.classList.contains('pins-moving')).toBe(false)
+  handlers.get('movestart')!({ originalEvent: {} })
+  expect(container.classList.contains('pins-moving')).toBe(true)
+  handlers.get('moveend')!()
+  expect(container.classList.contains('pins-moving')).toBe(false)
+})
+
+test('setHidden で出す・出さないを切りかえ、dispose で class を外す', () => {
+  const pins = createBuildingPins(map, vi.fn())
+  pins.setHidden(true)
+  expect(container.classList.contains('pins-off')).toBe(true)
+  pins.setHidden(false)
+  expect(container.classList.contains('pins-off')).toBe(false)
+  pins.setHidden(true)
+  pins.dispose()
+  expect(container.classList.contains('pins-off')).toBe(false)
 })

@@ -62,3 +62,13 @@
   border-radius: 8px;
   pointer-events: auto;
 }
+
+/* ピンを出す・出さないの丸いボタン（「出典」の左） */
+.pins-toggle {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 16px;
+  line-height: 1;
+}

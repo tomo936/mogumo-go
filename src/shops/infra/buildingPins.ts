@@ -24,6 +24,10 @@ export type PinnedBuilding = {
   label: { text: string; station: boolean } | null
 }
 
+// 地図の入れ物に付ける class。css 側（checkin.css）で .bldg-pins を隠す
+const MOVING_CLASS = 'pins-moving' // 指で動かしている間
+const HIDDEN_CLASS = 'pins-off' // 「ピンを出さない」のボタン
+
 const SCATTER_SIZE_M = 10 // 散らばったピンの大きさを決める目安の幅
 
 // お店のピン。icon があればシロのピンの絵（先が下の真ん中）、無ければ白い丸（まとめたピン）
@@ -207,13 +211,30 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
   map.on('zoomend', onZoom)
   map.on('render', fit) // 3D を描いたあと（そのコマのカメラ）で合わせる
 
+  // 指で動かしている間は隠す（カメラが屋根に追いつかず、ピンがずれて見えるため）。作り直しはせず class を付け外しするだけ。
+  // originalEvent があるのはユーザー操作。歩いてカメラが自動でついてくる動き（originalEvent なし）では隠さない
+  const container = map.getContainer()
+  const onMoveStart = (e: { originalEvent?: unknown }) => {
+    if (e.originalEvent) container.classList.add(MOVING_CLASS)
+  }
+  const onMoveEnd = () => container.classList.remove(MOVING_CLASS)
+  map.on('movestart', onMoveStart)
+  map.on('moveend', onMoveEnd)
+
   return {
     update(next: PinnedBuilding[], nextChecked: ReadonlySet<string>) {
       buildings = next
       checked = nextChecked
       render()
     },
+    // ピンと名前の札をまとめて出す・出さない（ボタン用）
+    setHidden(hidden: boolean) {
+      container.classList.toggle(HIDDEN_CLASS, hidden)
+    },
     dispose() {
+      map.off('movestart', onMoveStart)
+      map.off('moveend', onMoveEnd)
+      container.classList.remove(MOVING_CLASS, HIDDEN_CLASS)
       map.off('zoomend', onZoom)
       map.off('render', fit)
       for (const { m } of markers) m.remove()

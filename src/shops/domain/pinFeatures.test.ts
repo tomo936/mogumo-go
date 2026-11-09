@@ -23,3 +23,9 @@ test('近い店ほど sort が小さい（重なったとき近い店が残る�
 test('空なら空', () => {
   expect(pinFeatures([], new Set(), me)).toEqual([])
 })
+
+test('済みの店は done が true（既定は false）', () => {
+  expect(pinFeatures([at('a', 10)], new Set(), me)[0].properties.done).toBe(false)
+  const [a, b] = pinFeatures([at('a', 10), at('b', 20)], new Set(), me, new Set(['b']))
+  expect([a.properties.done, b.properties.done]).toEqual([false, true])
+})

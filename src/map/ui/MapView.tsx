@@ -47,6 +47,7 @@ type Props = {
   onSelectBuilding: (shops: Shop[] | null, title?: string | null) => void // ビル・施設・駅（同じ建物の複数のお店）が押された。title は施設・駅の名前
   onPosition: (me: LatLng) => void // 1秒に4回まで
   onHintTap: (hintId: string) => void // 気配のピンが押された
+  pinsHidden?: boolean // 店のピン（1軒・ビル・施設）と名前の札を出さない（気配のピンは出す）
   ref?: Ref<MapViewHandle>
 }
 
@@ -58,7 +59,7 @@ const CHECKIN_WAVE_DELAY_MS = 900 // 紙吹雪のあと、霧の波が走り出�
 
 // 地図・カメラ・位置は MapLibre と ref だけで持ち、React の再描画を起こさない。
 // React に上げるのは位置情報の出来事（onStatus）だけ。
-export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, ref }: Props) {
+export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, pinsHidden = false, ref }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const onStatusRef = useRef(onStatus)
   const onShopsErrorRef = useRef(onShopsError)
@@ -67,6 +68,11 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   const onPositionRef = useRef(onPosition)
   const onHintTapRef = useRef(onHintTap)
   const worldRef = useRef<ReturnType<typeof attachWorld> | null>(null)
+  const pinsHiddenRef = useRef(pinsHidden) // 世界ができる前に決まっていた分も、できたときに渡す
+  useEffect(() => {
+    pinsHiddenRef.current = pinsHidden
+    worldRef.current?.setPinsVisible(!pinsHidden)
+  }, [pinsHidden])
   useLayoutEffect(() => {
     onStatusRef.current = onStatus
     onShopsErrorRef.current = onShopsError
@@ -180,6 +186,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         },
       })
       worldRef.current = s.world
+      s.world.setPinsVisible(!pinsHiddenRef.current)
       if (s.current) s.world.onPosition(s.current)
       s.loaded = true
       s.drawn = null

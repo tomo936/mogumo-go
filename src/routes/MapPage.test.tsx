@@ -37,10 +37,10 @@ beforeEach(() => {
 vi.mock('../map/ui/MapView.tsx', async () => {
   const { useEffect, useImperativeHandle } = await import('react')
   return {
-    MapView: ({ onStatus, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, ref }: {
+    MapView: ({ pinsHidden, onStatus, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, ref }: {
       onStatus: (e: LocationEvent) => void; onShopsError: () => void
       onSelectShop: (s: Shop | null) => void; onSelectBuilding: (s: Shop[] | null) => void; onPosition: (p: LatLng) => void
-      onHintTap: (id: string) => void
+      onHintTap: (id: string) => void; pinsHidden?: boolean
       ref?: React.Ref<{ checkin(shop: Shop, cells: unknown[]): void }>
     }) => {
       useEffect(() => { mounts.push(onStatus) }, [onStatus])
@@ -51,7 +51,7 @@ vi.mock('../map/ui/MapView.tsx', async () => {
         hintInputs: () => ({ shops: mapShopsNow, near: mapShopsNow, cleared: new Set<string>(), checked: new Set<string>() }),
         whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
       }), [])
-      return <div data-testid="map-view" />
+      return <div data-testid="map-view" data-pins-hidden={String(pinsHidden)} />
     },
   }
 })
@@ -307,4 +307,22 @@ test('30m に入ると帯「気配の正体は…『○○』！」が出る', a
   act(() => last().position({ lat: 35.0001, lng: 139 }))
   await act(async () => { await Promise.resolve() })
   expect(screen.getByText('気配の正体は…『麺屋かくれ』！')).toBeInTheDocument()
+})
+
+test('ピンのボタンで出す・出さないが切りかわり、その端末に覚える', async () => {
+  const view = () => render(
+    <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+      <MapPage />
+    </AuthContext.Provider>,
+  )
+  const first = view()
+  expect(screen.getByTestId('map-view')).toHaveAttribute('data-pins-hidden', 'false')
+  await userEvent.click(screen.getByRole('button', { name: 'ピンを隠す' }))
+  expect(screen.getByTestId('map-view')).toHaveAttribute('data-pins-hidden', 'true')
+  expect(localStorage.getItem('mogumo.pinsHidden')).toBe('1')
+  first.unmount()
+  view() // 開き直しても覚えている
+  expect(screen.getByTestId('map-view')).toHaveAttribute('data-pins-hidden', 'true')
+  await userEvent.click(screen.getByRole('button', { name: 'ピンを出す' }))
+  expect(localStorage.getItem('mogumo.pinsHidden')).toBe('0')
 })
