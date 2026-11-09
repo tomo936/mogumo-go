@@ -47,3 +47,10 @@
 - 仕様の正本 `docs/SPEC.md`（§9 が最近の決定）、基本設計 `docs/basic-design.md`（N 番号の表）、DB `docs/detailed-design-db.md`
 - お店の見本と決め方 `art/reference/shops/README.md`、模型の作り方 `art/prototypes/blender-*.py`、霧の素材 `src/assets/fog/`、歩く絵 `art/characters/boy-walk/`
 - 進捗ボード（上司向け）: memory の progress-board を参照
+
+## 2026-11-09 夜: 続きから（12時過ぎに再開）
+- お店のシート（2段・写真シール＋わたしの記録・指で引く動き）は完了し dev に上げ済み。下へ引いても閉じない（× だけで閉じる）。
+- 写真は pc.l（238px）を使う版に変更済み。Supabase の関数 `shops-hotpepper` の置き直しはオーナーが実施済み。実機で写真の大きさを確認してもらう（未確認）。
+- 男の子の3D（ミシェーラの試し）: AI モデル（公式・指紋一致）は D:\mogumo-3d\ComfyUI\models にあり、形だけの GLB（boy_s123_shape_00001_.glb）はできた。色付きの組み立ては、CUDA の pip 部品が揃わず停止中（cusparse のヘッダは入ったが cublas などが入らない）。
+- 次の一手（オーナーの確認が要る）: NVIDIA 公式の CUDA Toolkit 13.0（約3〜4GB、D: に入れる）を入れて組み立て直す。もしくは色付きは保留してミシェーラに報告する。
+- 次の機能: 図鑑（シールアルバム風。お店のシートと同じ詳しい画面を使い回す）。設計から始める。
