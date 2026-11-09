@@ -16,26 +16,42 @@ const RAMEN: Word[] = ['ラーメン', 'らーめん', '拉麺', '中華そば',
 const SUSHI: Word[] = ['寿司', '鮨', 'すし', 'sushi', 'zushi', 'スシロー', '銚子丸', 'かっぱ', '魚がし', '回転']
 const SOBA: Word[] = ['そば', '蕎麦', 'うどん', 'soba', 'udon', '丸亀', 'ゆで太郎', 'つるとんたん', '美々卯']
 const CURRY: Word[] = ['カレー', 'curry', 'coco壱番屋', 'ココイチ', 'インド', 'ネパール', 'ターリー', 'マサラ', 'naan']
-const CAKE: Word[] = ['ケーキ', 'スイーツ']
+const CAKE: Word[] = ['ケーキ', 'スイーツ', 'たい焼', 'たいやき', '鯛焼']
 // 「パン」は パンダ・パンツ・ジャパン・パンケーキ などに当たらないようにする
 const BAKERY: Word[] = [/(?<!ジャ)パン(?!ダ|ツ|ケーキ|フレット)/, 'ベーカリー', 'ブーランジェリー', 'bakery', 'boulangerie']
+// 牛丼・丼もの（「丼」は短いが、うどん・そばは byName で先に決まるので当たらない）
+const DONBURI: Word[] = ['丼', 'どんぶり', '吉野家', '松屋', 'すき家', 'なか卯', '牛めし', 'すた丼', '伝説のすた丼']
+// ハンバーガー・ファストフード（ハンバーグは洋食。バーガーはハンバーグに当たらない）
+const BURGER: Word[] = ['バーガー', 'burger', 'マクドナルド', 'ケンタッキー', 'kfc', 'サブウェイ', 'subway', 'フレッシュネス', 'シェイクシャック', 'shake shack', 'ロッテリア', 'ウェンディーズ', 'ファーストキッチン', 'ファストフード']
+// アジア・エスニック（インド・ネパールはカレー）。「フォー」はフォーム等に当たらないようにする
+const ETHNIC: Word[] = [
+  'タイ料理', 'タイ式', 'タイ屋台', 'タイ国', 'タイダイニング', 'バンコク', 'ケバブ', 'kebab', 'thai', 'ベトナム', 'vietnam', /フォー(?![ムマクスチ])/, 'ガパオ', 'カオマンガイ', 'パクチー', 'アジアン', 'エスニック',
+  '韓国', 'korea', '純豆腐', 'スンドゥブ', 'チェゴヤ', 'ビビンバ', 'トッポギ', 'サムギョプサル', 'チヂミ', 'インドネシア', 'シンガポール', 'マレーシア', '台湾', 'ミャンマー', 'カンボジア',
+]
+const OKONOMIYAKI: Word[] = ['お好み焼', 'お好み', 'もんじゃ', '鉄板焼', 'okonomiyaki']
+const TAKOYAKI: Word[] = ['たこ焼', 'たこやき', 'タコ焼', 'たこ焼き', '銀だこ', 'takoyaki']
 // 地図の店（ジャンルの情報が無い）を店名から推し量るための言葉
 const GUESS: [ShopKind, Word[]][] = [
   ['yakiniku', ['焼肉', 'ホルモン', '焼き肉', 'yakiniku', '牛角', '叙々苑', '牛繁', '明月館', 'bbq', '牛たん', '牛タン', 'ジンギスカン']],
   ['chinese', ['中華', '餃子', 'ぎょうざ', '飯店', '担々', '麻婆', '小籠包', '酒家', '菜館', '日高屋', '王将', 'バーミヤン', '麻辣', '四川', 'din tai fung', 'haidilao', '海底撈', '重慶', '刀削']],
+  ['ethnic', ETHNIC],
+  ['donburi', DONBURI],
+  ['burger', BURGER],
   ['western', [
     'イタリア', 'トラットリア', 'リストランテ', 'ピッツァ', 'ピザ', 'パスタ', 'ビストロ', '洋食', 'ハンバーグ', 'ステーキ', 'フレンチ', 'オムライス',
     'trattoria', 'pizza', 'bistro', 'italian',
     'ガスト', 'ジョナサン', 'デニーズ', 'ロイヤルホスト', 'サイゼリヤ', '五右衛門', 'スパゲティ', 'オステリア', 'ペッパーランチ', 'びっくりドンキー', 'ファミレス',
   ]],
+  ['takoyaki', TAKOYAKI],
+  ['okonomiyaki', OKONOMIYAKI],
   ['izakaya', [
     '居酒屋', '酒場', '焼鳥', '焼き鳥', 'やきとり', '串', '魚民', '和民', '鳥貴族', '大衆', '立ち飲み', '立呑',
     'もつ焼', '塚田農場', '磯丸水産', 'とり', '鳥', /バル(?![ーコト])/, /(?<!ナン)バー(?!ガ)/, /(^|[^a-z])bar($|[^a-z])/,
   ]],
-  ['cake', ['ケーキ', 'スイーツ', 'パティスリー', 'ドーナツ', 'クレープ', 'ジェラート', 'アイス', 'patisserie', 'cake', 'donut']],
+  ['cake', ['ケーキ', 'スイーツ', 'たい焼', 'たいやき', '鯛焼', 'パティスリー', 'ドーナツ', 'クレープ', 'ジェラート', 'アイス', 'patisserie', 'cake', 'donut']],
   ['cafe', ['カフェ', '珈琲', 'コーヒー', '喫茶', 'cafe', 'coffee', 'café']],
   ['washoku', [
-    '定食', 'とんかつ', '天ぷら', '天麩羅', '割烹', '和食', '丼', '牛丼', '食堂', 'おにぎり', '鰻', 'うなぎ',
+    '定食', 'とんかつ', '天ぷら', '天麩羅', '割烹', '和食', '食堂', 'おにぎり', '鰻', 'うなぎ',
     'やよい軒', '大戸屋', '小料理', 'かっぽう', 'かつや', '松のや', '牛かつ', 'てんや', '宇奈とと', 'しゃぶしゃぶ', '温野菜', 'しゃぶ葉', 'すき焼き', 'おでん',
   ]],
   ['bakery', BAKERY],
@@ -59,16 +75,19 @@ const byName = (name: string): ShopKind | null => {
 
 // ホットペッパーのジャンルコード → 種類（spec 4.5）
 // 要確認: ジャンルマスタ（G001 居酒屋 / G002 ダイニングバー / G004 和食 / G005 洋食 / G006 イタリアン・フレンチ /
-//   G007 中華 / G011 カラオケ・パーティ / G012 バー・カクテル / G008 焼肉・ホルモン / G013 ラーメン / G014 カフェ・スイーツ / G017 韓国料理）
+//   G007 中華 / G011 カラオケ・パーティ / G012 バー・カクテル / G008 焼肉・ホルモン / G013 ラーメン / G014 カフェ・スイーツ / G017 韓国料理 / G016 お好み焼き・もんじゃ / G009 アジア・エスニック）
 export const kindFromHotpepper = (genreCode: string | null, name: string): ShopKind => {
   if (genreCode === 'G013' || isRamen(name)) return 'ramen'
   if (genreCode === 'G004' && has(name, SUSHI)) return 'sushi'
   if (genreCode === 'G004' && has(name, SOBA)) return 'soba'
   if (has(name, CURRY)) return 'curry'
+  if (has(name, TAKOYAKI)) return 'takoyaki'
   if (genreCode === 'G008' || genreCode === 'G017') return 'yakiniku'
   if (genreCode === 'G007') return 'chinese'
   if (genreCode === 'G005' || genreCode === 'G006') return 'western'
-  if (genreCode === 'G004') return 'washoku'
+  if (genreCode === 'G004') return has(name, DONBURI) ? 'donburi' : 'washoku'
+  if (genreCode === 'G016') return 'okonomiyaki'
+  if (genreCode === 'G009') return 'ethnic'
   if (genreCode === 'G001' || genreCode === 'G002' || genreCode === 'G012' || genreCode === 'G011') return 'izakaya'
   if (genreCode === 'G014' && has(name, CAKE)) return 'cake'
   if (genreCode === 'G014') return 'cafe'
@@ -92,6 +111,6 @@ export const kindFromMap = (subclass: string, name: string): ShopKind => {
     case 'pub':
       return 'izakaya'
     default:
-      return guess(name) ?? 'mystery'
+      return guess(name) ?? 'mystery' // fast_food でも名前で決まらない店（ラーメン・弁当のチェーン等）はハンバーガーにしない
   }
 }

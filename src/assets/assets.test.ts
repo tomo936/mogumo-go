@@ -3,10 +3,21 @@ import { describe, expect, it } from 'vitest'
 const shops = import.meta.glob('./shops/*.glb', { eager: true, query: '?url', import: 'default' })
 const lods = import.meta.glob('./shops/lod/*.glb', { eager: true, query: '?url', import: 'default' })
 
+const pins = import.meta.glob('./pins/*.png', { eager: true, query: '?url', import: 'default' })
+
 const KINDS = [
   'ramen', 'sushi', 'soba', 'washoku', 'izakaya', 'chinese', 'yakiniku',
   'western', 'curry', 'cafe', 'cake', 'bakery', 'mystery',
 ]
+
+describe('ピンの絵', () => {
+  it('合成済みのピンが 19 枚そろっている（sweets は cake、「？」は mystery、フォークとナイフは other）', () => {
+    const names = Object.keys(pins).map((p) => p.replace('./pins/', '').replace('.png', ''))
+    expect(names.sort()).toEqual([
+      ...KINDS, 'other', 'donburi', 'burger', 'ethnic', 'okonomiyaki', 'takoyaki',
+    ].sort())
+  })
+})
 
 describe('3D 素材', () => {
   it('店の glb が 13 種＋ビルそろっている', () => {

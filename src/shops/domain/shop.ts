@@ -11,7 +11,12 @@ export type ShopKind =
   | 'cafe'
   | 'cake'
   | 'bakery'
-  | 'mystery'
+  | 'mystery' // その他（ジャンル不明）。ピンの絵は other（フォークとナイフ）
+  | 'donburi'
+  | 'burger'
+  | 'ethnic'
+  | 'okonomiyaki'
+  | 'takoyaki'
 
 // ホットペッパー由来の詳細。地図だけの店は Shop.details が null
 export type ShopDetails = {
