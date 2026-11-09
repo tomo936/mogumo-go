@@ -44,7 +44,9 @@ export function createAvatar(map: MapLibreMap) {
         ref = pos
       }
       facing = travel === null ? facing : facingFor(travel, map.getBearing())
-      if (isWalking(speed)) {
+      const walking = isWalking(speed)
+      el.classList.toggle('me-avatar--idle', !walking) // 立っている間は、息をするように少し揺れる（CSS）
+      if (walking) {
         clock += dtMs
         frame = Math.floor((clock / 1000) * AVATAR_FPS) % AVATAR_FRAMES
       } else {
