@@ -20,6 +20,18 @@ export const THEMES = {
     building: '#f8f1e4', buildingLine: '#e6d9bf', road: '#ffffff', roadCasing: '#cfe5c2', path: '#f3f8ec', rail: '#b8c6ad', majorRoad: '#fff4cf', majorRoadCasing: '#ead39a',
     label: '#4d6656', labelHalo: '#ffffff', showPlaceLabels: false, showRoadLabels: false,
   },
+  // D: イラスト調（2026-11-10 オーナー: 鮮やかなイラストの色。起動画面の絵に寄せる）。ふちは濃い茶色の縁取り
+  illust: {
+    ground: '#fbf1d6', residential: '#f8ebcd', park: '#8fd35a', wood: '#6fc045', water: '#55bdf0', waterLine: '#2f93d1',
+    building: '#ffe1bd', buildingLine: '#8a5532', road: '#fffbef', roadCasing: '#8a5532', path: '#f2d7a8', rail: '#a3876a', majorRoad: '#ffe9a3', majorRoadCasing: '#7a4526',
+    label: '#6b3f26', labelHalo: '#ffffff', showPlaceLabels: false, showRoadLabels: false,
+    illust: {
+      buildingFills: ['#ffe3c2', '#ffd3c4', '#e7f3c9', '#d2e7fb'],
+      buildingShadow: 'rgba(130, 75, 35, 0.28)',
+      roadScale: 1.5,
+      majorRoadScale: 1.25,
+    },
+  },
 } satisfies Record<string, MapTheme>
 
 export type ThemeName = keyof typeof THEMES

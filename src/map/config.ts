@@ -2,7 +2,7 @@
 // タイルの出どころ（OpenFreeMap）は STYLE_URL の1か所で差し替える（SPEC §3.1）。
 // 土台は文字やお店の印が少ない positron。色は themes.ts の案を上から当てる
 export const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron'
-export const MAP_THEME: 'sky' | 'mint' | 'pop' = 'pop' // 本人が選択（2026-11-06）
+export const MAP_THEME: 'sky' | 'mint' | 'pop' | 'illust' = 'illust' // イラスト調（2026-11-10 オーナー）。前は pop
 export const PITCH = 55
 export const MIN_ZOOM = 16
 export const MAX_ZOOM = 18
