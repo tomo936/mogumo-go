@@ -47,10 +47,10 @@ describe('晴れた場所の決め方', () => {
 })
 
 describe('pageCount / filledCount', () => {
-  it('12 枚ずつ。0 枚は 0 ページ', () => {
+  it('4 枚ずつ。0 枚は 0 ページ', () => {
     expect(pageCount(0)).toBe(0)
-    expect(pageCount(12)).toBe(1)
-    expect(pageCount(13)).toBe(2)
+    expect(pageCount(4)).toBe(1)
+    expect(pageCount(5)).toBe(2)
   })
   it('埋まり数は行った店の数', () => {
     expect(filledCount([shop({ id: 'a', visits: v(1, 'x', 'x') }), shop({ id: 'b' })])).toBe(1)

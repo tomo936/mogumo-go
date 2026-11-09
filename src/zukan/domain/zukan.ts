@@ -17,7 +17,7 @@ export type ZukanShop = {
   mapId?: string | null // 合体前の地図の点（osm:…）。記録をまとめるときに使う
 }
 
-export const PAGE_SIZE = 12 // 3列×4段
+export const PAGE_SIZE = 4 // 2列×2段（ポラロイド風の大きいカード）
 
 // ジャンルの並び（図鑑のページの順）
 export const KIND_ORDER: ShopKind[] = [

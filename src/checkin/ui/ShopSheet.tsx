@@ -51,9 +51,10 @@ type Props = {
   error: CheckinError | null
   onCheckin: () => void
   onClose: () => void
+  onLocate?: () => void // 地図の視点をこのお店へ寄せる（図鑑から開いたときだけ出す。名前は仮）
 }
 
-export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, masked = false, visits = null, recordReady, busy, error, onCheckin, onClose }: Props) {
+export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, masked = false, visits = null, recordReady, busy, error, onCheckin, onClose, onLocate }: Props) {
   const [expanded, setExpanded] = useState(false) // 止まっている段（全画面か）
   const [height, setHeight] = useState<number | null>(null) // 引いている間・全画面の高さ（px）。小さい段で止まっているときは null（中身の高さ）
   const [settling, setSettling] = useState<SheetStop | null>(null) // 指を離して収まっていく途中の行き先
@@ -213,6 +214,11 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
       {big && photo && <span className="shop-sticker__label">写真: ホットペッパーグルメ</span>}
     </div>
   )
+  const locateButton = onLocate && (
+    <button type="button" className="shop-sheet__locate" onClick={onLocate}>
+      地図で見る
+    </button>
+  )
   const button = (
     <button type="button" className="shop-sheet__go" disabled={doneToday || !inRange || busy} onClick={onCheckin}>
       {doneToday ? '今日はチェックイン済み' : busy ? 'チェックイン中…' : inRange ? 'チェックイン' : `あと ${Math.ceil(distanceM - CHECKIN_M)}m`}
@@ -320,6 +326,7 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
       <div className="shop-sheet__foot">
         {errorRow}
         {button}
+        {locateButton}
         {!expanded && progress === 0 && <p className="shop-sheet__more">︿ 上にスライドでくわしく</p>}
       </div>
     </section>
