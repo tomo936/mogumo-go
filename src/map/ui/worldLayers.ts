@@ -28,6 +28,7 @@ import { createShopPins } from '../../shops/infra/shopPins.ts'
 import { createShopLayer } from '../../shops/infra/shopLayer.ts'
 import type { PlacedShop } from '../../shops/infra/shopLayer.ts'
 import { distanceMeters, localFrame } from '../domain/geo.ts'
+import { watchUserMove } from '../infra/userMove.ts'
 import type { LatLng } from '../domain/geo.ts'
 import { jstDay } from '../../checkin/domain/day.ts'
 
@@ -98,6 +99,11 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const facilityLayer = createFacilityLayer()
   const shopPins = createShopPins(map) // 1軒の店のピン（symbol レイヤー）
   const buildingPins = createBuildingPins(map, (ids) => deps.onPinTap(ids))
+  // 人が地図を動かしている間は、店のピン（1軒・ビル・施設）を隠す。歩いてカメラが自動でついてくる動きでは隠さない
+  const stopUserMove = watchUserMove(map, (moving) => {
+    shopPins.setMoving(moving)
+    buildingPins.setMoving(moving)
+  })
   const debugOverlay = debugOn(window.location.search) ? createDebugOverlay(map, buildingPins.debugRows) : null // ?debug のときだけ
   let shownPlaced: PlacedShop[] = [] // いま層に渡している置き方（1軒の店だけ。ピン用）
   let shownInFog: ReadonlySet<string> = new Set() // そのうち霧の中の近い店（ピンを雲の上に描く）
@@ -566,6 +572,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     dispose() {
       disposed = true
       if (frameId !== null) cancelAnimationFrame(frameId)
+      stopUserMove()
       shopPins.dispose()
       buildingPins.dispose()
       debugOverlay?.dispose()

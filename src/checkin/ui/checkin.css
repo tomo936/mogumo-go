@@ -159,9 +159,10 @@
   visibility: hidden;
 }
 
-/* ビルの上のピン。お店ごとのピンはシロの色分けの絵（src/assets/pins/）、まとめたピンは白い丸 */
+/* ビルの上のピン。お店ごとのピンはシロの色分けの絵（src/assets/pins/）、まとめたピンは白い丸。
+   外枠は MapLibre のマーカーなので absolute のまま（relative にすると文書の流れに乗り、前の気配のピンの高さ分だけ下へずれる） */
 .bldg-pins {
-  position: relative;
+  position: absolute;
   width: 0;
   height: 0;
 }

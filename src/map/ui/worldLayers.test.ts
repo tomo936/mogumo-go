@@ -14,8 +14,15 @@ vi.mock('../../shops/infra/shopLayer.ts', () => ({ createShopLayer: (id: string)
 const pinsUpdate = vi.fn()
 const facilityLayer = { id: 'facilities-3d', setFacilities: vi.fn(), pick: vi.fn(() => null) }
 vi.mock('../../shops/infra/facilityLayer.ts', () => ({ createFacilityLayer: () => facilityLayer }))
-const pinsApi = { attach: vi.fn(), update: vi.fn(), pick: vi.fn(() => null), setVisible: vi.fn(), dispose: vi.fn() }
-const buildingApi = { update: pinsUpdate, setHidden: vi.fn(), dispose: vi.fn() }
+const pinsApi = { attach: vi.fn(), update: vi.fn(), pick: vi.fn(() => null), setVisible: vi.fn(), setMoving: vi.fn(), dispose: vi.fn() }
+const buildingApi = { update: pinsUpdate, setHidden: vi.fn(), setMoving: vi.fn(), dispose: vi.fn() }
+const userMove = { onChange: null as ((moving: boolean) => void) | null, stop: vi.fn() }
+vi.mock('../infra/userMove.ts', () => ({
+  watchUserMove: (_m: unknown, onChange: (moving: boolean) => void) => {
+    userMove.onChange = onChange
+    return userMove.stop
+  },
+}))
 vi.mock('../../shops/infra/shopPins.ts', () => ({ createShopPins: () => pinsApi }))
 vi.mock('../../shops/infra/buildingPins.ts', () => ({ createBuildingPins: () => buildingApi }))
 
@@ -309,6 +316,18 @@ test('dispose で層を外し、遅れて届いた結果は無視する', async 
   resolve([shop])
   await flush()
   expect(shopLayer.setShops).not.toHaveBeenCalled()
+})
+
+test('人が地図を動かしている間は、1軒の店のピンとビルのピンを両方隠す。dispose で見張りをやめる', () => {
+  const { world } = setup()
+  userMove.onChange!(true)
+  expect(pinsApi.setMoving).toHaveBeenLastCalledWith(true)
+  expect(buildingApi.setMoving).toHaveBeenLastCalledWith(true)
+  userMove.onChange!(false)
+  expect(pinsApi.setMoving).toHaveBeenLastCalledWith(false)
+  expect(buildingApi.setMoving).toHaveBeenLastCalledWith(false)
+  world.dispose()
+  expect(userMove.stop).toHaveBeenCalled()
 })
 
 const poi = (id: number, name: string, x: number, y: number) => ({

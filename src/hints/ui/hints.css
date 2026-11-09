@@ -1,6 +1,6 @@
-/* 気配のピン（仮。シロのアイコンが届いたら中身を差し替える） */
+/* 気配のピン（仮。シロのアイコンが届いたら中身を差し替える）。MapLibre のマーカーなので absolute のまま（relative だと流れに乗って並びずれる） */
 .hint-pin {
-  position: relative;
+  position: absolute;
   width: 40px;
   height: 40px;
   padding: 0;

@@ -192,13 +192,14 @@ test('名前の札を出す（駅は駅名標の形）。縮小でも拡大で�
   expect(names()).toHaveLength(1)
 })
 
-test('指で動かしている間だけ隠す（movestart に originalEvent があるとき）。自動の動きでは隠さない', () => {
-  createBuildingPins(map, vi.fn())
-  handlers.get('movestart')!({}) // カメラの自動追従（originalEvent なし）
-  expect(container.classList.contains('pins-moving')).toBe(false)
-  handlers.get('movestart')!({ originalEvent: {} })
+test('setMoving(true) の間だけ隠す（人が地図を動かしている間。判定は map/infra/userMove.ts）、dispose で class を外す', () => {
+  const pins = createBuildingPins(map, vi.fn())
+  pins.setMoving(true)
   expect(container.classList.contains('pins-moving')).toBe(true)
-  handlers.get('moveend')!()
+  pins.setMoving(false)
+  expect(container.classList.contains('pins-moving')).toBe(false)
+  pins.setMoving(true)
+  pins.dispose()
   expect(container.classList.contains('pins-moving')).toBe(false)
 })
 
