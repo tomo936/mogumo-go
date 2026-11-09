@@ -132,7 +132,8 @@ test('全画面: 写真のシール・ひと言・わたしの記録・ホット
   setup({ shop: photoShop, visits: twice })
   await expand()
   expect(screen.getByRole('img', { name: '麺屋もぐも の写真' })).toHaveAttribute('src', 'https://imgfp.hotp.jp/x_l.jpg')
-  expect(screen.getByText('2026.11.3 はじめて')).toBeInTheDocument()
+  expect(screen.getByText('写真: ホットペッパーグルメ')).toBeInTheDocument() // 自分の写真と間違えないよう、日付は書かない
+  expect(screen.queryByText(/2026\.11\.3/)).not.toBeInTheDocument()
   expect(screen.getByText('濃厚とんこつ')).toBeInTheDocument()
   expect(screen.getByText('わたしの記録')).toBeInTheDocument()
   expect(screen.getByText('11/3')).toBeInTheDocument()
@@ -147,7 +148,6 @@ test('全画面: 写真のシール・ひと言・わたしの記録・ホット
 test('全画面: まだ行っていない店は案内を出す', async () => {
   setup({ visits: null, recordReady: true })
   await expand()
-  expect(screen.getByText('まだ行ってない')).toBeInTheDocument()
   expect(screen.getByText(/まだ行っていません/)).toBeInTheDocument()
 })
 
