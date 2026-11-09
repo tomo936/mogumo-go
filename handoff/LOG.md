@@ -41,3 +41,4 @@
 - 2026-11-09 Claude Code: 色分けピン chinese・yakiniku・western・curry・cafe を配置。13種そろった（art/pins/colored/）。依頼 2026-11-06-shop-pin-icons は完了。アプリのピンへの差し替えに進む。
 - 2026-11-09 Claude Code: アイコン単体（128×128）ramen・sushi・soba・washoku・izakaya を art/pins/ に配置（13種のうち5種）。
 - 2026-11-09 Claude Code: アイコン単体 chinese・yakiniku・western・curry・cafe を art/pins/ に配置（13種のうち10種）。
+- 2026-11-09 Claude Code: アイコン単体 cake（pin-sweets.png の中身）・bakery・mystery を配置。単体13種・色分け13種ともそろった。
