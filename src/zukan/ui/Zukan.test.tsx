@@ -24,7 +24,7 @@ test('行っていないお店は名前を出さず「？」と一言だけ', as
   render(<Zukan onPick={() => {}} onClose={() => {}} />)
   await screen.findByText('1/2')
   expect(screen.queryByText('秘密のラーメン屋')).not.toBeInTheDocument()
-  expect(screen.getByText('？')).toBeInTheDocument()
+  expect(screen.getByText('？？？')).toBeInTheDocument()
   expect(screen.getByText('濃厚とんこつ')).toBeInTheDocument()
 })
 

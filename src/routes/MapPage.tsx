@@ -125,6 +125,7 @@ export function MapPage() {
     hints.openSheet()
   }
   const [zukanOpen, setZukanOpen] = useState(false) // 図鑑（探索シートの入口から開く）
+  const [locateShopId, setLocateShopId] = useState<string | null>(null)
   const closeExplore = () => {
     setExploreOpen(false)
     hints.closeSheet()
@@ -242,6 +243,7 @@ export function MapPage() {
           error={checkinError}
           onCheckin={() => void checkin()}
           onClose={() => select(null)}
+          onLocate={locateShopId === selected.id ? () => mapRef.current?.focusAt(selected) : undefined}
         />
       )}
       {exploreOpen && (
@@ -272,6 +274,7 @@ export function MapPage() {
         <Zukan
           onPick={(z) => {
             setZukanOpen(false)
+            setLocateShopId(z.id) // 図鑑から開いたお店だけ「地図で見る」を出す
             select(zukanToShop(z))
           }}
           onClose={() => setZukanOpen(false)}

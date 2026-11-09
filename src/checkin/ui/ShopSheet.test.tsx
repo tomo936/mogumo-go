@@ -181,3 +181,15 @@ test('全画面: 金の枠まで行ったら次の段の案内は出さない', 
   expect(screen.getByText('12回')).toBeInTheDocument()
   expect(screen.queryByText(/の枠$/)).not.toBeInTheDocument()
 })
+
+test('onLocate があるときだけ「地図で見る」を出し、押すと呼ばれる', async () => {
+  const onLocate = vi.fn()
+  setup({ onLocate })
+  await userEvent.click(screen.getByRole('button', { name: '地図で見る' }))
+  expect(onLocate).toHaveBeenCalledTimes(1)
+})
+
+test('onLocate が無ければ「地図で見る」は出ない', () => {
+  setup()
+  expect(screen.queryByRole('button', { name: '地図で見る' })).not.toBeInTheDocument()
+})
