@@ -39,7 +39,7 @@ export type PinDebugRow = {
 const MOVING_CLASS = 'pins-moving' // 人が地図を動かしている間
 const HIDDEN_CLASS = 'pins-off' // 「ピンを出さない」のボタン
 
-const SCATTER_SIZE_M = 10 // 散らばったピンの大きさを決める目安の幅
+const SCATTER_SIZE_M = 16 // 散らばったピンの大きさを決める目安の幅（2026-11-09 本人「施設の中のピンも小さい」で 10→16）
 
 // お店のピン。icon があればシロのピンの絵（先が下の真ん中）、無ければ白い丸（まとめたピン）
 function pin(icon: string | null, label: string, onClick: () => void): HTMLButtonElement {

@@ -122,12 +122,12 @@ test('ピンはビルの幅に合わせて縮み、ビルの屋根の上（大�
   const pins = createBuildingPins(map, vi.fn())
   pins.update([bldg(['a', 'b', 'c'])], new Set())
   const inner = () => live()[0].el.querySelector<HTMLElement>('.bldg-pins__scale')!
-  expect(inner().style.transform).toMatch(/scale\(0\.5\d+\)/) // 16m*4px*0.9/98 ≈ 0.588
+  expect(inner().style.transform).toMatch(/scale\(0\.91\d*\)/) // 16m*4px*1.4/98 ≈ 0.914
   expect(offsets.at(-1)![1]).toBeCloseTo(-16 * 1.3 * 4 * Math.sin(Math.PI / 3), 0)
   ppm = 2
   moved!()
   expect(offsets.at(-1)![1]).toBeCloseTo(-16 * 1.3 * 2 * Math.sin(Math.PI / 3), 0)
-  expect(inner().style.transform).toMatch(/scale\(0\.3\)/)
+  expect(inner().style.transform).toMatch(/scale\(0\.55\)/)
 })
 
 test('施設・ズーム18は塊ごとのマーカー（近い2軒は1つのマーカーに2本）、ズーム17に戻すと1つにまとまる', () => {

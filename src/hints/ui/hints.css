@@ -259,3 +259,8 @@
   font-weight: 800;
   white-space: nowrap;
 }
+
+/* 人が地図を指で動かしている間は、気配のピンも隠す（ビルのピンと同じ合図 .pins-moving。2026-11-09 本人） */
+.pins-moving .hint-pin {
+  visibility: hidden;
+}

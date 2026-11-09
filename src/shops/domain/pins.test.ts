@@ -31,12 +31,12 @@ test('clusterSpots: 1m の2軒は1つの塊（位置は平均）、30m 離れれ
   expect(r).toEqual([{ ids: ['a', 'b'], x: 0.5, y: 0 }, { ids: ['c'], x: 30, y: 0 }])
 })
 
-test('ピンの列がビルの幅（9割）に収まる大きさ', () => {
+test('ピンの列がビルの幅（PIN_FIT_RATE）に収まる大きさ', () => {
   // 幅 16m・1m=4px のビル（64px）に3つ: 列の幅 34*2+30=98px → 64*0.9/98
-  expect(pinScale(16, 4, 3)).toBeCloseTo((64 * 0.9) / 98, 5)
+  expect(pinScale(16, 4, 3)).toBeCloseTo((64 * 1.4) / 98, 5)
 })
 
-test('近くても元の大きさより大きくせず、遠くても 0.3 より小さくしない', () => {
+test('近くても元の大きさより大きくせず、遠くても PIN_MIN_SCALE より小さくしない', () => {
   expect(pinScale(16, 40, 1)).toBe(1)
-  expect(pinScale(16, 0.1, 5)).toBe(0.3)
+  expect(pinScale(16, 0.1, 5)).toBe(0.55)
 })
