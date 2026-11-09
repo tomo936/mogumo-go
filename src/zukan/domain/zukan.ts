@@ -10,6 +10,7 @@ export type ZukanShop = {
   photoUrl: string | null
   catch: string | null
   genreName: string | null
+  budgetName: string | null
   lat: number
   lng: number
   visits: Visits | null // null = まだ行っていない（「？」）

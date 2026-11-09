@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildZukan, filledCount, pageCount, type ZukanShop } from './zukan.ts'
 
 const shop = (p: Partial<ZukanShop> & { id: string }): ZukanShop => ({
-  name: p.id, kind: 'ramen', photoUrl: null, catch: null, genreName: null, lat: 35, lng: 139, visits: null, cleared: true, ...p,
+  name: p.id, kind: 'ramen', photoUrl: null, catch: null, genreName: null, budgetName: null, lat: 35, lng: 139, visits: null, cleared: true, ...p,
 })
 const v = (count: number, firstDay: string, lastDay: string) => ({ count, firstDay, lastDay })
 

@@ -141,7 +141,6 @@ export function MapPage() {
     const t = setTimeout(() => setSoonName(null), 1600)
     return () => clearTimeout(t)
   }, [soonName])
-  const [locateShopId, setLocateShopId] = useState<string | null>(null)
   const closeExplore = () => {
     setExploreOpen(false)
     hints.closeSheet()
@@ -259,7 +258,6 @@ export function MapPage() {
           error={checkinError}
           onCheckin={() => void checkin()}
           onClose={() => select(null)}
-          onLocate={locateShopId === selected.id ? () => mapRef.current?.focusAt(selected) : undefined}
         />
       )}
       {exploreOpen && (
@@ -289,9 +287,9 @@ export function MapPage() {
       )}
       {zukanOpen && (
         <Zukan
-          onPick={(z) => {
+          onLocate={(z) => {
             setZukanOpen(false)
-            setLocateShopId(z.id) // 図鑑から開いたお店だけ「地図で見る」を出す
+            mapRef.current?.focusAt(z) // 詳細の「地図で見る」: 視点をお店へ寄せて、シートを開く
             select(zukanToShop(z))
           }}
           onClose={() => setZukanOpen(false)}
