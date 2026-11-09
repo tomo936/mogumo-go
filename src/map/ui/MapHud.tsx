@@ -10,8 +10,11 @@ const CHARACTERS = import.meta.glob<string>('../../assets/characters/starter-*.w
 const characterUrl = (starterId: number) =>
   CHARACTERS[starterId === 102 ? '../../assets/characters/starter-girl.webp' : '../../assets/characters/starter-boy.webp']
 
-const FAN_RADIUS = 138
-const BUTTON = 64
+const MENU_ART = import.meta.glob<string>('../../assets/ui/menu-ramen.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>
+const ramenUrl = MENU_ART['../../assets/ui/menu-ramen.webp']
+
+const FAN_RADIUS = 148
+const BUTTON = 72 // 扇の丸の大きさ（CSS の .hud-fan と同じ）
 
 type Props = {
   nickname: string | null
@@ -41,12 +44,9 @@ export function MapHud(p: Props) {
   const spots = fanPositions(items.length, 0, 0, FAN_RADIUS)
   return (
     <>
-      <div className="hud-player" aria-label="プレイヤー">
+      <div className="hud-player" role="img" aria-label={`${p.nickname ?? 'あなた'} Lv ${p.level}`}>
         <img src={characterUrl(p.starterId)} alt="" />
-        <div>
-          <b>{p.nickname ?? 'あなた'}</b>
-          <span>{`Lv ${p.level}`}</span>
-        </div>
+        <span className="hud-player__lv">{`Lv ${p.level}`}</span>
       </div>
 
       <button
@@ -56,8 +56,7 @@ export function MapHud(p: Props) {
         aria-pressed={p.pinsHidden}
         onClick={p.onTogglePins}
       >
-        <Icon name={p.pinsHidden ? 'pinOff' : 'pin'} size={20} />
-        <span>ピン</span>
+        <Icon name={p.pinsHidden ? 'pinOff' : 'pin'} size={22} />
       </button>
 
       <button type="button" className="hud-hint" aria-label="気配" aria-expanded={p.hintOpen} onClick={p.onHintTap}>
@@ -71,14 +70,14 @@ export function MapHud(p: Props) {
               key={it.name}
               type="button"
               className="hud-fan"
+              aria-label={it.name}
               style={{ left: spots[i].x - BUTTON / 2, bottom: -spots[i].y - BUTTON / 2 }}
               onClick={() => {
                 setMenuOpen(false)
                 it.run()
               }}
             >
-              <Icon name={it.icon} size={22} />
-              <small>{it.name}</small>
+              <Icon name={it.icon} size={30} />
             </button>
           ))}
         <button
@@ -88,7 +87,7 @@ export function MapHud(p: Props) {
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((x) => !x)}
         >
-          <Icon name={menuOpen ? 'close' : 'ramen'} size={menuOpen ? 26 : 30} />
+          {menuOpen ? <Icon name="close" size={28} /> : <img src={ramenUrl} alt="" className="hud-toggle__art" />}
         </button>
       </div>
 
