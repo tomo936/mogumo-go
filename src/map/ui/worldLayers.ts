@@ -24,6 +24,7 @@ import { createFacilityLayer } from '../../shops/infra/facilityLayer.ts'
 import type { PlacedFacility } from '../../shops/infra/facilityPick.ts'
 import type { PinnedBuilding } from '../../shops/infra/buildingPins.ts'
 import { createCheckMarks } from '../../shops/infra/checkMarks.ts'
+import { createShopPins } from '../../shops/infra/shopPins.ts'
 import { createShopLayer } from '../../shops/infra/shopLayer.ts'
 import type { PlacedShop } from '../../shops/infra/shopLayer.ts'
 import { distanceMeters, localFrame } from '../domain/geo.ts'
@@ -95,8 +96,11 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const fogShopLayer = createShopLayer('shops-3d-fog') // 霧の中の近い店（今までどおり雲の上に描く）
   const facilityLayer = createFacilityLayer()
   const checkMarks = createCheckMarks(map)
+  const shopPins = createShopPins(map) // 1軒の店のピン（symbol レイヤー）
   const buildingPins = createBuildingPins(map, (ids) => deps.onPinTap(ids))
-  let shownPlaced: PlacedShop[] = [] // いま層に渡している置き方（1軒の店だけ。✓ の印用）
+  let shownPlaced: PlacedShop[] = [] // いま層に渡している置き方（1軒の店だけ。✓ の印・ピン用）
+  let shownInFog: ReadonlySet<string> = new Set() // そのうち霧の中の近い店（ピンを雲の上に描く）
+  let shownFrom: LatLng | null = null // 距離順（ピンの優先）の基準にした現在地
   let shownBuildings: PinnedBuilding[] = [] // いま出しているビルと、その中の店
   let shownFacilities: PlacedFacility[] = [] // いま出している大型施設・駅
   let fogCenter: LatLng | null = null // 雲の塊を置いたときの現在地
@@ -347,6 +351,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     if (key === shownKey) return // 顔ぶれが変わったときだけ層を作り直す
     shownKey = key
     shownPlaced = singles
+    shownInFog = inFog
+    shownFrom = p
     shownBuildings = blds
     shownFacilities = facs
     shopLayer.setShops(drawn.filter((s) => !inFog.has(s.id)))
@@ -358,6 +364,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const updateMarks = () => {
     const done = checkedNow()
     checkMarks.update(shownPlaced, done)
+    if (shownFrom) shopPins.update(shownPlaced, shownInFog, shownFrom)
     buildingPins.update(shownBuildings, done)
   }
 
@@ -501,6 +508,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         map.addLayer(shopLayer, below)
         map.addLayer(fogLayer, below)
         map.addLayer(fogShopLayer, below)
+        // お店のピン: 晴れた所の店は雲の下、霧の中の近い店は雲の上。どちらも自分の印より下
+        shopPins.attach(fogLayer.id, below)
         setFog(p)
       } else if (distanceMeters(fogCenter, p) >= FOG_REBUILD_M) {
         setFog(p)
@@ -511,7 +520,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     },
     shopsNear: () => near,
     titleOf: (ids) => shownFacilities.find((f) => f.shopIds.includes(ids[0]))?.name ?? null,
-    pick: (point) => fogShopLayer.pick(point) ?? shopLayer.pick(point) ?? facilityLayer.pick(point), // 手前に出やすい小さい模型を先に
+    pick: (point) => shopPins.pick(point) ?? fogShopLayer.pick(point) ?? shopLayer.pick(point) ?? facilityLayer.pick(point), // 手前に出やすい小さい模型を先に
     focus(shopIds) {
       focusIds = new Set(shopIds ?? [])
       if (refreshedAt && !disposed) showShops(refreshedAt)
@@ -554,6 +563,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       disposed = true
       if (frameId !== null) cancelAnimationFrame(frameId)
       checkMarks.dispose()
+      shopPins.dispose()
       buildingPins.dispose()
       map.off('idle', onIdle)
       map.off('moveend', onMoveEnd)

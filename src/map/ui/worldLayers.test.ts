@@ -16,6 +16,8 @@ const pinsUpdate = vi.fn()
 vi.mock('../../shops/infra/checkMarks.ts', () => ({ createCheckMarks: () => ({ update: marksUpdate, dispose: vi.fn() }) }))
 const facilityLayer = { id: 'facilities-3d', setFacilities: vi.fn(), pick: vi.fn(() => null) }
 vi.mock('../../shops/infra/facilityLayer.ts', () => ({ createFacilityLayer: () => facilityLayer }))
+const pinsApi = { attach: vi.fn(), update: vi.fn(), pick: vi.fn(() => null), dispose: vi.fn() }
+vi.mock('../../shops/infra/shopPins.ts', () => ({ createShopPins: () => pinsApi }))
 vi.mock('../../shops/infra/buildingPins.ts', () => ({ createBuildingPins: () => ({ update: pinsUpdate, dispose: vi.fn() }) }))
 
 vi.mock('../../shops/domain/facility.ts', async (orig) => {
@@ -108,6 +110,18 @@ test('大型施設・お店・霧・霧の中の近い店は自分の位置の�
   vi.mocked(map.getLayer).mockImplementation(((id: string) => (id === 'me-circle-line' || id === 'me-shadow' ? {} : undefined)) as never)
   world.onPosition(home)
   expect(vi.mocked(map.addLayer).mock.calls).toEqual([[facilityLayer, 'me-circle-line'], [shopLayer, 'me-circle-line'], [fogLayer, 'me-circle-line'], [fogShopLayer, 'me-circle-line']])
+})
+
+test('お店のピンは霧の層の手前と自分の印の手前に入れ、1軒の店を渡し、タップはピンを先に見る', async () => {
+  const { world, map } = setup()
+  vi.mocked(map.getLayer).mockImplementation(((id: string) => (id === 'me-circle-line' ? {} : undefined)) as never)
+  world.onPosition(home)
+  expect(pinsApi.attach).toHaveBeenCalledWith('fog', 'me-circle-line')
+  await flush()
+  expect(pinsApi.update).toHaveBeenLastCalledWith([expect.objectContaining({ id: 's1', model: 'ramen' })], expect.any(Set), expect.anything())
+  pinsApi.pick.mockReturnValueOnce(['s1'] as never)
+  expect(world.pick({ x: 1, y: 1 })).toEqual(['s1'])
+  expect(shopLayer.pick).not.toHaveBeenCalled()
 })
 
 test('店が何軒あっても、1回の更新でタイルを読むのは道路1回・建物1回', async () => {
