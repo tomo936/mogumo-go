@@ -44,3 +44,4 @@
 - 2026-11-09 Claude Code: アイコン単体 cake（pin-sweets.png の中身）・bakery・mystery を配置。単体13種・色分け13種ともそろった。
 - 2026-11-09 Claude Code: 高画質の元データ ramen・sushi・soba・washoku・izakaya を art/pins/hires/ に配置（13種のうち5種）。
 - 2026-11-09 Claude Code: 高画質の元データ chinese・yakiniku・western・curry・cafe を art/pins/hires/ に配置（13種のうち10種）。
+- 2026-11-09 Claude Code: 「その他（ジャンル不明）」のピンの絵を依頼（to-shiro/2026-11-09-other-pin.md）。気配の「？」と同じ絵ではだめ、とオーナー決定。
