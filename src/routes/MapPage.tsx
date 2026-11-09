@@ -272,7 +272,6 @@ export function MapPage() {
         <Zukan
           onPick={(z) => {
             setZukanOpen(false)
-            mapRef.current?.focusAt(z) // 地図の視点をお店へ移す（探索シートから選ぶときと同じ）
             select(zukanToShop(z))
           }}
           onClose={() => setZukanOpen(false)}
