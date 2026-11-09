@@ -1,7 +1,7 @@
 // お店をタップしたときに下から出るシート。① 小さい段 ⇄ ② 全画面（上にスライド／持ち手を押す）。
 // 全画面は写真のシール（無い店は種類の絵）と「わたしの記録」。設計 docs/superpowers/specs/2026-11-09-shop-sheet-design.md
 // チェックインのボタンは 50m 以内だけ押せる。
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import './checkin.css'
 import '../../hints/ui/hints.css'
@@ -11,6 +11,8 @@ import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
 import { CHECKIN_M } from '../../shops/config.ts'
 import { formatOpen } from '../domain/openHours.ts'
 import { frameTier, nextTier } from '../domain/visits.ts'
+import { dragHeight, sheetStop } from '../domain/sheetDrag.ts'
+import type { SheetStop } from '../domain/sheetDrag.ts'
 import type { FrameTier, Visits } from '../domain/visits.ts'
 import { hintLines } from '../../hints/domain/hint.ts'
 import type { DailyHint } from '../../hints/domain/hint.ts'
@@ -26,7 +28,8 @@ const ERROR_TEXT: Record<CheckinError, string> = {
 }
 
 const TIER_NAME: Record<FrameTier, string> = { normal: 'ふつう', silver: '銀', gold: '金' }
-const SWIPE_PX = 40 // これだけ指を上下に動かしたら段を変える
+const MOVE_PX = 6 // これより動いたら「引いている」（それまではボタンのタップとして扱う）
+const SETTLE_MS = 280 // 指を離してから段に収まるまで（CSS の transition と同じ）
 
 // 写真の無い店のシールに入れる、種類の模型の絵
 const cards = import.meta.glob('../../assets/shops/cards/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
@@ -52,7 +55,15 @@ type Props = {
 
 export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, masked = false, visits = null, recordReady, busy, error, onCheckin, onClose }: Props) {
   const [expanded, setExpanded] = useState(false)
-  const startY = useRef<number | null>(null)
+  const [height, setHeight] = useState<number | null>(null) // 引いている間・全画面の高さ（px）。小さい段で止まっているときは null（中身の高さ）
+  const [animating, setAnimating] = useState(false)
+  const sectionRef = useRef<HTMLElement>(null)
+  const smallH = useRef(0)
+  const drag = useRef<{ from: 'small' | 'full'; startY: number; startH: number; moved: boolean; id: number } | null>(null)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current)
+  }, [])
   const bodyRef = useRef<HTMLDivElement>(null)
   const inRange = distanceM <= CHECKIN_M
   const d = shop.details
@@ -65,19 +76,54 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
   const next = nextTier(count)
   const name = masked ? '？？？' : shop.name
 
-  // 上下のスライドで段を変える。全画面では中身が一番上までスクロールしているときだけ下へ戻す
+  // 指で引くとシートがついてきて、離すと段（小さい／全画面／閉じる）になめらかに収まる。
+  // 全画面では中身がスクロールするので、引けるのは中身の外（上の持ち手のあたり）だけ
+  const fullH = () => window.innerHeight
+  const currentH = () => sectionRef.current?.offsetHeight ?? 0
+  const settle = (stop: SheetStop) => {
+    if (timer.current) clearTimeout(timer.current)
+    if (!expanded && height === null) smallH.current = currentH()
+    const from = height ?? currentH()
+    setAnimating(true)
+    setHeight(from)
+    const to = stop === 'full' ? fullH() : stop === 'small' ? smallH.current : 0
+    if (stop === 'full') setExpanded(true)
+    // 今の高さを置いてから次のコマで行き先へ（CSS の transition が効くように）
+    requestAnimationFrame(() => requestAnimationFrame(() => setHeight(to)))
+    timer.current = setTimeout(() => {
+      setAnimating(false)
+      if (stop === 'close') onClose()
+      else if (stop === 'small') {
+        setExpanded(false)
+        setHeight(null)
+      }
+    }, SETTLE_MS)
+  }
   const onPointerDown = (e: ReactPointerEvent) => {
-    startY.current = e.clientY
+    if (expanded && bodyRef.current?.contains(e.target as Node)) return // 中身のスクロールに任せる
+    if (!expanded && height === null) smallH.current = currentH()
+    drag.current = { from: expanded ? 'full' : 'small', startY: e.clientY, startH: currentH(), moved: false, id: e.pointerId }
+  }
+  const onPointerMove = (e: ReactPointerEvent) => {
+    const g = drag.current
+    if (!g) return
+    const dy = e.clientY - g.startY
+    if (!g.moved) {
+      if (Math.abs(dy) < MOVE_PX) return
+      g.moved = true
+      sectionRef.current?.setPointerCapture?.(g.id) // 引き始めたら、指が外へ出ても追う（タップのうちは取らない）
+    }
+    const h = dragHeight(g.startH, dy, fullH())
+    setAnimating(false)
+    setHeight(h)
+    if (!expanded && h > smallH.current + 40) setExpanded(true) // 引き上げている途中で中身を全画面の形に
   }
   const onPointerUp = (e: ReactPointerEvent) => {
-    if (startY.current === null) return
-    const dy = e.clientY - startY.current
-    startY.current = null
-    if (dy < -SWIPE_PX && !expanded) setExpanded(true)
-    else if (dy > SWIPE_PX) {
-      if (!expanded) onClose()
-      else if ((bodyRef.current?.scrollTop ?? 0) <= 0) setExpanded(false)
-    }
+    const g = drag.current
+    drag.current = null
+    if (!g?.moved) return
+    const dy = e.clientY - g.startY
+    settle(sheetStop(g.from, dy, dragHeight(g.startH, dy, fullH()), smallH.current))
   }
 
   const tags = (
@@ -119,17 +165,24 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
 
   return (
     <section
-      className={`shop-sheet${expanded ? ' shop-sheet--full' : ''}`}
+      ref={sectionRef}
+      className={`shop-sheet${expanded ? ' shop-sheet--full' : ''}${animating ? ' shop-sheet--settling' : ''}`}
+      style={height === null ? undefined : { height }}
       aria-label="お店の情報"
       onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={() => (startY.current = null)}
+      onPointerCancel={() => {
+        const g = drag.current
+        drag.current = null
+        if (g?.moved) settle(g.from)
+      }}
     >
       <button
         type="button"
         className="shop-sheet__grab"
         aria-label={expanded ? '小さくする' : 'くわしく見る'}
-        onClick={() => setExpanded((x) => !x)}
+        onClick={() => settle(expanded ? 'small' : 'full')}
       />
       <button type="button" className="shop-sheet__close" aria-label="閉じる" onClick={onClose}>
         ×
