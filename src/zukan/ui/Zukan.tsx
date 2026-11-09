@@ -2,7 +2,6 @@
 // 仕様: docs/superpowers/specs/2026-11-10-zukan-design.md
 import { useEffect, useMemo, useState } from 'react'
 import './zukan.css'
-import { BADGE_COLOR } from '../../shops/domain/badgeColor.ts'
 import type { ShopKind } from '../../shops/domain/shop.ts'
 import { frameTier } from '../../checkin/domain/visits.ts'
 import { KIND_ORDER, PAGE_SIZE, buildZukan, filledCount, pageCount, type ZukanShop } from '../domain/zukan.ts'
@@ -102,7 +101,7 @@ export function Zukan({ onPick, onClose }: Props) {
                       </button>
                     ) : (
                       <div className="zukan__card zukan__card--unknown" aria-label="まだ行っていないお店">
-                        <span className="zukan__photo zukan__photo--unknown" style={{ background: BADGE_COLOR[s.kind] }}>
+                        <span className="zukan__photo zukan__photo--unknown">
                           <img src={cardUrl(s.kind)} alt="" />
                           <span className="zukan__question">？</span>
                         </span>
