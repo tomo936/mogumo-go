@@ -11,6 +11,7 @@ import { loadProgress, postCheckin } from '../checkin/infra/checkinApi.ts'
 import { profileRepo } from '../setup/infra/profileRepo.ts'
 import { levelFor } from '../zukan/domain/level.ts'
 import { MapHud } from '../map/ui/MapHud.tsx'
+import { Record } from '../record/ui/Record.tsx'
 import type { StarterId } from '../setup/infra/profileRepo.ts'
 import { CheckinEffect } from '../checkin/ui/CheckinEffect.tsx'
 import { BuildingSheet } from '../checkin/ui/BuildingSheet.tsx'
@@ -127,7 +128,8 @@ export function MapPage() {
     setExploreOpen(true)
     hints.openSheet()
   }
-  const [zukanOpen, setZukanOpen] = useState(false) // 図鑑（探索シートの入口から開く）
+  const [zukanOpen, setZukanOpen] = useState(false) // 図鑑（メニューから開く）
+  const [recordOpen, setRecordOpen] = useState(false) // 記録（メニューから開く）
   const [profile, setProfile] = useState<{ nickname: string; starterId: StarterId } | null>(null)
   const [visitedCount, setVisitedCount] = useState(0) // プレイヤーのレベルの元（行ったお店の数）
   const [soonName, setSoonName] = useState<string | null>(null) // まだ作っていない画面の名前（短く出す）
@@ -291,6 +293,7 @@ export function MapPage() {
           onClose={() => setZukanOpen(false)}
         />
       )}
+      {recordOpen && <Record onClose={() => setRecordOpen(false)} />}
       {pickedHintData && (
         <HintSheet hint={pickedHintData} distanceM={distances.get(pickedHintData.id) ?? null} onClose={closeHint} />
       )}
@@ -314,6 +317,10 @@ export function MapPage() {
           onZukan={() => {
             closeExplore()
             setZukanOpen(true)
+          }}
+          onRecord={() => {
+            closeExplore()
+            setRecordOpen(true)
           }}
           onSoon={(name) => setSoonName(name)}
           pinsHidden={pinsHidden}

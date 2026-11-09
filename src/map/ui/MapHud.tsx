@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { fanPositions } from '../domain/menuFan.ts'
+import { Icon } from '../../ui/Icon.tsx'
+import type { IconName } from '../../ui/Icon.tsx'
 
 const CHARACTERS = import.meta.glob<string>('../../assets/characters/starter-*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>
 const characterUrl = (starterId: number) =>
@@ -19,6 +21,7 @@ type Props = {
   hintOpen: boolean
   onHintTap: () => void
   onZukan: () => void
+  onRecord: () => void
   onSoon: (name: string) => void
   settings: ReactNode // 設定の中身（出典・ピンの表示・ログアウト）
   pinsHidden: boolean
@@ -28,12 +31,12 @@ type Props = {
 export function MapHud(p: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const items = [
-    { icon: '📖', name: '図鑑', run: () => p.onZukan() },
-    { icon: '📝', name: '記録', run: () => p.onSoon('記録') },
-    { icon: '🎰', name: 'ガチャ', run: () => p.onSoon('ガチャ') },
-    { icon: '👤', name: 'マイページ', run: () => p.onSoon('マイページ') },
-    { icon: '⚙️', name: '設定', run: () => setSettingsOpen(true) },
+  const items: { icon: IconName; name: string; run: () => void }[] = [
+    { icon: 'zukan', name: '図鑑', run: () => p.onZukan() },
+    { icon: 'record', name: '記録', run: () => p.onRecord() },
+    { icon: 'gacha', name: 'ガチャ', run: () => p.onSoon('ガチャ') },
+    { icon: 'person', name: 'マイページ', run: () => p.onSoon('マイページ') },
+    { icon: 'settings', name: '設定', run: () => setSettingsOpen(true) },
   ]
   const spots = fanPositions(items.length, 0, 0, FAN_RADIUS)
   return (
@@ -53,7 +56,8 @@ export function MapHud(p: Props) {
         aria-pressed={p.pinsHidden}
         onClick={p.onTogglePins}
       >
-        {p.pinsHidden ? '🚫' : '📍'}
+        <Icon name={p.pinsHidden ? 'pinOff' : 'pin'} size={20} />
+        <span>ピン</span>
       </button>
 
       <button type="button" className="hud-hint" aria-label="気配" aria-expanded={p.hintOpen} onClick={p.onHintTap}>
@@ -73,7 +77,7 @@ export function MapHud(p: Props) {
                 it.run()
               }}
             >
-              <span>{it.icon}</span>
+              <Icon name={it.icon} size={22} />
               <small>{it.name}</small>
             </button>
           ))}
@@ -84,7 +88,7 @@ export function MapHud(p: Props) {
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((x) => !x)}
         >
-          {menuOpen ? '×' : '🍜'}
+          <Icon name={menuOpen ? 'close' : 'ramen'} size={menuOpen ? 26 : 30} />
         </button>
       </div>
 
