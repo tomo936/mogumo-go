@@ -195,12 +195,12 @@
   - `CheckinResult` の成功側: `{ ok: true; checkinId: string; coins: 0 | 30 | 40; wasHint: boolean; newCells: Cell[] }`
   - `CheckinEffect({ coins: 0 | 30 | 40; reveal?: string | null; onDone })` — `reveal` は伏せたままチェックインした店の名前
 
-- [ ] **Step 1: テストを書く**
+- [x] **Step 1: テストを書く**
   - `checkinApi.test.ts`: `coins_awarded 40・was_hint true を受け取る`、`was_hint が無い返事（古い関数）は wasHint false`（Review Focus 1）、`coins_awarded 35 は network`
   - `CheckinEffect.test.tsx`: `40 なら「+40 コイン（気配ボーナス +10）」`、`reveal があれば「『○○亭』だった！」を帯に出す`、`30 は今までどおり`
-- [ ] **Step 2:** `npx vitest run src/checkin` → FAIL
-- [ ] **Step 3:** 実装。`MapPage` の `effect` の型を `{ coins: 0 | 30 | 40; reveal: string | null; key: number }` にし、今は `reveal: null` を渡す（Task 13 でつなぐ）。
-- [ ] **Step 4:** `npx vitest run src/checkin src/routes` → PASS、`npx tsc -b` → 成功
+- [x] **Step 2:** `npx vitest run src/checkin` → FAIL
+- [x] **Step 3:** 実装。`MapPage` の `effect` の型を `{ coins: 0 | 30 | 40; reveal: string | null; key: number }` にし、今は `reveal: null` を渡す（Task 13 でつなぐ）。
+- [x] **Step 4:** `npx vitest run src/checkin src/routes` → PASS、`npx tsc -b` → 成功
 - [ ] **Step 5:** commit `feat(checkin): accept hint bonus (+40) and reveal in effect`
 
 ### Task 8: `src/hints/domain`（型・文・候補・明かし・速さと探し直し）
@@ -234,14 +234,14 @@
   - `export function mayGenerate(g: SpeedGate, now: number): boolean` — `lastFastAt === null || now - lastFastAt >= HINT_SLOW_HOLD_MS`
   - `export function showRegen(set: HintSet | null, me: LatLng | null): boolean` — 組が1件以上・未達成だけ・`regenLeft === 1`・重心から `HINT_REGEN_MIN_M` 以上
 
-- [ ] **Step 1: テストを書く**
+- [x] **Step 1: テストを書く**
   - `hint.test.ts`: `genreLabel` 3通り／`catchLabel('自家製麺')`→`'…自家製麺…'`、`'あいう…'` → `'…あいう…'`／`roundDistance`: 84→80、99→100、120→100、430→450、5→10／`distanceLabel(430)`→`'ここから 約450m'`／`matchesShop`: id 同じ・mapId 同じ → true、`hp:X` の気配と `osm:Y` の店が 20m・`'ラーメン一郎'` と `'一郎'` → true、20m・違う名前 → false、60m・同じ名前 → false（Review Focus 2）／`hintPosition`: mapId で合う店があればその位置、無ければ `h.shop`／`guideShops`: 済み（mapId で済みも）・名前なしを外し近い順に3件
   - `candidates.test.ts`（自宅を原点に、店を東へ m 単位で置く）: 自宅 1km 内にいる → 自宅 1km の店だけ（今いる場所の 1km 外の店は入らない）／自宅の外 → 自宅 1km と今いる場所 1km の両方／`regen: true` → 今いる場所 1km だけ／`home: null` → 今いる場所だけ／晴れたセルの店は外れる／済み（`id`・`mapId`）は外れる／名前が空は外れる／`hp:` は id だけ、`osm:` で `details: null` は id と位置／hp 120件 → 100件、osm 60件 → 50件（乱数固定で毎回同じ）
   - `reveal.test.ts`: 30m ちょうど → 明かす・31m → 明かさない／一度明かした id は離れても残る／達成は `revealed` に入り `newly` に入らない
   - `when.test.ts`: 10秒で 50m（18km/h）→ `mayGenerate` false、そのあと 29秒遅い → false、30秒遅い → true／10秒で 41m（約14.8km/h）→ true／点1つ → true／`showRegen`: 重心から 1500m ちょうど → true、1499m → false、達成あり → false、`regenLeft 0` → false、組が null・空 → false
-- [ ] **Step 2:** `npx vitest run src/hints` → FAIL
-- [ ] **Step 3:** 実装。距離は `distanceMeters`、晴れは `isClearedAt`、名前の照合は `normalizeName`（merge.ts）。間引きは Fisher–Yates の先頭 N 件。
-- [ ] **Step 4:** `npx vitest run src/hints` → PASS、`npm run lint` → 成功
+- [x] **Step 2:** `npx vitest run src/hints` → FAIL
+- [x] **Step 3:** 実装。距離は `distanceMeters`、晴れは `isClearedAt`、名前の照合は `normalizeName`（merge.ts）。間引きは Fisher–Yates の先頭 N 件。
+- [x] **Step 4:** `npx vitest run src/hints` → PASS、`npm run lint` → 成功
 - [ ] **Step 5:** commit `feat(hints): domain (text, candidates, reveal, speed, regen)`
 
 ### Task 9: `src/hints/infra`（`hintsApi`・`revealStore`）
@@ -260,12 +260,12 @@
   - `export function saveRevealed(userId: string, v: { day: string; generation: number; ids: string[] }): void`
   - キーは `mogumo.hintsRevealed.<userId>`。読み書きは try/catch（例外は空として扱う）
 
-- [ ] **Step 1: テストを書く**
+- [x] **Step 1: テストを書く**
   - `hintsApi.test.ts`: 200 の正しい形 → `ok` と `HintSet`／`hints` の1件が `slot` 無し → network／409 の `regen_used`・`regen_done`・`not_far`・`no_hints`・`profile_missing`（→ `no_profile`）を読み分ける／500・fetch の例外・トークン無し → network／本文に `regen`・`hp`・`osm` 以外の項目が無い／`readTodayHints`: generation 1 と 2 の行 → 2 の組だけ・`regenLeft 0`、行なし → `set: null`、エラー（列が無いなど）→ `ok: false`（Review Focus 1）
   - `revealStore.test.ts`: 保存して同じ day・generation で読むと戻る／day が違えば空／generation が違えば空／壊れた JSON は空／`localStorage` が例外を投げても落ちない
-- [ ] **Step 2:** `npx vitest run src/hints/infra` → FAIL
-- [ ] **Step 3:** 実装
-- [ ] **Step 4:** `npx vitest run src/hints` → PASS
+- [x] **Step 2:** `npx vitest run src/hints/infra` → FAIL
+- [x] **Step 3:** 実装
+- [x] **Step 4:** `npx vitest run src/hints` → PASS
 - [ ] **Step 5:** commit `feat(hints): api and reveal store`
 
 ### Task 10: 地図のつなぎ（`worldLayers`・`hintPins`・`MapView`）
@@ -282,12 +282,12 @@
   - `MapViewHandle` に `hintInputs(): ReturnType<World['hintInputs']> | null`・`whenShopsReady(): Promise<void>`・`setHints(hints: readonly DailyHint[], positions: ReadonlyMap<string, LatLng>, revealed: ReadonlySet<string>): void`・`focusAt(p: LatLng): void`（タップでお店に寄せるのと同じカメラ移動。戻すのは今の `unfocus`）・`bounceHint(hintId: string): void`
   - `MapView` の props に `onHintTap: (hintId: string) => void`
 
-- [ ] **Step 1: テストを書く**
+- [x] **Step 1: テストを書く**
   - `hintPins.test.ts`（MapLibre の `Marker` はモック。`buildingPins.test.ts` にならう）: 3件で3つ作る／達成済みは作らない／同じ内容で `update` しても作り直さない／別の組で `update` すると古いマーカーを全部 `remove`（Review Focus 5）／押すと `onTap(id)`／`dispose` で全部消える
   - `worldLayers.test.ts`: `hintInputs()` が合体済みの店と済みの id を返す／3つそろうまで `onShopsReady` を呼ばない・そろったら1回だけ（`shopsEnabled: false` ならホットペッパーを待たない）
-- [ ] **Step 2:** `npx vitest run src/hints src/map` → FAIL
-- [ ] **Step 3:** 実装。ピンの高さはビルのピンと重ならないよう少し上（値は作る人が決める）。
-- [ ] **Step 4:** `npx vitest run src/hints src/map` → PASS、`npx tsc -b` → 成功
+- [x] **Step 2:** `npx vitest run src/hints src/map` → FAIL
+- [x] **Step 3:** 実装。ピンの高さはビルのピンと重ならないよう少し上（値は作る人が決める）。
+- [x] **Step 4:** `npx vitest run src/hints src/map` → PASS、`npx tsc -b` → 成功
 - [ ] **Step 5:** commit `feat(map): hint pins and hint inputs`
 
 ### Task 11: `useDailyHints`（流れのまとめ）
@@ -302,7 +302,7 @@
   - `export function useDailyHints(a: { userId: string; enabled: boolean; me: LatLng | null; home: LatLng | null; map: RefObject<MapViewHandle | null>; api?: { readTodayHints; postDailyHints } }): { status: ExploreStatus; set: HintSet | null; revealed: ReadonlySet<string>; positions: ReadonlyMap<string, LatLng>; newlyRevealed: DailyHint | null; regenVisible: boolean; fast: boolean; notice: string | null; openSheet(): void; closeSheet(): void; retry(): void; regen(): void; hintFor(shop: Shop): DailyHint | null; isMasked(shop: Shop): boolean; markCompleted(shop: Shop): void; clearNewly(): void }`
   - `enabled` は `shopSourceEnabled(...)` の結果
 
-- [ ] **Step 1: テストを書く**（`renderHook`。api はモック、`map` は偽の handle、時刻は `vi.useFakeTimers`）
+- [x] **Step 1: テストを書く**（`renderHook`。api はモック、`map` は偽の handle、時刻は `vi.useFakeTimers`）
   - `開いただけでは postDailyHints を呼ばない（読むだけ）`、`今日の組があればピンを出す（setHints）`
   - `openSheet で組が無ければ、そろうのを待って候補を送る`／`2回目の openSheet は読み直すだけで送らない`
   - `enabled false → unavailable で送らない`／`whenShopsReady が 30 秒で来なければ timeout`
@@ -313,9 +313,9 @@
   - `30m に入ると newlyRevealed と bounceHint、revealStore に保存`／`markCompleted で達成になり regenVisible が false`
   - `日付が変わったら（1分ごとと visibilitychange）組・明かしを消す`／`読んだ組の day が今日でなければ捨てる`（Review Focus 4）
   - `isMasked`: 未明かし・未達成の気配の店 → true、明かした・達成 → false、気配でない店 → false
-- [ ] **Step 2:** `npx vitest run src/hints/ui` → FAIL
-- [ ] **Step 3:** 実装。state は `useReducer` でも `useState` でもよい。候補は `collectCandidates({ ...map.hintInputs(), home, me, regen, random: Math.random })`。`positions` は `hintPosition(h, hintInputs().shops)` を `me` が変わるたびに出し直す（3件なので軽い）。返ってきた `hint_date` を `day` の正本にする。
-- [ ] **Step 4:** `npx vitest run src/hints` → PASS
+- [x] **Step 2:** `npx vitest run src/hints/ui` → FAIL
+- [x] **Step 3:** 実装。state は `useReducer` でも `useState` でもよい。候補は `collectCandidates({ ...map.hintInputs(), home, me, regen, random: Math.random })`。`positions` は `hintPosition(h, hintInputs().shops)` を `me` が変わるたびに出し直す（3件なので軽い）。返ってきた `hint_date` を `day` の正本にする。
+- [x] **Step 4:** `npx vitest run src/hints` → PASS
 - [ ] **Step 5:** commit `feat(hints): useDailyHints flow`
 
 ### Task 12: 画面（探索ボタン・探索シート・ヒントのシート・明かしの帯）と `MapPage` のつなぎ
@@ -332,15 +332,15 @@
   - `HintSheet({ hint: DailyHint; distanceM: number | null; onClose })`
   - `RevealBanner({ name: string; onDone })` — `REVEAL_BANNER_MS` で閉じる。文「気配の正体は…『○○亭』！」
 
-- [ ] **Step 1: テストを書く**
+- [x] **Step 1: テストを書く**
   - `ExploreSheet.test.tsx`: 状態ごとの文（loading・fast・unavailable・timeout・error＋「もう一度」）／3件で「中華？」「…自家製麺の濃厚つけ麺…」「予算 1,000円台」「ここから 約400m」が出て**店名が出ない**／謎の気配の文／達成は店名と「達成 +10」／明かした気配は店名／探し直すボタンは `regenVisible` のときだけ、`fast` なら押せず「降りてから探し直してね」／気配なしで「今日は気配なし」と案内3件・案内が無ければ「近くにまだ行っていないお店はありません」／「Powered by ホットペッパーグルメ Webサービス」が出る
   - `HintSheet.test.tsx`: 「？？？」と距離とヒントの行、「近づくと正体が分かるよ（30m）」、店名が出ない、クレジットが出る
   - `ExploreButton.test.tsx`: 「探索」、`remaining 2` で「2」、null で数字なし
   - `RevealBanner.test.tsx`: 店名入りの文、3秒で `onDone`
   - `MapPage.test.tsx`: 探索ボタンでシートが開く／気配を押すと `focusAt` とヒントのシート／明かした気配を押すとお店のシート／シートを閉じると `unfocus`
-- [ ] **Step 2:** `npx vitest run src/hints/ui src/routes` → FAIL
-- [ ] **Step 3:** 実装。`MapPage` の state に「開いているシート」（探索／ヒント／お店／ビル。同時に1つ）を持つ。`MapView` の `onHintTap` と探索シートの `onPickHint` は同じ処理: 明かし済み・達成 → `hintInputs().shops` から `matchesShop` の店を探してお店のシート（見つからなければヒントのシート）、それ以外 → `focusAt(位置)`＋ヒントのシート。探索ボタンは地図の下の真ん中で、ホットペッパーのクレジットと重ならない位置（見た目は作る人が決める、ビルのピンとそろえる）。
-- [ ] **Step 4:** `npm test` → PASS、`npx tsc -b` → 成功、`npm run lint` → 成功
+- [x] **Step 2:** `npx vitest run src/hints/ui src/routes` → FAIL
+- [x] **Step 3:** 実装。`MapPage` の state に「開いているシート」（探索／ヒント／お店／ビル。同時に1つ）を持つ。`MapView` の `onHintTap` と探索シートの `onPickHint` は同じ処理: 明かし済み・達成 → `hintInputs().shops` から `matchesShop` の店を探してお店のシート（見つからなければヒントのシート）、それ以外 → `focusAt(位置)`＋ヒントのシート。探索ボタンは地図の下の真ん中で、ホットペッパーのクレジットと重ならない位置（見た目は作る人が決める、ビルのピンとそろえる）。
+- [x] **Step 4:** `npm test` → PASS、`npx tsc -b` → 成功、`npm run lint` → 成功
 - [ ] **Step 5:** commit `feat(hints): explore button, sheets and reveal banner`
 
 ### Task 13: 他のシートで店名を伏せる・「気配の店 +10」の札・伏せたままのチェックイン
@@ -354,13 +354,13 @@
   - `ShopSheet` の props に `hint?: DailyHint | null`・`masked?: boolean`。`masked` なら名前は「？？？」、営業時間の代わりに `hintLines(hint)`。`hint` が未達成なら「気配の店 +10」の札
   - `BuildingSheet` の props に `maskedIds?: ReadonlySet<string>`（その店の行は「？？？」）・`hintIds?: ReadonlySet<string>`（札）
 
-- [ ] **Step 1: テストを書く**
+- [x] **Step 1: テストを書く**
   - `ShopSheet.test.tsx`: `masked で店名と営業時間が出ず「？？？」とヒントの行`、`未達成の気配の店に「気配の店 +10」`、`masked でもチェックインのボタンは押せる`
   - `BuildingSheet.test.tsx`: `maskedIds の店は「？？？」、他の店は名前`、`並び順で伏せた店の名前が推測できないよう「？？？」は最後に並ぶ`
   - `MapPage.test.tsx`: `伏せた店でチェックインが成功（wasHint true）→ 演出の帯に正体、markCompleted が呼ばれる`／`失敗（too_far）なら正体を出さない`（Review Focus 3）／`wasHint true の返事で探索シートの気配が達成になる`
-- [ ] **Step 2:** `npx vitest run src/checkin src/routes` → FAIL
-- [ ] **Step 3:** 実装。`MapPage` はお店のシート・ビルの一覧を開くときに `hintFor`・`isMasked` で渡す。チェックインの成功時、`masked` だったら `effect.reveal = shop.name`、`wasHint` なら `markCompleted(shop)`。
-- [ ] **Step 4:** `npm test` → PASS、`npx tsc -b`・`npm run lint` → 成功
+- [x] **Step 2:** `npx vitest run src/checkin src/routes` → FAIL
+- [x] **Step 3:** 実装。`MapPage` はお店のシート・ビルの一覧を開くときに `hintFor`・`isMasked` で渡す。チェックインの成功時、`masked` だったら `effect.reveal = shop.name`、`wasHint` なら `markCompleted(shop)`。
+- [x] **Step 4:** `npm test` → PASS、`npx tsc -b`・`npm run lint` → 成功
 - [ ] **Step 5:** commit `feat(checkin): mask hint shop names until revealed`
 
 ### Task 14: 明かしの演出と全体の確認
@@ -368,9 +368,9 @@
 **Files:**
 - Modify: `src/routes/MapPage.tsx`, `src/hints/ui/hints.css`
 
-- [ ] **Step 1:** `newlyRevealed` が来たら `RevealBanner` を出し（`clearNewly` で閉じる）、ピンの `bounce` は Task 11 で呼ばれていることを確かめる。`MapPage.test.tsx` に `30m で帯「気配の正体は…『○○亭』！」が出る` を足して FAIL → 実装 → PASS。
-- [ ] **Step 2:** `npm test`・`npx tsc -b`・`npm run lint`・`npm run build` → すべて成功
-- [ ] **Step 3:** `npm run dev` の `?fake` で、探索ボタン・シート・ピン（雲の上に見える）・ヒントのシートを撮る（`daily-hints` がまだ無いので「気配を読み込めませんでした」になるのが正しい。その画面も撮る）。PNG で本人に送るのはリーダー。
+- [x] **Step 1:** `newlyRevealed` が来たら `RevealBanner` を出し（`clearNewly` で閉じる）、ピンの `bounce` は Task 11 で呼ばれていることを確かめる。`MapPage.test.tsx` に `30m で帯「気配の正体は…『○○亭』！」が出る` を足して FAIL → 実装 → PASS。
+- [x] **Step 2:** `npm test`・`npx tsc -b`・`npm run lint`・`npm run build` → すべて成功
+- [x] **Step 3:** `npm run dev` の `?fake` で、探索ボタン・シート・ピン（雲の上に見える）・ヒントのシートを撮る（`daily-hints` がまだ無いので「気配を読み込めませんでした」になるのが正しい。その画面も撮る）。PNG で本人に送るのはリーダー。
 - [ ] **Step 4:** commit `feat(hints): reveal banner`
 
 ### Task 15（リーダー）: シロへの素材の依頼

@@ -20,11 +20,24 @@ import { loadProgress } from '../../checkin/infra/checkinApi.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
 import { attachWorld } from './worldLayers.ts'
+import { createHintPins } from '../../hints/infra/hintPins.ts'
+import type { DailyHint } from '../../hints/domain/hint.ts'
+import '../../hints/ui/hints.css'
 import { nextBearing } from '../domain/rotate.ts'
 import { isStale, judgeFix, shouldMoveCamera, stepToward } from '../domain/smoothing.ts'
 import type { Fix } from '../domain/smoothing.ts'
 
-export type MapViewHandle = { checkin(shop: Shop, newCells: Cell[]): void; unfocus(): void; isCheckedToday(shop: Shop): boolean; checked(): ReadonlySet<string> }
+export type MapViewHandle = {
+  checkin(shop: Shop, newCells: Cell[]): void
+  unfocus(): void
+  isCheckedToday(shop: Shop): boolean
+  checked(): ReadonlySet<string>
+  hintInputs(): ReturnType<ReturnType<typeof attachWorld>['hintInputs']> | null // 気配の候補集めの材料（地図ができる前は null）
+  whenShopsReady(): Promise<void> // お店の読み込みがそろったら解ける
+  setHints(hints: readonly DailyHint[], positions: ReadonlyMap<string, LatLng>, revealed: ReadonlySet<string>): void
+  focusAt(p: LatLng): void // お店をタップしたときと同じカメラの寄せ。戻すのは unfocus
+  bounceHint(hintId: string): void
+}
 
 type Props = {
   onStatus: (event: LocationEvent) => void
@@ -33,6 +46,7 @@ type Props = {
   onSelectShop: (shop: Shop | null) => void
   onSelectBuilding: (shops: Shop[] | null, title?: string | null) => void // ビル・施設・駅（同じ建物の複数のお店）が押された。title は施設・駅の名前
   onPosition: (me: LatLng) => void // 1秒に4回まで
+  onHintTap: (hintId: string) => void // 気配のピンが押された
   ref?: Ref<MapViewHandle>
 }
 
@@ -44,13 +58,14 @@ const CHECKIN_WAVE_DELAY_MS = 900 // 紙吹雪のあと、霧の波が走り出�
 
 // 地図・カメラ・位置は MapLibre と ref だけで持ち、React の再描画を起こさない。
 // React に上げるのは位置情報の出来事（onStatus）だけ。
-export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBuilding, onPosition, ref }: Props) {
+export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, ref }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const onStatusRef = useRef(onStatus)
   const onShopsErrorRef = useRef(onShopsError)
   const onSelectShopRef = useRef(onSelectShop)
   const onSelectBuildingRef = useRef(onSelectBuilding)
   const onPositionRef = useRef(onPosition)
+  const onHintTapRef = useRef(onHintTap)
   const worldRef = useRef<ReturnType<typeof attachWorld> | null>(null)
   useLayoutEffect(() => {
     onStatusRef.current = onStatus
@@ -58,6 +73,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     onSelectShopRef.current = onSelectShop
     onSelectBuildingRef.current = onSelectBuilding
     onPositionRef.current = onPosition
+    onHintTapRef.current = onHintTap
   })
   // チェックイン演出: 約0.9秒後に済みの印を付け、新しく晴れるセルを足して波を走らせる（外すときに取り消す）
   const checkinTimers = useRef(new Set<ReturnType<typeof setTimeout>>())
@@ -65,10 +81,30 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   const focusRef = useRef<{ lat: number; lng: number } | null>(null)
   const unfocusRef = useRef<() => void>(() => {})
   const tapRef = useRef<(ids: string[] | null) => void>(() => {})
+  const focusAtRef = useRef<(p: LatLng) => void>(() => {})
+  // 気配のピン。最後に渡された内容は覚えておき、地図を作り直したときに出し直す
+  const hintPinsRef = useRef<ReturnType<typeof createHintPins> | null>(null)
+  const lastHintsRef = useRef<Parameters<MapViewHandle['setHints']> | null>(null)
+  // お店の読み込みがそろうのを待つ口。そろう前に地図を作り直しても、待っている人はそのまま待てる
+  const readyRef = useRef<{ promise: Promise<void>; resolve: () => void; done: boolean } | null>(null)
+  const newReady = () => {
+    let resolve!: () => void
+    const promise = new Promise<void>((r) => { resolve = r })
+    readyRef.current = { promise, resolve, done: false }
+  }
+  if (!readyRef.current) newReady()
   useImperativeHandle(ref, () => ({
     unfocus: () => unfocusRef.current(),
     isCheckedToday: (shop) => worldRef.current?.checkedToday(shop) ?? false,
     checked: () => worldRef.current?.checked() ?? new Set<string>(),
+    hintInputs: () => worldRef.current?.hintInputs() ?? null,
+    whenShopsReady: () => readyRef.current!.promise,
+    setHints: (hints, positions, revealed) => {
+      lastHintsRef.current = [hints, positions, revealed]
+      hintPinsRef.current?.update(hints, positions, revealed)
+    },
+    focusAt: (p) => focusAtRef.current(p),
+    bounceHint: (id) => hintPinsRef.current?.bounce(id),
     checkin: (shop, newCells) => {
       const t = setTimeout(() => {
         checkinTimers.current.delete(t)
@@ -110,6 +146,10 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       attributionControl: false, // 出典は起動時のスプラッシュと「出典」ボタンで示す
     })
     map.touchZoomRotate.disableRotation()
+    if (readyRef.current!.done) newReady()
+    const hintPins = createHintPins(map, (id) => onHintTapRef.current(id))
+    hintPinsRef.current = hintPins
+    if (lastHintsRef.current) hintPins.update(...lastHintsRef.current)
 
     // 位置: target が最新の目標、current が画面に出している位置、drawn がサークルを描いた位置
     const s: {
@@ -133,6 +173,11 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         onShopsError: () => onShopsErrorRef.current(),
         loadProgress,
         onPinTap: (ids) => tapRef.current(ids),
+        onShopsReady: () => {
+          const r = readyRef.current!
+          r.done = true
+          r.resolve()
+        },
       })
       worldRef.current = s.world
       if (s.current) s.world.onPosition(s.current)
@@ -209,6 +254,12 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         unfocusRef.current()
       }
     }
+    // 気配を押したとき: カメラをその場所へ寄せる（お店のシートを開くときと同じ動き）
+    focusAtRef.current = (p) => {
+      const zoom = focusRef.current ? map.getZoom() : Math.min(map.getZoom() + TAP_ZOOM_STEP, MAX_ZOOM)
+      focusRef.current = { lat: p.lat, lng: p.lng }
+      map.easeTo({ center: [p.lng, p.lat], zoom, duration: 500 })
+    }
     // 板を閉じたら、カメラを自分に戻して追いかけを再開する
     unfocusRef.current = () => {
       if (!focusRef.current) return
@@ -259,6 +310,8 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
       worldRef.current = null
+      hintPins.dispose()
+      hintPinsRef.current = null
       s.world?.dispose()
       map.remove()
     }

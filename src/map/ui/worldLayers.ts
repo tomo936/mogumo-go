@@ -37,6 +37,7 @@ type Deps = {
   onShopsError: () => void
   loadProgress: () => Promise<{ cells: Cell[]; checkedShopIds: Set<string>; lastDayByShop?: Map<string, string> }>
   onPinTap: (shopIds: string[]) => void // ビルの上のピンが押された（1軒ならその店、まとめたピンなら全員）
+  onShopsReady?: () => void // ホットペッパー・地図のお店・進み具合の3つがそろった最初の1回
 }
 
 const THIN_EASE_PER_S = 3 // 薄さが目標に近づく速さ（1秒あたり）
@@ -82,6 +83,8 @@ type World = {
   titleOf(shopIds: string[]): string | null // 施設・駅の名前（ビルや名前の無い施設は null）
   checked(): ReadonlySet<string> // 済みの店 id（合体した店は、地図の点の id で済みでも含む）
   checkedToday(shop: { id: string; mapId: string | null }): boolean // 今日（日本時間）もうチェックインした店か
+  hintInputs(): { shops: Shop[]; near: Shop[]; cleared: ReadonlySet<string>; checked: ReadonlySet<string> } // 気配の候補集めの材料
+  shopsReady(): boolean // お店の読み込み（3つ）がそろったか
   dispose(): void
 }
 
@@ -118,6 +121,13 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   let fetching = false
   let failedAt: number | null = null
   let disposed = false
+  // お店の読み込みがそろったか: ホットペッパー（使えない環境では不要）・地図のお店の取り出し・進み具合
+  const ready = { hp: !deps.shopsEnabled, map: false, progress: false, fired: false }
+  const checkReady = () => {
+    if (ready.fired || disposed || !ready.hp || !ready.map || !ready.progress) return
+    ready.fired = true
+    deps.onShopsReady?.()
+  }
   let hpShops: Shop[] = [] // ホットペッパーの最後に成功した結果
   let mapShops: Shop[] = [] // 地図タイルのお店（タイルが読めたときだけ更新）
   let shops: Shop[] = [] // 2つを合わせたもの
@@ -154,6 +164,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       mapShops = extractMapShops(map, p, SHOP_RADIUS_M, lm)
       landmarks = lm
       shops = mergeShops(mapShops, hpShops)
+      ready.map = true
       // 新しく読めた駅の点があれば、それを含む輪郭の店と施設を置き直す（古い点で計算したままだと駅にならない）
       for (const m of lm) {
         const k = `${m.name}@${m.lat.toFixed(5)},${m.lng.toFixed(5)}`
@@ -182,6 +193,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     placeSome()
     showShops(p)
     if (work) nextFrame()
+    checkReady()
   }
 
   // 列の店の置き方を、PLACE_BUDGET_MS まで計算する（最低1軒）。列が空になったら取り出した道路・建物も捨てる
@@ -421,6 +433,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         failedAt = null
         if (disposed) return
         hpShops = list
+        ready.hp = true
         shops = mergeShops(mapShops, hpShops)
         if (last) refreshShops(last)
       },
@@ -464,10 +477,15 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       const before = cleared.size
       for (const c of cells) cleared.add(cellKey(c))
       for (const id of checkedShopIds) checkedIds.add(id)
+      ready.progress = true
       updateMarks()
-      if (cleared.size === before) return
+      if (cleared.size === before) {
+        checkReady()
+        return
+      }
       if (fogCenter) setFog(fogCenter)
       if (last) refreshShops(last)
+      checkReady()
     },
     () => {},
   )
@@ -526,6 +544,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       updateMarks()
     },
     checked: checkedNow,
+    hintInputs: () => ({ shops, near, cleared, checked: checkedNow() }),
+    shopsReady: () => ready.fired,
     checkedToday(shop) {
       const today = jstDay(new Date())
       return lastDay.get(shop.id) === today || (shop.mapId !== null && lastDay.get(shop.mapId) === today)

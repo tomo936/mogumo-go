@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { AuthContext } from '../auth/AuthContext.ts'
 import type { LatLng } from '../map/domain/geo.ts'
 import type { LocationEvent } from '../map/domain/locationStatus.ts'
@@ -16,18 +16,41 @@ const checkinCalls: { id: string; cells: unknown[] }[] = []
 const unfocusCalls: number[] = []
 const postCheckin = vi.fn()
 vi.mock('../checkin/infra/checkinApi.ts', () => ({ postCheckin: (...a: unknown[]) => postCheckin(...a) }))
+const readTodayHints = vi.fn()
+const postDailyHints = vi.fn()
+vi.mock('../hints/infra/hintsApi.ts', () => ({
+  readTodayHints: (...a: unknown[]) => readTodayHints(...a),
+  postDailyHints: (...a: unknown[]) => postDailyHints(...a),
+}))
+const hintTaps: ((id: string) => void)[] = []
+const focusAtCalls: LatLng[] = []
+let mapShopsNow: Shop[] = []
+afterEach(() => vi.useRealTimers())
+beforeEach(() => {
+  localStorage.clear()
+  readTodayHints.mockReset()
+  readTodayHints.mockResolvedValue({ ok: true, set: null })
+  postDailyHints.mockReset()
+  mapShopsNow = []
+  focusAtCalls.length = 0
+})
 vi.mock('../map/ui/MapView.tsx', async () => {
   const { useEffect, useImperativeHandle } = await import('react')
   return {
-    MapView: ({ onStatus, onShopsError, onSelectShop, onSelectBuilding, onPosition, ref }: {
+    MapView: ({ onStatus, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, ref }: {
       onStatus: (e: LocationEvent) => void; onShopsError: () => void
       onSelectShop: (s: Shop | null) => void; onSelectBuilding: (s: Shop[] | null) => void; onPosition: (p: LatLng) => void
+      onHintTap: (id: string) => void
       ref?: React.Ref<{ checkin(shop: Shop, cells: unknown[]): void }>
     }) => {
       useEffect(() => { mounts.push(onStatus) }, [onStatus])
       useEffect(() => { shopErrors.push(onShopsError) }, [onShopsError])
+      useEffect(() => { hintTaps.push(onHintTap) }, [onHintTap])
       useEffect(() => { handlers.push({ select: onSelectShop, building: onSelectBuilding, position: onPosition }) }, [onSelectShop, onSelectBuilding, onPosition])
-      useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false, checked: () => new Set<string>() }), [])
+      useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false, checked: () => new Set<string>(),
+        hintInputs: () => ({ shops: mapShopsNow, near: mapShopsNow, cleared: new Set<string>(), checked: new Set<string>() }),
+        whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
+      }), [])
       return <div data-testid="map-view" />
     },
   }
@@ -187,4 +210,101 @@ test('一覧で店を選ぶと、一覧が閉じてお店のシートが出る',
   await userEvent.click(screen.getByRole('button', { name: /らーめん太郎/ }))
   expect(screen.queryByRole('region', { name: 'ビルのお店' })).toBeNull()
   expect(screen.getByRole('region', { name: 'お店の情報' })).toBeInTheDocument()
+})
+
+
+// ---- 気配 ----
+const hintShop: Shop = { id: 'hp:S1', name: '麺屋かくれ', lat: 35, lng: 139, kind: 'ramen', details: null, mapId: null }
+const hintA = {
+  id: 'h1', slot: 1, shopId: 'hp:S1', genre: '中華', catch: '自家製麺', budget: '1,000円台', isMystery: false, completed: false,
+  shop: { name: '麺屋かくれ', lat: 35, lng: 139 },
+}
+const todaySet = (hints = [hintA]) => ({ day: '2026-11-07', generation: 1, regenLeft: 1 as const, hints })
+const farAway: LatLng = { lat: 35.002, lng: 139 } // 約220m
+const withHints = async (hints = [hintA], at: LatLng = farAway) => {
+  readTodayHints.mockResolvedValue({ ok: true, set: todaySet(hints) })
+  mapShopsNow = [hintShop]
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-11-07T03:00:00Z'))
+  renderPage()
+  act(() => last().position(at))
+  await act(async () => { await Promise.resolve() })
+}
+
+test('探索ボタンでシートが開き、店名が出ない', async () => {
+  await withHints()
+  await userEvent.click(screen.getByRole('button', { name: /探索/ }))
+  expect(screen.getByRole('region', { name: '探索' })).toBeInTheDocument()
+  expect(await screen.findByText('中華？')).toBeInTheDocument()
+  expect(document.body.textContent).not.toContain('麺屋かくれ')
+})
+
+test('気配を押すと focusAt とヒントのシート。閉じると unfocus', async () => {
+  await withHints()
+  await userEvent.click(screen.getByRole('button', { name: /探索/ }))
+  await userEvent.click(await screen.findByRole('button', { name: /中華？/ }))
+  expect(focusAtCalls).toHaveLength(1)
+  expect(screen.getByRole('region', { name: '気配' })).toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: '探索' })).toBeNull()
+  expect(screen.getByText('？？？')).toBeInTheDocument()
+  const n = unfocusCalls.length
+  await userEvent.click(screen.getByRole('button', { name: '閉じる' }))
+  expect(unfocusCalls.length).toBeGreaterThan(n)
+})
+
+test('地図の気配のピンを押してもヒントのシートが開く', async () => {
+  await withHints()
+  act(() => hintTaps[hintTaps.length - 1]('h1'))
+  expect(screen.getByRole('region', { name: '気配' })).toBeInTheDocument()
+})
+
+test('明かした気配を押すとお店のシート（名前が出る）', async () => {
+  await withHints([hintA], { lat: 35.0001, lng: 139 }) // 約11m = 30m 以内で明かす
+  await act(async () => { await Promise.resolve() })
+  act(() => last().position({ lat: 35.0001, lng: 139 }))
+  act(() => hintTaps[hintTaps.length - 1]('h1'))
+  expect(screen.getByRole('region', { name: 'お店の情報' })).toBeInTheDocument()
+  expect(screen.getByText('麺屋かくれ')).toBeInTheDocument()
+})
+
+test('伏せた気配の店のシートは「？？？」で、チェックインできる。成功すると演出に正体が出て達成になる', async () => {
+  postCheckin.mockReset()
+  postCheckin.mockResolvedValue({ ok: true, checkinId: 'c1', coins: 40, wasHint: true, newCells: [] })
+  await withHints([hintA], { lat: 35.0004, lng: 139 }) // 約44m = 30m の外・50m の内
+  act(() => last().select(hintShop))
+  expect(screen.getByText('？？？')).toBeInTheDocument()
+  expect(screen.queryByText('麺屋かくれ')).toBeNull()
+  expect(screen.getByText('気配の店 +10')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'チェックイン' }))
+  expect(screen.getByText('『麺屋かくれ』だった！')).toBeInTheDocument()
+  expect(screen.getByText('+40 コイン（気配ボーナス +10）')).toBeInTheDocument()
+  // 達成になり、探索ボタンの数字が消える
+  expect(screen.queryByText('1')).toBeNull()
+})
+
+test('チェックインが失敗（too_far）したら正体を出さない', async () => {
+  postCheckin.mockReset()
+  postCheckin.mockResolvedValue({ ok: false, reason: 'too_far' })
+  await withHints([hintA], { lat: 35.0004, lng: 139 })
+  act(() => last().select(hintShop))
+  await userEvent.click(screen.getByRole('button', { name: 'チェックイン' }))
+  expect(screen.queryByText(/だった！/)).toBeNull()
+  expect(screen.queryByText('麺屋かくれ')).toBeNull()
+})
+
+test('ビルの一覧でも、伏せた気配の店は「？？？」', async () => {
+  await withHints([hintA], { lat: 35.0004, lng: 139 })
+  const other: Shop = { id: 'hp:Z', name: 'ふつうの店', lat: 35, lng: 139, kind: 'cafe', details: null, mapId: null }
+  act(() => last().building([hintShop, other]))
+  expect(screen.getByText('ふつうの店')).toBeInTheDocument()
+  expect(screen.queryByText('麺屋かくれ')).toBeNull()
+  expect(screen.getByText('？？？')).toBeInTheDocument()
+})
+
+test('30m に入ると帯「気配の正体は…『○○』！」が出る', async () => {
+  await withHints([hintA], farAway)
+  expect(screen.queryByText(/気配の正体は/)).toBeNull()
+  act(() => last().position({ lat: 35.0001, lng: 139 }))
+  await act(async () => { await Promise.resolve() })
+  expect(screen.getByText('気配の正体は…『麺屋かくれ』！')).toBeInTheDocument()
 })

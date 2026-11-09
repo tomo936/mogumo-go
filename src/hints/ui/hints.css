@@ -1,0 +1,256 @@
+/* 気配のピン（仮。シロのアイコンが届いたら中身を差し替える） */
+.hint-pin {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.hint-pin::after {
+  /* ぼかした影（地面に落ちる） */
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 22px;
+  height: 7px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: rgba(31, 42, 55, 0.22);
+  filter: blur(2px);
+}
+.hint-pin__face {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid #bfe0ff;
+  box-sizing: border-box;
+  color: #4aa8ff;
+  font-size: 22px;
+  font-weight: 900;
+  box-shadow: 0 2px 6px rgba(31, 42, 55, 0.25);
+}
+.hint-pin--mystery .hint-pin__face {
+  background: #f1ebff;
+  border-color: #cdbdf5;
+  color: #8e6ee0;
+}
+.hint-pin--revealed .hint-pin__face {
+  border-color: #3ecf8e;
+  color: #3ecf8e;
+}
+.hint-pin--bounce .hint-pin__face {
+  animation: hint-pin-bounce 0.4s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+@keyframes hint-pin-bounce {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.5);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 探索ボタン（地図の下の真ん中） */
+.explore-button {
+  position: absolute;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  white-space: nowrap;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  background: #4aa8ff;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(74, 168, 255, 0.5);
+  font-size: 16px;
+  font-weight: 800;
+}
+.explore-button__count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #ff8a75;
+  border: 2px solid #fff;
+  color: #fff;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+/* 探索シート・ヒントのシート（枠は .shop-sheet を使う） */
+.explore-sheet {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.explore-sheet__status {
+  margin: 10px 0 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #5b6b7b;
+}
+.explore-sheet__notice {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #eef6ff;
+  color: #3d6f9e;
+  font-size: 13px;
+}
+.explore-sheet__retry,
+.explore-sheet__regen {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #4aa8ff;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+.explore-sheet__regen:disabled {
+  background: #cfe3f7;
+  color: #6b8299;
+}
+.hint-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.hint-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 16px;
+  background: #f4f9ff;
+  color: inherit;
+  text-align: left;
+}
+.hint-row--done {
+  background: #effaf4;
+}
+.hint-row__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hint-row__title {
+  font-size: 16px;
+  font-weight: 800;
+}
+.hint-row__sub {
+  font-size: 13px;
+  color: #3d4a5c;
+}
+.hint-row__dist {
+  font-size: 12px;
+  color: #6b7a8c;
+}
+.hint-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 3px solid #bfe0ff;
+  border-radius: 50%;
+  background: #fff;
+  box-sizing: border-box;
+  color: #4aa8ff;
+  font-size: 20px;
+  font-weight: 900;
+}
+.hint-badge--mystery {
+  border-color: #cdbdf5;
+  background: #f1ebff;
+  color: #8e6ee0;
+}
+.hint-badge--open {
+  border-color: #3ecf8e;
+  color: #3ecf8e;
+}
+.hint-lines {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+  font-weight: 700;
+}
+.hint-lines li {
+  margin-top: 4px;
+}
+.hint-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #6b7a8c;
+}
+.hint-credit {
+  display: block;
+  margin-top: 10px;
+  font-size: 10px;
+  color: #6b7a8c;
+}
+
+/* 明かしの帯（画面の上） */
+.reveal-banner {
+  position: fixed;
+  top: calc(64px + env(safe-area-inset-top));
+  left: 12px;
+  right: 12px;
+  z-index: 25;
+  padding: 12px 16px;
+  border-radius: 20px;
+  background: #fff;
+  border: 3px solid #3ecf8e;
+  box-sizing: border-box;
+  color: #1f2a37;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(62, 207, 142, 0.35);
+  animation: reveal-banner-in 0.35s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+@keyframes reveal-banner-in {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 「気配の店 +10」の札 */
+.hint-tag {
+  display: inline-block;
+  margin: 2px 0 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #ff8a75;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}

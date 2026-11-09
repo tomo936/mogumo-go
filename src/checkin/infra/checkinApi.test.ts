@@ -25,11 +25,24 @@ describe('postCheckin', () => {
     expect(init.method).toBe('POST')
     expect(JSON.parse(init.body)).toEqual({ shop_id: 'hp:J001', lat: 35.68, lng: 139.76, far_from_home: true })
     expect(init.headers).toEqual({ 'Content-Type': 'application/json', apikey: 'anon', Authorization: 'Bearer tok' })
-    expect(r).toEqual({ ok: true, checkinId: 'c1', coins: 30, newCells: [{ x: 1, y: 2 }, { x: 3, y: 4 }] })
+    expect(r).toEqual({ ok: true, checkinId: 'c1', coins: 30, wasHint: false, newCells: [{ x: 1, y: 2 }, { x: 3, y: 4 }] })
   })
   it('coins 0 も受ける', async () => {
     const fetchFn = vi.fn().mockResolvedValue(res(200, { checkin_id: 'c2', coins_awarded: 0, new_cells: [] }))
-    expect(await postCheckin(input, { ...base, fetchFn })).toEqual({ ok: true, checkinId: 'c2', coins: 0, newCells: [] })
+    expect(await postCheckin(input, { ...base, fetchFn })).toEqual({ ok: true, checkinId: 'c2', coins: 0, wasHint: false, newCells: [] })
+  })
+  it('coins 40・was_hint true を受ける', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(res(200, { checkin_id: 'c3', coins_awarded: 40, was_hint: true, new_cells: [] }))
+    expect(await postCheckin(input, { ...base, fetchFn })).toEqual({ ok: true, checkinId: 'c3', coins: 40, wasHint: true, newCells: [] })
+  })
+  it('was_hint が無い返事（古い関数）は wasHint false', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(res(200, { checkin_id: 'c4', coins_awarded: 30, new_cells: [] }))
+    const r = await postCheckin(input, { ...base, fetchFn })
+    expect(r).toMatchObject({ ok: true, wasHint: false })
+  })
+  it('coins_awarded 35 は network', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(res(200, { checkin_id: 'c5', coins_awarded: 35, new_cells: [] }))
+    expect(await postCheckin(input, { ...base, fetchFn })).toEqual({ ok: false, reason: 'network' })
   })
   it.each([
     [403, 'too_far'],

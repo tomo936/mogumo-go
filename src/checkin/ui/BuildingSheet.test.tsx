@@ -41,3 +41,15 @@ test('施設・駅は見出しにその名前', () => {
   expect(screen.getByText('経堂コルティ')).toBeInTheDocument()
   expect(screen.queryByText('このビルのお店')).toBeNull()
 })
+
+test('maskedIds の店は「？？？」で最後に並ぶ（並びで名前が推測できない）。hintIds の店には札', () => {
+  const shops: Shop[] = [
+    { id: 'a', name: 'あおい食堂', lat: 35, lng: 139, kind: 'washoku', details: null, mapId: null },
+    { id: 'b', name: 'いろは', lat: 35, lng: 139, kind: 'cafe', details: null, mapId: null },
+    { id: 'c', name: 'うどん屋', lat: 35, lng: 139, kind: 'soba', details: null, mapId: null },
+  ]
+  render(<BuildingSheet shops={shops} checkedIds={new Set()} maskedIds={new Set(['a'])} hintIds={new Set(['a'])} onPick={() => {}} onClose={() => {}} />)
+  expect(screen.queryByText('あおい食堂')).not.toBeInTheDocument()
+  const rows = screen.getAllByRole('button').filter((b) => b.className.includes('bldg-sheet__row'))
+  expect(rows.map((r) => r.textContent)).toEqual(['いろは', 'うどん屋', '？？？気配の店 +10'])
+})

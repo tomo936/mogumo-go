@@ -5,7 +5,7 @@ import type { LatLng } from '../../map/domain/geo.ts'
 import { jstDay } from '../domain/day.ts'
 
 export type CheckinResult =
-  | { ok: true; checkinId: string; coins: 30 | 0; newCells: Cell[] }
+  | { ok: true; checkinId: string; coins: 0 | 30 | 40; wasHint: boolean; newCells: Cell[] }
   | { ok: false; reason: 'too_far' | 'network' | 'not_found' | 'no_profile' | 'already_today' }
 
 const fail = (reason: 'too_far' | 'network' | 'not_found' | 'no_profile' | 'already_today'): CheckinResult => ({ ok: false, reason })
@@ -20,14 +20,15 @@ const sessionToken = async () =>
   (await (await import('../../lib/supabase.ts')).supabase.auth.getSession()).data.session?.access_token ?? null
 
 function parseOk(json: unknown): CheckinResult {
-  if (!isObj(json) || typeof json.checkin_id !== 'string' || (json.coins_awarded !== 30 && json.coins_awarded !== 0)) return fail('network')
+  if (!isObj(json) || typeof json.checkin_id !== 'string' || (json.coins_awarded !== 30 && json.coins_awarded !== 0 && json.coins_awarded !== 40)) return fail('network')
   if (!Array.isArray(json.new_cells)) return fail('network')
   const newCells: Cell[] = []
   for (const c of json.new_cells) {
     if (!Array.isArray(c) || !isInt(c[0]) || !isInt(c[1])) return fail('network')
     newCells.push({ x: c[0], y: c[1] })
   }
-  return { ok: true, checkinId: json.checkin_id, coins: json.coins_awarded, newCells }
+  // was_hint が無い返事（古い関数）は気配ではない扱い
+  return { ok: true, checkinId: json.checkin_id, coins: json.coins_awarded, wasHint: json.was_hint === true, newCells }
 }
 
 export async function postCheckin(
