@@ -45,3 +45,4 @@
 - 2026-11-09 Claude Code: 高画質の元データ ramen・sushi・soba・washoku・izakaya を art/pins/hires/ に配置（13種のうち5種）。
 - 2026-11-09 Claude Code: 高画質の元データ chinese・yakiniku・western・curry・cafe を art/pins/hires/ に配置（13種のうち10種）。
 - 2026-11-09 Claude Code: 「その他（ジャンル不明）」のピンの絵を依頼（to-shiro/2026-11-09-other-pin.md）。気配の「？」と同じ絵ではだめ、とオーナー決定。
+- 2026-11-09 Claude Code: お店の種類を4つ増やす（donburi・burger・ethnic・konamon）ためのピンの絵と建物の見本を依頼（to-shiro/2026-11-09-new-shop-kinds-art.md）。
