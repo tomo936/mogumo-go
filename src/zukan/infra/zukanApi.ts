@@ -8,7 +8,7 @@ type Rows = PromiseLike<{ data: unknown; error: unknown }>
 type ShopsClient = { from(table: string): { select(columns: string): { order(c: string): { range(from: number, to: number): Rows } } } }
 const PAGE = 1000
 
-const COLUMNS = 'shop_id, name, lat, lng, genre_code, genre_name, catch, photo_url'
+const COLUMNS = 'shop_id, name, lat, lng, genre_code, genre_name, catch, budget_name, photo_url'
 
 // 1000 行ずつ、足りなくなるまで読む（並びを固定して頁の抜け・重なりを防ぐ）
 async function readShops(c: ShopsClient): Promise<Record<string, unknown>[]> {
@@ -41,6 +41,7 @@ export async function loadZukan(client?: ShopsClient): Promise<ZukanShop[]> {
       photoUrl: str(r.photo_url)?.startsWith('https://') ? str(r.photo_url) : null,
       catch: str(r.catch),
       genreName: str(r.genre_name),
+      budgetName: str(r.budget_name),
       visits: progress.visitsByShop.get(id) ?? null,
       cleared: cleared.has(cellKey(cellOf({ lat: r.lat, lng: r.lng }))),
     })

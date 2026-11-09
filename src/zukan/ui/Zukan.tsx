@@ -7,6 +7,7 @@ import type { ShopKind } from '../../shops/domain/shop.ts'
 import { frameTier } from '../../checkin/domain/visits.ts'
 import { KIND_ORDER, PAGE_SIZE, buildZukan, filledCount, pageCount, type ZukanShop } from '../domain/zukan.ts'
 import { loadZukan } from '../infra/zukanApi.ts'
+import { ZukanDetail } from './ZukanDetail.tsx'
 import { levelFor } from '../domain/level.ts'
 
 const KIND_NAME: Record<ShopKind, string> = {
@@ -19,11 +20,12 @@ const cards = import.meta.glob('../../assets/shops/cards/*.webp', { eager: true,
 const cardUrl = (kind: ShopKind) => cards[`../../assets/shops/cards/${kind}.webp`] ?? cards['../../assets/shops/cards/mystery.webp']
 
 type Props = {
-  onPick: (shop: ZukanShop) => void
+  onLocate: (shop: ZukanShop) => void // 詳細の「地図で見る」
   onClose: () => void
 }
 
-export function Zukan({ onPick, onClose }: Props) {
+export function Zukan({ onLocate, onClose }: Props) {
+  const [detail, setDetail] = useState<ZukanShop | null>(null)
   const [state, setState] = useState<{ status: 'loading' } | { status: 'error' } | { status: 'ready'; shops: ZukanShop[] }>({ status: 'loading' })
   const [kind, setKind] = useState<ShopKind>('ramen')
   const [page, setPage] = useState(0)
@@ -48,6 +50,10 @@ export function Zukan({ onPick, onClose }: Props) {
   const filledAll = filledCount(all)
   const percent = total === 0 ? 0 : Math.round((filledAll / total) * 100)
   const lv = levelFor(filledAll)
+
+  if (detail) {
+    return <ZukanDetail shop={detail} onBack={() => setDetail(null)} onLocate={() => onLocate(detail)} />
+  }
 
   return (
     <section className="zukan" aria-label="図鑑">
@@ -105,7 +111,7 @@ export function Zukan({ onPick, onClose }: Props) {
                       <button
                         type="button"
                         className={`zukan__card zukan__card--visited zukan__card--${frameTier(s.visits.count)}`}
-                        onClick={() => onPick(s)}
+                        onClick={() => setDetail(s)}
                         aria-label={`${s.name} ${s.visits.count}回行った`}
                       >
                         <span className="zukan__name">{s.name}</span>
