@@ -24,6 +24,15 @@ import { loadHome } from '../setup/infra/homeStore.ts'
 import { nextStatus } from '../map/domain/locationStatus.ts'
 
 const SHOPS_ERROR_BANNER_MS = 6000
+const PINS_HIDDEN_KEY = 'mogumo.pinsHidden' // ピンを出さない設定（その端末だけ。読めなくても動く）
+
+function loadPinsHidden(): boolean {
+  try {
+    return localStorage.getItem(PINS_HIDDEN_KEY) === '1'
+  } catch {
+    return false
+  }
+}
 
 export function MapPage() {
   const { session, signOut } = useAuth()
@@ -38,6 +47,16 @@ export function MapPage() {
   }, [shopsError])
   const [status, dispatch] = useReducer(nextStatus, 'searching')
   const [attempt, setAttempt] = useState(0)
+  const [pinsHidden, setPinsHidden] = useState(loadPinsHidden)
+  const togglePins = () => {
+    const next = !pinsHidden
+    setPinsHidden(next)
+    try {
+      localStorage.setItem(PINS_HIDDEN_KEY, next ? '1' : '0')
+    } catch {
+      // 保存できなくても、この画面の間は切りかわる
+    }
+  }
 
   const mapRef = useRef<MapViewHandle>(null)
   const [selected, setSelected] = useState<Shop | null>(null)
@@ -184,6 +203,7 @@ export function MapPage() {
         onSelectBuilding={selectBuilding}
         onPosition={setMe}
         onHintTap={pickHint}
+        pinsHidden={pinsHidden}
       />
       {building && !selected && (
         <BuildingSheet
@@ -249,6 +269,15 @@ export function MapPage() {
         <LocationOverlay status={status} onRetry={retry} onReload={() => window.location.reload()} />
         {shopsError && <p className="location-banner">お店を読み込めませんでした</p>}
         <div className="map-actions">
+          <button
+            type="button"
+            className="pins-toggle"
+            aria-label={pinsHidden ? 'ピンを出す' : 'ピンを隠す'}
+            aria-pressed={pinsHidden}
+            onClick={togglePins}
+          >
+            {pinsHidden ? '🚫' : '📍'}
+          </button>
           <CreditsButton />
           <button type="button" onClick={() => void signOut()}>
             ログアウト

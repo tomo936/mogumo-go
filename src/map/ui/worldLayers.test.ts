@@ -11,14 +11,13 @@ const shopLayer = { id: 'shops-3d', setShops: vi.fn(), pick: vi.fn(() => null) }
 const fogShopLayer = { id: 'shops-3d-fog', setShops: vi.fn(), pick: vi.fn(() => null) } // 霧の中の近い店（雲の上に描く）
 vi.mock('../../fog/infra/fogLayer.ts', () => ({ createFogLayer: () => fogLayer }))
 vi.mock('../../shops/infra/shopLayer.ts', () => ({ createShopLayer: (id: string) => (id === 'shops-3d' ? shopLayer : fogShopLayer) }))
-const marksUpdate = vi.fn()
 const pinsUpdate = vi.fn()
-vi.mock('../../shops/infra/checkMarks.ts', () => ({ createCheckMarks: () => ({ update: marksUpdate, dispose: vi.fn() }) }))
 const facilityLayer = { id: 'facilities-3d', setFacilities: vi.fn(), pick: vi.fn(() => null) }
 vi.mock('../../shops/infra/facilityLayer.ts', () => ({ createFacilityLayer: () => facilityLayer }))
-const pinsApi = { attach: vi.fn(), update: vi.fn(), pick: vi.fn(() => null), dispose: vi.fn() }
+const pinsApi = { attach: vi.fn(), update: vi.fn(), pick: vi.fn(() => null), setVisible: vi.fn(), dispose: vi.fn() }
+const buildingApi = { update: pinsUpdate, setHidden: vi.fn(), dispose: vi.fn() }
 vi.mock('../../shops/infra/shopPins.ts', () => ({ createShopPins: () => pinsApi }))
-vi.mock('../../shops/infra/buildingPins.ts', () => ({ createBuildingPins: () => ({ update: pinsUpdate, dispose: vi.fn() }) }))
+vi.mock('../../shops/infra/buildingPins.ts', () => ({ createBuildingPins: () => buildingApi }))
 
 vi.mock('../../shops/domain/facility.ts', async (orig) => {
   const a = await orig<typeof import('../../shops/domain/facility.ts')>()
@@ -118,7 +117,7 @@ test('お店のピンは霧の層の手前と自分の印の手前に入れ、1�
   world.onPosition(home)
   expect(pinsApi.attach).toHaveBeenCalledWith('fog', 'me-circle-line')
   await flush()
-  expect(pinsApi.update).toHaveBeenLastCalledWith([expect.objectContaining({ id: 's1', model: 'ramen' })], expect.any(Set), expect.anything())
+  expect(pinsApi.update).toHaveBeenLastCalledWith([expect.objectContaining({ id: 's1', model: 'ramen' })], expect.any(Set), expect.anything(), expect.any(Set))
   pinsApi.pick.mockReturnValueOnce(['s1'] as never)
   expect(world.pick({ x: 1, y: 1 })).toEqual(['s1'])
   expect(shopLayer.pick).not.toHaveBeenCalled()
@@ -160,7 +159,7 @@ test('組の片方が霧の中なら、見えている1軒はふつうの店', a
   expect(out.map((s) => [s.id, s.model])).toEqual([['a', 'cafe']])
 })
 
-test('ビルに入った済みの店には checkMarks を出さず、buildingPins に渡る', async () => {
+test('ビルに入った済みの店は buildingPins に渡り、1軒用のピンには渡らない', async () => {
   tiles = { transportation: [roadFeature], building: [building(0, 16, 20, 12)] }
   const a: Shop = { id: 'a', name: 'a', lat: home.lat + 14 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe', details: null, mapId: null }
   const b: Shop = { id: 'b', name: 'b', lat: home.lat + 18 / M, lng: home.lng + 5 / LNG_M, kind: 'ramen', details: null, mapId: null }
@@ -168,7 +167,7 @@ test('ビルに入った済みの店には checkMarks を出さず、buildingPin
   world.onPosition(home)
   await flush()
   await flush()
-  expect(marksUpdate).toHaveBeenLastCalledWith([], expect.any(Set))
+  expect(pinsApi.update).toHaveBeenLastCalledWith([], expect.anything(), expect.anything(), expect.any(Set))
   const [blds, checked] = pinsUpdate.mock.lastCall!
   expect(blds).toHaveLength(1)
   expect((checked as Set<string>).has('a')).toBe(true)
@@ -841,4 +840,11 @@ test('shopsEnabled が false ならホットペッパーを待たずにそろう
   world.onPosition(home)
   await flush()
   expect(onShopsReady).toHaveBeenCalledTimes(1)
+})
+
+test('setPinsVisible は1軒のピンとビル・施設のピンの両方に伝わる', () => {
+  const { world } = setup()
+  world.setPinsVisible(false)
+  expect(pinsApi.setVisible).toHaveBeenLastCalledWith(false)
+  expect(buildingApi.setHidden).toHaveBeenLastCalledWith(true)
 })

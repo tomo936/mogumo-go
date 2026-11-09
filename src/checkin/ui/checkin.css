@@ -153,19 +153,10 @@
   .checkin-effect__banner { animation: none; opacity: 1; }
 }
 
-/* 済みの印（地図のお店の上） */
-.check-mark {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: #fff;
-  color: #3ecf8e;
-  font-size: 14px;
-  font-weight: 900;
-  box-shadow: 0 1px 4px rgba(31, 42, 55, 0.3);
-  pointer-events: none;
+/* 指で動かしている間・「ピンを出さない」のときは、ビル・施設のピンと名前の札を隠す（地図の入れ物に class が付く） */
+.pins-moving .bldg-pins,
+.pins-off .bldg-pins {
+  visibility: hidden;
 }
 
 /* ビルの上のピン。お店ごとのピンはシロの色分けの絵（src/assets/pins/）、まとめたピンは白い丸 */

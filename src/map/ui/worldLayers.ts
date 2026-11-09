@@ -23,7 +23,6 @@ import { createBuildingPins } from '../../shops/infra/buildingPins.ts'
 import { createFacilityLayer } from '../../shops/infra/facilityLayer.ts'
 import type { PlacedFacility } from '../../shops/infra/facilityPick.ts'
 import type { PinnedBuilding } from '../../shops/infra/buildingPins.ts'
-import { createCheckMarks } from '../../shops/infra/checkMarks.ts'
 import { createShopPins } from '../../shops/infra/shopPins.ts'
 import { createShopLayer } from '../../shops/infra/shopLayer.ts'
 import type { PlacedShop } from '../../shops/infra/shopLayer.ts'
@@ -85,6 +84,7 @@ type World = {
   checked(): ReadonlySet<string> // 済みの店 id（合体した店は、地図の点の id で済みでも含む）
   checkedToday(shop: { id: string; mapId: string | null }): boolean // 今日（日本時間）もうチェックインした店か
   hintInputs(): { shops: Shop[]; near: Shop[]; cleared: ReadonlySet<string>; checked: ReadonlySet<string> } // 気配の候補集めの材料
+  setPinsVisible(visible: boolean): void // 店のピン（1軒・ビル・施設）と名前の札を出す・出さない（気配のピンは別）
   shopsReady(): boolean // お店の読み込み（3つ）がそろったか
   dispose(): void
 }
@@ -95,10 +95,9 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const shopLayer = createShopLayer('shops-3d') // 晴れた所の店（雲と奥行きを比べる）
   const fogShopLayer = createShopLayer('shops-3d-fog') // 霧の中の近い店（今までどおり雲の上に描く）
   const facilityLayer = createFacilityLayer()
-  const checkMarks = createCheckMarks(map)
   const shopPins = createShopPins(map) // 1軒の店のピン（symbol レイヤー）
   const buildingPins = createBuildingPins(map, (ids) => deps.onPinTap(ids))
-  let shownPlaced: PlacedShop[] = [] // いま層に渡している置き方（1軒の店だけ。✓ の印・ピン用）
+  let shownPlaced: PlacedShop[] = [] // いま層に渡している置き方（1軒の店だけ。ピン用）
   let shownInFog: ReadonlySet<string> = new Set() // そのうち霧の中の近い店（ピンを雲の上に描く）
   let shownFrom: LatLng | null = null // 距離順（ピンの優先）の基準にした現在地
   let shownBuildings: PinnedBuilding[] = [] // いま出しているビルと、その中の店
@@ -360,11 +359,10 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     facilityLayer.setFacilities(facs)
     updateMarks()
   }
-  // ✓ の印（1軒の店）とビルのピン（✓ はピンの上に出す）を、済みの一覧に合わせて出し直す
+  // 1軒の店のピン（✓ は絵の右上）とビルのピンを、済みの一覧に合わせて出し直す
   const updateMarks = () => {
     const done = checkedNow()
-    checkMarks.update(shownPlaced, done)
-    if (shownFrom) shopPins.update(shownPlaced, shownInFog, shownFrom)
+    if (shownFrom) shopPins.update(shownPlaced, shownInFog, shownFrom, done) // 1軒の店の ✓ はピンの絵の右上
     buildingPins.update(shownBuildings, done)
   }
 
@@ -554,6 +552,10 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     },
     checked: checkedNow,
     hintInputs: () => ({ shops, near, cleared, checked: checkedNow() }),
+    setPinsVisible(visible) {
+      shopPins.setVisible(visible)
+      buildingPins.setHidden(!visible)
+    },
     shopsReady: () => ready.fired,
     checkedToday(shop) {
       const today = jstDay(new Date())
@@ -562,7 +564,6 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     dispose() {
       disposed = true
       if (frameId !== null) cancelAnimationFrame(frameId)
-      checkMarks.dispose()
       shopPins.dispose()
       buildingPins.dispose()
       map.off('idle', onIdle)
