@@ -32,9 +32,8 @@ const SWIPE_PX = 40 // これだけ指を上下に動かしたら段を変える
 const cards = import.meta.glob('../../assets/shops/cards/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
 const cardUrl = (kind: ShopKind) => cards[`../../assets/shops/cards/${kind}.webp`] ?? cards['../../assets/shops/cards/mystery.webp']
 
-// '2026-11-03' → '2026.11.3' / '11/3'
+// '2026-11-03' → '11/3'
 const parts = (day: string) => day.split('-').map(Number) as [number, number, number]
-const longDay = (day: string) => parts(day).join('.')
 const shortDay = (day: string) => `${parts(day)[1]}/${parts(day)[2]}`
 
 type Props = {
@@ -103,7 +102,8 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
           />
         )}
       </div>
-      {big && <span className="shop-sticker__label">{visits ? `${longDay(visits.firstDay)} はじめて` : 'まだ行ってない'}</span>}
+      {/* 自分の写真と間違えないよう、お店の写真には出どころだけ書く（日付は記録の欄に） */}
+      {big && photo && <span className="shop-sticker__label">写真: ホットペッパーグルメ</span>}
     </div>
   )
   const button = (
