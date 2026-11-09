@@ -19,6 +19,7 @@ import { extractFeatures, featuresNear, NEAR_M } from '../../shops/infra/mapFeat
 import type { AreaFeatures } from '../../shops/infra/mapFeatures.ts'
 import { extractMapShops } from '../../shops/infra/mapShops.ts'
 import type { Landmark } from '../../shops/infra/mapShops.ts'
+import { createDebugOverlay, isDebug } from './debugOverlay.ts'
 import { createBuildingPins } from '../../shops/infra/buildingPins.ts'
 import { createFacilityLayer } from '../../shops/infra/facilityLayer.ts'
 import type { PlacedFacility } from '../../shops/infra/facilityPick.ts'
@@ -97,6 +98,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const facilityLayer = createFacilityLayer()
   const shopPins = createShopPins(map) // 1軒の店のピン（symbol レイヤー）
   const buildingPins = createBuildingPins(map, (ids) => deps.onPinTap(ids))
+  const debugOverlay = isDebug(window.location.search) ? createDebugOverlay(map, buildingPins.debugRows) : null // ?debug のときだけ
   let shownPlaced: PlacedShop[] = [] // いま層に渡している置き方（1軒の店だけ。ピン用）
   let shownInFog: ReadonlySet<string> = new Set() // そのうち霧の中の近い店（ピンを雲の上に描く）
   let shownFrom: LatLng | null = null // 距離順（ピンの優先）の基準にした現在地
@@ -566,6 +568,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       if (frameId !== null) cancelAnimationFrame(frameId)
       shopPins.dispose()
       buildingPins.dispose()
+      debugOverlay?.dispose()
       map.off('idle', onIdle)
       map.off('moveend', onMoveEnd)
       for (const id of [fogLayer.id, facilityLayer.id, shopLayer.id, fogShopLayer.id]) if (map.getLayer(id)) map.removeLayer(id)

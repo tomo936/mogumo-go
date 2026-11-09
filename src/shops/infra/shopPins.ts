@@ -4,6 +4,7 @@
 import type { GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl'
 import type { LatLng } from '../../map/domain/geo.ts'
 import { pinFeatures } from '../domain/pinFeatures.ts'
+import { LIFT_TIERS } from '../domain/pinLift.ts'
 import { checkBadgeImage } from './checkBadge.ts'
 import { PIN_ICON } from './pinIcons.ts'
 
@@ -18,21 +19,31 @@ const SIZE_AT_18 = 0.29
 const ICON_SIZE = ['interpolate', ['linear'], ['zoom'], 16, SIZE_AT_16, 18, SIZE_AT_18] as const
 
 // ピンを地面の点から屋根の少し上へ持ち上げる。画面の真上へずらす近似（3D カメラでの屋根の位置とは合わせない）。
-// 目安: ズーム17.5 で CSS 約 30px 上、ズームが1上がると約2倍（建物の高さは地図の縮尺に比例するため）。
+// 持ち上げる高さは店の模型の高さの段（低・中・高。地物の liftTier）ごとに変える。
+// 目安: ズーム17.5 で 1m あたり CSS 3px（10m で約 30px）、ズームが1上がると約2倍（建物の高さは地図の縮尺に比例するため）。
 // icon-offset は icon-size 倍されるので、設定する値は「見せたい px ÷ そのズームの icon-size」。
-export const LIFT_PX_AT_17_5 = 30
+export const LIFT_PX_PER_M_AT_17_5 = 3
 export function iconSizeAt(zoom: number): number {
   const t = Math.min(1, Math.max(0, (zoom - 16) / 2))
   return SIZE_AT_16 + (SIZE_AT_18 - SIZE_AT_16) * t
 }
 const LIFT_ZOOMS = [14, 15, 16, 17, 18, 19, 20] // 整数ズームごとに計算し、間は直線でつなぐ（誤差は数px）
-export function liftOffsetAt(zoom: number): [number, number] {
-  const px = LIFT_PX_AT_17_5 * 2 ** (zoom - 17.5)
+export function liftOffsetAt(zoom: number, heightM: number): [number, number] {
+  const px = LIFT_PX_PER_M_AT_17_5 * heightM * 2 ** (zoom - 17.5)
   return [0, -Math.round((px / iconSizeAt(zoom)) * 10) / 10]
 }
-const ICON_OFFSET = ['interpolate', ['linear'], ['zoom'], ...LIFT_ZOOMS.flatMap((z) => [z, ['literal', liftOffsetAt(z)]])] as const
+// 式は配列を動的に作れないので、ズームごとに「段 → literal」の match を用意する
+const ICON_OFFSET = [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  ...LIFT_ZOOMS.flatMap((z) => [
+    z,
+    ['match', ['get', 'liftTier'], 'low', ['literal', liftOffsetAt(z, LIFT_TIERS.low.repM)], 'high', ['literal', liftOffsetAt(z, LIFT_TIERS.high.repM)], ['literal', liftOffsetAt(z, LIFT_TIERS.mid.repM)]],
+  ]),
+] as const
 
-type Placed = { id: string; model: string; lat: number; lng: number }
+type Placed = { id: string; model: string; lat: number; lng: number; sizeM?: number }
 
 export function createShopPins(map: MapLibreMap) {
   let attached = false

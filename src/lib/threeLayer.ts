@@ -31,6 +31,9 @@ export function projectAt(map: MapLibreMap, p: { lat: number; lng: number }, hei
   return { x: ((v.x / v.w + 1) / 2) * c.clientWidth, y: ((1 - v.y / v.w) / 2) * c.clientHeight }
 }
 
+// projectAt が使える状態か（一度でも 3D を描いたか）。?debug の表示用
+export const hasProjection = () => lastMatrix !== null
+
 type Options = {
   id: string
   onAdd(scene: THREE.Scene, map: MapLibreMap): void
