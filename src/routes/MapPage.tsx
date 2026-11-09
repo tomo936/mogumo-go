@@ -293,7 +293,7 @@ export function MapPage() {
           onClose={() => setZukanOpen(false)}
         />
       )}
-      {recordOpen && <Record onClose={() => setRecordOpen(false)} />}
+      {recordOpen && <Record home={home} onClose={() => setRecordOpen(false)} />}
       {pickedHintData && (
         <HintSheet hint={pickedHintData} distanceM={distances.get(pickedHintData.id) ?? null} onClose={closeHint} />
       )}

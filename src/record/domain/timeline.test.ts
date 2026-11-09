@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DAY_MS, alphaAt, areaKm2, clearedAt, fadeFor, groupByMonth, monthLabel, stepWeek, timeRange, type ClearedCell, type VisitEntry } from './timeline.ts'
+import { DAY_MS, areaKm2, clearedAt, groupByMonth, monthLabel, stepWeek, timeRange, type ClearedCell, type VisitEntry } from './timeline.ts'
 
 const cell = (at: number): ClearedCell => ({ x: 0, y: 0, at })
 const visit = (day: string, name = day): VisitEntry => ({ shopId: name, name, kind: 'ramen', photoUrl: null, day })
@@ -14,24 +14,7 @@ describe('timeRange / clearedAt', () => {
   })
 })
 
-describe('alphaAt', () => {
-  it('晴れる前は 0、晴れた瞬間から fade をかけて 1 になる', () => {
-    expect(alphaAt(100, 50, 40)).toBe(0)
-    expect(alphaAt(100, 100, 40)).toBe(0)
-    expect(alphaAt(100, 120, 40)).toBe(0.5)
-    expect(alphaAt(100, 200, 40)).toBe(1)
-  })
-  it('fade が 0 なら晴れた瞬間に 1', () => {
-    expect(alphaAt(100, 100, 0)).toBe(1)
-  })
-})
-
-describe('fadeFor / areaKm2 / stepWeek', () => {
-  it('光り方の長さは最低1日、範囲の6%', () => {
-    expect(fadeFor(null)).toBe(DAY_MS)
-    expect(fadeFor({ start: 0, end: 100 * DAY_MS })).toBe(6 * DAY_MS)
-    expect(fadeFor({ start: 0, end: 2 * DAY_MS })).toBe(DAY_MS)
-  })
+describe('areaKm2 / stepWeek', () => {
   it('1マス 25m × 25m = 625㎡、1600 マスで 1km²', () => {
     expect(areaKm2(1600)).toBeCloseTo(1, 6)
   })

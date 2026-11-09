@@ -5,8 +5,9 @@ import './record.css'
 import { Icon } from '../../ui/Icon.tsx'
 import { levelFor } from '../../zukan/domain/level.ts'
 import { loadRecord } from '../infra/recordApi.ts'
-import { TopDownMap } from './TopDownMap.tsx'
-import { areaKm2, clearedAt, fadeFor, groupByMonth, stepWeek, timeRange, type ClearedCell, type VisitEntry } from '../domain/timeline.ts'
+import { RecordMap } from './RecordMap.tsx'
+import type { LatLng } from '../../map/domain/geo.ts'
+import { areaKm2, clearedAt, groupByMonth, stepWeek, timeRange, type ClearedCell, type VisitEntry } from '../domain/timeline.ts'
 
 type State = { status: 'loading' } | { status: 'error' } | { status: 'ready'; cells: ClearedCell[]; visits: VisitEntry[] }
 
@@ -18,7 +19,7 @@ const dayLabel = (ms: number) => {
   return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`
 }
 
-export function Record({ onClose }: { onClose: () => void }) {
+export function Record({ home, onClose }: { home: LatLng | null; onClose: () => void }) {
   const [state, setState] = useState<State>({ status: 'loading' })
   const [t, setT] = useState<number | null>(null) // スライダーの日付（null = いちばん新しい）
 
@@ -36,7 +37,6 @@ export function Record({ onClose }: { onClose: () => void }) {
   const visits = state.status === 'ready' ? state.visits : NO_VISITS
   const range = useMemo(() => timeRange(cells), [cells])
   const now = t ?? range?.end ?? 0
-  const fade = fadeFor(range)
   const shown = useMemo(() => clearedAt(cells, now), [cells, now])
   const history = useMemo(() => groupByMonth(visits, now), [visits, now])
   const visitedShops = new Set(history.flatMap((g) => g.items.map((i) => i.shopId))).size
@@ -57,7 +57,7 @@ export function Record({ onClose }: { onClose: () => void }) {
       {state.status === 'ready' && (
         <>
           <div className="rc__mapcard">
-            <TopDownMap cells={cells} t={now} fadeMs={fade} />
+            <RecordMap cells={cells} t={now} home={home} />
             {range === null && <p className="rc__empty">まだ晴れた場所がありません。お店に行くと、ここに光が広がります</p>}
           </div>
 

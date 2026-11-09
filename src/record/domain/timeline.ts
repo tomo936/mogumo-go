@@ -28,19 +28,6 @@ export function timeRange(cells: ClearedCell[]): { start: number; end: number } 
   return { start, end }
 }
 
-// 時刻 t での光り方（0〜1）。晴れた瞬間から fadeMs かけて、だんだん明るくなる（ふわっと増える）
-export function alphaAt(cellAt: number, t: number, fadeMs: number): number {
-  if (t < cellAt) return 0
-  if (fadeMs <= 0) return 1
-  return Math.min(1, (t - cellAt) / fadeMs)
-}
-
-// スライダーが動いたときの、光り方の長さ。全体が短くても長くても、ふわっと見えるように範囲に合わせる
-export function fadeFor(range: { start: number; end: number } | null): number {
-  if (!range) return DAY_MS
-  return Math.max(DAY_MS, (range.end - range.start) * 0.06)
-}
-
 export function clearedAt(cells: ClearedCell[], t: number): ClearedCell[] {
   return cells.filter((c) => c.at <= t)
 }

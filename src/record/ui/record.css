@@ -60,9 +60,11 @@
 }
 .rc-map {
   display: block;
+  position: relative;
   width: 100%;
-  height: auto;
+  aspect-ratio: 1 / 1;
   border-radius: 2px;
+  overflow: hidden;
 }
 .rc__empty {
   position: absolute;
