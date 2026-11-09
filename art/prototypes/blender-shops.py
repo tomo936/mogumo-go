@@ -1362,10 +1362,10 @@ def ethnic():
                           (-0.6, FY - 0.3, 'round', 0.9), (0.35, FY - 0.25, 'round', 0.95), (1.32, FY - 0.15, 'broad', 1.15)):
         plant_pot(x, y, 0.0, kd, s)
 
-# お好み焼き屋: クリーム色のかべ・こげ茶の板ぶきの切妻（妻が正面・妻は縦の板）・のれん3枚と格子の引き戸・すりガラスの大きな窓・右の側面に格子窓・屋根の銀の排気ダクト
+# お好み焼き屋: クリーム色のかべ・こげ茶の板ぶきの切妻（妻が正面・妻は縦の板）・のれん3枚と格子の引き戸・すりガラスの大きな窓・右の側面に格子窓（見本の屋根の銀の排気ダクトは 2026-11-09 オーナーの指示で付けない）
 def okonomiyaki():
     WALL = mat('#f0dcb6'); WOOD = mat('#a8693f'); WOOD_D = mat('#7d5235'); ROOF = mat('#6e4a38'); ROOF_D = mat('#5f3f2f')
-    GLOW = mat('#efcc98', 0.7, emit=0.3); SLAB = mat('#e3d4c0'); NOREN = mat('#5c4033', 0.9); METAL = mat('#9da2a9', 0.4)
+    GLOW = mat('#efcc98', 0.7, emit=0.3); SLAB = mat('#e3d4c0'); NOREN = mat('#5c4033', 0.9)
     W, D, H, Z0 = 2.2, 1.9, 1.28, 0.07; FY = -D / 2; RX = W / 2
     cube((W + 0.5, D + 0.4, Z0), (0, -0.08, Z0 / 2), SLAB, bevel=0.02)                            # 石の台
     cube((W, D, H), (0, 0, Z0 + H / 2), WALL, bevel=0.04, seg=3)
@@ -1396,74 +1396,63 @@ def okonomiyaki():
     # 右の側面（+X）: 格子窓
     lattice(RX + 0.02, -0.2, Z0 + 0.66, 0.78, 0.8, WOOD, GLOW, 3, 4, rz=math.pi / 2)
     cube((0.12, 0.92, 0.05), (RX + 0.06, -0.2, Z0 + 0.22), WOOD, bevel=0.015)
-    # 屋根の銀の排気ダクト（右の斜面）＋かべへ下りる管
-    zr = lambda x: ze + tp * (half - abs(x)) + 0.1
-    CX, CY = 0.42, 0.3; top = zr(CX) + 0.5
-    cyl(0.085, top - zr(CX) + 0.05, (CX, CY, (zr(CX) + top) / 2 - 0.02), METAL, verts=16)
-    cyl(0.1, 0.05, (CX, CY, top), METAL, verts=16)
-    cube((0.24, 0.24, 0.03), (CX, CY, zr(CX) - 0.01), METAL, bevel=0.01, rot=(0, -p, 0))
-    FXA, FYA = 0.18, -0.3                                                                        # 前の管: 斜面から立ち上がって煙突へ
-    cube((0.2, 0.2, 0.03), (FXA, FYA, zr(FXA) - 0.01), METAL, bevel=0.01, rot=(0, -p, 0))
-    zA = top - 0.15
-    tube([(FXA, FYA, zr(FXA)), (FXA, FYA, zA - 0.08), (FXA, FYA + 0.04, zA - 0.02), (FXA, FYA + 0.1, zA), (CX - 0.05, CY, zA)], 0.055, METAL)
-    xo = half + 0.12                                                                             # 横の管: 煙突から外へ出て、軒の外を下り、かべへ
-    tube([(CX, CY, zA), (xo - 0.12, CY, zA), (xo - 0.03, CY, zA - 0.03), (xo, CY, zA - 0.12), (xo, CY, zt - 0.3), (xo - 0.03, CY, zt - 0.38), (xo - 0.12, CY, zt - 0.41), (RX + 0.01, CY, zt - 0.41)], 0.055, METAL)
-    cyl(0.07, 0.06, (xo, CY, zt - 0.2), METAL, verts=14)
     # 鉢植え
     for (x, y, kd, s) in ((-1.25, FY - 0.12, 'succ', 1.0), (0.32, FY - 0.25, 'round', 1.0), (RX + 0.12, FY - 0.08, 'round', 0.9)):
         plant_pot(x, y, Z0, kd, s)
 
-# たこ焼き屋: 木の板の台（前と左に張り出したカウンター）・クリーム色のかべ・赤い瓦の切妻（妻が正面）・正面の大きな開口と白いのれん・中にたこ焼きの鉄板
+# たこ焼き屋: クリーム色のかべ（地面に直接建つ）・赤い瓦の切妻（妻が正面）・正面の窓口（下だけ木の板張りのカウンター）と白いのれん・中にたこ焼きの鉄板
+# 2026-11-09 オーナー: 「台の上に乗っているみたい」→ 建物の下の木の台をやめ、板張りは窓口の下（カウンターの腰板）だけにした
 def takoyaki():
     WALL = mat('#f2e3c6'); WOOD = mat('#cf9256'); WOOD_L = mat('#dca468'); WOOD_D = mat('#b97e48'); ROOF = mat('#d65a4c'); ROOF_D = mat('#c44f43')
     GLOW = mat('#f6d29a', 0.7, emit=0.4); INSIDE = mat('#e9b67c', 0.8, emit=0.15); WHITE = mat('#f4efe4', 0.9); GREY = mat('#8d8f94', 0.45)
-    BALL = mat('#d9953f')
-    W, D, H = 1.7, 1.55, 1.15; FY = -0.62; BY = FY + D; LX = -W / 2                              # 家（台の上）
-    PX0, PX1, PY0, PY1, PZ = LX - 0.32, W / 2 + 0.12, FY - 0.36, BY + 0.05, 0.42                   # 木の台
-    for k in range(0 if LO else int((PX1 - PX0) / 0.13)):                                        # 前の板の腰（遠く用は後ろの箱だけ）
-        cube((0.12, 0.05, PZ - 0.06), (PX0 + 0.065 + k * 0.13, PY0 + 0.03, 0.06 + (PZ - 0.06) / 2), WOOD if k % 2 else WOOD_D, bevel=0.012, seg=1)
-    for k in range(0 if LO else int((PY1 - PY0) / 0.13)):                                        # 左の板の腰
-        cube((0.05, 0.12, PZ - 0.06), (PX0 + 0.03, PY0 + 0.065 + k * 0.13, 0.06 + (PZ - 0.06) / 2), WOOD if k % 2 else WOOD_D, bevel=0.012, seg=1)
-    cube((PX1 - PX0, PY1 - PY0, PZ - 0.06), ((PX0 + PX1) / 2 + 0.03, (PY0 + PY1) / 2 + 0.03, 0.06 + (PZ - 0.06) / 2), WOOD_D, bevel=0.01)
-    cube((PX1 - PX0 + 0.06, PY1 - PY0 + 0.06, 0.07), ((PX0 + PX1) / 2, (PY0 + PY1) / 2, 0.035), WOOD_D, bevel=0.02)   # 下の台木
-    cube((PX1 - PX0 + 0.1, PY1 - PY0 + 0.08, 0.07), ((PX0 + PX1) / 2, (PY0 + PY1) / 2, PZ + 0.035), WOOD_L, bevel=0.025)  # カウンターの天板
-    Z0 = PZ + 0.07; zt = Z0 + H; CY = (FY + BY) / 2
-    # かべ（正面は大きな開口: x -0.6〜0.7・高さ 0.9）
-    OX0, OX1, OH = -0.6, 0.72, 0.9
-    cube((OX0 - LX, D, H), ((LX + OX0) / 2, CY, Z0 + H / 2), WALL, bevel=0.03)                 # 開口の左（中まで詰める）
-    cube((W / 2 - OX1, D, H), ((W / 2 + OX1) / 2, CY, Z0 + H / 2), WALL, bevel=0.02)            # 開口の右
+    BALL = mat('#d9953f'); STONE = mat('#c9c0b2')
+    W, D, H, Z0 = 1.8, 1.6, 1.55, 0.06; FY = -D / 2; BY = D / 2; LX = -W / 2; CY = 0.0
+    cube((W + 0.06, D + 0.06, Z0), (0, 0, Z0 / 2), STONE, bevel=0.015)                          # 低い土台（かべの足もと）
+    zt = Z0 + H
+    # かべ（正面は窓口: x -0.6〜0.7、高さ SILL〜OT）
+    OX0, OX1, SILL, OT = -0.6, 0.72, 0.78, 1.42
+    cube((OX0 - LX, D, H), ((LX + OX0) / 2, CY, Z0 + H / 2), WALL, bevel=0.03)                 # 窓口の左（中まで詰める）
+    cube((W / 2 - OX1, D, H), ((W / 2 + OX1) / 2, CY, Z0 + H / 2), WALL, bevel=0.02)            # 窓口の右
     cube((OX1 - OX0, D - 0.6, H), ((OX0 + OX1) / 2, CY + 0.3, Z0 + H / 2), WALL, bevel=0.03)    # 奥（左右のかべと重ねない）
-    cube((OX1 - OX0, 0.08, H - OH), ((OX0 + OX1) / 2, FY + 0.04, Z0 + OH + (H - OH) / 2), WALL, bevel=0.03)
+    cube((OX1 - OX0, 0.6, SILL - Z0), ((OX0 + OX1) / 2, FY + 0.3, Z0 + (SILL - Z0) / 2), WALL, bevel=0.01)   # 窓口の下（中の作業台）
+    cube((OX1 - OX0, 0.08, zt - OT), ((OX0 + OX1) / 2, FY + 0.04, OT + (zt - OT) / 2), WALL, bevel=0.03)    # 窓口の上
     cube((W - 0.12, D - 0.12, 0.04), (0, CY, zt - 0.02), WALL, bevel=0)                             # 天井（上から見えないように）
-    # 店の中: 奥の木のかべ・作業台・鉄板とたこ焼き・道具入れ
-    cube((W - 0.16, 0.05, OH), (0, FY + 0.575, Z0 + OH / 2), INSIDE, bevel=0.005)
-    cube((OX1 - OX0, 0.55, 0.3), ((OX0 + OX1) / 2, FY + 0.33, Z0 + 0.15), WOOD, bevel=0.01)
-    GX = 0.2; cube((0.48, 0.28, 0.07), (GX, FY + 0.25, Z0 + 0.335), GREY, bevel=0.012)
+    # 店の中: 奥の木のかべ・鉄板とたこ焼き・道具入れ
+    cube((OX1 - OX0 - 0.02, 0.05, OT - SILL), ((OX0 + OX1) / 2, FY + 0.575, SILL + (OT - SILL) / 2), INSIDE, bevel=0.005)
+    GX = 0.2; cube((0.48, 0.28, 0.07), (GX, FY + 0.25, SILL + 0.035), GREY, bevel=0.012)
     for i in range(5):
-        for j in range(3): sphere(0.027, (GX - 0.18 + i * 0.09, FY + 0.17 + j * 0.08, Z0 + 0.38), BALL, seg=8)
-    cyl(0.05, 0.12, (0.58, FY + 0.3, Z0 + 0.36), WOOD_L, verts=12, bevel=0.008)
-    for dx in (-0.015, 0.015): cube((0.012, 0.012, 0.18), (0.58 + dx, FY + 0.3, Z0 + 0.45), WOOD_D, bevel=0, rot=(0, dx * 8, 0))
-    cyl(0.03, 0.14, (0.48, FY + 0.45, Z0 + 0.37), mat('#8a5a3a'), verts=10, bevel=0.005)
-    # 開口の木の枠・上の太い横木・のれん
-    for x in (OX0 - 0.03, OX1 + 0.03): cube((0.09, 0.12, OH + 0.04), (x, FY - 0.01, Z0 + OH / 2), WOOD, bevel=0.02)
-    cube((OX1 - OX0 + 0.3, 0.14, 0.13), ((OX0 + OX1) / 2, FY - 0.02, Z0 + OH + 0.08), WOOD, bevel=0.03)
-    noren_rod(OX0 + 0.02, OX1 - 0.02, FY - 0.06, Z0 + OH - 0.06, WOOD_L, WHITE, [(-0.37, 0.36, 0.68, WHITE), (0.31, 0.26, 0.36, WHITE), (0.58, 0.24, 0.36, WHITE)])
+        for j in range(3): sphere(0.027, (GX - 0.18 + i * 0.09, FY + 0.17 + j * 0.08, SILL + 0.08), BALL, seg=8)
+    cyl(0.05, 0.12, (0.58, FY + 0.3, SILL + 0.06), WOOD_L, verts=12, bevel=0.008)
+    for dx in (-0.015, 0.015): cube((0.012, 0.012, 0.18), (0.58 + dx, FY + 0.3, SILL + 0.15), WOOD_D, bevel=0, rot=(0, dx * 8, 0))
+    cyl(0.03, 0.14, (0.48, FY + 0.45, SILL + 0.07), mat('#8a5a3a'), verts=10, bevel=0.005)
+    # 窓口の下だけ木のカウンター: 前へ張り出した天板＋板張りの腰板
+    CX0, CX1, CD = OX0 - 0.12, OX1 + 0.12, 0.3                                                   # カウンターの左右と張り出し
+    cube((CX1 - CX0, CD - 0.01, SILL - 0.06), ((CX0 + CX1) / 2, FY - CD / 2 - 0.005, (SILL - 0.06) / 2), WOOD_D, bevel=0.01)
+    for k in range(0 if LO else int((CX1 - CX0) / 0.12)):                                       # 腰板（遠く用は後ろの箱だけ）
+        cube((0.11, 0.05, SILL - 0.1), (CX0 + 0.06 + k * 0.12, FY - CD - 0.01, 0.04 + (SILL - 0.1) / 2), WOOD if k % 2 else WOOD_D, bevel=0.012, seg=1)
+    cube((CX1 - CX0 + 0.06, CD + 0.06, 0.05), ((CX0 + CX1) / 2, FY - CD / 2, 0.025), WOOD_D, bevel=0.015)       # 腰板の下の木
+    cube((CX1 - CX0 + 0.1, CD + 0.14, 0.06), ((CX0 + CX1) / 2, FY - CD / 2 + 0.04, SILL - 0.02), WOOD_L, bevel=0.02)  # 天板
+    # 窓口の木の枠・上の太い横木・のれん
+    for x in (OX0 - 0.03, OX1 + 0.03): cube((0.09, 0.12, OT - SILL + 0.04), (x, FY - 0.01, (SILL + OT) / 2), WOOD, bevel=0.02)
+    cube((OX1 - OX0 + 0.3, 0.14, 0.13), ((OX0 + OX1) / 2, FY - 0.02, OT + 0.06), WOOD, bevel=0.03)
+    noren_rod(OX0 + 0.02, OX1 - 0.02, FY - 0.06, OT - 0.05, WOOD_L, WHITE, [(-0.37, 0.36, 0.48, WHITE), (0.31, 0.26, 0.26, WHITE), (0.58, 0.24, 0.26, WHITE)])
     # 妻（正面・背面）: しっくいの三角＋破風板／赤い瓦の屋根
     p = math.radians(37); tp = math.tan(p); ox, oy = 0.14, 0.2; gh = tp * W / 2
     for sy in (-1, 1): gable_wall(W, (FY + 0.02) if sy < 0 else (BY - 0.02), zt, gh, WALL, sy)
     ze = zt - tp * ox; half = W / 2 + ox; run = half / math.cos(p)
     for sx in (-1, 1):
-        objs = tile_slope(D + 2 * oy, run, M_at(sx * half, CY, ze, rz=(math.pi / 2 if sx > 0 else -math.pi / 2), rx=p), ROOF, ROOF_D, tw=0.22, th=0.17)
+        tile_slope(D + 2 * oy, run, M_at(sx * half, CY, ze, rz=(math.pi / 2 if sx > 0 else -math.pi / 2), rx=p), ROOF, ROOF_D, tw=0.22, th=0.17)
     rz = ze + tp * half
     cyl(0.085, D + 2 * oy + 0.06, (0, CY, rz + 0.06), ROOF, rot=(math.pi / 2, 0, 0), verts=14)
     for y in (FY - oy + 0.01, BY + oy - 0.01): barge_boards(W, y, ze - 0.06, ox, p, WOOD)
     # 左の側面（-X）: 小さな格子窓
-    lattice(LX - 0.02, CY - 0.15, Z0 + 0.62, 0.38, 0.42, WOOD, GLOW, 2, 2, rz=-math.pi / 2)
-    # 小物: 竹の筒・鉢植え
-    cyl(0.045, 0.16, (PX0 + 0.12, FY - 0.15, PZ + 0.15), mat('#d8b46a'), verts=12, bevel=0.01)
-    cyl(0.06, 0.03, (PX0 + 0.12, FY - 0.15, PZ + 0.085), mat('#c79f55'), verts=12, bevel=0.005)
-    for (x, y, z, kd, s) in ((PX0 + 0.14, BY - 0.25, PZ + 0.07, 'succ', 0.85), (OX0 + 0.05, FY - 0.2, PZ + 0.07, 'succ', 0.75),
-                             (PX1 - 0.08, FY - 0.2, PZ + 0.07, 'succ', 0.8), (PX0 - 0.05, PY0 - 0.12, 0.0, 'succ', 1.0)):
+    lattice(LX - 0.02, CY - 0.1, 1.05, 0.4, 0.44, WOOD, GLOW, 2, 2, rz=-math.pi / 2)
+    cube((0.12, 0.52, 0.05), (LX - 0.06, CY - 0.1, 0.8), WOOD, bevel=0.015)
+    # 小物: 竹の筒（カウンターの左）・鉢植え
+    cyl(0.045, 0.16, (CX0 + 0.1, FY - 0.15, SILL + 0.08), mat('#d8b46a'), verts=12, bevel=0.01)
+    cyl(0.06, 0.03, (CX0 + 0.1, FY - 0.15, SILL + 0.015), mat('#c79f55'), verts=12, bevel=0.005)
+    for (x, y, z, kd, s) in ((OX0 + 0.05, FY - 0.2, SILL, 'succ', 0.75), (CX1 - 0.08, FY - 0.2, SILL, 'succ', 0.8),
+                             (LX - 0.15, FY - 0.15, 0.0, 'succ', 1.0), (LX - 0.15, 0.5, 0.0, 'round', 0.9)):
         plant_pot(x, y, z, kd, s)
 
 {'station': station, 'building': building, 'ramen': ramen, 'sushi': sushi, 'chinese': chinese, 'yakiniku': yakiniku, 'western': western, 'cake': cake, 'bakery': bakery, 'mystery': mystery, 'soba': soba, 'izakaya': izakaya, 'washoku': washoku, 'curry': curry, 'cafe': cafe,
