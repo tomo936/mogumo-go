@@ -328,9 +328,6 @@ export function MapPage() {
           }
         />
         {soonName && <p className="hud-soon" role="status">{`${soonName}は準備中です`}</p>}
-        <a className="hp-credit" href="http://webservice.recruit.co.jp/" target="_blank" rel="noreferrer">
-          Powered by ホットペッパーグルメ Webサービス
-        </a>
       </div>
     </>
   )

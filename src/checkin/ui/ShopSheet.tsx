@@ -316,7 +316,6 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
                 <a className="shop-sheet__hp" href={hpUrl} target="_blank" rel="noopener noreferrer">
                   ホットペッパーで見る
                 </a>
-                <p className="shop-sheet__credit">Powered by ホットペッパーグルメ Webサービス</p>
               </>
             )}
           </div>

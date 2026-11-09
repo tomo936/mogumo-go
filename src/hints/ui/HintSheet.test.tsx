@@ -13,7 +13,7 @@ test('「？？？」と距離とヒントの行が出て、店名は出ない',
   expect(screen.getByText('予算 1,000円台')).toBeInTheDocument()
   expect(screen.getByText('近づくと正体が分かるよ（30m）')).toBeInTheDocument()
   expect(document.body.textContent).not.toContain('秘密亭')
-  expect(screen.getByText('Powered by ホットペッパーグルメ Webサービス')).toBeInTheDocument()
+  expect(screen.queryByText('Powered by ホットペッパーグルメ Webサービス')).not.toBeInTheDocument()
 })
 
 test('謎の気配は「正体は行ってみてのお楽しみ」。閉じるボタンが効く', async () => {
