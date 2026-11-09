@@ -1,6 +1,7 @@
 // 気配のピン（地図に貼る HTML マーカー）。最大3つ。霧（WebGL の層）の手前に出るので、雲の上に必ず見える。
 // 仮の見た目は丸＋「？」。シロのアイコンが届いたら中身を差し替える。
 import { Marker } from 'maplibre-gl'
+import mysteryPin from '../../assets/pins/mystery.png'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import type { LatLng } from '../../map/domain/geo.ts'
 import type { DailyHint } from '../domain/hint.ts'
@@ -42,8 +43,15 @@ export function createHintPins(map: MapLibreMap, onTap: (hintId: string) => void
         if (h.isMystery) el.classList.add('hint-pin--mystery')
         if (revealed.has(h.id)) el.classList.add('hint-pin--revealed')
         el.setAttribute('aria-label', revealed.has(h.id) ? '気配（正体が分かった）' : '気配')
-        el.innerHTML = '<span class="hint-pin__face"></span>'
-        el.querySelector('.hint-pin__face')!.textContent = revealed.has(h.id) ? '!' : '?'
+        // 気配はジャンルが分からないよう、どれもシロの「？」のピンの絵（色で種類がばれない）
+        el.innerHTML = '<span class="hint-pin__face"><img class="hint-pin__img" alt="" draggable="false"></span>'
+        el.querySelector<HTMLImageElement>('.hint-pin__img')!.src = mysteryPin
+        if (revealed.has(h.id)) {
+          const mark = document.createElement('span')
+          mark.className = 'hint-pin__mark'
+          mark.textContent = '!'
+          el.appendChild(mark)
+        }
         el.addEventListener('pointerdown', (e) => e.stopPropagation()) // 地図のタップ（建物の当たり判定）を走らせない
         el.addEventListener('click', (e) => {
           e.stopPropagation()
