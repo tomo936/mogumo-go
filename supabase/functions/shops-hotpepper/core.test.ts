@@ -8,7 +8,7 @@ const fixture = {
       {
         id: 'J001', name: '麺屋いろは', lat: '35.681', lng: 139.767,
         genre: { code: 'G013', name: 'ラーメン' }, catch: 'こだわりの一杯',
-        budget: { code: 'B002', name: '~1000円' }, photo: { mobile: { l: 'https://x/l.jpg', s: 'https://x/s.jpg' } },
+        budget: { code: 'B002', name: '~1000円' }, photo: { pc: { l: 'https://x/pc_l.jpg', m: 'https://x/pc_m.jpg' }, mobile: { l: 'https://x/l.jpg', s: 'https://x/s.jpg' } },
         open: '月～日 11:00～22:00',
       },
       { id: 'J002', name: '', lat: 35.7, lng: 139.8 },
@@ -43,8 +43,15 @@ describe('parseHotpepper', () => {
     expect(rows[0]).toEqual({
       shop_id: 'hp:J001', name: '麺屋いろは', lat: 35.681, lng: 139.767,
       genre_code: 'G013', genre_name: 'ラーメン', catch: 'こだわりの一杯',
-      budget_code: 'B002', budget_name: '~1000円', photo_url: 'https://x/l.jpg', open: '月～日 11:00～22:00',
+      budget_code: 'B002', budget_name: '~1000円', photo_url: 'https://x/pc_l.jpg', open: '月～日 11:00～22:00',
     })
+  })
+  it('写真は pc.l、無ければ mobile.l', () => {
+    const shop = (fixture as { results: { shop: Record<string, unknown>[] } }).results.shop[0]
+    const only = (photo: unknown) => parseHotpepper({ results: { shop: [{ ...shop, photo }] } })[0].photo_url
+    expect(only({ mobile: { l: 'https://x/l.jpg' } })).toBe('https://x/l.jpg')
+    expect(only({ pc: { l: '' }, mobile: { l: 'https://x/l.jpg' } })).toBe('https://x/l.jpg')
+    expect(only(null)).toBeNull()
   })
   it('壊れた形は空配列', () => {
     expect(parseHotpepper(null)).toEqual([])

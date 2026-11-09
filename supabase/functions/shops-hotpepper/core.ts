@@ -57,7 +57,10 @@ export function parseHotpepper(json: unknown): ShopRow[] {
     if (!id || !name || s.lat == null || s.lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) continue
     const genre = isObj(s.genre) ? s.genre : {}
     const budget = isObj(s.budget) ? s.budget : {}
-    const photo = isObj(s.photo) && isObj(s.photo.mobile) ? s.photo.mobile : {}
+    // 写真は API で一番大きい pc.l（238px）。無ければ mobile.l（168px）（2026-11-09 オーナー: 画質が悪い）
+    const photo = isObj(s.photo) ? s.photo : {}
+    const pc = isObj(photo.pc) ? photo.pc : {}
+    const mobile = isObj(photo.mobile) ? photo.mobile : {}
     rows.push({
       shop_id: `hp:${id}`,
       name,
@@ -68,7 +71,7 @@ export function parseHotpepper(json: unknown): ShopRow[] {
       catch: str(s.catch),
       budget_code: str(budget.code),
       budget_name: str(budget.name),
-      photo_url: str(photo.l),
+      photo_url: str(pc.l) ?? str(mobile.l),
       open: str(s.open),
     })
   }
