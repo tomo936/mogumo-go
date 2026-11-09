@@ -56,9 +56,8 @@ export function MapHud(p: Props) {
         {p.pinsHidden ? '🚫' : '📍'}
       </button>
 
-      <button type="button" className="hud-hint" aria-expanded={p.hintOpen} onClick={p.onHintTap}>
-        <span>気配</span>
-        {p.hintsRemaining !== null && <b>{p.hintsRemaining}</b>}
+      <button type="button" className="hud-hint" aria-label="気配" aria-expanded={p.hintOpen} onClick={p.onHintTap}>
+        ？
       </button>
 
       <div className="hud-menu">
