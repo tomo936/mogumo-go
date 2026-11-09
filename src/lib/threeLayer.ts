@@ -17,6 +17,20 @@ export function modelMatrix(origin: LatLng, p: { lat: number; lng: number }, sca
     .toArray()
 }
 
+// 最後に描いたコマのカメラ（メルカトル座標 → 画面のクリップ座標）。地図の上に重ねる HTML のピンを、
+// 3D の屋根の高さにぴったり合わせるのに使う（画面の真上にずらすだけだと、遠近で傾いた分がずれる）
+let lastMatrix: number[] | null = null
+
+// p の地面から heightM 上の点が、画面（CSS px）のどこに写るか。まだ一度も描いていなければ null
+export function projectAt(map: MapLibreMap, p: { lat: number; lng: number }, heightM: number): { x: number; y: number } | null {
+  if (!lastMatrix) return null
+  const mc = MercatorCoordinate.fromLngLat([p.lng, p.lat], heightM)
+  const v = new THREE.Vector4(mc.x, mc.y, mc.z, 1).applyMatrix4(new THREE.Matrix4().fromArray(lastMatrix))
+  if (v.w <= 0) return null
+  const c = map.getCanvas()
+  return { x: ((v.x / v.w + 1) / 2) * c.clientWidth, y: ((1 - v.y / v.w) / 2) * c.clientHeight }
+}
+
 type Options = {
   id: string
   onAdd(scene: THREE.Scene, map: MapLibreMap): void
@@ -59,6 +73,7 @@ export function threeLayer(opts: Options): CustomLayerInterface {
       renderer = null
     },
     render(_gl, args) {
+      lastMatrix = args.defaultProjectionData.mainMatrix as unknown as number[]
       const origin = opts.origin()
       if (!renderer || !origin) return
       local.fromArray(modelMatrix(origin, origin, 1, 0))
