@@ -244,6 +244,9 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     // 建物かピンが押された: 1軒ならお店のシート、2軒以上ならビルの一覧。カメラはそのお店（ビルなら先頭の店）へ寄せる
     tapRef.current = (ids) => {
       const found = (ids ?? []).map((id) => s.world?.shopsNear().find((sh) => sh.id === id)).filter((sh): sh is Shop => !!sh)
+      // 建物でもピンでもない所（道路など）を押したときは何もしない。押しまちがいでシートが閉じたり、
+      // カメラが自分に戻ったりしないように（2026-11-09 本人）。閉じるのはシートの × で
+      if (found.length === 0) return
       if (found.length > 1) {
         // お店のシートは一覧側で閉じる（ここで onSelectShop(null) を呼ぶとカメラの寄せが外れ、タップのたびにズームが進む）
         onSelectBuildingRef.current(found, s.world?.titleOf(found.map((sh) => sh.id)) ?? null)
@@ -257,8 +260,6 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         focusRef.current = { lat: at.lat, lng: at.lng }
         s.world?.focus(found.map((sh) => sh.id)) // 選んだ建物は遠くても詳しい模型に
         map.easeTo({ center: [at.lng, at.lat], zoom, duration: 500 })
-      } else {
-        unfocusRef.current()
       }
     }
     // 気配を押したとき: カメラをその場所へ寄せる（お店のシートを開くときと同じ動き）

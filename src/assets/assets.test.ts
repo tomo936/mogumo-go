@@ -13,20 +13,27 @@ const KINDS = [
 describe('ピンの絵', () => {
   it('合成済みのピンが 19 枚そろっている（sweets は cake、「？」は mystery、フォークとナイフは other）', () => {
     const names = Object.keys(pins).map((p) => p.replace('./pins/', '').replace('.png', ''))
-    expect(names.sort()).toEqual([
-      ...KINDS, 'other', 'donburi', 'burger', 'ethnic', 'okonomiyaki', 'takoyaki',
-    ].sort())
+    expect(names.sort()).toEqual([...KINDS, 'other', ...NEW_KINDS].sort())
   })
 })
 
+const NEW_KINDS = ['donburi', 'burger', 'ethnic', 'okonomiyaki', 'takoyaki']
+
 describe('3D 素材', () => {
-  it('店の glb が 13 種＋ビルそろっている', () => {
+  it('店の glb が 18 種＋ビルそろっている', () => {
     const names = Object.keys(shops).map((p) => p.replace('./shops/', '').replace('.glb', ''))
-    expect(names.sort()).toEqual([...KINDS, 'building'].sort())
+    expect(names.sort()).toEqual([...KINDS, ...NEW_KINDS, 'building'].sort())
   })
 
-  it('遠く用の軽い glb（lod/）も 13 種＋ビルそろっている', () => {
+  it('遠く用の軽い glb（lod/）も 18 種＋ビルそろっている', () => {
     const names = Object.keys(lods).map((p) => p.replace('./shops/lod/', '').replace('.glb', ''))
-    expect(names.sort()).toEqual([...KINDS, 'building'].sort())
+    expect(names.sort()).toEqual([...KINDS, ...NEW_KINDS, 'building'].sort())
+  })
+
+  it('新しい5種（丼・バーガー・エスニック・お好み焼き・たこ焼き）の glb が詳しい版と軽い版の両方にある', () => {
+    for (const k of NEW_KINDS) {
+      expect(shops[`./shops/${k}.glb`]).toBeTruthy()
+      expect(lods[`./shops/lod/${k}.glb`]).toBeTruthy()
+    }
   })
 })
