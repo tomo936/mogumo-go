@@ -64,6 +64,12 @@ export function createAvatar(map: MapLibreMap) {
         added = true
       }
     },
+    // 進んでいる向き（北0・時計回りの度）。まだ進んでいなければ 0
+    heading: () => travel ?? 0,
+    // 3D の男の子が出ているときは、2D の絵を隠す
+    setHidden(hidden: boolean) {
+      el.style.display = hidden ? 'none' : ''
+    },
     dispose() {
       marker.remove()
     },
