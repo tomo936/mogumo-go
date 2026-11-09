@@ -103,6 +103,15 @@ describe('loadProgress', () => {
     expect(p.cells).toEqual([{ x: 1, y: 2 }, { x: -3, y: 4 }])
     expect(p.checkedShopIds).toEqual(new Set(['hp:A', 'osm:1']))
   })
+  it('店ごとの記録（回数・はじめて・この前）も作る', async () => {
+    const p = await loadProgress(
+      client({
+        fog_cells: { data: [], error: null },
+        checkins: { data: [{ shop_id: 'hp:A', checked_in_at: '2026-11-03T01:00:00Z' }, { shop_id: 'hp:A', checked_in_at: '2026-11-08T01:00:00Z' }], error: null },
+      }),
+    )
+    expect(p.visitsByShop.get('hp:A')).toEqual({ count: 2, firstDay: '2026-11-03', lastDay: '2026-11-08' })
+  })
   it('1000 行を超えても頁をたどって全部読む（両テーブル）', async () => {
     const cellRows = Array.from({ length: 1003 }, (_, i) => ({ cell_x: i, cell_y: -i }))
     const shopRows = Array.from({ length: 1003 }, (_, i) => ({ shop_id: `hp:${i}` }))

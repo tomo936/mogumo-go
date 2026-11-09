@@ -23,6 +23,7 @@ import { createAvatar } from '../infra/avatarMarker.ts'
 import { attachWorld } from './worldLayers.ts'
 import { createHintPins } from '../../hints/infra/hintPins.ts'
 import type { DailyHint } from '../../hints/domain/hint.ts'
+import type { Visits } from '../../checkin/domain/visits.ts'
 import '../../hints/ui/hints.css'
 import { nextBearing } from '../domain/rotate.ts'
 import { isStale, judgeFix, shouldMoveCamera, stepToward } from '../domain/smoothing.ts'
@@ -32,6 +33,8 @@ export type MapViewHandle = {
   checkin(shop: Shop, newCells: Cell[]): void
   unfocus(): void
   isCheckedToday(shop: Shop): boolean
+  visitsFor(shop: Shop): Visits | null // わたしの記録（読み込み前・0回は null）
+  progressReady(): boolean // 保存済みの記録を読み終えたか
   checked(): ReadonlySet<string>
   hintInputs(): ReturnType<ReturnType<typeof attachWorld>['hintInputs']> | null // 気配の候補集めの材料（地図ができる前は null）
   whenShopsReady(): Promise<void> // お店の読み込みがそろったら解ける
@@ -103,6 +106,8 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   useImperativeHandle(ref, () => ({
     unfocus: () => unfocusRef.current(),
     isCheckedToday: (shop) => worldRef.current?.checkedToday(shop) ?? false,
+    visitsFor: (shop) => worldRef.current?.visitsFor(shop) ?? null,
+    progressReady: () => worldRef.current?.progressReady() ?? false,
     checked: () => worldRef.current?.checked() ?? new Set<string>(),
     hintInputs: () => worldRef.current?.hintInputs() ?? null,
     whenShopsReady: () => readyRef.current!.promise,

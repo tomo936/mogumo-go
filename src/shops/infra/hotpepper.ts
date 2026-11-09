@@ -21,6 +21,7 @@ export function roundCenter(p: LatLng, gridM: number): LatLng {
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 const strOrNull = (v: unknown): string | null => (typeof v === 'string' ? v : null)
+const httpsOrNull = (v: unknown): string | null => (typeof v === 'string' && v.startsWith('https://') ? v : null)
 
 // Edge Function が返す行（supabase/functions/shops-hotpepper/core.ts の ShopRow）を Shop に直す
 function toShops(json: unknown): Shop[] {
@@ -40,6 +41,7 @@ function toShops(json: unknown): Shop[] {
         genreName: strOrNull(r.genre_name),
         catch: strOrNull(r.catch),
         budgetName: strOrNull(r.budget_name),
+        photoUrl: httpsOrNull(r.photo_url),
         open: strOrNull(r.open),
       },
       mapId: null,
