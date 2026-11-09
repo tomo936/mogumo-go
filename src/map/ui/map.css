@@ -271,3 +271,38 @@
 .hud-pins[aria-pressed='true'] {
   background: #efe9dc;
 }
+
+/* 設定の全画面（2026-11-10） */
+.hud-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  overflow-y: auto;
+  padding: calc(10px + env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom));
+  background: #fffaf2;
+  color: #4a3b2c;
+}
+.hud-screen__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.hud-screen__bar h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.hud-screen__back {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  font-size: 18px;
+}
+.hud-screen__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
