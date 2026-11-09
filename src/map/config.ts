@@ -22,4 +22,4 @@ export const AVATAR_SPEED_TAU_MS = 300 // 速さをならす時間（コマご�
 export const AVATAR_MIN_MOVE_M = 0.5 // これ以上動いてから向きを更新する（止まりぎわのぶれで向きが回らないように）
 export const AVATAR_FRAMES = 21
 export const AVATAR_FPS = 14
-export const AVATAR_HEIGHT_PX = 64
+export const AVATAR_HEIGHT_PX = 40 // 画面上の高さ（2026-11-09 本人「巨人かよ」で 64→40）

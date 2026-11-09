@@ -78,4 +78,14 @@
   position: absolute;
   pointer-events: none;
   background-repeat: no-repeat;
+  transform-origin: 50% 100%;
+}
+/* 立っている間の「待機」の動き。足元を軸に少し伸び縮みして上下する（息をする感じ）。
+   MapLibre が transform を書くので、別のプロパティ（scale・translate）で動かす */
+.me-avatar--idle {
+  animation: me-avatar-idle 1.6s ease-in-out infinite;
+}
+@keyframes me-avatar-idle {
+  0%, 100% { scale: 1 1; translate: 0 0; }
+  50% { scale: 1.02 0.97; translate: 0 0.5px; }
 }
