@@ -19,8 +19,11 @@ const PATHS: Record<IconName, ReactNode> = {
   ),
   gacha: (
     <>
-      <path d="M12 3l2.3 6.2L20.5 12l-6.2 2.8L12 21l-2.3-6.2L3.5 12l6.2-2.8z" />
-      <path d="M19 3.5v3M17.5 5h3" />
+      <circle cx="12" cy="9" r="7" />
+      <circle cx="9.3" cy="8.4" r="1.3" />
+      <circle cx="14.4" cy="10.4" r="1.3" />
+      <path d="M4.5 16.8h15V21a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1z" />
+      <path d="M10.2 19.4h3.6" />
     </>
   ),
   person: (

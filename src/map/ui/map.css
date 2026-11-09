@@ -154,7 +154,7 @@
 .hud-menu {
   position: absolute;
   left: 50%;
-  bottom: calc(44px + env(safe-area-inset-bottom)); /* 少し上げた（2026-11-10 オーナー） */
+  bottom: 22px;
   z-index: 5;
   width: 0;
   height: 64px;
@@ -275,7 +275,7 @@
 .hud-soon {
   position: absolute;
   left: 50%;
-  bottom: calc(150px + env(safe-area-inset-bottom));
+  bottom: 120px;
   z-index: 40;
   transform: translateX(-50%);
   margin: 0;
