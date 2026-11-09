@@ -83,3 +83,46 @@ test('元のデザインは書き換えない', () => {
   themeStyle(original, theme)
   expect(layer(original, 'water').paint?.['fill-color']).toBe('#123')
 })
+
+// ---- イラスト調（2026-11-10） ----
+const illust: MapTheme = {
+  ...theme,
+  illust: { buildingFills: ['#a00001', '#a00002', '#a00003', '#a00004'], buildingShadow: 'rgba(1,2,3,0.5)', roadScale: 2, majorRoadScale: 1.5 },
+}
+const widthBase = (): StyleSpecification => {
+  const s = base()
+  for (const l of s.layers) {
+    if (l.id === 'highway_minor') (l as { paint: Record<string, unknown> }).paint['line-width'] = ['interpolate', ['exponential', 1.2], ['zoom'], 13, 1, 20, 10]
+    if (l.id === 'highway_major_inner') (l as { paint: Record<string, unknown> }).paint['line-width'] = 4
+  }
+  return s
+}
+
+test('イラスト調: 建物の色を高さで変え、建物の下にずらした影を入れる', () => {
+  const s = themeStyle(base(), illust)
+  expect(layer(s, 'building').paint?.['fill-color']).toEqual(['step', ['coalesce', ['get', 'render_height'], 6], '#a00001', 6, '#a00002', 10, '#a00003', 16, '#a00004'])
+  const ids = s.layers.map((l) => l.id)
+  expect(ids.indexOf('building-shadow')).toBe(ids.indexOf('building') - 1)
+  expect(layer(s, 'building-shadow').paint?.['fill-translate']).toEqual([3, 5])
+})
+
+test('イラスト調: 道の太さを式の中の数値だけ大きくし、端を丸くする（zoom の補間は外側のまま）', () => {
+  const s = themeStyle(widthBase(), illust)
+  expect(layer(s, 'highway_minor').paint?.['line-width']).toEqual(['interpolate', ['exponential', 1.2], ['zoom'], 13, 2, 20, 20])
+  expect(layer(s, 'highway_major_inner').paint?.['line-width']).toBe(6)
+  expect(layer(s, 'highway_minor').layout?.['line-cap']).toBe('round')
+})
+
+test('イラスト調でない色の案は、太さも建物の影も今のまま', () => {
+  const s = themeStyle(widthBase(), theme)
+  expect(layer(s, 'highway_minor').paint?.['line-width']).toEqual(['interpolate', ['exponential', 1.2], ['zoom'], 13, 1, 20, 10])
+  expect(s.layers.some((l) => l.id === 'building-shadow')).toBe(false)
+})
+
+test('イラスト調: 細い道の下に、茶色のふちの線を足す（太さは 1.45 倍）', () => {
+  const s = themeStyle(widthBase(), illust)
+  const ids = s.layers.map((l) => l.id)
+  expect(ids.indexOf('highway_minor_casing_illust')).toBe(ids.indexOf('highway_minor') - 1)
+  expect(layer(s, 'highway_minor_casing_illust').paint?.['line-color']).toBe(illust.roadCasing)
+  expect(layer(s, 'highway_minor_casing_illust').paint?.['line-width']).toEqual(['interpolate', ['exponential', 1.2], ['zoom'], 13, 2.9, 20, 29])
+})

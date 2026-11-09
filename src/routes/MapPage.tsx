@@ -305,6 +305,7 @@ export function MapPage() {
             if (!selectedRef.current) mapRef.current?.unfocus() // 演出が終わったらカメラを自分に戻す
           }} />}
       <div className="map-overlay">
+        <div className="map-sky" aria-hidden="true" />
         <LocationOverlay status={status} onRetry={retry} onReload={() => window.location.reload()} />
         {shopsError && <p className="location-banner">お店を読み込めませんでした</p>}
         <MapHud
