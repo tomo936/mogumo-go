@@ -6,7 +6,6 @@ import type { LatLng } from '../../map/domain/geo.ts'
 import type { DailyHint } from '../domain/hint.ts'
 
 const BOUNCE_MS = 400
-const LIFT_PX = 52 // お店（ビルのピン）より少し上に浮かせる
 
 type Shown = { m: Marker; el: HTMLButtonElement; id: string; timer: ReturnType<typeof setTimeout> | null }
 
@@ -50,7 +49,8 @@ export function createHintPins(map: MapLibreMap, onTap: (hintId: string) => void
           e.stopPropagation()
           onTap(h.id)
         })
-        const m = new Marker({ element: el, anchor: 'bottom', offset: [0, -LIFT_PX] }).setLngLat([p.lng, p.lat]).addTo(map)
+        // ピンの先を地面の点に付ける（画面の px で浮かせると、カメラを引く・回すとずれて見える）
+        const m = new Marker({ element: el, anchor: 'bottom' }).setLngLat([p.lng, p.lat]).addTo(map)
         shown.push({ m, el, id: h.id, timer: null })
       }
     },
