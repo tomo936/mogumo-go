@@ -22,27 +22,32 @@
   filter: blur(2px);
 }
 .hint-pin__face {
-  display: grid;
-  place-items: center;
+  display: block;
   width: 40px;
   height: 40px;
+}
+.hint-pin__img {
+  display: block;
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 2px 3px rgba(31, 42, 55, 0.3));
+  pointer-events: none;
+  user-select: none;
+}
+.hint-pin__mark {
+  /* 正体が分かった印（右上の緑の丸） */
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: #fff;
-  border: 3px solid #bfe0ff;
-  box-sizing: border-box;
-  color: #4aa8ff;
-  font-size: 22px;
+  background: #3ecf8e;
+  color: #fff;
+  font-size: 12px;
   font-weight: 900;
-  box-shadow: 0 2px 6px rgba(31, 42, 55, 0.25);
-}
-.hint-pin--mystery .hint-pin__face {
-  background: #f1ebff;
-  border-color: #cdbdf5;
-  color: #8e6ee0;
-}
-.hint-pin--revealed .hint-pin__face {
-  border-color: #3ecf8e;
-  color: #3ecf8e;
 }
 .hint-pin--bounce .hint-pin__face {
   animation: hint-pin-bounce 0.4s cubic-bezier(0.2, 1.4, 0.4, 1);

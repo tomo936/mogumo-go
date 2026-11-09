@@ -6,9 +6,9 @@ import type { Map as MapLibreMap } from 'maplibre-gl'
 import { localFrame } from '../../map/domain/geo.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
 import { FACILITY_CLUSTER_PX, PIN_GAP_PX } from '../config.ts'
-import { BADGE_COLOR } from '../domain/badgeColor.ts'
 import { clusterSpots, pinLayout, pinScale } from '../domain/pins.ts'
 import type { Shop } from '../domain/shop.ts'
+import { PIN_ICON } from './pinIcons.ts'
 import { screenScale } from './screenScale.ts'
 import type { PlacedShop } from './shopLayer.ts'
 
@@ -25,13 +25,28 @@ export type PinnedBuilding = {
 
 const SCATTER_SIZE_M = 10 // 散らばったピンの大きさを決める目安の幅
 
-function pin(color: string, label: string, onClick: () => void): HTMLButtonElement {
+// お店のピン。icon があればシロのピンの絵（先が下の真ん中）、無ければ白い丸（まとめたピン）
+function pin(icon: string | null, label: string, onClick: () => void): HTMLButtonElement {
   const b = document.createElement('button')
   b.type = 'button'
-  b.className = 'bldg-pin'
-  b.style.setProperty('--pin-color', color)
-  b.innerHTML = '<span class="bldg-pin__head"><span class="bldg-pin__label"></span></span>'
-  b.querySelector('.bldg-pin__label')!.textContent = label
+  b.className = icon ? 'bldg-pin bldg-pin--icon' : 'bldg-pin'
+  if (icon) {
+    const img = document.createElement('img')
+    img.className = 'bldg-pin__img'
+    img.src = icon
+    img.alt = ''
+    img.draggable = false
+    b.appendChild(img)
+    if (label) {
+      const mark = document.createElement('span')
+      mark.className = 'bldg-pin__mark'
+      mark.textContent = label
+      b.appendChild(mark)
+    }
+  } else {
+    b.innerHTML = '<span class="bldg-pin__head"><span class="bldg-pin__label"></span></span>'
+    b.querySelector('.bldg-pin__label')!.textContent = label
+  }
   b.addEventListener('click', (e) => {
     e.stopPropagation()
     onClick()
@@ -113,7 +128,7 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
     const tag = nameTag(b)
     if (tag) el.appendChild(tag)
     const done = b.shops.filter((s) => checked.has(s.id)).length
-    const p = pin('#ffffff', '🍽', () => onTap(b.shops.map((s) => s.id)))
+    const p = pin(null, '🍽', () => onTap(b.shops.map((s) => s.id)))
     p.classList.add('bldg-pin--all')
     const count = document.createElement('span')
     count.className = 'bldg-pin__count'
@@ -127,7 +142,7 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
   const row = (shops: Shop[], xs: { x: number; y: number }[]) => (el: HTMLElement) => {
     xs.forEach((at, i) => {
       const s = shops[i]
-      const p = pin(BADGE_COLOR[s.kind], checked.has(s.id) ? '✓' : '', () => onTap([s.id]))
+      const p = pin(PIN_ICON[s.kind], checked.has(s.id) ? '✓' : '', () => onTap([s.id]))
       p.style.transform = `translate(${at.x}px, ${at.y}px)`
       if (checked.has(s.id)) p.classList.add('bldg-pin--done')
       el.appendChild(p)
