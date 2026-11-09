@@ -9,6 +9,17 @@ export function isDebug(search: string): boolean {
   return new URLSearchParams(search).has('debug')
 }
 
+// ?debug を一度付けて開いたら、ログインの行き来で URL から消えても、そのタブを閉じるまで出す
+const DEBUG_KEY = 'mogumo.debug'
+export function debugOn(search: string): boolean {
+  try {
+    if (isDebug(search)) sessionStorage.setItem(DEBUG_KEY, '1')
+    return sessionStorage.getItem(DEBUG_KEY) === '1'
+  } catch {
+    return isDebug(search)
+  }
+}
+
 const r1 = (n: number) => (Math.round(n * 10) / 10).toString()
 const xy = (p: { x: number; y: number } | null) => (p ? `${r1(p.x)},${r1(p.y)}` : '-')
 
