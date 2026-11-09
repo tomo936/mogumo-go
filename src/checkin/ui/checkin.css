@@ -486,7 +486,8 @@
   object-fit: contain;
 }
 .shop-sticker--big {
-  width: min(78%, 300px);
+  /* ホットペッパーの写真は 238px 四方が最大。のばしすぎないよう小さめに（2026-11-09 オーナー） */
+  width: min(58%, 220px);
   margin: 22px auto 0;
   padding: 10px 10px 30px;
   border-radius: 6px;
@@ -496,7 +497,7 @@
 .shop-sticker--big .shop-sticker__window {
   width: 100%;
   height: auto;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 1 / 1; /* 写真が正方形なので切らずに出す */
   border-radius: 3px;
 }
 .shop-sticker__tape {

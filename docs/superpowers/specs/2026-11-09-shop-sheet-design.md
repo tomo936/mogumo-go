@@ -29,7 +29,7 @@
 - 地図データだけの店: 写真の代わりに種類の模型の絵、「くわしい情報はまだありません」、ホットペッパーの欄は出さない。
 
 ### データ
-- 写真: Edge Function `shops-hotpepper` は既に `photo_url`（mobile の l）を返している。アプリ側（`src/shops/infra/hotpepper.ts`）で `ShopDetails.photoUrl` として受け取る。合体した店もそのまま持つ。
+- 写真: Edge Function `shops-hotpepper` の `photo_url` は API で一番大きい pc.l（238px 四方。無ければ mobile.l 168px）。2026-11-09 オーナー「画質が悪い」→ pc.l に替え、ポラロイドは小さめ（幅 58%・最大 220px）・窓は正方形にして引きのばしを減らす。アプリ側（`src/shops/infra/hotpepper.ts`）で `ShopDetails.photoUrl` として受け取る。合体した店もそのまま持つ。
 - ホットペッパーのページ: **リーダーの判断**で、店の ID から `https://www.hotpepper.jp/str<ID>/` を作る（サーバーと DB を変えずに済むため）。外のタブで開く。
 - 記録: `checkins`（RLS で自分の行だけ読める）から、その店の `shop_id`（合体した店は `mapId` の osm: も）を読み、回数・最初・最後の日を出す（日本時間）。シートを開いたときに読む。読めなければ記録の欄を出さない。チェックインが通ったら、その場で数を足す。
 - 枠の段の計算は `src/checkin/domain/` の純粋な関数（テストする）。
