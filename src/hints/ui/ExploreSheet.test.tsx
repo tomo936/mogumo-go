@@ -91,5 +91,4 @@ test('notice・毎日0時の文が出る（クレジットは気配のシート�
   expect(screen.getByText('この辺りには気配がありませんでした')).toBeInTheDocument()
   expect(screen.getByText('気配は毎日0時に入れかわります')).toBeInTheDocument()
   expect(screen.queryByText('Powered by ホットペッパーグルメ Webサービス')).not.toBeInTheDocument()
-  expect(screen.getByText('Powered by ホットペッパーグルメ Webサービス')).toBeInTheDocument()
 })
