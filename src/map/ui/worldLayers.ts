@@ -88,6 +88,7 @@ type World = {
   checked(): ReadonlySet<string> // 済みの店 id（合体した店は、地図の点の id で済みでも含む）
   checkedToday(shop: { id: string; mapId: string | null }): boolean // 今日（日本時間）もうチェックインした店か
   visitsFor(shop: { id: string; mapId: string | null }): Visits | null // わたしの記録（読み込み前・0回は null）
+  progressReady(): boolean // 保存済みの記録を読み終えたか
   hintInputs(): { shops: Shop[]; near: Shop[]; cleared: ReadonlySet<string>; checked: ReadonlySet<string> } // 気配の候補集めの材料
   setPinsVisible(visible: boolean): void // 店のピン（1軒・ビル・施設）と名前の札を出す・出さない（気配のピンは別）
   shopsReady(): boolean // お店の読み込み（3つ）がそろったか
@@ -574,6 +575,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       return visitsFor(shop)?.lastDay === jstDay(new Date())
     },
     visitsFor,
+    progressReady: () => ready.progress,
     dispose() {
       disposed = true
       if (frameId !== null) cancelAnimationFrame(frameId)

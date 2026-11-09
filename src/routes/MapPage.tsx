@@ -12,6 +12,7 @@ import { CheckinEffect } from '../checkin/ui/CheckinEffect.tsx'
 import { BuildingSheet } from '../checkin/ui/BuildingSheet.tsx'
 import { ShopSheet } from '../checkin/ui/ShopSheet.tsx'
 import type { CheckinError } from '../checkin/ui/ShopSheet.tsx'
+import type { Visits } from '../checkin/domain/visits.ts'
 import type { Shop } from '../shops/domain/shop.ts'
 import { shopSourceEnabled } from '../shops/infra/hotpepper.ts'
 import { guideShops, hintPosition, matchesShop } from '../hints/domain/hint.ts'
@@ -66,6 +67,7 @@ export function MapPage() {
   const [checkinError, setCheckinError] = useState<CheckinError | null>(null)
   const [effect, setEffect] = useState<{ coins: 0 | 30 | 40; reveal: string | null; key: number } | null>(null)
   const [doneToday, setDoneToday] = useState(false)
+  const [record, setRecord] = useState<{ visits: Visits | null; ready: boolean }>({ visits: null, ready: false })
   const [exploreOpen, setExploreOpen] = useState(false)
   const [pickedHint, setPickedHint] = useState<string | null>(null)
   const hints = useDailyHints({
@@ -93,6 +95,7 @@ export function MapPage() {
     setSelected(shop)
     // 今日もうチェックインしたお店かは、板を開いたときに地図に聞いておく（描画中に ref を読まない）
     setDoneToday(shop ? (mapRef.current?.isCheckedToday(shop) ?? false) : false)
+    setRecord({ visits: shop ? (mapRef.current?.visitsFor(shop) ?? null) : null, ready: mapRef.current?.progressReady() ?? false })
     setCheckinError(null)
     if (!shop) mapRef.current?.unfocus() // 板を閉じたらカメラを自分に戻す
   }, [closeHintSheet])
@@ -224,7 +227,10 @@ export function MapPage() {
       )}
       {selected && me && (
         <ShopSheet
+          key={selected.id}
           shop={selected}
+          visits={record.visits}
+          recordReady={record.ready}
           distanceM={distanceMeters(me, selected)}
           doneToday={doneToday}
           hint={hints.hintFor(selected)}

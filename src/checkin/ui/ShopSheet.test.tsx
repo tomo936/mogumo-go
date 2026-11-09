@@ -114,3 +114,70 @@ test('未達成の気配の店に「気配の店 +10」。達成済み・気配�
   setup()
   expect(screen.queryByText('気配の店 +10')).not.toBeInTheDocument()
 })
+
+// ---- 2段のシート（2026-11-09 設計 shop-sheet） ----
+const photoShop: Shop = { ...hp, details: { ...hp.details!, catch: '濃厚とんこつ', budgetName: '～1000円', photoUrl: 'https://imgfp.hotp.jp/x_l.jpg' } }
+const twice = { count: 2, firstDay: '2026-11-03', lastDay: '2026-11-08' }
+const expand = () => userEvent.click(screen.getByRole('button', { name: 'くわしく見る' }))
+
+test('小さい段: 行った回数を出す。0回（null）なら出さない', () => {
+  const { unmount } = render(<ShopSheet shop={hp} distanceM={10} busy={false} error={null} onCheckin={() => {}} onClose={() => {}} visits={twice} />)
+  expect(screen.getByText('2回行った')).toBeInTheDocument()
+  unmount()
+  setup({ visits: null })
+  expect(screen.queryByText(/回行った/)).not.toBeInTheDocument()
+})
+
+test('全画面: 写真のシール・ひと言・わたしの記録・ホットペッパーのリンク', async () => {
+  setup({ shop: photoShop, visits: twice })
+  await expand()
+  expect(screen.getByRole('img', { name: '麺屋もぐも の写真' })).toHaveAttribute('src', 'https://imgfp.hotp.jp/x_l.jpg')
+  expect(screen.getByText('2026.11.3 はじめて')).toBeInTheDocument()
+  expect(screen.getByText('濃厚とんこつ')).toBeInTheDocument()
+  expect(screen.getByText('わたしの記録')).toBeInTheDocument()
+  expect(screen.getByText('11/3')).toBeInTheDocument()
+  expect(screen.getByText('11/8')).toBeInTheDocument()
+  expect(screen.getByText('あと1回で銀の枠')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'ホットペッパーで見る' })).toHaveAttribute('href', 'https://www.hotpepper.jp/strJ001/')
+  // 小さくする
+  await userEvent.click(screen.getByRole('button', { name: '小さくする' }))
+  expect(screen.queryByText('わたしの記録')).not.toBeInTheDocument()
+})
+
+test('全画面: まだ行っていない店は案内を出す', async () => {
+  setup({ visits: null, recordReady: true })
+  await expand()
+  expect(screen.getByText('まだ行ってない')).toBeInTheDocument()
+  expect(screen.getByText(/まだ行っていません/)).toBeInTheDocument()
+})
+
+test('全画面: 記録が読めていなければ記録の欄を出さない', async () => {
+  setup({ visits: null, recordReady: false })
+  await expand()
+  expect(screen.queryByText('わたしの記録')).not.toBeInTheDocument()
+})
+
+test('全画面: 写真の無い店は種類の絵、地図だけの店はリンク無しで「くわしい情報はまだありません」', async () => {
+  setup({ shop: mapShop })
+  await expand()
+  expect(screen.getByRole('img', { name: '名無しの店 の絵' })).toBeInTheDocument()
+  expect(screen.getByText(/くわしい情報はまだありません/)).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'ホットペッパーで見る' })).not.toBeInTheDocument()
+})
+
+test('全画面: 伏せた気配の店は名前・写真・ひと言・リンクを出さない', async () => {
+  setup({ shop: photoShop, masked: true, hint: secret, visits: null, recordReady: true })
+  await expand()
+  expect(screen.queryByText('麺屋もぐも')).not.toBeInTheDocument()
+  expect(screen.queryByRole('img', { name: /の写真/ })).not.toBeInTheDocument()
+  expect(screen.queryByText('濃厚とんこつ')).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'ホットペッパーで見る' })).not.toBeInTheDocument()
+  expect(screen.getByText('中華？')).toBeInTheDocument()
+})
+
+test('全画面: 金の枠まで行ったら次の段の案内は出さない', async () => {
+  setup({ visits: { count: 12, firstDay: '2026-10-01', lastDay: '2026-11-08' } })
+  await expand()
+  expect(screen.getByText('12回')).toBeInTheDocument()
+  expect(screen.queryByText(/の枠$/)).not.toBeInTheDocument()
+})

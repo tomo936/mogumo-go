@@ -47,7 +47,7 @@ vi.mock('../map/ui/MapView.tsx', async () => {
       useEffect(() => { shopErrors.push(onShopsError) }, [onShopsError])
       useEffect(() => { hintTaps.push(onHintTap) }, [onHintTap])
       useEffect(() => { handlers.push({ select: onSelectShop, building: onSelectBuilding, position: onPosition }) }, [onSelectShop, onSelectBuilding, onPosition])
-      useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false, checked: () => new Set<string>(),
+      useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false, visitsFor: () => null, progressReady: () => true, checked: () => new Set<string>(),
         hintInputs: () => ({ shops: mapShopsNow, near: mapShopsNow, cleared: new Set<string>(), checked: new Set<string>() }),
         whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
       }), [])
