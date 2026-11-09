@@ -8,7 +8,7 @@ vi.mock('../infra/zukanApi.ts', () => ({ loadZukan: () => load() }))
 
 import { Zukan } from './Zukan.tsx'
 
-const base = { kind: 'ramen', photoUrl: null, genreName: 'ラーメン', lat: 35, lng: 139, mapId: null } as const
+const base = { kind: 'ramen', photoUrl: null, genreName: 'ラーメン', lat: 35, lng: 139, mapId: null, cleared: true } as const
 const visited: ZukanShop = { ...base, id: 'hp:A', name: '麺屋A', catch: 'こだわり', visits: { count: 2, firstDay: '2026-11-03', lastDay: '2026-11-08' } }
 const unknown: ZukanShop = { ...base, id: 'hp:B', name: '秘密のラーメン屋', catch: '濃厚とんこつ', visits: null }
 

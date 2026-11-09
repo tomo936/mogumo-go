@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildZukan, filledCount, pageCount, type ZukanShop } from './zukan.ts'
 
 const shop = (p: Partial<ZukanShop> & { id: string }): ZukanShop => ({
-  name: p.id, kind: 'ramen', photoUrl: null, catch: null, genreName: null, lat: 35, lng: 139, visits: null, ...p,
+  name: p.id, kind: 'ramen', photoUrl: null, catch: null, genreName: null, lat: 35, lng: 139, visits: null, cleared: true, ...p,
 })
 const v = (count: number, firstDay: string, lastDay: string) => ({ count, firstDay, lastDay })
 
@@ -32,6 +32,17 @@ describe('buildZukan', () => {
     const m = buildZukan([shop({ id: 'hp:A', kind: 'sushi' })])
     expect(m.get('sushi')).toHaveLength(1)
     expect(m.get('ramen')).toEqual([])
+  })
+})
+
+describe('晴れた場所の決め方', () => {
+  it('霧の中で行ったことが無い店は出さない', () => {
+    const z = buildZukan([shop({ id: 'hp:fog', cleared: false })]).get('ramen')!
+    expect(z).toEqual([])
+  })
+  it('霧の中でも行ったことがある店は出す', () => {
+    const z = buildZukan([shop({ id: 'hp:fog', cleared: false, visits: v(1, '2026-11-01', '2026-11-01') })]).get('ramen')!
+    expect(z.map((s) => s.id)).toEqual(['hp:fog'])
   })
 })
 

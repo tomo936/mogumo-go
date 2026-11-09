@@ -13,6 +13,7 @@ export type ZukanShop = {
   lat: number
   lng: number
   visits: Visits | null // null = まだ行っていない（「？」）
+  cleared: boolean // 晴れた場所（霧が晴れている所）にあるか
   mapId?: string | null // 合体前の地図の点（osm:…）。記録をまとめるときに使う
 }
 
@@ -56,10 +57,13 @@ function order(a: ZukanShop, b: ZukanShop): number {
   return a.id.localeCompare(b.id)
 }
 
+// 出すお店: 晴れた場所のお店は全部（行っていなければ「？」）。霧の中のお店は、行ったことがあるものだけ
+export const shownInZukan = (s: ZukanShop): boolean => s.cleared || s.visits !== null
+
 export function buildZukan(shops: ZukanShop[]): Map<ShopKind, ZukanShop[]> {
   const out = new Map<ShopKind, ZukanShop[]>()
   for (const k of KIND_ORDER) out.set(k, [])
-  for (const s of mergeSame(shops)) out.get(s.kind)?.push(s)
+  for (const s of mergeSame(shops).filter(shownInZukan)) out.get(s.kind)?.push(s)
   for (const list of out.values()) list.sort(order)
   return out
 }
