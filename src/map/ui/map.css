@@ -72,3 +72,10 @@
   font-size: 16px;
   line-height: 1;
 }
+
+/* 自分のアバター（お試し版）。マーカーは absolute のまま（relative にすると他のマーカーを押し下げる） */
+.me-avatar {
+  position: absolute;
+  pointer-events: none;
+  background-repeat: no-repeat;
+}
