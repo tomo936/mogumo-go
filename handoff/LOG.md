@@ -39,3 +39,4 @@
 - 2026-11-09 Claude Code: シロのピン（色分けの完成形）5種を受け取り art/pins/colored/ に配置（ramen・sushi・soba・washoku・izakaya）。残り8種（chinese・yakiniku・western・curry・cafe・cake・bakery・mystery）は未着。
 - 2026-11-09 Claude Code: 色分けピン cake・bakery・mystery を art/pins/colored/ に配置（計8種）。chinese・yakiniku・western・curry・cafe の5枚は作業中に届いたためファイルとして保存できず、再送待ち。
 - 2026-11-09 Claude Code: 色分けピン chinese・yakiniku・western・curry・cafe を配置。13種そろった（art/pins/colored/）。依頼 2026-11-06-shop-pin-icons は完了。アプリのピンへの差し替えに進む。
+- 2026-11-09 Claude Code: アイコン単体（128×128）ramen・sushi・soba・washoku・izakaya を art/pins/ に配置（13種のうち5種）。
