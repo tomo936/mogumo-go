@@ -49,3 +49,4 @@
 - 2026-11-09 Claude Code: 新しい種類の依頼を更新。粉もの（konamon）を お好み焼き（okonomiyaki）と たこ焼き（takoyaki）に分けた（オーナー決定）。全5種類。
 - 2026-11-09 Claude Code: ミシェーラのピンの枠19・アイコン19・建物の見本5を受け取り配置。依頼2件を完了に。返事 to-shiro/2026-11-09-pin-art-received.md。
 - 2026-11-09 Claude Code: 女の子の歩く絵（8方向×21コマ）を依頼（to-shiro/2026-11-09-girl-walk-art.md）。男の子の歩く絵でアバターのお試し版を作っている。
+- 2026-11-09 Claude Code: お店のシートの飾り（ポラロイドの枠3種・テープ・窓の背景）を依頼（to-shiro/2026-11-09-shop-sheet-art.md）。
