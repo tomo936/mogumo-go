@@ -278,10 +278,6 @@ export function MapPage() {
           onRegen={hints.regen}
           onRetry={hints.retry}
           placement="top"
-          onOpenZukan={() => {
-            closeExplore()
-            setZukanOpen(true)
-          }}
           onClose={closeExplore}
         />
       )}
