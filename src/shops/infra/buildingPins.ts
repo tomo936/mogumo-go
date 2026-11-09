@@ -8,6 +8,7 @@ import type { LatLng } from '../../map/domain/geo.ts'
 import { FACILITY_CLUSTER_PX, PIN_GAP_PX } from '../config.ts'
 import { clusterSpots, pinLayout, pinScale } from '../domain/pins.ts'
 import type { Shop } from '../domain/shop.ts'
+import { projectAt } from '../../lib/threeLayer.ts'
 import { PIN_ICON } from './pinIcons.ts'
 import { screenScale } from './screenScale.ts'
 import type { PlacedShop } from './shopLayer.ts'
@@ -95,12 +96,17 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
         scaleOf.set(s.b, sc)
       }
       const scale = pinScale(s.sizeM, sc.pxPerM, s.count).toFixed(3).replace(/\.?0+$/, '')
-      const offset = Math.round(-s.topM * sc.pxPerUpM * 10) / 10
-      const key = `${scale}|${offset}`
+      // 屋根の点を 3D と同じカメラで写し、地面の点からのずれをそのまま使う（遠近で傾いた分も合う）。
+      // まだ 3D を描いていないときだけ、画面の真上にずらす近似
+      const ground = projectAt(map, s.at, 0)
+      const top = ground ? projectAt(map, s.at, s.topM) : null
+      const dx = ground && top ? Math.round((top.x - ground.x) * 10) / 10 : 0
+      const dy = ground && top ? Math.round((top.y - ground.y) * 10) / 10 : Math.round(-s.topM * sc.pxPerUpM * 10) / 10
+      const key = `${scale}|${dx}|${dy}`
       if (key === s.last) continue
       s.last = key
       s.inner.style.transform = `scale(${scale})`
-      s.m.setOffset([0, offset])
+      s.m.setOffset([dx, dy])
     }
   }
 
@@ -199,7 +205,7 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
     if (keyOf() !== shownKey) render()
   }
   map.on('zoomend', onZoom)
-  map.on('move', fit)
+  map.on('render', fit) // 3D を描いたあと（そのコマのカメラ）で合わせる
 
   return {
     update(next: PinnedBuilding[], nextChecked: ReadonlySet<string>) {
@@ -209,7 +215,7 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
     },
     dispose() {
       map.off('zoomend', onZoom)
-      map.off('move', fit)
+      map.off('render', fit)
       for (const { m } of markers) m.remove()
       markers = []
     },
