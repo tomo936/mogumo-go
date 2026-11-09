@@ -29,3 +29,14 @@ test('済みの店は done が true（既定は false）', () => {
   const [a, b] = pinFeatures([at('a', 10), at('b', 20)], new Set(), me, new Set(['b']))
   expect([a.properties.done, b.properties.done]).toEqual([false, true])
 })
+
+test('liftM と高さの段を持たせる（ラーメンは謎より高い）', () => {
+  const [r, m] = pinFeatures([{ ...at('r', 10, 'ramen'), sizeM: 16 }, { ...at('m', 10, 'mystery'), sizeM: 16 }], new Set(), me)
+  expect(r.properties.liftM).toBeGreaterThan(m.properties.liftM)
+  expect(r.properties.liftTier).toBe('high')
+  expect(m.properties.liftTier).toBe('low')
+})
+
+test('sizeM が無くても liftM が入る', () => {
+  expect(pinFeatures([at('a', 10)], new Set(), me)[0].properties.liftM).toBeGreaterThan(0)
+})

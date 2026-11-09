@@ -24,6 +24,17 @@ export type PinnedBuilding = {
   label: { text: string; station: boolean } | null
 }
 
+// ?debug の表示用。at: ピンの地面の点／ground: map.project の画面位置／lift: projectAt で求めた持ち上げ（dx,dy。まだ描いていなければ null）
+// groundDiff: projectAt(…,0) と map.project の地面の点の差（px）／scale: pinScale の値
+export type PinDebugRow = {
+  at: LatLng
+  topM: number
+  ground: { x: number; y: number }
+  lift: { x: number; y: number } | null
+  groundDiff: { x: number; y: number } | null
+  scale: number
+}
+
 // 地図の入れ物に付ける class。css 側（checkin.css）で .bldg-pins を隠す
 const MOVING_CLASS = 'pins-moving' // 指で動かしている間
 const HIDDEN_CLASS = 'pins-off' // 「ピンを出さない」のボタン
@@ -113,6 +124,23 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
       s.m.setOffset([dx, dy])
     }
   }
+
+  // ?debug 用: いまのピンごとの測定値（呼ばれたときだけ測る。ふだんは何もしない）
+  const debugRows = (): PinDebugRow[] =>
+    markers.map((s) => {
+      const sc = screenScale((p) => map.project([p.lng, p.lat]), s.b.placed)
+      const g = map.project([s.at.lng, s.at.lat])
+      const g3 = projectAt(map, s.at, 0)
+      const top = g3 ? projectAt(map, s.at, s.topM) : null
+      return {
+        at: s.at,
+        topM: s.topM,
+        ground: { x: g.x, y: g.y },
+        lift: g3 && top ? { x: top.x - g3.x, y: top.y - g3.y } : null,
+        groundDiff: g3 ? { x: g3.x - g.x, y: g3.y - g.y } : null,
+        scale: pinScale(s.sizeM, sc.pxPerM, s.count),
+      }
+    })
 
   const marker = (b: PinnedBuilding, at: LatLng, fill: (el: HTMLElement) => number, sizeM: number, topM = b.topM): Shown => {
     const outer = document.createElement('div')
@@ -227,6 +255,7 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
       checked = nextChecked
       render()
     },
+    debugRows,
     // ピンと名前の札をまとめて出す・出さない（ボタン用）
     setHidden(hidden: boolean) {
       container.classList.toggle(HIDDEN_CLASS, hidden)

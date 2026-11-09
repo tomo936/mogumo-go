@@ -66,12 +66,13 @@ test('dispose で層・source・絵を外す', () => {
   expect(map.removeSource).toHaveBeenCalledWith(PIN_SOURCE)
 })
 
-test('ピンは屋根の少し上へ: ズーム17.5 で約30px、ズームが1上がると約2倍（icon-size 倍を考慮）', () => {
-  const px = (z: number) => -liftOffsetAt(z)[1] * iconSizeAt(z)
+test('ピンは屋根の少し上へ: ズーム17.5 で 10m なら約30px、ズームが1上がると約2倍（icon-size 倍を考慮）', () => {
+  const px = (z: number, m = 10) => -liftOffsetAt(z, m)[1] * iconSizeAt(z)
   expect(px(17.5)).toBeCloseTo(30, 0)
+  expect(px(17.5, 19)).toBeGreaterThan(px(17.5, 9))
   expect(px(18.5) / px(17.5)).toBeCloseTo(2, 1)
   expect(px(16.5) / px(17.5)).toBeCloseTo(0.5, 1)
-  expect(liftOffsetAt(17)[0]).toBe(0) // 真上にだけずらす
+  expect(liftOffsetAt(17, 10)[0]).toBe(0) // 真上にだけずらす
 })
 
 test('層に icon-offset と済み用の icon-image が付く', () => {
@@ -79,6 +80,7 @@ test('層に icon-offset と済み用の icon-image が付く', () => {
   createShopPins(m).attach()
   const layout = (map.addLayer.mock.calls[0][0] as { layout: Record<string, unknown> }).layout
   expect(layout['icon-offset']).toBeDefined()
+  expect(JSON.stringify(layout['icon-offset'])).toContain('liftTier') // 高さの段で持ち上げを変える
   expect(JSON.stringify(layout['icon-image'])).toContain('-done')
 })
 
