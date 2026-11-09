@@ -20,6 +20,7 @@ import { loadProgress } from '../../checkin/infra/checkinApi.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
 import { createAvatar } from '../infra/avatarMarker.ts'
+import { createAvatarModel } from '../infra/avatarModel.ts'
 import { attachWorld } from './worldLayers.ts'
 import { createHintPins } from '../../hints/infra/hintPins.ts'
 import type { DailyHint } from '../../hints/domain/hint.ts'
@@ -164,6 +165,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     if (lastHintsRef.current) hintPins.update(...lastHintsRef.current)
 
     const avatar = createAvatar(map) // 自分のアバター（お試し版）
+    const avatarModel = createAvatarModel(map) // 3D の男の子（読めたら 2D の絵の代わりに出す）
 
     // 位置: target が最新の目標、current が画面に出している位置、drawn がサークルを描いた位置
     const s: {
@@ -176,6 +178,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       map.addSource('me-shadow', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addLayer({ id: 'me-circle-fill', type: 'fill', source: 'me-circle', paint: { 'fill-color': '#4aa8ff', 'fill-opacity': 0.15 } })
       map.addLayer({ id: 'me-circle-line', type: 'line', source: 'me-circle', paint: { 'line-color': '#4aa8ff', 'line-width': 2, 'line-opacity': 0.6 } })
+      map.addLayer(avatarModel.layer)
       map.addLayer({
         id: 'me-shadow', type: 'circle', source: 'me-shadow',
         paint: { 'circle-radius': 10, 'circle-color': '#1f2a37', 'circle-opacity': 0.25, 'circle-pitch-alignment': 'map' },
@@ -294,6 +297,8 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         s.current = c
         s.world?.onPosition(c)
         avatar.update(c, dt)
+        avatarModel.setPose(c, avatar.heading(), now)
+        avatar.setHidden(avatarModel.ready())
         if (now - loop.positionAt >= POSITION_EVERY_MS) {
           loop.positionAt = now
           onPositionRef.current(c)
