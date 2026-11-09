@@ -19,6 +19,7 @@ import { fetchHotpepperShops, shopSourceEnabled } from '../../shops/infra/hotpep
 import { loadProgress } from '../../checkin/infra/checkinApi.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
+import { createAvatar } from '../infra/avatarMarker.ts'
 import { attachWorld } from './worldLayers.ts'
 import { createHintPins } from '../../hints/infra/hintPins.ts'
 import type { DailyHint } from '../../hints/domain/hint.ts'
@@ -157,6 +158,8 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     hintPinsRef.current = hintPins
     if (lastHintsRef.current) hintPins.update(...lastHintsRef.current)
 
+    const avatar = createAvatar(map) // 自分のアバター（お試し版）
+
     // 位置: target が最新の目標、current が画面に出している位置、drawn がサークルを描いた位置
     const s: {
       loaded: boolean; target: LatLng | null; current: LatLng | null; lastFix: Fix | null
@@ -285,6 +288,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         const c = stepToward(s.current, s.target, dt)
         s.current = c
         s.world?.onPosition(c)
+        avatar.update(c, dt)
         if (now - loop.positionAt >= POSITION_EVERY_MS) {
           loop.positionAt = now
           onPositionRef.current(c)
@@ -310,6 +314,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
 
     return () => {
       cancelAnimationFrame(loop.frame)
+      avatar.dispose()
       clearTimeout(firstFixTimer)
       clearInterval(staleTimer)
       stopWatch()

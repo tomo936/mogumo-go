@@ -16,3 +16,10 @@ export const SNAP_GAP_MS = 10000
 export const FOLLOW_TAU_MS = 400
 export const FIRST_FIX_TIMEOUT_MS = 20000
 export const ROTATE_DEG_PER_PX = 0.3
+// 自分のアバター（お試し版）。ならした位置の速さ（m/秒）がこれを超えたら「歩いている」
+export const AVATAR_WALK_SPEED_MPS = 0.4
+export const AVATAR_SPEED_TAU_MS = 300 // 速さをならす時間（コマごとのぶれを消す）
+export const AVATAR_MIN_MOVE_M = 0.5 // これ以上動いてから向きを更新する（止まりぎわのぶれで向きが回らないように）
+export const AVATAR_FRAMES = 21
+export const AVATAR_FPS = 14
+export const AVATAR_HEIGHT_PX = 64
