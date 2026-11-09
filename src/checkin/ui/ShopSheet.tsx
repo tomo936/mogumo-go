@@ -1,9 +1,12 @@
 // お店をタップしたときに下から出るシート。チェックインのボタンは 50m 以内だけ押せる。
 import './checkin.css'
+import '../../hints/ui/hints.css'
 import { BADGE_COLOR } from '../../shops/domain/badgeColor.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
 import { CHECKIN_M } from '../../shops/config.ts'
 import { formatOpen } from '../domain/openHours.ts'
+import { hintLines } from '../../hints/domain/hint.ts'
+import type { DailyHint } from '../../hints/domain/hint.ts'
 
 export type CheckinError = 'too_far' | 'network' | 'not_found' | 'no_profile' | 'already_today'
 
@@ -19,13 +22,15 @@ type Props = {
   shop: Shop
   distanceM: number
   doneToday?: boolean // 今日もうチェックインしたお店
+  hint?: DailyHint | null // 今日の気配の店なら、その気配
+  masked?: boolean // 気配の正体をまだ明かしていない（名前と営業時間を伏せ、ヒントを出す）
   busy: boolean
   error: CheckinError | null
   onCheckin: () => void
   onClose: () => void
 }
 
-export function ShopSheet({ shop, distanceM, doneToday = false, busy, error, onCheckin, onClose }: Props) {
+export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, masked = false, busy, error, onCheckin, onClose }: Props) {
   const inRange = distanceM <= CHECKIN_M
   const open = shop.details?.open
   return (
@@ -34,10 +39,14 @@ export function ShopSheet({ shop, distanceM, doneToday = false, busy, error, onC
         ×
       </button>
       <div className="shop-sheet__head">
-        <span className="shop-sheet__badge" style={{ background: BADGE_COLOR[shop.kind] }} aria-hidden="true" />
+        {/* 伏せている間は、バッジの色でお店の種類が分からないようにする */}
+        <span className="shop-sheet__badge" style={{ background: masked ? '#fff' : BADGE_COLOR[shop.kind] }} aria-hidden="true" />
         <div>
-          <h2 className="shop-sheet__name">{shop.name}</h2>
-          {open && <p className="shop-sheet__open">{formatOpen(open)}</p>}
+          <h2 className="shop-sheet__name">{masked ? '？？？' : shop.name}</h2>
+          {hint && !hint.completed && <span className="hint-tag">気配の店 +10</span>}
+          {masked && hint
+            ? hintLines(hint).map((l) => <p key={l} className="shop-sheet__open">{l}</p>)
+            : open && <p className="shop-sheet__open">{formatOpen(open)}</p>}
           <p className="shop-sheet__distance">{`ここから ${Math.ceil(distanceM)}m`}</p>
         </div>
       </div>

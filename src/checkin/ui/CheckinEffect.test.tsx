@@ -49,3 +49,16 @@ test('動きを減らす設定では紙吹雪の canvas を出さない', () => 
   expect(container.querySelector('[data-testid="checkin-confetti"]')).toBeNull()
   expect(container.textContent).toContain('チェックイン完了')
 })
+
+test('40 なら「+40 コイン（気配ボーナス +10）」', () => {
+  render(<CheckinEffect coins={40} onDone={() => {}} />)
+  expect(screen.getByText('+40 コイン（気配ボーナス +10）')).toBeInTheDocument()
+})
+
+test('reveal があれば帯に「『○○亭』だった！」が出る。無ければ出ない', () => {
+  const { unmount } = render(<CheckinEffect coins={40} reveal="○○亭" onDone={() => {}} />)
+  expect(screen.getByText('『○○亭』だった！')).toBeInTheDocument()
+  unmount()
+  render(<CheckinEffect coins={30} onDone={() => {}} />)
+  expect(screen.queryByText(/だった！/)).not.toBeInTheDocument()
+})

@@ -82,3 +82,35 @@ test('今日もうチェックインしたお店は、近くても押せず「�
   const button = screen.getByRole('button', { name: '今日はチェックイン済み' })
   expect(button).toBeDisabled()
 })
+
+const secret = {
+  id: 'h1', slot: 1, shopId: 'hp:J001', genre: '中華', catch: '自家製麺', budget: '1,000円台', isMystery: false, completed: false,
+  shop: { name: '麺屋もぐも', lat: 35, lng: 139 },
+}
+
+test('masked で店名と営業時間が出ず「？？？」とヒントの行が出る', () => {
+  setup({ masked: true, hint: secret })
+  expect(screen.getByText('？？？')).toBeInTheDocument()
+  expect(screen.queryByText('麺屋もぐも')).not.toBeInTheDocument()
+  expect(screen.queryByText('11:00〜22:00')).not.toBeInTheDocument()
+  expect(screen.getByText('中華？')).toBeInTheDocument()
+  expect(screen.getByText('予算 1,000円台')).toBeInTheDocument()
+})
+
+test('masked でもチェックインのボタンは押せる', async () => {
+  const props = setup({ masked: true, hint: secret, distanceM: 40 })
+  await userEvent.click(screen.getByRole('button', { name: 'チェックイン' }))
+  expect(props.onCheckin).toHaveBeenCalledTimes(1)
+})
+
+test('未達成の気配の店に「気配の店 +10」。達成済み・気配でない店には出ない', () => {
+  const { unmount } = render(<ShopSheet shop={hp} distanceM={10} busy={false} error={null} onCheckin={() => {}} onClose={() => {}} hint={secret} />)
+  expect(screen.getByText('気配の店 +10')).toBeInTheDocument()
+  expect(screen.getByText('麺屋もぐも')).toBeInTheDocument() // 明かしたあとは名前が出る
+  unmount()
+  const done = render(<ShopSheet shop={hp} distanceM={10} busy={false} error={null} onCheckin={() => {}} onClose={() => {}} hint={{ ...secret, completed: true }} />)
+  expect(screen.queryByText('気配の店 +10')).not.toBeInTheDocument()
+  done.unmount()
+  setup()
+  expect(screen.queryByText('気配の店 +10')).not.toBeInTheDocument()
+})

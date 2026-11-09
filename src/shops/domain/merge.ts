@@ -15,7 +15,7 @@ export function normalizeName(name: string): string {
     .replace(/(本店|支店|店)$/, '')
 }
 
-function namesContain(x: string, y: string): boolean {
+export function namesContain(x: string, y: string): boolean {
   return x !== '' && y !== '' && (x.includes(y) || y.includes(x))
 }
 

@@ -782,3 +782,49 @@ test('たくさんの店は、最初の呼び出しで一部を置き、コマ�
   expect(vi.mocked(shopLayer.setShops).mock.lastCall![0]).toHaveLength(80)
   expect(frames).toHaveLength(0)
 })
+
+test('hintInputs は合体済みの店・近い店・晴れたセル・済みの id を返す', async () => {
+  const { world } = setup({ home: null, fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([far])), loadProgress: vi.fn(() => Promise.resolve({ cells: [cellOf(far)], checkedShopIds: new Set(['x']) })) })
+  world.onPosition(home)
+  await flush()
+  const h = world.hintInputs()
+  expect(h.shops.map((s) => s.id)).toEqual(['far'])
+  expect(h.near.map((s) => s.id)).toEqual(['far'])
+  expect(h.cleared.size).toBeGreaterThan(0)
+  expect(h.checked.has('x')).toBe(true)
+})
+
+test('onShopsReady は、ホットペッパー・地図のお店・進み具合の3つがそろったとき1回だけ呼ばれる', async () => {
+  let resolveHp!: (v: Shop[]) => void
+  let resolveProgress!: (v: { cells: Cell[]; checkedShopIds: Set<string> }) => void
+  const onShopsReady = vi.fn()
+  tilesLoaded = false
+  const { world } = setup({
+    fetchHotpepper: vi.fn((_c: LatLng) => new Promise<Shop[]>((r) => { resolveHp = r })),
+    loadProgress: vi.fn(() => new Promise<{ cells: Cell[]; checkedShopIds: Set<string> }>((r) => { resolveProgress = r })),
+    onShopsReady,
+  })
+  world.onPosition(home)
+  expect(world.shopsReady()).toBe(false)
+  resolveHp([shop])
+  await flush()
+  expect(onShopsReady).not.toHaveBeenCalled() // 地図のお店がまだ
+  tilesLoaded = true
+  idleHandler!()
+  expect(onShopsReady).not.toHaveBeenCalled() // 進み具合がまだ
+  resolveProgress({ cells: [], checkedShopIds: new Set() })
+  await flush()
+  expect(onShopsReady).toHaveBeenCalledTimes(1)
+  expect(world.shopsReady()).toBe(true)
+  idleHandler!()
+  world.onPosition(north(600))
+  expect(onShopsReady).toHaveBeenCalledTimes(1)
+})
+
+test('shopsEnabled が false ならホットペッパーを待たずにそろう', async () => {
+  const onShopsReady = vi.fn()
+  const { world } = setup({ shopsEnabled: false, onShopsReady })
+  world.onPosition(home)
+  await flush()
+  expect(onShopsReady).toHaveBeenCalledTimes(1)
+})
