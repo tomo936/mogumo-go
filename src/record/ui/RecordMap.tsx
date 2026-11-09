@@ -1,7 +1,7 @@
 // 記録の地図: 本物の地図を真上から見て、その上にアプリの地図と同じ雲を重ねる。
 // スライダーの日付までに晴れたマスだけを「晴れた場所」にして、雲を作り直す。中心は自宅。
 import { useEffect, useRef } from 'react'
-import { Map as MapLibreMap } from 'maplibre-gl'
+import { Map as MapLibreMap, Marker } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import '../../map/infra/maplibreWorker.ts' // 地図の作業用プログラムの読み込み先（アプリ本体と同じ設定）
 import { MAP_THEME, STYLE_URL } from '../../map/config.ts'
@@ -46,6 +46,16 @@ export function RecordMap({ cells, t, home }: Props) {
       attributionControl: false,
     })
     map.touchZoomRotate.disableRotation()
+    // 自宅の目印（雲の上に出る。家のアイコンの丸とやさしい輪）
+    let homeMarker: Marker | null = null
+    if (home) {
+      const el = document.createElement('div')
+      el.className = 'rc-home'
+      el.setAttribute('aria-label', '自宅')
+      el.innerHTML =
+        '<span class="rc-home__ring"></span><span class="rc-home__disc"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-5.5h4V20"/></svg></span><span class="rc-home__label">自宅</span>'
+      homeMarker = new Marker({ element: el, anchor: 'center' }).setLngLat([home.lng, home.lat]).addTo(map)
+    }
     const fog = createFogLayer()
     const base = clearedFromHome(home)
     let last: Clump[] = []
@@ -80,6 +90,7 @@ export function RecordMap({ cells, t, home }: Props) {
     return () => {
       if (pending !== null) cancelAnimationFrame(pending)
       apply.current = () => {}
+      homeMarker?.remove()
       map.remove()
     }
     // 地図は日付が変わっても作り直さない（cells・home が読み込めた最初の値で作る）

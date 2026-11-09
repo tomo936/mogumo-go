@@ -1,7 +1,7 @@
 // アプリ共通の線のアイコン（2026-11-10）。絵文字の仮をやめて、色・太さをそろえる。24×24、currentColor で塗る。
 import type { ReactNode } from 'react'
 
-export type IconName = 'zukan' | 'record' | 'gacha' | 'person' | 'settings' | 'pin' | 'pinOff' | 'ramen' | 'close' | 'back'
+export type IconName = 'zukan' | 'record' | 'gacha' | 'person' | 'settings' | 'pin' | 'pinOff' | 'ramen' | 'close' | 'back' | 'home'
 
 const PATHS: Record<IconName, ReactNode> = {
   zukan: (
@@ -19,9 +19,8 @@ const PATHS: Record<IconName, ReactNode> = {
   ),
   gacha: (
     <>
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M3.5 12h17" />
-      <circle cx="12" cy="12" r="2.2" />
+      <path d="M12 3l2.3 6.2L20.5 12l-6.2 2.8L12 21l-2.3-6.2L3.5 12l6.2-2.8z" />
+      <path d="M19 3.5v3M17.5 5h3" />
     </>
   ),
   person: (
@@ -59,6 +58,13 @@ const PATHS: Record<IconName, ReactNode> = {
   ),
   close: <path d="M5 5l14 14M19 5L5 19" />,
   back: <path d="M15 5l-7 7 7 7" />,
+  home: (
+    <>
+      <path d="M3 11.5L12 4l9 7.5" />
+      <path d="M5.5 10v10h13V10" />
+      <path d="M10 20v-5.5h4V20" />
+    </>
+  ),
 }
 
 export function Icon({ name, size = 24 }: { name: IconName; size?: number }) {

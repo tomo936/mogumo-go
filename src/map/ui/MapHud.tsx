@@ -13,8 +13,10 @@ const characterUrl = (starterId: number) =>
 const MENU_ART = import.meta.glob<string>('../../assets/ui/menu-ramen.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>
 const ramenUrl = MENU_ART['../../assets/ui/menu-ramen.webp']
 
-const FAN_RADIUS = 148
-const BUTTON = 72 // 扇の丸の大きさ（CSS の .hud-fan と同じ）
+const FAN_RADIUS = 152
+const DISC = 58 // 扇の丸の大きさ（CSS の .hud-fan__disc と同じ）
+const LABEL_BLOCK = 19 // 丸の下の文字の高さ＋すきま（CSS の .hud-fan small と同じ）
+const BOX_W = 76 // 文字が入る幅（CSS の .hud-fan と同じ）
 
 type Props = {
   nickname: string | null
@@ -57,6 +59,7 @@ export function MapHud(p: Props) {
         onClick={p.onTogglePins}
       >
         <Icon name={p.pinsHidden ? 'pinOff' : 'pin'} size={22} />
+        <small>ピン</small>
       </button>
 
       <button type="button" className="hud-hint" aria-label="気配" aria-expanded={p.hintOpen} onClick={p.onHintTap}>
@@ -71,13 +74,16 @@ export function MapHud(p: Props) {
               type="button"
               className="hud-fan"
               aria-label={it.name}
-              style={{ left: spots[i].x - BUTTON / 2, bottom: -spots[i].y - BUTTON / 2 }}
+              style={{ left: spots[i].x - BOX_W / 2, bottom: -spots[i].y - DISC / 2 - LABEL_BLOCK }}
               onClick={() => {
                 setMenuOpen(false)
                 it.run()
               }}
             >
-              <Icon name={it.icon} size={30} />
+              <span className="hud-fan__disc">
+                <Icon name={it.icon} size={28} />
+              </span>
+              <small>{it.name}</small>
             </button>
           ))}
         <button
