@@ -337,6 +337,15 @@
 .shop-sheet {
   touch-action: none; /* 上下のスライドを地図に渡さない */
   max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box; /* 高さ（px）に余白も含める。含めないと全画面で上が切れる */
+  overflow: clip; /* hidden だと文字選びなどでシート自体が内側にずれることがある */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.shop-sheet--settling {
+  transition: height 0.28s cubic-bezier(0.2, 0.8, 0.3, 1); /* SETTLE_MS と合わせる */
 }
 .shop-sheet__grab {
   display: block;
@@ -359,12 +368,9 @@
   background: #d5dce8;
 }
 .shop-sheet--full {
-  top: 0;
   border-radius: 0;
   background: #fffaf2;
   padding-top: calc(18px + env(safe-area-inset-top));
-  display: flex;
-  flex-direction: column;
 }
 .shop-sheet--full .shop-sheet__close {
   top: calc(8px + env(safe-area-inset-top));

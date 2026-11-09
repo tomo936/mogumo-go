@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import type { Shop } from '../../shops/domain/shop.ts'
@@ -142,7 +142,7 @@ test('全画面: 写真のシール・ひと言・わたしの記録・ホット
   expect(screen.getByRole('link', { name: 'ホットペッパーで見る' })).toHaveAttribute('href', 'https://www.hotpepper.jp/strJ001/')
   // 小さくする
   await userEvent.click(screen.getByRole('button', { name: '小さくする' }))
-  expect(screen.queryByText('わたしの記録')).not.toBeInTheDocument()
+  await waitFor(() => expect(screen.queryByText('わたしの記録')).not.toBeInTheDocument()) // 小さくなり終わってから中身が替わる
 })
 
 test('全画面: まだ行っていない店は案内を出す', async () => {
