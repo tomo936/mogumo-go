@@ -1,12 +1,7 @@
 /* お店図鑑（手帳風）。参考: 2026-11-10 オーナーのイメージ画像。装飾は CSS（絵の素材はミシェーラに依頼予定） */
 .zukan {
   position: fixed;
-  left: 10px;
-  right: 10px;
-  top: 14vh;
-  bottom: 14vh;
-  border-radius: 20px;
-  box-shadow: 0 8px 24px rgba(60, 40, 20, 0.3);
+  inset: 0;
   z-index: 30;
   overflow-y: auto;
   padding: calc(10px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom));
@@ -268,12 +263,7 @@
 /* ---- 図鑑カード詳細（手帳風・2026-11-10）。後で入れる枠は点線 ---- */
 .zd {
   position: fixed;
-  left: 10px;
-  right: 10px;
-  top: 10vh;
-  bottom: 10vh;
-  border-radius: 20px;
-  box-shadow: 0 8px 24px rgba(60, 40, 20, 0.3);
+  inset: 0;
   z-index: 31;
   overflow-y: auto;
   padding: calc(10px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom));
