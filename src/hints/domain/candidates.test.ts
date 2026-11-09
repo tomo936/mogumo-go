@@ -39,7 +39,7 @@ describe('collectCandidates', () => {
     expect(collectCandidates({ ...base, checked, shops }).hp).toEqual(['hp:ok'])
   })
   it('hp は id だけ、osm で details なしは id と位置、osm で details ありは入らない', () => {
-    const d = { genreCode: null, genreName: null, catch: null, budgetName: null, open: null }
+    const d = { genreCode: null, genreName: null, catch: null, budgetName: null, photoUrl: null, open: null }
     const shops = [shop('hp:a', 500), shop('osm:1', 600), shop('osm:2', 700, { details: d })]
     const r = collectCandidates({ ...base, shops })
     expect(r.hp).toEqual(['hp:a'])

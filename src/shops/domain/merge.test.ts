@@ -13,7 +13,7 @@ const M = 0.000009 // 緯度およそ 1m
 function shop(id: string, name: string, dy = 0, details: Shop['details'] = null): Shop {
   return { id, name, lat: 35 + dy * M, lng: 139, kind: 'cafe', details, mapId: null }
 }
-const det = { genreCode: 'G1', genreName: 'x', catch: null, budgetName: null, open: null }
+const det = { genreCode: 'G1', genreName: 'x', catch: null, budgetName: null, photoUrl: null, open: null }
 
 describe('normalizeName', () => {
   it('かな・括弧・記号の違いをならす', () => {

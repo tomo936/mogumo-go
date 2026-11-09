@@ -33,9 +33,18 @@ describe('fetchHotpepperShops', () => {
     expect(shops).toHaveLength(2)
     expect(shops[0]).toEqual({
       id: 'hp:J001', name: '麺屋いろは', lat: 35.681, lng: 139.767, kind: 'ramen',
-      details: { genreCode: 'G013', genreName: 'ラーメン', catch: 'こだわり', budgetName: '~1000円', open: '11:00～22:00' }, mapId: null,
+      details: { genreCode: 'G013', genreName: 'ラーメン', catch: 'こだわり', budgetName: '~1000円', photoUrl: null, open: '11:00～22:00' }, mapId: null,
     })
     expect(shops[1].id).toBe('hp:J002')
+  })
+  it('写真の URL は https:// のものだけ通す', async () => {
+    const body = [
+      { ...rows[0], photo_url: 'https://imgfp.hotp.jp/x_l.jpg' },
+      { ...rows[1], photo_url: 'http://x/l.jpg' },
+      { ...rows[0], shop_id: 'hp:J003', photo_url: 123 },
+    ]
+    const shops = await fetchHotpepperShops(center, { ...base, fetchFn: vi.fn().mockResolvedValue(res(200, body)) })
+    expect(shops.map((s) => s.details?.photoUrl)).toEqual(['https://imgfp.hotp.jp/x_l.jpg', null, null])
   })
   it('トークンが無ければ fetch せず shops_unavailable', async () => {
     const fetchFn = vi.fn()

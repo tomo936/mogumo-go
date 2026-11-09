@@ -24,6 +24,7 @@ export type ShopDetails = {
   genreName: string | null
   catch: string | null
   budgetName: string | null
+  photoUrl: string | null // https:// のものだけ（ホットペッパーの写真）
   open: string | null
 }
 
