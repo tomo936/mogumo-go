@@ -4,6 +4,12 @@ import type { ShopKind } from './shop.ts'
 // 比は src/assets/shops/*.glb の外形（高さ ÷ 横幅 x と z の長い方）から求めた（2026-11-09）
 export const HEIGHT_RATIO: Record<ShopKind, number> = {
   mystery: 0.6,
+  // 新しい5種の模型ができるまでは mystery の模型で描くので、同じ値
+  donburi: 0.6,
+  burger: 0.6,
+  ethnic: 0.6,
+  okonomiyaki: 0.6,
+  takoyaki: 0.6,
   chinese: 0.71,
   soba: 0.72,
   izakaya: 0.73,

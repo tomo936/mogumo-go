@@ -19,7 +19,10 @@ const LOD_URLS = import.meta.glob<string>('../../assets/shops/lod/*.glb', { quer
 // 読み込む模型の見分け（詳しい版は種類の名前、軽い版は 'lod:' を付ける）
 type ModelKey = ModelName | `lod:${ModelName}`
 const keyOf = (s: PlacedShop): ModelKey => (s.light ? `lod:${s.model}` : s.model)
-const urlOf = (key: ModelKey) => (key.startsWith('lod:') ? LOD_URLS[`../../assets/shops/lod/${key.slice(4)}.glb`] : URLS[`../../assets/shops/${key}.glb`])
+// 模型がまだ無い新しい5種は、mystery（その他の建物）の模型で描く（Blender で作るまで）
+const NO_MODEL: ReadonlySet<string> = new Set(['donburi', 'burger', 'ethnic', 'okonomiyaki', 'takoyaki'])
+const modelFile = (name: string) => (NO_MODEL.has(name) ? 'mystery' : name)
+const urlOf = (key: ModelKey) => (key.startsWith('lod:') ? LOD_URLS[`../../assets/shops/lod/${modelFile(key.slice(4))}.glb`] : URLS[`../../assets/shops/${modelFile(key)}.glb`])
 
 // 読み込んだ模型: 部品ごとの形・材質と、模型の根元からの行列
 type Part = { geo: THREE.BufferGeometry; mat: THREE.Material | THREE.Material[]; local: THREE.Matrix4 }

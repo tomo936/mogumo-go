@@ -20,7 +20,7 @@ function fake() {
   return { map, setData, m: map as unknown as MapLibreMap }
 }
 
-test('attach で source・2つの層・13種の絵を登録する（層の位置は引数どおり）', async () => {
+test('attach で source・2つの層・18種の絵を登録する（層の位置は引数どおり）', async () => {
   const { map, m } = fake()
   const pins = createShopPins(m)
   pins.attach('fog', 'me')
@@ -28,7 +28,7 @@ test('attach で source・2つの層・13種の絵を登録する（層の位置
   expect(map.addLayer.mock.calls.map((c) => [(c[0] as { id: string }).id, c[1]])).toEqual([[PIN_LAYER, 'fog'], [PIN_LAYER_FOG, 'me']])
   await Promise.resolve()
   await Promise.resolve()
-  expect(map.addImage).toHaveBeenCalledTimes(26) // 13種 × （ふつう・済み）
+  expect(map.addImage).toHaveBeenCalledTimes(36) // 18種 × （ふつう・済み）
   expect(map.addImage).toHaveBeenCalledWith('pin-ramen', expect.anything())
   expect(map.addImage).toHaveBeenCalledWith('pin-ramen-done', expect.anything())
   pins.attach('x', 'y') // 2回目は何もしない
