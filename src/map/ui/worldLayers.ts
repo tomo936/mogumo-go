@@ -31,13 +31,15 @@ import { distanceMeters, localFrame } from '../domain/geo.ts'
 import { watchUserMove } from '../infra/userMove.ts'
 import type { LatLng } from '../domain/geo.ts'
 import { jstDay } from '../../checkin/domain/day.ts'
+import { addVisit, mergeVisits } from '../../checkin/domain/visits.ts'
+import type { Visits } from '../../checkin/domain/visits.ts'
 
 type Deps = {
   home: LatLng | null
   fetchHotpepper: (center: LatLng) => Promise<Shop[]>
   shopsEnabled: boolean
   onShopsError: () => void
-  loadProgress: () => Promise<{ cells: Cell[]; checkedShopIds: Set<string>; lastDayByShop?: Map<string, string> }>
+  loadProgress: () => Promise<{ cells: Cell[]; checkedShopIds: Set<string>; visitsByShop?: Map<string, Visits> }>
   onPinTap: (shopIds: string[]) => void // ビルの上のピンが押された（1軒ならその店、まとめたピンなら全員）
   onShopsReady?: () => void // ホットペッパー・地図のお店・進み具合の3つがそろった最初の1回
 }
@@ -85,6 +87,7 @@ type World = {
   titleOf(shopIds: string[]): string | null // 施設・駅の名前（ビルや名前の無い施設は null）
   checked(): ReadonlySet<string> // 済みの店 id（合体した店は、地図の点の id で済みでも含む）
   checkedToday(shop: { id: string; mapId: string | null }): boolean // 今日（日本時間）もうチェックインした店か
+  visitsFor(shop: { id: string; mapId: string | null }): Visits | null // わたしの記録（読み込み前・0回は null）
   hintInputs(): { shops: Shop[]; near: Shop[]; cleared: ReadonlySet<string>; checked: ReadonlySet<string> } // 気配の候補集めの材料
   setPinsVisible(visible: boolean): void // 店のピン（1軒・ビル・施設）と名前の札を出す・出さない（気配のピンは別）
   shopsReady(): boolean // お店の読み込み（3つ）がそろったか
@@ -113,7 +116,9 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   let fogCenter: LatLng | null = null // 雲の塊を置いたときの現在地
   let lastClumps: Clump[] = [] // 層に最後に渡した雲の塊（波の「変わる前」）
   const checkedIds = new Set<string>() // サーバーが知っている id と、今回付けた id（hp: と osm: の両方がありうる）
-  const lastDay = new Map<string, string>() // 店 id ごとの、最後にチェックインした日（日本時間）
+  const visits = new Map<string, Visits>() // 店 id ごとの記録（回数・はじめて・この前、日本時間）
+  const visitsFor = (shop: { id: string; mapId: string | null }): Visits | null =>
+    mergeVisits(visits.get(shop.id), shop.mapId ? visits.get(shop.mapId) : undefined)
   // 店の id か、合体前の地図の点の id のどちらかが済みなら、その店は済み
   const checkedNow = (): Set<string> => {
     const s = new Set(checkedIds)
@@ -484,8 +489,9 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
 
   // 保存済みの晴れたセルを足す（波なし）。失敗したら自宅まわりだけのまま
   deps.loadProgress().then(
-    ({ cells, checkedShopIds, lastDayByShop }) => {
-      for (const [id, day] of lastDayByShop ?? []) if (!lastDay.has(id) || day > lastDay.get(id)!) lastDay.set(id, day)
+    ({ cells, checkedShopIds, visitsByShop }) => {
+      // 読み込みの間にチェックインしていたら、多い方（その1回を含む方）を残す
+      for (const [id, v] of visitsByShop ?? []) if ((visits.get(id)?.count ?? 0) <= v.count) visits.set(id, v)
       if (disposed) return
       const before = cleared.size
       for (const c of cells) cleared.add(cellKey(c))
@@ -553,9 +559,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     markChecked(shopId, mapId) {
       checkedIds.add(shopId)
       if (mapId) checkedIds.add(mapId)
-      const today = jstDay(new Date())
-      lastDay.set(shopId, today)
-      if (mapId) lastDay.set(mapId, today)
+      // サーバーは送った id（shopId）で記録する。合体した店の mapId 側は visitsFor で合わせる
+      visits.set(shopId, addVisit(visits.get(shopId), jstDay(new Date())))
       updateMarks()
     },
     checked: checkedNow,
@@ -566,9 +571,9 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     },
     shopsReady: () => ready.fired,
     checkedToday(shop) {
-      const today = jstDay(new Date())
-      return lastDay.get(shop.id) === today || (shop.mapId !== null && lastDay.get(shop.mapId) === today)
+      return visitsFor(shop)?.lastDay === jstDay(new Date())
     },
+    visitsFor,
     dispose() {
       disposed = true
       if (frameId !== null) cancelAnimationFrame(frameId)
