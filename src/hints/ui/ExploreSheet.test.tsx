@@ -8,7 +8,7 @@ import { hint, setOf } from './fixtures.ts'
 type Props = Parameters<typeof ExploreSheet>[0]
 const base = (): Props => ({
   status: 'ready', set: null, revealed: new Set<string>(), distances: new Map<string, number>(), regenVisible: false, fast: false,
-  notice: null, guide: [], onPickHint: vi.fn(), onPickShop: vi.fn(), onRegen: vi.fn(), onRetry: vi.fn(), onClose: vi.fn(),
+  notice: null, guide: [], onPickHint: vi.fn(), onPickShop: vi.fn(), onRegen: vi.fn(), onRetry: vi.fn(), onOpenZukan: vi.fn(), onClose: vi.fn(),
 })
 const show = (o: Partial<Props> = {}) => {
   const p = { ...base(), ...o }

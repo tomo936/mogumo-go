@@ -19,6 +19,7 @@ type Props = {
   onPickShop: (shop: Shop) => void
   onRegen: () => void
   onRetry: () => void
+  onOpenZukan: () => void // 図鑑（行ったお店・見つけたお店）
   onClose: () => void
 }
 
@@ -117,6 +118,9 @@ export function ExploreSheet(p: Props) {
         </>
       )}
       <p className="hint-note">気配は毎日0時に入れかわります</p>
+      <button type="button" className="explore-sheet__zukan" onClick={p.onOpenZukan}>
+        図鑑を見る
+      </button>
       <a className="hint-credit" href="http://webservice.recruit.co.jp/" target="_blank" rel="noreferrer">
         Powered by ホットペッパーグルメ Webサービス
       </a>

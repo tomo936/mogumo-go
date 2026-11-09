@@ -18,6 +18,8 @@ import { shopSourceEnabled } from '../shops/infra/hotpepper.ts'
 import { guideShops, hintPosition, matchesShop } from '../hints/domain/hint.ts'
 import { ExploreButton } from '../hints/ui/ExploreButton.tsx'
 import { ExploreSheet } from '../hints/ui/ExploreSheet.tsx'
+import { Zukan } from '../zukan/ui/Zukan.tsx'
+import { zukanToShop } from '../zukan/domain/zukan.ts'
 import { HintSheet } from '../hints/ui/HintSheet.tsx'
 import { RevealBanner } from '../hints/ui/RevealBanner.tsx'
 import { useDailyHints } from '../hints/ui/useDailyHints.ts'
@@ -122,6 +124,7 @@ export function MapPage() {
     setExploreOpen(true)
     hints.openSheet()
   }
+  const [zukanOpen, setZukanOpen] = useState(false) // 図鑑（探索シートの入口から開く）
   const closeExplore = () => {
     setExploreOpen(false)
     hints.closeSheet()
@@ -258,7 +261,20 @@ export function MapPage() {
           }}
           onRegen={hints.regen}
           onRetry={hints.retry}
+          onOpenZukan={() => {
+            closeExplore()
+            setZukanOpen(true)
+          }}
           onClose={closeExplore}
+        />
+      )}
+      {zukanOpen && (
+        <Zukan
+          onPick={(z) => {
+            setZukanOpen(false)
+            select(zukanToShop(z))
+          }}
+          onClose={() => setZukanOpen(false)}
         />
       )}
       {pickedHintData && (
