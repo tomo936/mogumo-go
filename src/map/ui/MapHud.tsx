@@ -89,15 +89,15 @@ export function MapHud(p: Props) {
       </div>
 
       {settingsOpen && (
-        <div className="hud-settings" role="dialog" aria-label="設定">
-          <div className="hud-settings__head">
-            <b>設定</b>
-            <button type="button" aria-label="閉じる" onClick={() => setSettingsOpen(false)}>
-              ×
+        <section className="hud-screen" aria-label="設定">
+          <header className="hud-screen__bar">
+            <button type="button" className="hud-screen__back" aria-label="戻る" onClick={() => setSettingsOpen(false)}>
+              ←
             </button>
-          </div>
-          {p.settings}
-        </div>
+            <h2>設定</h2>
+          </header>
+          <div className="hud-screen__body">{p.settings}</div>
+        </section>
       )}
     </>
   )
