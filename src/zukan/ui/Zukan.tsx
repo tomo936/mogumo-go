@@ -7,6 +7,7 @@ import type { ShopKind } from '../../shops/domain/shop.ts'
 import { frameTier } from '../../checkin/domain/visits.ts'
 import { KIND_ORDER, PAGE_SIZE, buildZukan, filledCount, pageCount, type ZukanShop } from '../domain/zukan.ts'
 import { loadZukan } from '../infra/zukanApi.ts'
+import { levelFor } from '../domain/level.ts'
 
 const KIND_NAME: Record<ShopKind, string> = {
   ramen: 'ラーメン', sushi: '寿司', soba: 'そば', washoku: '和食', izakaya: '居酒屋', chinese: '中華', yakiniku: '焼肉',
@@ -46,6 +47,7 @@ export function Zukan({ onPick, onClose }: Props) {
   const total = all.length
   const filledAll = filledCount(all)
   const percent = total === 0 ? 0 : Math.round((filledAll / total) * 100)
+  const lv = levelFor(filledAll)
 
   return (
     <section className="zukan" aria-label="図鑑">
@@ -56,7 +58,8 @@ export function Zukan({ onPick, onClose }: Props) {
         <h2 className="zukan__title">お店図鑑</h2>
         {byKind && (
           <div className="zukan__progress">
-            <span>{`あなたのお店コレクション ${filledAll}/${total} 訪問済み`}</span>
+            <span>{`Lv ${lv.level}・あなたのお店コレクション ${filledAll}/${total} 訪問済み`}</span>
+            <span className="zukan__next">{`次のレベルまであと ${lv.toNext} 店`}</span>
             <div className="zukan__bar" role="img" aria-label={`${percent}%`}>
               <i style={{ width: `${percent}%` }} />
             </div>
