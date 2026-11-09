@@ -48,6 +48,7 @@ type Placed = { id: string; model: string; lat: number; lng: number; sizeM?: num
 export function createShopPins(map: MapLibreMap) {
   let attached = false
   let hidden = false // 「ピンを出さない」のボタン
+  let moving = false // 人が地図を動かしている間（map/infra/userMove.ts）
   let disposed = false
   let pending: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
 
@@ -64,9 +65,15 @@ export function createShopPins(map: MapLibreMap) {
       'icon-allow-overlap': false,
       'icon-padding': 2,
       'symbol-sort-key': ['get', 'sort'] as never, // 近い店ほど先に置かれる
-      visibility: hidden ? ('none' as const) : ('visible' as const),
+      visibility: hidden || moving ? ('none' as const) : ('visible' as const),
     },
   })
+
+  const applyVisibility = () => {
+    if (!attached) return
+    const v = hidden || moving ? 'none' : 'visible'
+    for (const id of [PIN_LAYER, PIN_LAYER_FOG]) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', v)
+  }
 
   return {
     // clearBefore: 晴れた所の店のピンを入れる位置（雲の層の手前）／fogBefore: 霧の中の店のピンの位置（自分の印の手前）
@@ -95,8 +102,12 @@ export function createShopPins(map: MapLibreMap) {
     // 2層（✓ の付いた絵もこの層の中）をまとめて出す・出さない。気配のピンは別なので変わらない
     setVisible(visible: boolean) {
       hidden = !visible
-      if (!attached) return
-      for (const id of [PIN_LAYER, PIN_LAYER_FOG]) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none')
+      applyVisibility()
+    },
+    // 人が地図を動かしている間は隠す（ビルのピンと同じ）
+    setMoving(next: boolean) {
+      moving = next
+      applyVisibility()
     },
     // 押された点にあるピンの店 id（なければ null）。雲の上の層を先に見る
     pick(point: { x: number; y: number }): string[] | null {

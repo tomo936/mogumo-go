@@ -95,3 +95,18 @@ test('setVisible で2層とも切りかえ、隠している間は pick も null
   pins.setVisible(true)
   expect(map.setLayoutProperty.mock.calls.map((c) => [c[0], c[2]])).toEqual([[PIN_LAYER, 'visible'], [PIN_LAYER_FOG, 'visible']])
 })
+
+test('setMoving(true) の間は2層とも隠し、false で戻す。「出さない」ボタンで隠している間は戻さない', () => {
+  const { map, m } = fake()
+  const pins = createShopPins(m)
+  pins.attach()
+  const shown = () => map.setLayoutProperty.mock.calls.map((c) => c[2])
+  pins.setMoving(true)
+  expect(map.setLayoutProperty.mock.calls.map((c) => [c[0], c[2]])).toEqual([[PIN_LAYER, 'none'], [PIN_LAYER_FOG, 'none']])
+  pins.setMoving(false)
+  expect(shown().slice(2)).toEqual(['visible', 'visible'])
+  pins.setVisible(false)
+  pins.setMoving(true)
+  pins.setMoving(false)
+  expect(shown().slice(-2)).toEqual(['none', 'none'])
+})
