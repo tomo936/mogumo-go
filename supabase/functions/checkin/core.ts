@@ -115,3 +115,44 @@ export function findPoi(features: PoiFeature[], osmId: string): { name: string; 
   }
   return null
 }
+
+// 店名のならし方。src/shops/domain/merge.ts の normalizeName と同じにしておくこと（keep in sync: src/shops/domain/merge.ts）
+export function normalizeName(name: string): string {
+  return name
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/\([^)]*\)|「[^」]*」|\[[^\]]*\]/g, '')
+    .replace(/[\s・\-‐－]/g, '')
+    .replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60))
+    .replace(/(本店|支店|店)$/, '')
+}
+
+// ならした名前が互いを含めば同じ店とみなす（merge.ts の namesContain と同じ。keep in sync）
+export function namesMatch(a: string, b: string): boolean {
+  const x = normalizeName(a)
+  const y = normalizeName(b)
+  return x !== '' && y !== '' && (x.includes(y) || y.includes(x))
+}
+
+// 今日の気配の行（daily_hints に shops の名前・位置を付けたもの）
+export type ActiveHintRow = { shop_id: string; generation: number; completed_checkin_id: string | null; shop: { name: string; lat: number; lng: number } | null }
+
+// 今の組（一番大きい generation）の、未達成の行だけ。作り直す前の組・達成済みは +10 の対象外
+export function activeHints(rows: readonly ActiveHintRow[]): ActiveHintRow[] {
+  const gen = rows.reduce((g, r) => Math.max(g, r.generation), 0)
+  return rows.filter((r) => r.generation === gen && r.completed_checkin_id === null)
+}
+
+// hp: のチェックインで、合体前の地図の点 mapId が今の組の未達成の気配か（このときだけタイルで確かめる）
+export function altForMapId(active: readonly ActiveHintRow[], mapId: string | null): boolean {
+  return mapId !== null && active.some((r) => r.shop_id === mapId)
+}
+
+// osm: のチェックインで、確かめた点と同じ店とみなせる hp: の気配（40m 以内かつ店名が互いを含む）
+export function altHpFor(active: readonly ActiveHintRow[], poi: { name: string; lat: number; lng: number }): string | null {
+  for (const r of active) {
+    if (!r.shop_id.startsWith('hp:') || !r.shop) continue
+    if (distanceM(poi, r.shop) <= MATCH_M && namesMatch(poi.name, r.shop.name)) return r.shop_id
+  }
+  return null
+}

@@ -2,14 +2,10 @@
 // 受け取る: POST { shop_id, lat, lng, far_from_home }（JWT 必須）。ユーザーは JWT からだけ決める。
 // プライバシー: lat/lng・距離・トークン・ユーザーID・店ID をログに出さない・保存しない・返さない（403 の丸めた距離だけ返す）。
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { VectorTile } from 'npm:@mapbox/vector-tile@2'
-import Pbf from 'npm:pbf@4'
-import { CHECKIN_M, CLEAR_M, acceptHpCheckin, cellsAround, closestM, distanceM, findPoi, jstDay, parseMapId, tilesToTry } from './core.ts'
-import type { PoiFeature } from './core.ts'
+import { CHECKIN_M, CLEAR_M, MATCH_M, acceptHpCheckin, activeHints, altForMapId, altHpFor, cellsAround, closestM, distanceM, jstDay, parseMapId } from './core.ts'
+import type { ActiveHintRow } from './core.ts'
+import { UpstreamError, verifyOsm } from './osmTile.ts'
 
-const Z = 14
-const EDGE_M = 60
-const TILEJSON = 'https://tiles.openfreemap.org/planet'
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -19,56 +15,6 @@ const CORS = {
 const json = (body: unknown, status: number) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 const fail = (error: string, status: number) => json({ error }, status)
-
-class UpstreamError extends Error {}
-
-async function fetchTilePois(x: number, y: number, template: string): Promise<PoiFeature[]> {
-  const url = template.replace('{z}', String(Z)).replace('{x}', String(x)).replace('{y}', String(y))
-  let tile: VectorTile
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(15000) })
-    if (res.status === 404 || res.status === 204) return []
-    if (!res.ok) throw new UpstreamError('tile')
-    tile = new VectorTile(new Pbf(new Uint8Array(await res.arrayBuffer())))
-  } catch {
-    throw new UpstreamError('tile')
-  }
-  const layer = tile.layers['poi']
-  if (!layer) return []
-  const out: PoiFeature[] = []
-  for (let i = 0; i < layer.length; i++) {
-    const f = layer.feature(i)
-    const g = f.toGeoJSON(x, y, Z).geometry
-    if (g.type !== 'Point') continue
-    const [lng, lat] = g.coordinates as number[]
-    out.push({
-      id: f.id,
-      name: typeof f.properties.name === 'string' ? f.properties.name : undefined,
-      subclass: typeof f.properties.subclass === 'string' ? f.properties.subclass : undefined,
-      lng,
-      lat,
-    })
-  }
-  return out
-}
-
-// 現在地のタイル（端に近ければ隣も）から、アプリが言う番号の点を探す
-async function verifyOsm(shopId: string, lat: number, lng: number) {
-  let template: unknown
-  try {
-    const meta = await fetch(TILEJSON, { signal: AbortSignal.timeout(15000) })
-    if (!meta.ok) throw new UpstreamError('tilejson')
-    template = (await meta.json())?.tiles?.[0]
-  } catch {
-    throw new UpstreamError('tilejson')
-  }
-  if (typeof template !== 'string') throw new UpstreamError('tilejson')
-  for (const t of tilesToTry(lat, lng, Z, EDGE_M)) {
-    const poi = findPoi(await fetchTilePois(t.x, t.y, template), shopId)
-    if (poi) return poi
-  }
-  return null
-}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
@@ -110,6 +56,8 @@ Deno.serve(async (req: Request) => {
     let shop: { lat: number; lng: number }
     let dist: number
     let osmPoi: Awaited<ReturnType<typeof verifyOsm>> = null
+    let mapPoi: Awaited<ReturnType<typeof verifyOsm>> = null // hp: のときの、合体前の地図の点（確かめた結果）
+    let mapChecked = false
     if (shop_id.startsWith('hp:')) {
       const { data, error } = await db.from('shops').select('lat, lng').eq('shop_id', shop_id).maybeSingle()
       if (error) throw new Error('shops read')
@@ -123,6 +71,8 @@ Deno.serve(async (req: Request) => {
       if (dHp > CHECKIN_M && mapId) {
         try {
           const poi = await verifyOsm(mapId, lat, lng)
+          mapChecked = true
+          mapPoi = poi
           if (poi) {
             dPoi = distanceM({ lat, lng }, poi)
             poiToShop = distanceM(poi, shop) // 別の店の点で通れないように、同じ店とみなせる点だけ使う
@@ -149,13 +99,44 @@ Deno.serve(async (req: Request) => {
       if (error) throw new Error('shops upsert')
     }
 
+    // 気配の店の id のずれ（hp: と osm:）を確かめる（設計 2026-11-07-daily-hints §5.3）。
+    // +10 を付けるかは perform_checkin が daily_hints を見て決める。ここは「同じ店の別の id」を渡すだけ
+    const day = jstDay(new Date())
+    const { data: hintRows, error: hintError } = await db
+      .from('daily_hints')
+      .select('shop_id, generation, completed_checkin_id, shops(name, lat, lng)')
+      .eq('user_id', userId)
+      .eq('hint_date', day)
+    // 読めなければ「ずれの照合」をしないだけ（+10 は perform_checkin が自分で決める）。チェックインは止めない
+    if (hintError) console.error('checkin: daily_hints read failed')
+    const active = activeHints((hintError ? [] : hintRows ?? []).map((r: Record<string, unknown>): ActiveHintRow => {
+      const s = (Array.isArray(r.shops) ? r.shops[0] : r.shops) as ActiveHintRow['shop'] | undefined
+      return { shop_id: r.shop_id as string, generation: r.generation as number, completed_checkin_id: r.completed_checkin_id as string | null, shop: s ?? null }
+    }))
+    let altShopId: string | null = null
+    if (shop_id.startsWith('hp:')) {
+      // 気配が osm:Y（謎の気配）で、あとで hp:X と合体した店にチェックインした
+      if (mapId && altForMapId(active, mapId)) {
+        try {
+          const poi = mapChecked ? mapPoi : await verifyOsm(mapId, lat, lng)
+          if (poi && distanceM(poi, shop) <= MATCH_M) altShopId = mapId
+        } catch (e) {
+          if (!(e instanceof UpstreamError)) throw e // タイルが読めなければ +10 を付けないだけで、チェックインは続ける
+        }
+      }
+    } else if (osmPoi) {
+      // 気配が hp:X で、ホットペッパーの読み込みに失敗して osm:Y のままチェックインした
+      altShopId = altHpFor(active, osmPoi)
+    }
+
     // 3. 1トランザクションで書く
     const { data, error } = await db.rpc('perform_checkin', {
       p_user: userId,
       p_shop_id: shop_id,
       p_far: far_from_home,
-      p_day: jstDay(new Date()),
+      p_day: day,
       p_cells: cellsAround(shop.lat, shop.lng, CLEAR_M),
+      p_alt_shop_id: altShopId,
     })
     if (error) {
       if (error.code === '23503' && error.message.includes('profile_missing')) return fail('profile_missing', 409)
@@ -164,7 +145,7 @@ Deno.serve(async (req: Request) => {
     }
     const row = Array.isArray(data) ? data[0] : data
     if (!row) throw new Error('perform_checkin')
-    return json({ checkin_id: row.checkin_id, coins_awarded: row.coins_awarded, new_cells: row.new_cells }, 200)
+    return json({ checkin_id: row.checkin_id, coins_awarded: row.coins_awarded, new_cells: row.new_cells, was_hint: row.was_hint === true }, 200)
   } catch (e) {
     if (e instanceof UpstreamError) {
       console.error('checkin upstream failed')

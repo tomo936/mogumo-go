@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { cellsInCircle } from '../../../src/fog/domain/grid.ts'
 import { distanceMeters } from '../../../src/map/domain/geo.ts'
-import { CHECKIN_M, CLEAR_M, MATCH_M, cellsAround, acceptHpCheckin, closestM, distanceM, findPoi, parseMapId, jstDay, tileXY, tilesToTry } from './core.ts'
+import { CHECKIN_M, CLEAR_M, MATCH_M, activeHints, altForMapId, altHpFor, cellsAround, acceptHpCheckin, closestM, distanceM, findPoi, parseMapId, jstDay, tileXY, tilesToTry } from './core.ts'
+import type { ActiveHintRow } from './core.ts'
 
 const sortCells = (c: [number, number][]) => [...c].sort((a, b) => a[0] - b[0] || a[1] - b[1])
 
@@ -129,5 +130,33 @@ describe('acceptHpCheckin', () => {
   it('どちらも外れたら、使える中で小さい方の距離で断る', () => {
     expect(acceptHpCheckin({ dHp: 90, dPoi: 70, poiToShop: 30 })).toEqual({ ok: false, distance: 70 })
     expect(acceptHpCheckin({ dHp: 90, dPoi: null, poiToShop: null })).toEqual({ ok: false, distance: 90 })
+  })
+})
+
+describe('気配の店の照合（activeHints / altForMapId / altHpFor）', () => {
+  const o = { lat: 35.6909, lng: 139.7003 }
+  const north = (m: number) => ({ lat: o.lat + m / 111195, lng: o.lng })
+  const row = (shop_id: string, generation: number, done: string | null = null, shop: ActiveHintRow['shop'] = null): ActiveHintRow =>
+    ({ shop_id, generation, completed_checkin_id: done, shop })
+
+  it('activeHints: 一番大きい generation の未達成の行だけ', () => {
+    const rows = [row('hp:A', 1), row('osm:9', 1), row('hp:B', 2), row('hp:C', 2, 'c1')]
+    expect(activeHints(rows).map((r) => r.shop_id)).toEqual(['hp:B'])
+    expect(activeHints([])).toEqual([])
+  })
+
+  it('altForMapId: 今の組の未達成の osm:Y だけ true', () => {
+    expect(altForMapId(activeHints([row('osm:9', 1), row('hp:B', 1)]), 'osm:9')).toBe(true)
+    expect(altForMapId(activeHints([row('osm:9', 1), row('hp:B', 2)]), 'osm:9')).toBe(false) // 作り直す前の組
+    expect(altForMapId(activeHints([row('osm:9', 1)]), null)).toBe(false)
+  })
+
+  it('altHpFor: hp の気配で、40m 以内かつ同じ名前のときだけ', () => {
+    const hint = row('hp:X', 1, null, { name: 'ラーメン一郎 新宿店', ...o })
+    expect(altHpFor([hint], { name: '一郎', ...north(30) })).toBe('hp:X')
+    expect(altHpFor([hint], { name: '二郎', ...north(30) })).toBeNull()
+    expect(altHpFor([hint], { name: '一郎', ...north(45) })).toBeNull()
+    expect(altHpFor([row('osm:5', 1, null, { name: '一郎', ...o })], { name: '一郎', ...north(10) })).toBeNull()
+    expect(altHpFor([row('hp:Y', 1, null, null)], { name: '一郎', ...o })).toBeNull()
   })
 })
