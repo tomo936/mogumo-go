@@ -1,5 +1,6 @@
 // 図鑑のデータ: 見つけたお店（shops。RLS で誰でも読める）と、自分の記録（loadProgress）を合わせる。
 import { kindFromHotpepper } from '../../shops/domain/kind.ts'
+import { cellKey, cellOf } from '../../fog/domain/grid.ts'
 import { loadProgress } from '../../checkin/infra/checkinApi.ts'
 import type { ZukanShop } from '../domain/zukan.ts'
 
@@ -25,6 +26,7 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v !== '' ? 
 export async function loadZukan(client?: ShopsClient): Promise<ZukanShop[]> {
   const c = client ?? ((await import('../../lib/supabase.ts')).supabase as unknown as ShopsClient)
   const [rows, progress] = await Promise.all([readShops(c), loadProgress()])
+  const cleared = new Set(progress.cells.map((c) => cellKey(c)))
   const shops: ZukanShop[] = []
   for (const r of rows) {
     const id = str(r.shop_id)
@@ -40,6 +42,7 @@ export async function loadZukan(client?: ShopsClient): Promise<ZukanShop[]> {
       catch: str(r.catch),
       genreName: str(r.genre_name),
       visits: progress.visitsByShop.get(id) ?? null,
+      cleared: cleared.has(cellKey(cellOf({ lat: r.lat, lng: r.lng }))),
     })
   }
   return shops
