@@ -54,17 +54,17 @@ type Props = {
 }
 
 export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, masked = false, visits = null, recordReady, busy, error, onCheckin, onClose }: Props) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(false) // 止まっている段（全画面か）
   const [height, setHeight] = useState<number | null>(null) // 引いている間・全画面の高さ（px）。小さい段で止まっているときは null（中身の高さ）
-  const [animating, setAnimating] = useState(false)
+  const [settling, setSettling] = useState<SheetStop | null>(null) // 指を離して収まっていく途中の行き先
   const sectionRef = useRef<HTMLElement>(null)
-  const smallH = useRef(0)
-  const drag = useRef<{ from: 'small' | 'full'; startY: number; startH: number; moved: boolean; id: number } | null>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const [smallH, setSmallH] = useState(0) // 小さい段の高さ（引き始めに測る）
+  const drag = useRef<{ from: 'small' | 'full'; startY: number; startH: number; moved: boolean } | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current)
   }, [])
-  const bodyRef = useRef<HTMLDivElement>(null)
   const inRange = distanceM <= CHECKIN_M
   const d = shop.details
   const open = masked ? null : d?.open
@@ -77,21 +77,28 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
   const name = masked ? '？？？' : shop.name
 
   // 指で引くとシートがついてきて、離すと段（小さい／全画面／閉じる）になめらかに収まる。
-  // 全画面では中身がスクロールするので、引けるのは中身の外（上の持ち手のあたり）だけ
+  // 中身は引いた分だけ入れかわる（小さい段の中身が薄れ、全画面の中身が下から浮かぶ）。チェックインのボタンは下に置いたまま
   const fullH = () => window.innerHeight
   const currentH = () => sectionRef.current?.offsetHeight ?? 0
+  // 中身の入れかわりの進み（0 = 小さい段の中身、1 = 全画面の中身）。収まっていく途中は行き先の値（CSS でなめらかに）
+  const progress = (() => {
+    if (settling) return settling === 'full' ? 1 : 0
+    if (height === null) return expanded ? 1 : 0
+    const span = fullH() * 0.6 - smallH
+    return span <= 0 ? 1 : Math.min(1, Math.max(0, (height - smallH) / span))
+  })()
   const settle = (stop: SheetStop) => {
     if (timer.current) clearTimeout(timer.current)
-    if (!expanded && height === null) smallH.current = currentH()
-    const from = height ?? currentH()
-    setAnimating(true)
-    setHeight(from)
-    const to = stop === 'full' ? fullH() : stop === 'small' ? smallH.current : 0
-    if (stop === 'full') setExpanded(true)
+    const small = !expanded && height === null ? currentH() : smallH
+    setSmallH(small)
+    setSettling(stop)
+    setHeight(height ?? currentH())
+    const to = stop === 'full' ? fullH() : stop === 'small' ? small : 0
     // 今の高さを置いてから次のコマで行き先へ（CSS の transition が効くように）
     requestAnimationFrame(() => requestAnimationFrame(() => setHeight(to)))
+    if (stop === 'full') setExpanded(true)
     timer.current = setTimeout(() => {
-      setAnimating(false)
+      setSettling(null)
       if (stop === 'close') onClose()
       else if (stop === 'small') {
         setExpanded(false)
@@ -99,31 +106,84 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
       }
     }, SETTLE_MS)
   }
-  const onPointerDown = (e: ReactPointerEvent) => {
-    if (expanded && bodyRef.current?.contains(e.target as Node)) return // 中身のスクロールに任せる
-    if (!expanded && height === null) smallH.current = currentH()
-    drag.current = { from: expanded ? 'full' : 'small', startY: e.clientY, startH: currentH(), moved: false, id: e.pointerId }
+  const begin = (y: number) => {
+    if (!expanded && height === null) setSmallH(currentH())
+    drag.current = { from: expanded ? 'full' : 'small', startY: y, startH: currentH(), moved: false }
   }
-  const onPointerMove = (e: ReactPointerEvent) => {
+  // 引いているなら true（呼び出し側でスクロールなどを止める）
+  const move = (y: number): boolean => {
     const g = drag.current
-    if (!g) return
-    const dy = e.clientY - g.startY
+    if (!g) return false
+    const dy = y - g.startY
     if (!g.moved) {
-      if (Math.abs(dy) < MOVE_PX) return
+      if (Math.abs(dy) < MOVE_PX) return false
       g.moved = true
-      sectionRef.current?.setPointerCapture?.(g.id) // 引き始めたら、指が外へ出ても追う（タップのうちは取らない）
     }
-    const h = dragHeight(g.startH, dy, fullH())
-    setAnimating(false)
-    setHeight(h)
-    if (!expanded && h > smallH.current + 40) setExpanded(true) // 引き上げている途中で中身を全画面の形に
+    setSettling(null)
+    setHeight(dragHeight(g.startH, dy, fullH()))
+    return true
   }
-  const onPointerUp = (e: ReactPointerEvent) => {
+  const end = (y: number | null) => {
     const g = drag.current
     drag.current = null
     if (!g?.moved) return
-    const dy = e.clientY - g.startY
-    settle(sheetStop(g.from, dy, dragHeight(g.startH, dy, fullH()), smallH.current))
+    if (y === null) return settle(g.from)
+    const dy = y - g.startY
+    settle(sheetStop(g.from, dy, dragHeight(g.startH, dy, fullH()), smallH))
+  }
+  const live = useRef({ begin, move, end })
+  useEffect(() => {
+    live.current = { begin, move, end }
+  })
+
+  // 全画面の中身: 一番上までスクロールしているときに下へ引いたら、スクロールでなくシートを縮める（iPhone はタッチで扱う）
+  const fullShown = expanded || progress > 0 || settling !== null
+  useEffect(() => {
+    const body = bodyRef.current
+    if (!body || !fullShown) return
+    const t: { startY: number; mode: 'undecided' | 'sheet' | 'scroll' } = { startY: 0, mode: 'undecided' }
+    const onStart = (e: TouchEvent) => {
+      t.startY = e.touches[0].clientY
+      t.mode = 'undecided'
+    }
+    const onMove = (e: TouchEvent) => {
+      const y = e.touches[0].clientY
+      if (t.mode === 'undecided') {
+        if (Math.abs(y - t.startY) < MOVE_PX) return
+        if (y > t.startY && body.scrollTop <= 0) {
+          t.mode = 'sheet'
+          live.current.begin(t.startY)
+        } else t.mode = 'scroll'
+      }
+      if (t.mode === 'sheet') {
+        e.preventDefault()
+        live.current.move(y)
+      }
+    }
+    const onEnd = (e: TouchEvent) => {
+      if (t.mode === 'sheet') live.current.end(e.changedTouches[0]?.clientY ?? null)
+      t.mode = 'undecided'
+    }
+    body.addEventListener('touchstart', onStart, { passive: true })
+    body.addEventListener('touchmove', onMove, { passive: false })
+    body.addEventListener('touchend', onEnd)
+    body.addEventListener('touchcancel', onEnd)
+    return () => {
+      body.removeEventListener('touchstart', onStart)
+      body.removeEventListener('touchmove', onMove)
+      body.removeEventListener('touchend', onEnd)
+      body.removeEventListener('touchcancel', onEnd)
+    }
+  }, [fullShown])
+
+  const onPointerDown = (e: ReactPointerEvent) => {
+    // 全画面の中身はタッチの処理（上）とスクロールに任せる。マウスは中身の上でも引ける
+    if (e.pointerType === 'touch' && bodyRef.current?.contains(e.target as Node)) return
+    begin(e.clientY)
+  }
+  const onPointerMove = (e: ReactPointerEvent) => {
+    const wasMoved = drag.current?.moved
+    if (move(e.clientY) && !wasMoved) sectionRef.current?.setPointerCapture?.(e.pointerId) // 引き始めたら、指が外へ出ても追う（タップのうちは取らない）
   }
 
   const tags = (
@@ -166,17 +226,13 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
   return (
     <section
       ref={sectionRef}
-      className={`shop-sheet${expanded ? ' shop-sheet--full' : ''}${animating ? ' shop-sheet--settling' : ''}`}
+      className={`shop-sheet${expanded ? ' shop-sheet--full' : ''}${settling ? ' shop-sheet--settling' : ''}`}
       style={height === null ? undefined : { height }}
       aria-label="お店の情報"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={() => {
-        const g = drag.current
-        drag.current = null
-        if (g?.moved) settle(g.from)
-      }}
+      onPointerUp={(e) => end(e.clientY)}
+      onPointerCancel={() => end(null)}
     >
       <button
         type="button"
@@ -187,9 +243,9 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
       <button type="button" className="shop-sheet__close" aria-label="閉じる" onClick={onClose}>
         ×
       </button>
-      {!expanded ? (
-        <>
-          <div className="shop-sheet__head">
+      <div className="shop-sheet__stage">
+        {progress < 0.5 && (
+          <div className="shop-sheet__head" style={{ opacity: 1 - progress * 2 }}>
             {sticker(false)}
             <div>
               <h2 className="shop-sheet__name">{name}</h2>
@@ -201,64 +257,70 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
               </p>
             </div>
           </div>
-          {errorRow}
-          {button}
-          <p className="shop-sheet__more">︿ 上にスライドでくわしく</p>
-        </>
-      ) : (
-        <div className="shop-sheet__body" ref={bodyRef}>
-          {sticker(true)}
-          <h2 className="shop-sheet__name shop-sheet__name--big">{name}</h2>
-          {tags}
-          {hintRows}
-          {open && <p className="shop-sheet__open">{formatOpen(open)}</p>}
-          {!masked && d?.catch && <p className="shop-sheet__catch">{d.catch}</p>}
-          {!d && !masked && <p className="shop-sheet__open">くわしい情報はまだありません（地図のデータのお店）</p>}
-          <p className="shop-sheet__distance">{`ここから ${Math.ceil(distanceM)}m`}</p>
-          {showRecord && (
-            <div className="shop-record">
-              <p className="shop-record__title">わたしの記録</p>
-              {visits ? (
-                <>
-                  <div className="shop-record__stats">
-                    <div>
-                      <b>{`${visits.count}回`}</b>行った
-                    </div>
-                    <div>
-                      <b>{shortDay(visits.firstDay)}</b>はじめて
-                    </div>
-                    <div>
-                      <b>{shortDay(visits.lastDay)}</b>この前
-                    </div>
-                  </div>
-                  {next && (
-                    <>
-                      <p className="shop-record__next">{`あと${next.remaining}回で${TIER_NAME[next.tier]}の枠`}</p>
-                      <div className="shop-record__bar" aria-hidden="true">
-                        <i style={{ width: `${Math.round((count / (count + next.remaining)) * 100)}%` }} />
+        )}
+        {fullShown && (
+          <div
+            className="shop-sheet__body"
+            ref={bodyRef}
+            style={progress < 1 ? { opacity: progress, pointerEvents: 'none', transform: `translateY(${Math.round((1 - progress) * 40)}px)` } : undefined}
+          >
+            {sticker(true)}
+            <h2 className="shop-sheet__name shop-sheet__name--big">{name}</h2>
+            {tags}
+            {hintRows}
+            {open && <p className="shop-sheet__open">{formatOpen(open)}</p>}
+            {!masked && d?.catch && <p className="shop-sheet__catch">{d.catch}</p>}
+            {!d && !masked && <p className="shop-sheet__open">くわしい情報はまだありません（地図のデータのお店）</p>}
+            <p className="shop-sheet__distance">{`ここから ${Math.ceil(distanceM)}m`}</p>
+            {showRecord && (
+              <div className="shop-record">
+                <p className="shop-record__title">わたしの記録</p>
+                {visits ? (
+                  <>
+                    <div className="shop-record__stats">
+                      <div>
+                        <b>{`${visits.count}回`}</b>行った
                       </div>
-                    </>
-                  )}
-                </>
-              ) : (
-                <p className="shop-record__next">
-                  まだ行っていません。チェックインで <b>+30</b>
-                </p>
-              )}
-            </div>
-          )}
-          {errorRow}
-          {button}
-          {hpUrl && (
-            <>
-              <a className="shop-sheet__hp" href={hpUrl} target="_blank" rel="noopener noreferrer">
-                ホットペッパーで見る
-              </a>
-              <p className="shop-sheet__credit">Powered by ホットペッパーグルメ Webサービス</p>
-            </>
-          )}
-        </div>
-      )}
+                      <div>
+                        <b>{shortDay(visits.firstDay)}</b>はじめて
+                      </div>
+                      <div>
+                        <b>{shortDay(visits.lastDay)}</b>この前
+                      </div>
+                    </div>
+                    {next && (
+                      <>
+                        <p className="shop-record__next">{`あと${next.remaining}回で${TIER_NAME[next.tier]}の枠`}</p>
+                        <div className="shop-record__bar" aria-hidden="true">
+                          <i style={{ width: `${Math.round((count / (count + next.remaining)) * 100)}%` }} />
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <p className="shop-record__next">
+                    まだ行っていません。チェックインで <b>+30</b>
+                  </p>
+                )}
+              </div>
+            )}
+            {hpUrl && (
+              <>
+                <a className="shop-sheet__hp" href={hpUrl} target="_blank" rel="noopener noreferrer">
+                  ホットペッパーで見る
+                </a>
+                <p className="shop-sheet__credit">Powered by ホットペッパーグルメ Webサービス</p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+      {/* チェックインのボタンは段が変わっても下に置いたまま */}
+      <div className="shop-sheet__foot">
+        {errorRow}
+        {button}
+        {!expanded && progress === 0 && <p className="shop-sheet__more">︿ 上にスライドでくわしく</p>}
+      </div>
     </section>
   )
 }

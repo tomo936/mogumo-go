@@ -345,7 +345,11 @@
   -webkit-user-select: none;
 }
 .shop-sheet--settling {
-  transition: height 0.28s cubic-bezier(0.2, 0.8, 0.3, 1); /* SETTLE_MS と合わせる */
+  transition: height 0.28s cubic-bezier(0.2, 0.8, 0.3, 1), background-color 0.28s; /* SETTLE_MS と合わせる */
+}
+.shop-sheet--settling .shop-sheet__body,
+.shop-sheet--settling .shop-sheet__head {
+  transition: opacity 0.28s, transform 0.28s;
 }
 .shop-sheet__grab {
   display: block;
@@ -378,8 +382,17 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
   z-index: 2;
 }
-.shop-sheet__body {
+.shop-sheet__stage {
   flex: 1;
+  position: relative;
+  min-height: 0;
+}
+.shop-sheet__foot {
+  flex: none;
+}
+.shop-sheet__body {
+  position: absolute;
+  inset: 0;
   overflow-y: auto;
   touch-action: pan-y;
   overscroll-behavior: contain;
