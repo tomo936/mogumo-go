@@ -1,23 +1,22 @@
 import type { ShopKind } from './shop.ts'
 
 // 1軒の店の symbol ピンを持ち上げる高さ。模型の高さ = 大きさ（sizeM、幅の長い方）× 種類ごとの「高さ/幅」の比。
-// 比は src/assets/shops/*.glb の外形（高さ ÷ 横幅 x と z の長い方）から求めた（2026-11-09）
+// 比は src/assets/shops/*.glb の外形（高さ ÷ 横幅 x と z の長い方）から求めた（2026-11-09。新しい5種も同じ日に模型を作って測った）
 export const HEIGHT_RATIO: Record<ShopKind, number> = {
   mystery: 0.6,
-  // 新しい5種の模型ができるまでは mystery の模型で描くので、同じ値
-  donburi: 0.6,
-  burger: 0.6,
-  ethnic: 0.6,
-  okonomiyaki: 0.6,
-  takoyaki: 0.6,
+  burger: 0.65,
+  ethnic: 0.7,
   chinese: 0.71,
   soba: 0.72,
   izakaya: 0.73,
   cafe: 0.75,
+  donburi: 0.76,
   bakery: 0.85,
+  okonomiyaki: 0.85,
   western: 0.94,
   cake: 0.97,
   washoku: 0.98,
+  takoyaki: 1.04,
   yakiniku: 1.05,
   sushi: 1.14,
   curry: 1.25,
