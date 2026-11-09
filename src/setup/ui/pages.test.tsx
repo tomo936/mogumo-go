@@ -8,7 +8,7 @@ import { AuthContext } from '../../auth/AuthContext.ts'
 import { routes } from '../../routes/router.tsx'
 import { loadDraft, saveDraft } from '../infra/draftStore.ts'
 
-const repo = vi.hoisted(() => ({ exists: vi.fn(), create: vi.fn() }))
+const repo = vi.hoisted(() => ({ exists: vi.fn(), load: vi.fn().mockResolvedValue(null), create: vi.fn() }))
 const homeStore = vi.hoisted(() => ({ loadHome: vi.fn(), saveHome: vi.fn() }))
 const location = vi.hoisted(() => ({ get: vi.fn() }))
 vi.mock('../../lib/supabase.ts', () => ({ supabase: {} }))

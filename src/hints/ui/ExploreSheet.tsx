@@ -7,6 +7,7 @@ import type { ExploreStatus } from './useDailyHints.ts'
 import './hints.css'
 
 type Props = {
+  placement?: 'bottom' | 'top' // 上の気配ボタンから降りる（2026-11-10）
   status: ExploreStatus
   set: HintSet | null
   revealed: ReadonlySet<string>
@@ -66,7 +67,7 @@ export function ExploreSheet(p: Props) {
   const text = STATUS_TEXT[p.status]
   const none = p.status === 'ready' && hints.length === 0
   return (
-    <section className="shop-sheet explore-sheet" aria-label="探索">
+    <section className={`shop-sheet explore-sheet${p.placement === 'top' ? ' explore-sheet--top' : ''}`} aria-label="探索">
       <button type="button" className="shop-sheet__close" aria-label="閉じる" onClick={p.onClose}>
         ×
       </button>

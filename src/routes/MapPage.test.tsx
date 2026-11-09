@@ -231,9 +231,9 @@ const withHints = async (hints = [hintA], at: LatLng = farAway) => {
   await act(async () => { await Promise.resolve() })
 }
 
-test('探索ボタンでシートが開き、店名が出ない', async () => {
+test('気配ボタンでシートが開き、店名が出ない', async () => {
   await withHints()
-  await userEvent.click(screen.getByRole('button', { name: /探索/ }))
+  await userEvent.click(screen.getByRole('button', { name: /気配/ }))
   expect(screen.getByRole('region', { name: '探索' })).toBeInTheDocument()
   expect(await screen.findByText('中華？')).toBeInTheDocument()
   expect(document.body.textContent).not.toContain('麺屋かくれ')
@@ -241,7 +241,7 @@ test('探索ボタンでシートが開き、店名が出ない', async () => {
 
 test('気配を押すと focusAt とヒントのシート。閉じると unfocus', async () => {
   await withHints()
-  await userEvent.click(screen.getByRole('button', { name: /探索/ }))
+  await userEvent.click(screen.getByRole('button', { name: /気配/ }))
   await userEvent.click(await screen.findByRole('button', { name: /中華？/ }))
   expect(focusAtCalls).toHaveLength(1)
   expect(screen.getByRole('region', { name: '気配' })).toBeInTheDocument()

@@ -264,3 +264,19 @@
 .pins-moving .hint-pin {
   visibility: hidden;
 }
+
+/* 上の気配ボタンから降りる（2026-11-10） */
+.explore-sheet--top {
+  top: 0;
+  bottom: auto;
+  border-radius: 0 0 22px 22px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-top: calc(16px + env(safe-area-inset-top));
+  box-shadow: 0 8px 22px rgba(74, 168, 255, 0.25);
+  animation: explore-drop 0.28s ease-out;
+}
+@keyframes explore-drop {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
