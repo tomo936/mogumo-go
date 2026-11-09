@@ -26,9 +26,6 @@ export function HintSheet({ hint, distanceM, onClose }: Props) {
         ))}
       </ul>
       <p className="hint-note">{`近づくと正体が分かるよ（${HINT_REVEAL_M}m）`}</p>
-      <a className="hint-credit" href="http://webservice.recruit.co.jp/" target="_blank" rel="noreferrer">
-        Powered by ホットペッパーグルメ Webサービス
-      </a>
     </section>
   )
 }

@@ -118,9 +118,6 @@ export function ExploreSheet(p: Props) {
         </>
       )}
       <p className="hint-note">気配は毎日0時に入れかわります</p>
-      <a className="hint-credit" href="http://webservice.recruit.co.jp/" target="_blank" rel="noreferrer">
-        Powered by ホットペッパーグルメ Webサービス
-      </a>
     </section>
   )
 }

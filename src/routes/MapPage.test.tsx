@@ -187,13 +187,13 @@ test('通信中にシートを閉じて失敗 → エラーも出ず、シート
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })
 
-test('ホットペッパーのクレジットがいつも出ていて、規約のリンク先を向く', () => {
+test('地図の画面にはクレジットを出さない（出典は設定の中・スプラッシュ）', () => {
   render(
     <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
     </AuthContext.Provider>,
   )
-  expect(screen.getByRole('link', { name: 'Powered by ホットペッパーグルメ Webサービス' })).toHaveAttribute('href', 'http://webservice.recruit.co.jp/')
+  expect(screen.queryByText('Powered by ホットペッパーグルメ Webサービス')).not.toBeInTheDocument()
 })
 
 test('一覧で店を選ぶと、一覧が閉じてお店のシートが出る', async () => {
