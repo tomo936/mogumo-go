@@ -41,10 +41,12 @@
 
 ### Task 0（リーダー）: 地図にもともとある店名の文字を確かめる（設計 §7.6）
 
-- [ ] dev の地図（`npm run dev`、`?fake`）で、霧の中のお店の位置に OpenFreeMap の `poi` の文字（店名）が見えるかを撮って確かめる。
-- [ ] 見える → Task 1 を行う。見えない → Task 1 は飛ばし、`docs/session-handoff.md` に「poi の文字は見えなかった（2026-11-07）」と書く。
+- [x] dev の地図（`npm run dev`、`?fake`）で、霧の中のお店の位置に OpenFreeMap の `poi` の文字（店名）が見えるかを撮って確かめる。
+- [x] 見える → Task 1 を行う。見えない → Task 1 は飛ばし、`docs/session-handoff.md` に「poi の文字は見えなかった（2026-11-07）」と書く。
 
 ### Task 1: 地図の `poi` の文字を消す（Task 0 で「見える」ときだけ）
+
+> 2026-11-07 実施せず: Task 0 で見えなかった（positron に `poi` の層が無い）。
 
 **Files:**
 - Modify: `src/map/infra/theme.ts`（`themeLayer` の symbol の分岐）, `src/map/infra/theme.test.ts`
@@ -67,11 +69,11 @@
   - `public.create_daily_hints(p_user uuid, p_day date, p_regen boolean, p_rows jsonb) returns setof public.daily_hints`（今の組を slot 順）。`p_rows` は `[{ "slot": 1, "shop_id": "hp:…", "hint_genre": …, "hint_catch": …, "hint_budget": …, "is_mystery": false }, …]`。エラーは `raise exception '<code>' using errcode = 'P0001'`、code は `no_hints`・`regen_used`・`regen_done`。プロフィールが無いときは 0002 と同じ `profile_missing`（errcode 23503）
   - `public.perform_checkin(p_user uuid, p_shop_id text, p_far boolean, p_day date, p_cells jsonb, p_alt_shop_id text) returns table (checkin_id uuid, coins_awarded int, new_cells jsonb, was_hint boolean)`
 
-- [ ] **Step 1:** ファイルの先頭のコメントに、設計 §10「DB（手で確かめる）」の確かめ方を SQL の例つきで書く（同じ日に2回で1組、作り直しで generation 2・古い組が残る、2回目は `regen_used`、達成後は `regen_done`、気配の店で 30＋10 の2行・`was_hint = true`・`completed_checkin_id`、気配でない店・作り直す前の組の店・昨日の気配は 30 だけ、他人の行は読めない、authenticated から2つの関数を実行できない）。0001 の一意制約の今の名前を確かめる問い合わせ（`select conname from pg_constraint where conrelid = 'public.daily_hints'::regclass;`）も書く。
+- [x] **Step 1:** ファイルの先頭のコメントに、設計 §10「DB（手で確かめる）」の確かめ方を SQL の例つきで書く（同じ日に2回で1組、作り直しで generation 2・古い組が残る、2回目は `regen_used`、達成後は `regen_done`、気配の店で 30＋10 の2行・`was_hint = true`・`completed_checkin_id`、気配でない店・作り直す前の組の店・昨日の気配は 30 だけ、他人の行は読めない、authenticated から2つの関数を実行できない）。0001 の一意制約の今の名前を確かめる問い合わせ（`select conname from pg_constraint where conrelid = 'public.daily_hints'::regclass;`）も書く。
 - [ ] **Step 2:** 本体を書く。全体を `begin; … commit;` で囲み、**何度流しても同じ結果**にする（`add column if not exists`、`drop constraint if exists daily_hints_user_id_hint_date_slot_key` と `…_shop_id_key`（0001 の自動の名前）と新しい2つ、の順に落としてから新しい2つを add）。
   - `create_daily_hints`: 設計 §5.2 の 2 の流れどおり（`profiles` を `FOR UPDATE` → その日の `max(generation)` → regen の分岐）。`p_rows` が空のときは何も書かず今の組を返す。`security definer`・`set search_path = ''`・テーブルは `public.` を付けて書く。`revoke all on function … from public, anon, authenticated; grant execute … to service_role;`
   - `perform_checkin`: `drop function if exists public.perform_checkin(uuid, text, boolean, date, jsonb);` と新しい形の `drop function if exists`（再実行用）のあとに作る。0003 の中身に、設計 §5.2 の 3 の ★（気配の行を一番大きい generation から `shop_id in (p_shop_id, p_alt_shop_id)`・未達成で `FOR UPDATE`、`checkins.was_hint`、`coin_ledger` に `hint_bonus` 10、`daily_hints.completed_checkin_id`、戻り値 `was_hint`）を足す。権限は 0002 と同じ。
-- [ ] **Step 3: 確かめる** この段階では DB で動かせない（反映は Task 16）。次を読み合わせる: ①`drop function` の引数の型が 0003 の定義と完全に同じ ②`hint_bonus` は 0001 の CHECK（金額 10・`checkin_id` 必須）に合う ③`create_daily_hints` の regen=false で行があるときは何も書かない ④どちらの関数も `set search_path = ''`。
+- [x] **Step 3: 確かめる** この段階では DB で動かせない（反映は Task 16）。次を読み合わせる: ①`drop function` の引数の型が 0003 の定義と完全に同じ ②`hint_bonus` は 0001 の CHECK（金額 10・`checkin_id` 必須）に合う ③`create_daily_hints` の regen=false で行があるときは何も書かない ④どちらの関数も `set search_path = ''`。
 - [ ] **Step 4:** commit `feat(db): daily hints generation and hint bonus (0004)`
 
 ### Task 3: 地図タイルの読み方を `osmTile.ts` に分ける（`checkin` の動きは変えない）
@@ -86,14 +88,14 @@
   - `export async function verifyOsm(shopId: string, lat: number, lng: number): Promise<{ name: string; subclass: string; lng: number; lat: number } | null>` — 今の `checkin/index.ts` のものをそのまま
 - Produces（`daily-hints/core.ts`。`checkin/core.ts` から写す。先頭に `// keep in sync: supabase/functions/checkin/core.ts` ）: `jstDay`・`distanceM`・`tileXY`・`tilesToTry`・`findPoi`・`type PoiFeature`・`type LatLng`。`normalizeName(name: string): string` と `namesMatch(a: string, b: string): boolean`（`src/shops/domain/merge.ts` の `normalizeName` と `namesContain` を写す。`// keep in sync: src/shops/domain/merge.ts`）。`checkin/core.ts` にも同じ `normalizeName`・`namesMatch` を足す（Task 6 で使う）。
 
-- [ ] **Step 1: テストを書く** `daily-hints/core.test.ts`:
+- [x] **Step 1: テストを書く** `daily-hints/core.test.ts`:
   - `osmTile.ts は checkin と daily-hints で同じ中身`（`node:fs` の `readFileSync` で2つを読んで `toBe`）
   - `写した関数は checkin/core.ts と同じ答え`: `jstDay(new Date('2026-11-07T15:00:00Z'))` が両方 `'2026-11-08'`、`tilesToTry(35.68, 139.76, 14, 60)`・`distanceM(a, b)`・`findPoi(features, 'osm:42')` が両方で `toEqual`
   - `normalizeName は src/shops/domain/merge.ts と同じ答え`: `'ラーメン 一郎 本店'`・`'カフェ「ことり」'`・`'すし処(駅前)'` で3つとも一致
   - `namesMatch`: `('一郎', 'ラーメン一郎 新宿店')` → true、`('一郎', '二郎')` → false、`('', 'x')` → false
-- [ ] **Step 2:** `npx vitest run supabase/functions` → FAIL
-- [ ] **Step 3:** 実装。`checkin/index.ts` は `import { UpstreamError, verifyOsm } from './osmTile.ts'` に変えるだけで、流れは1行も変えない。
-- [ ] **Step 4:** `npx vitest run supabase/functions` → PASS（`checkin/core.test.ts` も含めて）
+- [x] **Step 2:** `npx vitest run supabase/functions` → FAIL
+- [x] **Step 3:** 実装。`checkin/index.ts` は `import { UpstreamError, verifyOsm } from './osmTile.ts'` に変えるだけで、流れは1行も変えない。
+- [x] **Step 4:** `npx vitest run supabase/functions` → PASS（`checkin/core.test.ts` も含めて）
 - [ ] **Step 5:** commit `refactor(functions): move osm tile reading to osmTile.ts`
 
 ### Task 4: `daily-hints/core.ts`（入力・抽選・作り直しの距離・ヒントの文）
@@ -120,7 +122,7 @@
   - `export type HintRowOut = HintRowIn & { hint_id: string; generation: number; completed_checkin_id: string | null }`
   - `export function toResponse(day: string, rows: readonly HintRowOut[], shops: ReadonlyMap<string, { name: string; lat: number; lng: number }>): { hint_date: string; generation: number; regen_left: 0 | 1; hints: unknown[] }` — 設計 §6.2 の形。行が無ければ `generation: 0, regen_left: 0, hints: []`。`regen_left` は generation が 1 なら 1、それ以外 0。`completed` は `completed_checkin_id !== null`。slot 順
 
-- [ ] **Step 1: テストを書く**（乱数は `const seq = (...v: number[]) => () => v.shift() ?? 0` で固定）
+- [x] **Step 1: テストを書く**（乱数は `const seq = (...v: number[]) => () => v.shift() ?? 0` で固定）
   - `parseRequest`: 正しい形が通る／`regen` が boolean でない・`hp` が配列でない・`hp:abc-1`（記号）・`osm:12a`・hp 101件・osm 51件・lat が `NaN` → null／余分な項目（`home` など）があっても無視して通るが結果に入らない
   - `planDraw`: `(10,10,0.1)`→`{hp:2,osm:1}`、`(10,10,0.9)`→`{hp:3,osm:0}`、`(1,10,0.9)`→`{hp:1,osm:2}`、`(10,0,0.1)`→`{hp:3,osm:0}`、`(2,0,0.5)`→`{hp:2,osm:0}`、`(0,0,0.1)`→`{hp:0,osm:0}`
   - `composeDraw`: 謎1件が確かめられた→ hp2＋osm1、確かめられなかった（`osmOk: []`）→ hp3、hp も足りなければあるだけ（1件）、重複が無い
@@ -130,9 +132,9 @@
   - `budgetShort`: `'～500円'`→`'〜1,000円'`、`'501～1000円'`→`'〜1,000円'`、`'1001～1500円'`→`'1,000円台'`、`'5001～7000円'`→`'5,000円台'`、`'10001～15000円'`→`'1万円台'`、`'30001円～'`→`'3万円台'`、`'１，００１〜１，５００円'`（全角）→`'1,000円台'`、`'お問い合わせください'`→ そのまま、null → null
   - `hintRow`: 謎なら genre・catch・budget が null で `is_mystery: true`／hp の店はジャンル名をそのまま・ジャンル無しは null で `is_mystery: false`
   - `toResponse`: generation 1 → `regen_left: 1`、2 → 0、空 → `hints: []`、`shop.name` が付く、slot 順
-- [ ] **Step 2:** `npx vitest run supabase/functions/daily-hints` → FAIL
-- [ ] **Step 3:** 実装。`planDraw` の規則: 謎の日 ＝ `random() < HINT_MYSTERY_DAY_RATE && nOsm > 0`。`osm = 謎の日 ? min(HINT_MYSTERY_PER_DAY, nOsm) : 0`、`hp = min(HINT_COUNT - osm, nHp)`、合計が `HINT_COUNT` 未満なら `osm` を `min(nOsm, HINT_COUNT - hp)` まで増やす。`budgetShort` は設計 §6.4 の1〜4（下の端 L を取り、`<1000`・`<10000`・それ以上で分ける）。
-- [ ] **Step 4:** `npx vitest run supabase/functions` → PASS
+- [x] **Step 2:** `npx vitest run supabase/functions/daily-hints` → FAIL
+- [x] **Step 3:** 実装。`planDraw` の規則: 謎の日 ＝ `random() < HINT_MYSTERY_DAY_RATE && nOsm > 0`。`osm = 謎の日 ? min(HINT_MYSTERY_PER_DAY, nOsm) : 0`、`hp = min(HINT_COUNT - osm, nHp)`、合計が `HINT_COUNT` 未満なら `osm` を `min(nOsm, HINT_COUNT - hp)` まで増やす。`budgetShort` は設計 §6.4 の1〜4（下の端 L を取り、`<1000`・`<10000`・それ以上で分ける）。
+- [x] **Step 4:** `npx vitest run supabase/functions` → PASS
 - [ ] **Step 5:** commit `feat(daily-hints): draw and hint text core`
 
 ### Task 5: `daily-hints/index.ts`（設計 §6.3 の流れ）
@@ -144,7 +146,7 @@
 - Consumes: Task 3 `verifyOsm`・`UpstreamError`、Task 4 のすべて、Task 2 `create_daily_hints`
 - Produces: `POST /functions/v1/daily-hints`。入出力・エラーの形は設計 §6.1・§6.2（409 の `error` は `profile_missing`・`regen_used`・`regen_done`・`no_hints`・`not_far`）
 
-- [ ] **Step 1:** 実装。CORS・JWT の確かめ・`json`/`fail` は `checkin/index.ts` と同じ書き方。流れ:
+- [x] **Step 1:** 実装。CORS・JWT の確かめ・`json`/`fail` は `checkin/index.ts` と同じ書き方。流れ:
   1. `parseRequest` → null なら 400。`day = jstDay(new Date())`。
   2. 今日の行（`daily_hints` を `user_id`・`hint_date` で、`hint_id, slot, shop_id, generation, hint_genre, hint_catch, hint_budget, is_mystery, completed_checkin_id`）を読み、一番大きい generation の組だけ残す。
   3. `regen = false` で組があれば → 店を付けて `toResponse` で返す（候補は見ない）。
@@ -154,7 +156,7 @@
   7. 0件 → 行を作らず、`regen = false` なら `hints: []`、作り直しなら今の組をそのまま返す。
   8. `db.rpc('create_daily_hints', { p_user, p_day: day, p_regen, p_rows })` → 戻りの行に `shops` の名前・位置を付けて `toResponse`。エラーは `profile_missing`（23503）・P0001 の3つを 409 に、それ以外は 500。
   9. ログは `console.error('daily-hints failed')` だけ。
-- [ ] **Step 2: 確かめる** Deno が無いので型は通らない前提。次を読み合わせる: ①本文の `home`・`lat`・`lng`（候補の外）を一切読まない ②候補・ユーザー id を `console` に出さない ③`regen = false` で組があるとき `shops`・`checkins`・タイルを読まない ④`npx vitest run supabase/functions` → PASS
+- [x] **Step 2: 確かめる** Deno が無いので型は通らない前提。次を読み合わせる: ①本文の `home`・`lat`・`lng`（候補の外）を一切読まない ②候補・ユーザー id を `console` に出さない ③`regen = false` で組があるとき `shops`・`checkins`・タイルを読まない ④`npx vitest run supabase/functions` → PASS
 - [ ] **Step 3:** commit `feat(daily-hints): edge function`
 
 ### Task 6: `checkin` 関数で気配の店を確かめる（設計 §5.3）
@@ -171,16 +173,16 @@
   - `export function altHpFor(active: readonly ActiveHintRow[], poi: { name: string; lat: number; lng: number }): string | null` — `hp:` の気配のうち、`distanceM(poi, shop) <= MATCH_M` かつ `namesMatch(poi.name, shop.name)` の最初の `shop_id`
   - 返事に `was_hint: boolean` を足す。`coins_awarded` は 30 か 40（か 0）
 
-- [ ] **Step 1: テストを書く** `checkin/core.test.ts`:
+- [x] **Step 1: テストを書く** `checkin/core.test.ts`:
   - `activeHints`: generation 1 と 2 の行があれば 2 だけ、達成済みの行は外れる、空 → 空
   - `altForMapId`: 今の組の未達成の `osm:Y` → true、generation 1（作り直す前）の `osm:Y` → false、null → false
   - `altHpFor`: 30m・同じ名前 → `'hp:X'`、30m・違う名前 → null、45m・同じ名前 → null、`osm:` の気配は対象外 → null
-- [ ] **Step 2:** `npx vitest run supabase/functions/checkin` → FAIL
-- [ ] **Step 3:** 実装（`index.ts`）。50m を通ったあと、`perform_checkin` の前に今日の気配（`daily_hints` を `user_id`・`hint_date = day` で、`shop_id, generation, completed_checkin_id, shops(name, lat, lng)`）を読み、`activeHints`。
+- [x] **Step 2:** `npx vitest run supabase/functions/checkin` → FAIL
+- [x] **Step 3:** 実装（`index.ts`）。50m を通ったあと、`perform_checkin` の前に今日の気配（`daily_hints` を `user_id`・`hint_date = day` で、`shop_id, generation, completed_checkin_id, shops(name, lat, lng)`）を読み、`activeHints`。
   - `hp:X` のチェックインで `altForMapId(active, mapId)` → まだタイルで確かめていなければ `verifyOsm(mapId, lat, lng)`。点があり `distanceM(poi, shop) <= MATCH_M` なら `p_alt_shop_id = mapId`。`UpstreamError` は +10 を付けないだけで、チェックインは続ける。
   - `osm:Y` のチェックイン → `p_alt_shop_id = altHpFor(active, osmPoi)`。
   - それ以外は `p_alt_shop_id: null`。`day` は1回だけ計算して `p_day` と共用。返事に `was_hint: row.was_hint`。
-- [ ] **Step 4:** `npx vitest run supabase/functions` → PASS
+- [x] **Step 4:** `npx vitest run supabase/functions` → PASS
 - [ ] **Step 5:** commit `feat(checkin): hint bonus with hp/osm id matching`
 
 ### Task 7: 端末のチェックインで 40・`wasHint` を受け取り、演出に出す
