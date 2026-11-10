@@ -108,43 +108,62 @@ export function RecordMap({ cells, t, home, pins }: Props) {
     apply.current(t)
   }, [t])
 
-  // 行ったお店のピン（スライダーの日のお店は大きく番号つき）。押すと店名と日付の札
+  // 行ったお店のピン（スライダーの日のお店は大きく番号つき）。押すと店名と日付の札。
+  // ピンは作り直さない（作り直すと、置き直すまでの一瞬だけ地図の左上に出て、ピンが跳ねて見える）。
+  // 店ごとに1つ作って残し、大きさ・番号・札だけを入れかえる。
+  const markersRef = useRef(new Map<string, { marker: Marker; el: HTMLButtonElement; num: HTMLElement; tag: HTMLElement; today: boolean }>())
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
-    let openTag: HTMLElement | null = null
-    const markers = pins.map((p) => {
-      const el = document.createElement('button')
-      el.type = 'button'
-      el.className = p.today ? 'rc-pin rc-pin--today' : 'rc-pin'
-      el.setAttribute('aria-label', `${p.name} ${mdLabel(p.lastDay)}`)
-      const img = document.createElement('img')
-      img.src = PIN_ICON[p.kind]
-      img.alt = ''
-      el.append(img)
-      if (p.order !== null) {
+    const markers = markersRef.current
+    const keep = new Set(pins.map((p) => p.shopId))
+    for (const [id, m] of markers) {
+      if (!keep.has(id)) {
+        m.marker.remove()
+        markers.delete(id)
+      }
+    }
+    for (const p of pins) {
+      let m = markers.get(p.shopId)
+      if (!m) {
+        const el = document.createElement('button')
+        el.type = 'button'
+        const img = document.createElement('img')
+        img.src = PIN_ICON[p.kind]
+        img.alt = ''
         const num = document.createElement('b')
         num.className = 'rc-pin__num'
-        num.textContent = String(p.order)
-        el.append(num)
+        const tag = document.createElement('span')
+        tag.className = 'rc-pin__tag'
+        tag.hidden = true
+        el.append(img, num, tag)
+        el.addEventListener('click', () => {
+          const show = tag.hidden
+          for (const other of markers.values()) other.tag.hidden = true
+          tag.hidden = !show
+        })
+        const marker = new Marker({ element: el, anchor: 'bottom' }).setLngLat([p.lng, p.lat]).addTo(map)
+        m = { marker, el, num, tag, today: false }
+        markers.set(p.shopId, m)
       }
-      const tag = document.createElement('span')
-      tag.className = 'rc-pin__tag'
-      tag.textContent = `${p.name} ・ ${mdLabel(p.lastDay)}`
-      tag.hidden = true
-      el.append(tag)
-      el.addEventListener('click', () => {
-        const show = tag.hidden
-        if (openTag) openTag.hidden = true
-        tag.hidden = !show
-        openTag = show ? tag : null
-      })
-      return new Marker({ element: el, anchor: 'bottom' }).setLngLat([p.lng, p.lat]).addTo(map)
-    })
-    return () => {
-      for (const m of markers) m.remove()
+      // 今日になったときだけ、ぽんと弾ませる（クラスを付け直すとアニメーションがもう一度動く）
+      const becameToday = p.today && !m.today
+      m.el.className = p.today ? 'rc-pin rc-pin--today' : 'rc-pin'
+      if (becameToday) m.el.classList.add('rc-pin--pop')
+      m.today = p.today
+      m.el.setAttribute('aria-label', `${p.name} ${mdLabel(p.lastDay)}`)
+      m.num.textContent = p.order !== null ? String(p.order) : ''
+      m.num.hidden = p.order === null
+      m.tag.textContent = `${p.name} ・ ${mdLabel(p.lastDay)}`
     }
   }, [pins])
+  useEffect(() => {
+    const markers = markersRef.current
+    return () => {
+      for (const m of markers.values()) m.marker.remove()
+      markers.clear()
+    }
+  }, [])
 
   return <div ref={containerRef} className="rc-map" role="img" aria-label="自宅を中心にした、晴れた場所と雲の地図（真上から）" />
 }

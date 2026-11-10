@@ -270,6 +270,8 @@
   opacity: 1;
   z-index: 2;
   filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.3));
+}
+.rc-pin--pop {
   animation: rc-pin-pop 0.5s ease-out 1;
 }
 @keyframes rc-pin-pop {

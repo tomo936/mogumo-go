@@ -54,7 +54,7 @@ const others: BadgeDef[] = [
   // 常連
   def('regular_3', 'regular', '顔なじみ', '同じお店に 3回行く', 1, icon('heart'), 3, groupReach(shop), { series: 'regular' }),
   def('regular_10', 'regular', '常連さん', '同じお店に 10回行く', 2, icon('heart'), 10, groupReach(shop), { series: 'regular' }),
-  def('regular_30', 'regular', 'お店の家族', '同じお店に 30回行く', 4, icon('heart'), 30, groupReach(shop), { series: 'regular' }),
+  def('regular_30', 'regular', 'お店の家族', '同じお店に 30回行く', 3, icon('heart'), 30, groupReach(shop), { series: 'regular' }),
   def('regular_five', 'regular', '行きつけ5', '3回以上行ったお店を 5軒つくる', 3, icon('heart'), 5, shopsReaching(3), { unit: '軒' }),
   // 霧はらい
   def('fog_01', 'fog', 'そよ風', '霧を 0.1km² 晴らす', 1, icon('cloud'), 0.1, fogArea, { unit: 'km²', series: 'fog' }),
@@ -64,19 +64,19 @@ const others: BadgeDef[] = [
   // 遠征（自宅が要る）
   def('far_1', 'far', 'ご近所たんけん', '自宅から 1km 以上はなれたお店に行く', 1, icon('flag'), 1, farFromHome, { needsHome: true, unit: 'km', series: 'far' }),
   def('far_3', 'far', '遠征隊', '自宅から 3km 以上はなれたお店に行く', 2, icon('flag'), 3, farFromHome, { needsHome: true, unit: 'km', series: 'far' }),
-  def('far_10', 'far', '大遠征', '自宅から 10km 以上はなれたお店に行く', 4, icon('flag'), 10, farFromHome, { needsHome: true, unit: 'km', series: 'far' }),
+  def('far_10', 'far', '大遠征', '自宅から 10km 以上はなれたお店に行く', 3, icon('flag'), 10, farFromHome, { needsHome: true, unit: 'km', series: 'far' }),
   def('far_compass', 'far', '四方八方', '自宅から 1km 以上先のお店に、北・東・南・西すべての向きで行く', 3, icon('compass'), 4, directions, { needsHome: true, unit: '方向' }),
   // 毎日・リズム
   def('rhythm_3', 'rhythm', 'つづけてグルメ', '3日つづけてお店に行く', 1, icon('calendar'), 3, streak(), { unit: '日', series: 'rhythm_streak' }),
-  def('rhythm_7', 'rhythm', '毎日グルメ', '7日つづけてお店に行く', 3, icon('calendar'), 7, streak(), { unit: '日', series: 'rhythm_streak' }),
-  def('rhythm_30', 'rhythm', 'グルメの鬼', '30日つづけてお店に行く', 5, icon('calendar'), 30, streak(), { unit: '日', series: 'rhythm_streak' }),
+  def('rhythm_7', 'rhythm', '毎日グルメ', '7日つづけてお店に行く', 2, icon('calendar'), 7, streak(), { unit: '日', series: 'rhythm_streak' }),
+  def('rhythm_30', 'rhythm', 'グルメの鬼', '30日つづけてお店に行く', 3, icon('calendar'), 30, streak(), { unit: '日', series: 'rhythm_streak' }),
   def('rhythm_month20', 'rhythm', 'ひと月に20軒', '同じ月に 20回お店に行く', 3, icon('calendar'), 20, groupReach((v) => v.month)),
   def('rhythm_lunch', 'rhythm', 'お昼の常連', '平日のお昼（11〜14時）に 10回お店に行く', 2, icon('sun'), 10, countWhere((v) => v.dow >= 1 && v.dow <= 5 && v.hour >= 11 && v.hour < 14)),
   def('rhythm_weekend', 'rhythm', '週末グルメ', '土日に 10回お店に行く', 2, icon('sun'), 10, countWhere((v) => v.dow === 0 || v.dow === 6)),
   // はしご
   def('hashigo_2', 'hashigo', 'はしご', '1日に 2軒行く', 1, icon('walk'), 2, distinctInGroup((v) => v.day, shop), { unit: '軒', series: 'hashigo_day' }),
   def('hashigo_3', 'hashigo', 'はしご上手', '1日に 3軒行く', 2, icon('walk'), 3, distinctInGroup((v) => v.day, shop), { unit: '軒', series: 'hashigo_day' }),
-  def('hashigo_5', 'hashigo', '食い倒れ', '1日に 5軒行く', 4, icon('walk'), 5, distinctInGroup((v) => v.day, shop), { unit: '軒', series: 'hashigo_day' }),
+  def('hashigo_5', 'hashigo', '食い倒れ', '1日に 5軒行く', 3, icon('walk'), 5, distinctInGroup((v) => v.day, shop), { unit: '軒', series: 'hashigo_day' }),
   def('hashigo_course', 'hashigo', 'フルコース', '同じ日に 4種類のジャンルのお店に行く', 3, icon('bowls'), 4, distinctInGroup((v) => v.day, (v) => v.kind), { unit: '種類' }),
   def('hashigo_world', 'hashigo', '世界一周', '同じ日に 和・洋・中 のお店に行く', 3, icon('bowls'), 3, sameDayAll([WA, YO, CHU]), { unit: '種類' }),
   // 気配
