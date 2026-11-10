@@ -74,9 +74,9 @@ const others: BadgeDef[] = [
   def('rhythm_lunch', 'rhythm', 'お昼の常連', '平日のお昼（11〜14時）に 10回お店に行く', 2, icon('sun'), 10, countWhere((v) => v.dow >= 1 && v.dow <= 5 && v.hour >= 11 && v.hour < 14)),
   def('rhythm_weekend', 'rhythm', '週末グルメ', '土日に 10回お店に行く', 2, icon('sun'), 10, countWhere((v) => v.dow === 0 || v.dow === 6)),
   // はしご
-  def('hashigo_2', 'hashigo', 'はしご', '1日に 2軒行く', 1, icon('walk'), 2, groupReach((v) => v.day), { unit: '軒', series: 'hashigo_day' }),
-  def('hashigo_3', 'hashigo', 'はしご上手', '1日に 3軒行く', 2, icon('walk'), 3, groupReach((v) => v.day), { unit: '軒', series: 'hashigo_day' }),
-  def('hashigo_5', 'hashigo', '食い倒れ', '1日に 5軒行く', 4, icon('walk'), 5, groupReach((v) => v.day), { unit: '軒', series: 'hashigo_day' }),
+  def('hashigo_2', 'hashigo', 'はしご', '1日に 2軒行く', 1, icon('walk'), 2, distinctInGroup((v) => v.day, shop), { unit: '軒', series: 'hashigo_day' }),
+  def('hashigo_3', 'hashigo', 'はしご上手', '1日に 3軒行く', 2, icon('walk'), 3, distinctInGroup((v) => v.day, shop), { unit: '軒', series: 'hashigo_day' }),
+  def('hashigo_5', 'hashigo', '食い倒れ', '1日に 5軒行く', 4, icon('walk'), 5, distinctInGroup((v) => v.day, shop), { unit: '軒', series: 'hashigo_day' }),
   def('hashigo_course', 'hashigo', 'フルコース', '同じ日に 4種類のジャンルのお店に行く', 3, icon('bowls'), 4, distinctInGroup((v) => v.day, (v) => v.kind), { unit: '種類' }),
   def('hashigo_world', 'hashigo', '世界一周', '同じ日に 和・洋・中 のお店に行く', 3, icon('bowls'), 3, sameDayAll([WA, YO, CHU]), { unit: '種類' }),
   // 気配
@@ -87,7 +87,7 @@ const others: BadgeDef[] = [
   single('hint_mystery', 'hint', 'なぞの気配', '謎の気配のお店に行く', 2, 'hint', firstWhere((v) => v.mysteryHint)),
   // 季節・記念日（ひみつ）
   single('season_soba', 'season', '年越しそば', '大みそか（12/31）にそばのお店に行く', 3, 'gift', firstWhere((v) => v.md === '12-31' && v.kind === 'soba'), { secret: true }),
-  single('season_xmas', 'season', 'メリークリスマス', 'クリスマス（12/24〜25）にスイーツのお店に行く', 3, 'gift', firstWhere((v) => (v.md === '12-24' || v.md === '12-25') && v.kind === 'cake'), { secret: true }),
+  single('season_xmas', 'season', 'メリークリスマス', 'クリスマス（12/24〜25）にスイーツかカフェのお店に行く', 3, 'gift', firstWhere((v) => (v.md === '12-24' || v.md === '12-25') && (v.kind === 'cake' || v.kind === 'cafe')), { secret: true }),
   single('season_valentine', 'season', 'バレンタイン', '2/14 にスイーツかカフェのお店に行く', 3, 'heart', firstWhere((v) => v.md === '02-14' && (v.kind === 'cake' || v.kind === 'cafe')), { secret: true }),
   def('season_four', 'season', '四季のグルメ', '春・夏・秋・冬のそれぞれでお店に行く', 4, icon('leaf'), 4, distinctCount((v) => season(Number(v.md.slice(0, 2)))), { secret: true, unit: '季節' }),
   single('season_year', 'season', '1周年', 'はじめてのお店から 1年たって、またお店に行く', 4, 'star', anniversary, { secret: true }),

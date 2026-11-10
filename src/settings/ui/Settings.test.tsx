@@ -32,7 +32,7 @@ test('お問い合わせはフォームの URL が無いあいだ準備中', () 
 
 test('ホットペッパーの表示（リンク）とバージョンがある', () => {
   show()
-  expect(screen.getByRole('link', { name: 'Powered by ホットペッパーグルメ Webサービス' })).toHaveAttribute('href', 'http://webservice.recruit.co.jp/')
+  expect(screen.getByRole('link', { name: 'Powered by ホットペッパーグルメ Webサービス' })).toHaveAttribute('href', 'https://webservice.recruit.co.jp/')
   expect(screen.getByText('バージョン')).toBeInTheDocument()
 })
 

@@ -128,3 +128,24 @@ test('seriesOf: ジャンルは種類ごとに1つ。顔は取れたいちばん
   expect(sushi.face.def.id).toBe('genre_sushi_1')
   expect(series.filter((x) => x.face.def.group === 'genre')).toHaveLength(18)
 })
+
+test('つづけて: 月またぎ・年またぎも続いて数える', () => {
+  const s = evaluate(input([v('ramen', '2026-12-30 12:00'), v('ramen', '2026-12-31 12:00'), v('ramen', '2027-01-01 12:00')]))
+  expect(get(s, 'rhythm_3').earnedAt).toBe(jst('2027-01-01 12:00'))
+})
+
+test('メリークリスマスはスイーツかカフェ、はしごは同じ日のちがうお店の数', () => {
+  const s = evaluate(input([v('cafe', '2026-12-24 15:00')]))
+  expect(get(s, 'season_xmas').earnedAt).toBe(jst('2026-12-24 15:00'))
+  const same = evaluate(input([v('ramen', '2026-11-05 12:00', { shopId: 'X' }), v('ramen', '2026-11-05 18:00', { shopId: 'X' })]))
+  expect(get(same, 'hashigo_2').earnedAt).toBeNull()
+})
+
+test('四季・お昼・週末', () => {
+  const s = evaluate(input([
+    v('ramen', '2026-04-01 12:00'), v('ramen', '2026-07-01 12:00'), v('ramen', '2026-10-01 12:00'), v('ramen', '2027-01-05 12:00'),
+  ]))
+  expect(get(s, 'season_four').earnedAt).toBe(jst('2027-01-05 12:00'))
+  expect(get(s, 'rhythm_lunch').have).toBe(4) // 4/1(水)・7/1(水)・10/1(木)・1/5(火) のお昼
+  expect(get(s, 'rhythm_weekend').have).toBe(0)
+})

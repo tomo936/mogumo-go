@@ -113,7 +113,7 @@ export function Settings(p: Props) {
             <p>データ: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a></p>
           </div>
         )}
-        <a className="st__row st__link st__hp" href="http://webservice.recruit.co.jp/" target="_blank" rel="noopener noreferrer">
+        <a className="st__row st__link st__hp" href="https://webservice.recruit.co.jp/" target="_blank" rel="noopener noreferrer">
           <span>Powered by ホットペッパーグルメ Webサービス</span>
         </a>
         <div className="st__row"><span>バージョン</span><span className="st__value">{APP_VERSION}</span></div>

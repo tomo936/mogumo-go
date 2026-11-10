@@ -36,6 +36,7 @@ export function MyPage(p: Props) {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [changingHome, setChangingHome] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let alive = true
@@ -45,7 +46,7 @@ export function MyPage(p: Props) {
     return () => {
       alive = false
     }
-  }, [])
+  }, [attempt])
 
   const visited = data ? new Set(data.visits.map((v) => v.shopId)).size : 0
   const lv = levelFor(visited)
@@ -113,7 +114,21 @@ export function MyPage(p: Props) {
         </div>
       </div>
 
-      {failed && <p className="mp__note" role="alert">記録を読み込めませんでした</p>}
+      {failed && (
+        <div className="mp__note">
+          <p role="alert">記録を読み込めませんでした</p>
+          <button
+            type="button"
+            className="mp__retry"
+            onClick={() => {
+              setFailed(false)
+              setAttempt((n) => n + 1)
+            }}
+          >
+            もう一度
+          </button>
+        </div>
+      )}
       {!data && !failed && <p className="mp__note">読み込んでいます…</p>}
 
       {data && (

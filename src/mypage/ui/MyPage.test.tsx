@@ -95,3 +95,10 @@ test('コインが読めなくても他は出る', async () => {
   show()
   expect(await screen.findByText('—')).toBeInTheDocument()
 })
+
+test('記録が読めなければ「もう一度」で読み直す', async () => {
+  record.load.mockRejectedValueOnce(new Error('x'))
+  show()
+  await userEvent.click(await screen.findByRole('button', { name: 'もう一度' }))
+  expect(await screen.findByText('420')).toBeInTheDocument()
+})
