@@ -13,6 +13,11 @@ export type VisitEntry = {
   kind: ShopKind
   photoUrl: string | null
   day: string // YYYY-MM-DD（日本時間）
+  at: number // 行った時刻（ms）
+  lat: number | null // お店の位置（無ければ null。地図のピンに出さない）
+  lng: number | null
+  wasHint: boolean // 気配のお店として行った
+  mysteryHint: boolean // 謎の気配として行った
 }
 
 export const DAY_MS = 86_400_000

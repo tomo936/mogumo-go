@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DAY_MS, areaKm2, clearedAt, groupByMonth, monthLabel, stepWeek, timeRange, type ClearedCell, type VisitEntry } from './timeline.ts'
 
 const cell = (at: number): ClearedCell => ({ x: 0, y: 0, at })
-const visit = (day: string, name = day): VisitEntry => ({ shopId: name, name, kind: 'ramen', photoUrl: null, day })
+const visit = (day: string, name = day): VisitEntry => ({ shopId: name, name, kind: 'ramen', photoUrl: null, day, at: Date.parse(`${day}T03:00:00Z`), lat: 35, lng: 139, wasHint: false, mysteryHint: false })
 
 describe('timeRange / clearedAt', () => {
   it('範囲は最初と最後。マスが無ければ null', () => {

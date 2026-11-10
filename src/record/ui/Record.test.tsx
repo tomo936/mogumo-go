@@ -13,8 +13,8 @@ import { Record } from './Record.tsx'
 const day = (s: string) => Date.parse(`${s}T12:00:00+09:00`)
 const cells: ClearedCell[] = Array.from({ length: 1600 }, (_, i) => ({ x: i % 40, y: Math.floor(i / 40), at: day(i < 800 ? '2026-10-01' : '2026-11-03') }))
 const visits: VisitEntry[] = [
-  { shopId: 'hp:A', name: '麺屋A', kind: 'ramen', photoUrl: null, day: '2026-10-05' },
-  { shopId: 'hp:B', name: 'カフェB', kind: 'cafe', photoUrl: null, day: '2026-11-03' },
+  { shopId: 'hp:A', name: '麺屋A', kind: 'ramen', photoUrl: null, day: '2026-10-05', at: Date.parse('2026-10-05T03:00:00Z'), lat: 35, lng: 139, wasHint: false, mysteryHint: false },
+  { shopId: 'hp:B', name: 'カフェB', kind: 'cafe', photoUrl: null, day: '2026-11-03', at: Date.parse('2026-11-03T03:00:00Z'), lat: 35, lng: 139, wasHint: false, mysteryHint: false },
 ]
 
 test('読み込み中の文を出し、読めたら数字と履歴を出す（いちばん新しい日で）', async () => {
