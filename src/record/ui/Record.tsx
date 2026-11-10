@@ -32,8 +32,8 @@ const dayLabel = (ms: number) => {
   const d = jstDate(ms)
   return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`
 }
-// スライダーは1時間ずつ動くため、いちばん右でも最後の1時間ぶんに届かない。選んだ日の終わり（いちばん新しい日は最後の記録）まで進めて、その日の晴れをぜんぶ見せる
-const endOfDayIn = (ms: number, end: number) => Math.min(end, Date.parse(`${jstDay(new Date(ms))}T23:59:59.999+09:00`))
+// スライダーは1時間ずつ動くため、いちばん右でも最後の1時間ぶんに届かない。右の端に着いたら、最後の記録まで進める
+const snapEnd = (ms: number, end: number) => (ms >= end - 3600_000 ? end : ms)
 const dayWithWeek = (ms: number) => `${dayLabel(ms)}（${WEEK[jstDate(ms).getUTCDay()]}）`
 const timeLabel = (ms: number) => {
   const d = jstDate(ms)
@@ -54,6 +54,7 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync }: Pro
   const [townState, setTownState] = useState<TownListState>({ status: 'loading' })
   const [gained, setGained] = useState<ClearedTown[]>(NO_TOWNS) // 開いているあいだに新しくクリアした町
   const [tab, setTab] = useState<RecordTab>(initialTab)
+  const [byStep, setByStep] = useState(false) // 日付を ‹ › で送ったときだけ、晴れる動きを見せる（スライダーは引いたぶんをすぐ反映）
   const [t, setT] = useState<number | null>(null) // スライダーの日付（null = いちばん新しい）
 
   useEffect(() => {
@@ -131,16 +132,16 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync }: Pro
       {state.status === 'ready' && tab === 'record' && (
         <>
           <div className="rc__mapcard">
-            <RecordMap cells={cells} towns={towns} t={now} home={home} pins={pins} />
+            <RecordMap cells={cells} towns={towns} t={now} home={home} pins={pins} wave={byStep} />
             {range === null && <p className="rc__empty">まだ晴れた場所がありません。お店に行くと、ここに光が広がります</p>}
           </div>
 
           {range !== null && (
             <div className="rc__slider">
               <div className="rc__slider-head">
-                <button type="button" aria-label="前の行った日" onClick={() => setT(stepVisitDay(now, -1, visits, range))}>‹</button>
+                <button type="button" aria-label="前の行った日" onClick={() => { setByStep(true); setT(stepVisitDay(now, -1, visits, range)) }}>‹</button>
                 <b>{today.length > 0 ? `${dayWithWeek(now)}　${today.length}軒` : dayWithWeek(now)}</b>
-                <button type="button" aria-label="次の行った日" onClick={() => setT(stepVisitDay(now, 1, visits, range))}>›</button>
+                <button type="button" aria-label="次の行った日" onClick={() => { setByStep(true); setT(stepVisitDay(now, 1, visits, range)) }}>›</button>
               </div>
               <input
                 type="range"
@@ -149,7 +150,7 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync }: Pro
                 max={range.end}
                 step={3600_000}
                 value={now}
-                onChange={(e) => setT(endOfDayIn(Number(e.target.value), range.end))}
+                onChange={(e) => { setByStep(false); setT(snapEnd(Number(e.target.value), range.end)) }}
               />
               <div className="rc__slider-ends"><span>{dayLabel(range.start)}</span><span>{dayLabel(range.end)}</span></div>
             </div>
