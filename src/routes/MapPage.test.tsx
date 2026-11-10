@@ -255,7 +255,7 @@ test('気配を押すと focusAt とヒントのシート。閉じると unfocus
   expect(focusAtCalls).toHaveLength(1)
   expect(screen.getByRole('region', { name: '気配' })).toBeInTheDocument()
   expect(screen.queryByRole('region', { name: '探索' })).toBeNull()
-  expect(screen.getByText('？？？')).toBeInTheDocument()
+  expect(screen.getByText('霧の中の気配')).toBeInTheDocument()
   const n = unfocusCalls.length
   await userEvent.click(screen.getByRole('button', { name: '閉じる' }))
   expect(unfocusCalls.length).toBeGreaterThan(n)
