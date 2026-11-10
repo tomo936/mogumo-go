@@ -226,7 +226,10 @@ export function MapPage() {
         onStatus={dispatch}
         home={home}
         onShopsError={() => setShopsError(true)}
-        onSelectShop={select}
+        onSelectShop={(shop) => {
+          setBuilding(null) // 地図で別のお店を押したら、ビルの一覧からは外れる
+          select(shop)
+        }}
         onSelectBuilding={selectBuilding}
         onPosition={setMe}
         onHintTap={pickHint}
@@ -239,10 +242,7 @@ export function MapPage() {
           maskedIds={new Set(building.shops.filter((x) => hints.isMasked(x)).map((x) => x.id))}
           hintIds={new Set(building.shops.filter((x) => hints.hintFor(x)).map((x) => x.id))}
           title={building.title}
-          onPick={(shop) => {
-            setBuilding(null)
-            select(shop)
-          }}
+          onPick={(shop) => select(shop) /* ビルの一覧は残しておき、お店のシートの「‹ ビル名」で戻れる */}
           onClose={() => {
             setBuilding(null)
             mapRef.current?.unfocus()
@@ -262,7 +262,20 @@ export function MapPage() {
           busy={busy}
           error={checkinError}
           onCheckin={() => void checkin()}
-          onClose={() => select(null)}
+          onClose={() => {
+            setBuilding(null)
+            select(null)
+          }}
+          backLabel={building ? (building.title ?? 'このビル') : null}
+          onBack={
+            building
+              ? () => {
+                  // ビルの一覧に戻る。済みの印はチェックインを反映して読み直す
+                  setSelected(null)
+                  setBuilding((b) => (b ? { ...b, checked: mapRef.current?.checked() ?? b.checked } : b))
+                }
+              : undefined
+          }
         />
       )}
       {exploreOpen && (
