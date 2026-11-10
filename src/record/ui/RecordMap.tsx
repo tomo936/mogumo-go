@@ -25,11 +25,13 @@ import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
 import { cellsInTown } from '../../towns/domain/shape.ts'
 import type { ClearedTown } from '../../towns/domain/shape.ts'
 
-type Props = { cells: ClearedCell[]; towns: ClearedTown[]; t: number; home: LatLng | null; pins: DayPin[] }
+type Props = { cells: ClearedCell[]; towns: ClearedTown[]; t: number; home: LatLng | null; pins: DayPin[]; wave?: boolean }
 
 const mdLabel = (day: string) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`
 
-export function RecordMap({ cells, towns, t, home, pins }: Props) {
+export function RecordMap({ cells, towns, t, home, pins, wave = true }: Props) {
+  const waveRef = useRef(wave) // 晴れる動き（波）を出すか。スライダーを引いているときは出さずにすぐ反映する
+  waveRef.current = wave
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const [loaded, setLoaded] = useState(false) // 地図の準備ができてからピンを置く（前に置くと左上に出る）
@@ -99,7 +101,7 @@ export function RecordMap({ cells, towns, t, home, pins }: Props) {
       const b = box
       const next = b ? fogClumps(origin, cleared, FAR_HALF_M, b) : []
       const rest = b ? plain.filter((c) => !inBox(c, b)) : plain
-      if (last.length > 0 && next.length < last.length) {
+      if (waveRef.current && last.length > 0 && next.length < last.length) {
         // 晴れるときは、中心から外へ向かって雲が縮んで消える
         fog.setClumps(origin, [...waveClumps(last, next, localFrame(origin).to(center), performance.now() / 1000), ...rest])
       } else {
