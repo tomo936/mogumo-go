@@ -39,7 +39,8 @@ test('読むのに失敗したら知らせる', async () => {
 })
 
 test('ニックネームの変更は profiles の nickname だけを、本人の行で更新する', async () => {
-  const eq = vi.fn(async () => ({ error: null }))
+  const select = vi.fn(async () => ({ data: [{ user_id: 'u1' }], error: null }))
+  const eq = vi.fn(() => ({ select }))
   const update = vi.fn(() => ({ eq }))
   const from = vi.fn(() => ({ update }))
   await createProfileRepo({ from } as unknown as SupabaseClient).updateNickname('u1', 'もぐもぐ')
@@ -49,6 +50,11 @@ test('ニックネームの変更は profiles の nickname だけを、本人の
 })
 
 test('ニックネームの変更に失敗したら知らせる', async () => {
-  const from = vi.fn(() => ({ update: () => ({ eq: async () => ({ error: { message: 'x' } }) }) }))
+  const from = vi.fn(() => ({ update: () => ({ eq: () => ({ select: async () => ({ data: null, error: { message: 'x' } }) }) }) }))
+  await expect(createProfileRepo({ from } as unknown as SupabaseClient).updateNickname('u1', 'もぐ')).rejects.toThrow()
+})
+
+test('1 行も更新されなかったら（行が無い・権限で弾かれた）失敗として知らせる', async () => {
+  const from = vi.fn(() => ({ update: () => ({ eq: () => ({ select: async () => ({ data: [], error: null }) }) }) }))
   await expect(createProfileRepo({ from } as unknown as SupabaseClient).updateNickname('u1', 'もぐ')).rejects.toThrow()
 })

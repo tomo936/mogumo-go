@@ -31,8 +31,9 @@ export function createProfileRepo(client: SupabaseClient): ProfileRepo {
     },
     // マイページのニックネームの変更（S15: 後から変更可・重複OK）
     async updateNickname(userId, nickname) {
-      const { error } = await client.from('profiles').update({ nickname }).eq('user_id', userId)
-      if (error) throw new Error('profiles の更新に失敗しました')
+      // 行が無い・権限で弾かれた（0 行の更新）ときも失敗として知らせる
+      const { data, error } = await client.from('profiles').update({ nickname }).eq('user_id', userId).select('user_id')
+      if (error || !Array.isArray(data) || data.length === 0) throw new Error('profiles の更新に失敗しました')
     },
   }
 }

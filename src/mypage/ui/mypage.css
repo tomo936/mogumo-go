@@ -208,3 +208,12 @@
   z-index: 45;
   overflow-y: auto;
 }
+.mp__retry {
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #c2652a;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
