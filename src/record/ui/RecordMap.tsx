@@ -158,15 +158,20 @@ export function RecordMap({ cells, t, home, pins }: Props) {
       if (!m) {
         const el = document.createElement('button')
         el.type = 'button'
+        // 動き（ぴょん）は中身にだけかける。外側の el には MapLibre が地図の上の位置を transform で入れるので、
+        // el の大きさを変えると位置まで縮んで、地図の左上から飛んでくるように見える
+        const body = document.createElement('span')
+        body.className = 'rc-pin__body'
         const img = document.createElement('img')
         img.src = PIN_ICON[p.kind]
         img.alt = ''
         const num = document.createElement('b')
         num.className = 'rc-pin__num'
+        body.append(img, num)
         const tag = document.createElement('span')
         tag.className = 'rc-pin__tag'
         tag.hidden = true
-        el.append(img, num, tag)
+        el.append(body, tag)
         el.addEventListener('click', () => {
           const show = tag.hidden
           for (const other of markers.values()) other.tag.hidden = true
@@ -178,7 +183,7 @@ export function RecordMap({ cells, t, home, pins }: Props) {
         requestAnimationFrame(() =>
           requestAnimationFrame(() => {
             el.style.visibility = ''
-            el.classList.add('rc-pin--pop')
+            body.classList.add('rc-pin__body--pop')
           }),
         )
         m = { marker, el, num, tag, today: true }

@@ -80,14 +80,15 @@
   background-repeat: no-repeat;
   transform-origin: 50% 100%;
 }
-/* 立っている間の「待機」の動き。足元を軸に少し伸び縮みして上下する（息をする感じ）。
-   MapLibre が transform を書くので、別のプロパティ（scale・translate）で動かす */
+/* 立っている間の「待機」の動き。少し上下する（息をする感じ）。
+   MapLibre が transform で位置を書くので、別のプロパティ（translate）で動かす。
+   scale は使わない（transform の位置ごと縮んで、地図の左上へずれるため） */
 .me-avatar--idle {
   animation: me-avatar-idle 1.6s ease-in-out infinite;
 }
 @keyframes me-avatar-idle {
-  0%, 100% { scale: 1 1; translate: 0 0; }
-  50% { scale: 1.02 0.97; translate: 0 0.5px; }
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 1px; }
 }
 
 /* ---- 作り直し（2026-11-10）: 左上のキャラ札・上の気配・下の扇メニュー ---- */
