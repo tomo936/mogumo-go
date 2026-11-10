@@ -4,12 +4,9 @@ import './zukan.css'
 import type { ShopKind } from '../../shops/domain/shop.ts'
 import { frameTier } from '../../checkin/domain/visits.ts'
 import type { ZukanShop } from '../domain/zukan.ts'
+import { KIND_LABEL } from '../../shops/domain/kindLabel.ts'
 
-const KIND_NAME: Record<ShopKind, string> = {
-  ramen: 'ラーメン', sushi: '寿司', soba: 'そば', washoku: '和食', izakaya: '居酒屋', chinese: '中華', yakiniku: '焼肉',
-  western: '洋食', curry: 'カレー', cafe: 'カフェ', cake: 'スイーツ', bakery: 'パン', donburi: '丼もの', burger: 'ハンバーガー',
-  ethnic: 'エスニック', okonomiyaki: 'お好み焼き', takoyaki: 'たこ焼き', mystery: 'その他',
-}
+const KIND_NAME = KIND_LABEL
 const TIER_NAME = { normal: 'ふつう', silver: '銀', gold: '金' } as const
 const cards = import.meta.glob('../../assets/shops/cards/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
 const cardUrl = (kind: ShopKind) => cards[`../../assets/shops/cards/${kind}.webp`] ?? cards['../../assets/shops/cards/mystery.webp']
