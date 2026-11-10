@@ -272,13 +272,15 @@
   z-index: 2;
   filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.3));
 }
-.rc-pin--pop {
-  animation: rc-pin-pop 0.6s ease-out 1 both;
-}
-/* その場所から、下からぴょんと飛び出す（足元を軸に） */
-.rc-pin {
+.rc-pin__body {
+  position: relative;
+  display: block;
   transform-origin: 50% 100%;
 }
+.rc-pin__body--pop {
+  animation: rc-pin-pop 0.6s ease-out 1 both;
+}
+/* その場所から、下からぴょんと飛び出す（足元を軸に。中身 .rc-pin__body だけを動かす） */
 @keyframes rc-pin-pop {
   0% { translate: 0 0; scale: 0.2 0.2; }
   45% { translate: 0 -14px; scale: 1.1 1.1; }
