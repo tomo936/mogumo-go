@@ -17,6 +17,8 @@ const unfocusCalls: number[] = []
 const postCheckin = vi.fn()
 vi.mock('../checkin/infra/checkinApi.ts', () => ({ postCheckin: (...a: unknown[]) => postCheckin(...a), loadProgress: () => Promise.resolve({ visitsByShop: new Map() }) }))
 vi.mock('../mypage/infra/coins.ts', () => ({ loadCoins: () => Promise.resolve(420) }))
+const syncMissions = vi.fn()
+vi.mock('../missions/infra/missionsApi.ts', () => ({ syncMissions: (...a: unknown[]) => syncMissions(...a) }))
 const readTodayHints = vi.fn()
 const postDailyHints = vi.fn()
 vi.mock('../hints/infra/hintsApi.ts', () => ({
@@ -39,6 +41,8 @@ beforeEach(() => {
   focusAtCalls.length = 0
   syncUntilSettled.mockReset()
   syncUntilSettled.mockResolvedValue(undefined)
+  syncMissions.mockReset()
+  syncMissions.mockResolvedValue(null)
   addTownCalls.length = 0
 })
 vi.mock('../map/ui/MapView.tsx', async () => {
@@ -351,6 +355,47 @@ test('チェックインのあと、持っているコインが地図の上に�
   act(() => last().select(shop))
   await userEvent.click(screen.getByRole('button', { name: 'チェックイン' }))
   expect(await screen.findByRole('img', { name: 'コイン 420' })).toBeInTheDocument()
+})
+
+// ---- 週ミッション ----
+const week = (o: { progress?: number; completed?: boolean; newly?: string[] } = {}) => ({
+  weekEnd: '2026-11-15', newly: o.newly ?? [],
+  missions: [
+    { id: 'm1', difficulty: 'easy', type: 'hint_shop', key: 'hint_trail', kinds: [], target: 1, progress: o.progress ?? 0, reward: 50, completed: o.completed ?? false },
+    { id: 'm2', difficulty: 'normal', type: 'first_visit', key: 'kaitaku', kinds: [], target: 3, progress: 1, reward: 100, completed: false },
+    { id: 'm3', difficulty: 'hard', type: 'weekend', key: 'weekend', kinds: [], target: 3, progress: 0, reward: 150, completed: false },
+  ],
+})
+
+test('気配のシートを開くと、出題つきで週ミッションを読み、チケット3枚を出す', async () => {
+  syncMissions.mockResolvedValue(week())
+  renderPage()
+  await userEvent.click(screen.getByRole('button', { name: '気配' }))
+  expect(await screen.findByRole('button', { name: /かんたん 気配をたどって 0\/1 50コイン/ })).toBeInTheDocument()
+  expect(syncMissions.mock.calls[0][0]).toEqual(expect.objectContaining({ hasHome: expect.any(Boolean), kinds: expect.any(Object) }))
+  await userEvent.click(screen.getByRole('button', { name: /ふつう 開拓日和/ }))
+  expect(screen.getByText('はじめてのお店に3軒。達成で 100 コイン')).toBeInTheDocument()
+})
+
+test('週ミッションが読めなければ「もう一度」。気配のシートは出たまま', async () => {
+  renderPage()
+  await userEvent.click(screen.getByRole('button', { name: '気配' }))
+  expect(await screen.findByText('ミッションを読めませんでした')).toBeInTheDocument()
+  syncMissions.mockResolvedValue(week())
+  await userEvent.click(screen.getAllByRole('button', { name: 'もう一度' }).at(-1)!)
+  expect(await screen.findByRole('button', { name: /かんたん 気配をたどって/ })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: '今日の気配' })).toBeInTheDocument()
+})
+
+test('チェックインのあと数え直し（出題なし）、達成したら演出のあとに帯', async () => {
+  postCheckin.mockResolvedValue({ ok: true, checkinId: 'c1', coins: 30, newCells: [] })
+  syncMissions.mockResolvedValue(week({ progress: 1, completed: true, newly: ['m1'] }))
+  renderPage()
+  act(() => last().position(here))
+  act(() => last().select(shop))
+  await userEvent.click(screen.getByRole('button', { name: 'チェックイン' }))
+  expect(syncMissions).toHaveBeenCalledWith(null)
+  expect(screen.queryByText('ミッション達成！')).not.toBeInTheDocument() // 演出の間は待つ
 })
 
 // ---- 町のクリア・コンプリート ----

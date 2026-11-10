@@ -7,7 +7,9 @@ import type { ExploreStatus } from './useDailyHints.ts'
 import './hints.css'
 import { DoneMark } from '../../ui/DoneMark.tsx'
 import { Icon } from '../../ui/Icon.tsx'
+import { CoinIcon } from '../../ui/CoinIcon.tsx'
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { catchLabel } from '../domain/hint.ts'
 import { kindFromGenre, untilResetLabel } from '../domain/sheetText.ts'
 
@@ -32,6 +34,7 @@ type Props = {
   onRegen: () => void
   onRetry: () => void
   onClose: () => void
+  extra?: ReactNode // 気配の下に出すもの（週ミッションのチケット）
 }
 
 const STATUS_TEXT: Partial<Record<ExploreStatus, string>> = {
@@ -95,7 +98,7 @@ function Row({ h, revealed, distanceM, direction, onPick }: { h: DailyHint; reve
         {h.completed ? (
           <span className="hint-card__stamp">{`達成 +${REWARD}`}</span>
         ) : (
-          <span className="hint-card__reward">{`+${REWARD}`}</span>
+          <span className="hint-card__reward"><CoinIcon size={13} />{`+${REWARD}`}</span>
         )}
       </button>
     </li>
@@ -170,6 +173,7 @@ export function ExploreSheet(p: Props) {
         </>
       )}
       <p className="hint-note">気配は毎日0時に入れかわります</p>
+      {p.extra}
     </section>
   )
 }
