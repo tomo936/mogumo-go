@@ -83,8 +83,8 @@ test('済みの店のピンに ✓、まとめたピンに「1/3」', () => {
   pins.update([bldg(['a', 'b', 'c'])], new Set(['b']))
   const ps = live()[0].el.querySelectorAll('.bldg-pin')
   expect(ps).toHaveLength(3)
-  expect(ps[1].textContent).toContain('✓')
-  expect(ps[0].textContent).not.toContain('✓')
+  expect(ps[1].querySelector('.bldg-pin__mark[aria-label="済み"] svg')).not.toBeNull()
+  expect(ps[0].querySelector('.bldg-pin__mark')).toBeNull()
   zoom = 15
   zoomEnd!()
   expect(live()).toHaveLength(1)
