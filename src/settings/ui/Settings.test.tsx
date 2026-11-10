@@ -42,6 +42,9 @@ test('位置情報の使い方を押すと説明が開く、出典も開く', as
   expect(screen.getByText(/サーバーには送りません/)).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: '出典・クレジット' }))
   expect(screen.getByRole('link', { name: 'OpenStreetMap contributors' })).toBeInTheDocument()
+  // 町の境目（e-Stat の利用規約: 出典と、加工したことを書く）
+  expect(screen.getByRole('link', { name: '政府統計の総合窓口（e-Stat）' })).toHaveAttribute('href', 'https://www.e-stat.go.jp/')
+  expect(screen.getByText('「国勢調査 町丁・字等別境界データ」（総務省統計局）を加工して作成')).toBeInTheDocument()
 })
 
 test('準備中のスイッチは押せない、戻るで閉じる', async () => {
