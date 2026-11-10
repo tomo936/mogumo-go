@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import type { ShopKind } from '../../shops/domain/shop.ts'
-import { evaluate, recentEarned, remaining } from './evaluate.ts'
+import { evaluate, recentEarned, remaining, seriesOf } from './evaluate.ts'
 import type { BadgeInput, BadgeState, BadgeVisit } from './types.ts'
 
 // 日本時間の日時（'2026-11-06 12:10'）
@@ -115,4 +115,16 @@ test('recentEarned は新しい順に n 個', () => {
   expect(r).toHaveLength(2)
   expect(r[0].earnedAt).toBe(jst('2026-11-02 12:00'))
   expect(r[0].earnedAt! >= r[1].earnedAt!).toBe(true)
+})
+
+test('seriesOf: ジャンルは種類ごとに1つ。顔は取れたいちばん上、次は最初のまだの段', () => {
+  const s = evaluate(input([v('ramen', '2026-11-01 12:00'), v('ramen', '2026-11-02 12:00'), v('ramen', '2026-11-03 12:00')]))
+  const series = seriesOf(s)
+  const ramen = series.find((x) => x.face.def.series === 'genre_ramen')!
+  expect(ramen.steps).toHaveLength(5)
+  expect(ramen.face.def.id).toBe('genre_ramen_2')
+  expect(ramen.next?.def.id).toBe('genre_ramen_3')
+  const sushi = series.find((x) => x.face.def.series === 'genre_sushi')!
+  expect(sushi.face.def.id).toBe('genre_sushi_1')
+  expect(series.filter((x) => x.face.def.group === 'genre')).toHaveLength(18)
 })

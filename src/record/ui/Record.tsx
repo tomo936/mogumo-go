@@ -9,6 +9,8 @@ import { RecordMap } from './RecordMap.tsx'
 import type { LatLng } from '../../map/domain/geo.ts'
 import { areaKm2, clearedAt, groupByMonth, timeRange, type ClearedCell, type VisitEntry } from '../domain/timeline.ts'
 import { pinsAt, stepVisitDay, visitsOnDay } from '../domain/dayPins.ts'
+import { evaluate } from '../../badges/domain/evaluate.ts'
+import { BadgeList } from '../../badges/ui/BadgeList.tsx'
 
 type State = { status: 'loading' } | { status: 'error' } | { status: 'ready'; cells: ClearedCell[]; visits: VisitEntry[] }
 
@@ -27,8 +29,11 @@ const timeLabel = (ms: number) => {
   return `${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2, '0')}`
 }
 
-export function Record({ home, onClose }: { home: LatLng | null; onClose: () => void }) {
+export type RecordTab = 'record' | 'badges'
+
+export function Record({ home, onClose, initialTab = 'record' }: { home: LatLng | null; onClose: () => void; initialTab?: RecordTab }) {
   const [state, setState] = useState<State>({ status: 'loading' })
+  const [tab, setTab] = useState<RecordTab>(initialTab)
   const [t, setT] = useState<number | null>(null) // スライダーの日付（null = いちばん新しい）
 
   useEffect(() => {
@@ -51,6 +56,7 @@ export function Record({ home, onClose }: { home: LatLng | null; onClose: () => 
   const today = useMemo(() => visitsOnDay(visits, now), [visits, now])
   const visitedShops = new Set(history.flatMap((g) => g.items.map((i) => i.shopId))).size
   const lv = levelFor(new Set(visits.map((v) => v.shopId)).size)
+  const badges = useMemo(() => (tab === 'badges' ? evaluate({ visits, cellTimes: cells.map((c) => c.at), home }) : []), [tab, visits, cells, home])
 
   return (
     <section className="rc" aria-label="記録">
@@ -60,11 +66,17 @@ export function Record({ home, onClose }: { home: LatLng | null; onClose: () => 
         </button>
         <h2>きろく</h2>
       </header>
+      <div className="rc__tabs" role="tablist" aria-label="記録の切りかえ">
+        <button type="button" role="tab" aria-selected={tab === 'record'} className={tab === 'record' ? 'is-on' : ''} onClick={() => setTab('record')}>きろく</button>
+        <button type="button" role="tab" aria-selected={tab === 'badges'} className={tab === 'badges' ? 'is-on' : ''} onClick={() => setTab('badges')}>じっせき</button>
+      </div>
 
       {state.status === 'loading' && <p className="rc__note">記録を開いています…</p>}
       {state.status === 'error' && <p className="rc__note" role="alert">記録を読み込めませんでした</p>}
 
-      {state.status === 'ready' && (
+      {state.status === 'ready' && tab === 'badges' && <BadgeList states={badges} hasHome={home !== null} />}
+
+      {state.status === 'ready' && tab === 'record' && (
         <>
           <div className="rc__mapcard">
             <RecordMap cells={cells} t={now} home={home} pins={pins} />

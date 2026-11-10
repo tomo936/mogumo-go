@@ -45,6 +45,7 @@ export type Measure = { have: number | null; at: number | null }
 
 export type BadgeDef = {
   id: string
+  series: string // 段のつながり（同じ series は一覧で1つにまとめる。1つだけの実績は id と同じ）
   group: BadgeGroup
   name: string
   how: string // 条件の短い文

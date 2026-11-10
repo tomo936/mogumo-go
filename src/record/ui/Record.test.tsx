@@ -72,3 +72,17 @@ test('町のクリア・コンプリートは準備中の枠、戻るボタン�
   await userEvent.click(screen.getByRole('button', { name: '戻る' }))
   expect(onClose).toHaveBeenCalled()
 })
+
+test('じっせきのタブに切りかえるとバッジが出る', async () => {
+  load.mockResolvedValueOnce({ cells, visits })
+  render(<Record home={null} onClose={() => {}} />)
+  await userEvent.click(await screen.findByRole('tab', { name: 'じっせき' }))
+  expect(screen.getByRole('img', { name: 'はじめてのラーメン' })).toBeInTheDocument()
+  expect(screen.getByText(/とった実績 \d+ \/ \d+/)).toBeInTheDocument()
+})
+
+test('はじめから じっせき のタブで開ける', async () => {
+  load.mockResolvedValueOnce({ cells, visits })
+  render(<Record home={null} onClose={() => {}} initialTab="badges" />)
+  expect(await screen.findByRole('img', { name: 'はじめてのカフェ' })).toBeInTheDocument()
+})

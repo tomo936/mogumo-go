@@ -40,3 +40,14 @@ export function remaining(s: BadgeState): string | null {
   const n = s.def.unit === 'km²' || s.def.unit === 'km' ? Math.round(left * 100) / 100 : left
   return `あと ${n}${s.def.unit}`
 }
+
+// 段のつながりごとにまとめる。見せる顔は「取れたいちばん上の段」、まだ無ければ最初の段。next は次にねらう段
+export type BadgeSeries = { face: BadgeState; steps: BadgeState[]; next: BadgeState | null }
+export function seriesOf(states: BadgeState[]): BadgeSeries[] {
+  const map = new Map<string, BadgeState[]>()
+  for (const s of states) map.set(s.def.series, [...(map.get(s.def.series) ?? []), s])
+  return [...map.values()].map((steps) => {
+    const got = steps.filter((s) => s.earnedAt !== null)
+    return { face: got[got.length - 1] ?? steps[0], steps, next: steps.find((s) => s.earnedAt === null) ?? null }
+  })
+}

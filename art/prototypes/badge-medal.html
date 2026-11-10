@@ -1,0 +1,66 @@
+<html><head><style>
+body{margin:0;background:#f3e9d6;font-family:'Noto Sans CJK JP',sans-serif;color:#4a3b2c}
+.wrap{padding:18px 22px;width:1000px}
+h1{font-size:22px;margin:0 0 4px}.sub{font-size:13px;color:#8a6a48;margin:0 0 12px}
+.row{display:flex;gap:10px;background:#fffdf7;border-radius:20px;padding:16px 10px 10px;margin-bottom:12px;justify-content:space-around}
+.it{text-align:center;font-size:13px;font-weight:800}
+.it small{display:block;font-weight:600;color:#8a6a48;font-size:11px}
+.dark{background:#3b2f25}.dark .it{color:#fff}.dark small{color:#d8c7ae}
+</style></head><body><div class="wrap">
+<h1>バッジ 5段（★1 クリーム → ★2 銅 → ★3 シルバー → ★4 ゴールド → ★5 虹）</h1>
+<p class="sub">ギザギザのふち・金属の光・中の放射の模様・名前のリボン・★の数。まだのものは灰色のシルエット</p>
+<div class="row" id="r1"></div>
+<div class="row" id="r2"></div>
+<div class="row dark" id="r3"></div>
+<script>
+const TIERS={
+ cream:{rim:['#fffaf0','#efe2c8','#c9b48e','#fbf3e2','#d8c6a3'],face:['#fffdf7','#f6ecd8'],ray:'#fff8',rib:['#b89668','#8f7048'],star:'#fff3d6',n:1},
+ bronze:{rim:['#f6c9a0','#c47a45','#8a4a22','#e9a978','#a55e2f'],face:['#ffe6cf','#e7a777'],ray:'#fff3',rib:['#c0703a','#93501f'],star:'#ffd7a8',n:2},
+ silver:{rim:['#ffffff','#c3cad6','#7d8798','#eef1f6','#9aa3b4'],face:['#ffffff','#cfd6e2'],ray:'#fff6',rib:['#6f88b8','#4d6596'],star:'#ffffff',n:3},
+ gold:{rim:['#fff6c2','#f2c230','#b07d0a','#ffe27a','#c99212'],face:['#fff8d6','#f6cf4f'],ray:'#fff5',rib:['#e0503a','#b0331f'],star:'#fff3a0',n:4},
+ rainbow:{rim:['#fff6c2','#f2c230','#b07d0a','#ffe27a','#c99212'],face:null,ray:'#fff7',rib:['#9a6ae0','#6c3fc0'],star:'#ffffff',n:5},
+}
+let uid=0
+function scallop(cx,cy,r,a,n){let d='';for(let i=0;i<=n*4;i++){const t=i/(n*4)*Math.PI*2;const rr=r+a*Math.cos(t*n);d+=(i?'L':'M')+(cx+rr*Math.sin(t)).toFixed(2)+' '+(cy-rr*Math.cos(t)).toFixed(2)}return d+'Z'}
+function rays(cx,cy,r,n){let d='';for(let i=0;i<n;i++){const a1=i/n*Math.PI*2,a2=(i+.5)/n*Math.PI*2;d+=`M${cx} ${cy}L${cx+r*Math.sin(a1)} ${cy-r*Math.cos(a1)}L${cx+r*Math.sin(a2)} ${cy-r*Math.cos(a2)}Z`}return d}
+function badge(tier,img,label,off){
+ const t=TIERS[tier],u='b'+(uid++),R=60,cx=80,cy=74
+ const face=t.face?`<radialGradient id="${u}f" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="${t.face[0]}"/><stop offset="1" stop-color="${t.face[1]}"/></radialGradient>`:
+  `<linearGradient id="${u}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffc4d6"/><stop offset=".25" stop-color="#fff0a6"/><stop offset=".5" stop-color="#c6f5c0"/><stop offset=".75" stop-color="#b9e4ff"/><stop offset="1" stop-color="#e3c9ff"/></linearGradient>`
+ const stars=Array.from({length:t.n},(_,i)=>{const x=cx+(i-(t.n-1)/2)*15;return `<path d="M${x} 131l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" fill="#ffcc33" stroke="#7a4a1c" stroke-width="1.1" stroke-linejoin="round"/>`}).join('')
+ const g=off?'filter="url(#'+u+'g)"':''
+ return `<svg width="160" height="170" viewBox="0 0 160 170"><defs>
+ <linearGradient id="${u}r" x1="0" y1="0" x2="1" y2="1">${t.rim.map((c,i)=>`<stop offset="${i/(t.rim.length-1)}" stop-color="${c}"/>`).join('')}</linearGradient>
+ <linearGradient id="${u}r2" x1="1" y1="1" x2="0" y2="0">${t.rim.map((c,i)=>`<stop offset="${i/(t.rim.length-1)}" stop-color="${c}"/>`).join('')}</linearGradient>
+ ${face}
+ <linearGradient id="${u}rb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${t.rib[0]}"/><stop offset="1" stop-color="${t.rib[1]}"/></linearGradient>
+ <filter id="${u}s" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="#000" flood-opacity=".3"/></filter>
+ <filter id="${u}w"><feMorphology in="SourceAlpha" operator="dilate" radius="3" result="d"/><feFlood flood-color="#fff"/><feComposite in2="d" operator="in" result="o"/><feMerge><feMergeNode in="o"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <filter id="${u}g"><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".45"/></feComponentTransfer></filter>
+ <clipPath id="${u}c"><circle cx="${cx}" cy="${cy}" r="${R-14}"/></clipPath>
+ </defs><g ${g}>
+ <g filter="url(#${u}s)"><path d="${scallop(cx,cy,R,2.2,22)}" fill="url(#${u}r)"/></g>
+ <circle cx="${cx}" cy="${cy}" r="${R-7}" fill="url(#${u}r2)"/>
+ <circle cx="${cx}" cy="${cy}" r="${R-11}" fill="url(#${u}r)"/>
+ <circle cx="${cx}" cy="${cy}" r="${R-14}" fill="url(#${u}f)"/>
+ <path d="${rays(cx,cy,R,20)}" fill="${t.ray}" clip-path="url(#${u}c)"/>
+ <circle cx="${cx}" cy="${cy}" r="${R-14}" fill="none" stroke="#0002" stroke-width="1.5"/>
+ <image href="${img}" x="${cx-31}" y="${cy-36}" width="60" height="60" filter="url(#${u}w)"/>
+ <path d="M${cx-44} ${cy-26} A50 50 0 0 1 ${cx+30} ${cy-46} A58 58 0 0 0 ${cx-44} ${cy-26}Z" fill="#fff" opacity=".55" clip-path="url(#${u}c)"/>
+ <ellipse cx="${cx-24}" cy="${cy-40}" rx="12" ry="5" fill="#fff" opacity=".6" transform="rotate(-30 ${cx-24} ${cy-40})"/>
+ <g filter="url(#${u}s)">
+  <path d="M14 112 h20 v-6 l6 6z" fill="${t.rib[1]}" opacity=".8"/><path d="M146 112 h-20 v-6 l-6 6z" fill="${t.rib[1]}" opacity=".8"/>
+  <path d="M6 112 h22 l-4 9 4 9 h-22z" fill="${t.rib[1]}"/><path d="M154 112 h-22 l4 9 -4 9 h22z" fill="${t.rib[1]}"/>
+  <rect x="20" y="106" width="120" height="22" rx="3" fill="url(#${u}rb)"/>
+  <rect x="20" y="106" width="120" height="5" rx="2" fill="#fff" opacity=".25"/>
+  <text x="${cx}" y="122" text-anchor="middle" font-size="12" font-weight="900" fill="#fff" font-family="Noto Sans CJK JP" letter-spacing=".5">${label}</text>
+ </g>
+ ${stars}
+ ${tier==='rainbow'&&!off?`<path d="M28 30l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#fff"/><path d="M134 22l1.6 4.4 4.4 1.6-4.4 1.6-1.6 4.4-1.6-4.4-4.4-1.6 4.4-1.6z" fill="#fff59a"/><path d="M140 70l1.2 3.3 3.3 1.2-3.3 1.2-1.2 3.3-1.2-3.3-3.3-1.2 3.3-1.2z" fill="#fff"/>`:''}
+ </g></svg>`}
+const sets=[['../pins/icons/pin-cafe.png','カフェ'],['../pins/icons/pin-sushi.png','すし'],['../pins/icons/pin-curry.png','カレー'],['../pins/icons/pin-ramen.png','ラーメン']]
+const tiers=[['cream','はじめて','★1 クリーム（1回）'],['bronze','好き','★2 銅（3回）'],['silver','通','★3 シルバー（10回）'],['gold','名人','★4 ゴールド（30回）'],['rainbow','マスター','★5 虹（50回）']]
+document.getElementById('r1').innerHTML=tiers.map(([t,n,s])=>`<div class="it">${badge(t,'../pins/icons/pin-ramen.png',(n==='はじめて'?'はじめてのラーメン':'ラーメン'+n))}<small>${s}</small></div>`).join('')
+document.getElementById('r2').innerHTML=sets.map(([i,g],k)=>`<div class="it">${badge(tiers[k+1][0],i,g+tiers[k+1][1])}<small>${g}</small></div>`).join('')+`<div class="it">${badge('gold','../pins/icons/pin-ramen.png','はしご上手')}<small>チャレンジ系</small></div>`+`<div class="it">${badge('bronze','../pins/icons/pin-ramen.png','ラーメン好き',true)}<small>まだ（灰色）</small></div>`
+document.getElementById('r3').innerHTML=tiers.map(([t,n,s])=>`<div class="it">${badge(t,'../pins/icons/pin-ramen.png',(n==='はじめて'?'はじめてのラーメン':'ラーメン'+n))}<small>${s}</small></div>`).join('')
+</script></div></body></html>
