@@ -35,11 +35,13 @@ test('error には「もう一度」ボタン', async () => {
 
 test('3件でヒントと距離が出て、店名は出ない', async () => {
   const hints = [hint('a'), hint('b', { genre: 'カフェ' }), hint('c', { isMystery: true, genre: null, catch: null, budget: null })]
-  const p = show({ set: setOf(hints), distances: new Map([['a', 400]]) })
+  const p = show({ set: setOf(hints), distances: new Map([['a', 400]]), directions: new Map([['a', '北東']]) })
   expect(screen.getByText('中華？')).toBeInTheDocument()
   expect(screen.getAllByText('…自家製麺の濃厚つけ麺…').length).toBe(2)
   expect(screen.getAllByText('予算 1,000円台').length).toBeGreaterThan(0)
-  expect(screen.getByText('ここから 約400m')).toBeInTheDocument()
+  expect(screen.getByText('北東へ 約400m')).toBeInTheDocument() // 方角つきの距離
+  expect(screen.getAllByText('+40').length).toBe(3) // ごほうび（チェックイン30＋気配10）
+  expect(screen.getByText(/霧の中に 3つの気配/)).toBeInTheDocument()
   expect(screen.getByText('謎の気配')).toBeInTheDocument()
   expect(screen.getByText('正体は行ってみてのお楽しみ')).toBeInTheDocument()
   expect(document.body.textContent).not.toContain('秘密亭')
@@ -47,10 +49,11 @@ test('3件でヒントと距離が出て、店名は出ない', async () => {
   expect(p.onPickHint).toHaveBeenCalledWith('a')
 })
 
-test('達成は店名と「達成 +10」、明かした気配は店名', () => {
+test('達成は店名と「達成 +40」、明かした気配は店名', () => {
   show({ set: setOf([hint('a', { completed: true }), hint('b'), hint('c')]), revealed: new Set(['b']) })
   expect(screen.getByText('『秘密亭a』')).toBeInTheDocument()
-  expect(screen.getByText('達成 +10')).toBeInTheDocument()
+  expect(screen.getByText('達成 +40')).toBeInTheDocument()
+  expect(screen.getByText(/霧の中に 2つの気配/)).toBeInTheDocument()
   expect(screen.getByText('『秘密亭b』')).toBeInTheDocument()
   expect(document.body.textContent).not.toContain('秘密亭c')
 })

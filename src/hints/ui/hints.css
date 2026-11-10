@@ -284,3 +284,223 @@
 .hint-pin[hidden] {
   display: none;
 }
+
+/* ---- 気配のシート（2026-11-10 作り直し・気配が主役）。お店のシートと同じ手帳風 ----
+   お店のシートの規則（checkin.css の .shop-sheet:not(...)）に負けないよう、クラスを3つ重ねる。
+   設計 docs/superpowers/specs/2026-11-10-hint-sheet-and-weekly-mission-placement.md */
+.shop-sheet.explore-sheet.explore-sheet--top {
+  top: -28px; /* 上の端は画面の外へ（下から出るお店のシートと逆向き） */
+  bottom: auto;
+  left: 0;
+  right: 0;
+  max-height: calc(78vh + 28px);
+  padding: calc(28px + 12px + env(safe-area-inset-top)) 14px 14px;
+  border-width: 0 0 2.5px;
+  border-radius: 0 0 22px 22px;
+  box-shadow: 0 3px 0 rgba(122, 74, 38, 0.18);
+}
+.shop-sheet.explore-sheet.explore-sheet--top::before {
+  top: -10px;
+  bottom: 4px;
+  border-radius: 0 0 17px 17px;
+}
+.explore-sheet--top .shop-sheet__close {
+  top: calc(28px + 10px + env(safe-area-inset-top));
+}
+.explore-sheet__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px;
+  padding-right: 44px;
+}
+.explore-sheet__head .shop-sheet__name {
+  margin: 0;
+  font-size: 22px;
+}
+.explore-sheet__meta {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: right;
+  color: #8a6a48;
+}
+.explore-sheet__meta b {
+  color: #c2652a;
+}
+.explore-sheet__status {
+  color: #7a6450;
+}
+.explore-sheet__notice {
+  border: 1.5px solid #e3cfaa;
+  background: #fff;
+  color: #7a4a26;
+}
+.explore-sheet__retry,
+.explore-sheet__regen {
+  border: 2px solid #7a4a26;
+  border-radius: 14px;
+  background: #fff;
+  color: #7a4a26;
+  box-shadow: 0 3px 0 #7a4a26;
+}
+.explore-sheet__regen:disabled {
+  border-color: #c9b28d;
+  background: #f1e4cc;
+  color: #9c8466;
+  box-shadow: 0 3px 0 #c9b28d;
+}
+.hint-note {
+  color: #8a6a48;
+}
+/* 気配のカード */
+.hint-card {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 2px solid #7a4a26;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 3px 0 rgba(122, 74, 38, 0.35);
+  color: #4a3b2c;
+  text-align: left;
+  overflow: hidden;
+}
+.hint-card--mystery {
+  background: #f6f0ff;
+}
+.hint-card--done {
+  background: #fffaf0;
+}
+.hint-card__window {
+  position: relative;
+  flex: none;
+  width: 76px;
+  height: 76px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 60%, #cfe6ff, #9cc8f2);
+  box-shadow: 0 0 0 2px #7a4a26;
+}
+.hint-card--mystery .hint-card__window {
+  background: radial-gradient(circle at 50% 60%, #ddcdff, #a88ae0);
+}
+.hint-card--open .hint-card__window {
+  background: #ffe9c4;
+}
+.hint-card__window img {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 56px;
+  transform: translate(-50%, -50%);
+  filter: blur(3px) saturate(0.8);
+  opacity: 0.85;
+}
+.hint-card--open .hint-card__window img {
+  filter: none;
+  opacity: 1;
+}
+.hint-card__puff {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 2px rgba(156, 200, 242, 0.7);
+}
+.hint-card__puff--a { left: -10px; top: 46px; width: 46px; height: 36px; }
+.hint-card__puff--b { left: 34px; top: 52px; width: 52px; height: 40px; }
+.hint-card__puff--c { left: 46px; top: -14px; width: 36px; height: 30px; opacity: 0.9; }
+.hint-card__q {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 30px;
+  font-weight: 900;
+  color: #c2652a;
+  text-shadow: 0 2px 0 #fff, 0 0 6px #fff;
+}
+.hint-card--mystery .hint-card__q {
+  color: #7b4fd0;
+}
+.hint-card__done {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  display: flex;
+}
+.hint-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+  padding-right: 34px;
+}
+.hint-card__genre {
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.15;
+  color: #c2652a;
+}
+.hint-card--mystery .hint-card__genre {
+  color: #7b4fd0;
+}
+.hint-card__name {
+  font-size: 16px;
+  font-weight: 900;
+}
+.hint-card__sub {
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: #5a4634;
+}
+.hint-card__chip {
+  align-self: flex-start;
+  padding: 0 7px;
+  border: 1.5px solid #7a4a26;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #7a4a26;
+}
+.hint-card__dist {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+  font-size: 12.5px;
+  font-weight: 900;
+  color: #2f7d5a;
+}
+.hint-card__reward {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  padding: 1px 8px;
+  border: 1.5px solid #7a4a26;
+  border-radius: 999px;
+  background: #f6c453;
+  font-size: 11px;
+  font-weight: 900;
+  color: #4a3b2c;
+}
+.hint-card__stamp {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 0 8px;
+  border: 2.5px solid #d6452f;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  color: #d6452f;
+  font-size: 13px;
+  font-weight: 900;
+  transform: rotate(-10deg);
+}
