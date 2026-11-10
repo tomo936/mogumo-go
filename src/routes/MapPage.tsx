@@ -23,6 +23,7 @@ import type { Shop } from '../shops/domain/shop.ts'
 import { shopSourceEnabled } from '../shops/infra/hotpepper.ts'
 import { guideShops, hintPosition, matchesShop } from '../hints/domain/hint.ts'
 import { ExploreSheet } from '../hints/ui/ExploreSheet.tsx'
+import { directionName } from '../hints/domain/sheetText.ts'
 import { Zukan } from '../zukan/ui/Zukan.tsx'
 import { zukanToShop } from '../zukan/domain/zukan.ts'
 import { HintSheet } from '../hints/ui/HintSheet.tsx'
@@ -204,6 +205,11 @@ export function MapPage() {
     if (me) for (const [id, p] of hints.positions) m.set(id, distanceMeters(me, p))
     return m
   }, [me, hints.positions])
+  const directions = useMemo(() => {
+    const m = new Map<string, string | null>()
+    if (me) for (const [id, p] of hints.positions) m.set(id, directionName(me, p))
+    return m
+  }, [me, hints.positions])
   const pickedHintData = pickedHint ? (hints.set?.hints.find((h) => h.id === pickedHint) ?? null) : null
   const noHints = exploreOpen && hints.status === 'ready' && hints.set !== null && hints.set.hints.length === 0
   const guide = (() => {
@@ -284,6 +290,7 @@ export function MapPage() {
           set={hints.set}
           revealed={hints.revealed}
           distances={distances}
+          directions={directions}
           regenVisible={hints.regenVisible}
           fast={hints.fast}
           notice={hints.notice}
