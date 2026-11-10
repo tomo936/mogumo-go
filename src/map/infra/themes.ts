@@ -26,7 +26,7 @@ export const THEMES = {
     building: '#ffe1bd', buildingLine: '#8a5532', road: '#fffbef', roadCasing: '#8a5532', path: '#f2d7a8', rail: '#a3876a', majorRoad: '#ffe9a3', majorRoadCasing: '#7a4526',
     label: '#6b3f26', labelHalo: '#ffffff', showPlaceLabels: false, showRoadLabels: false,
     illust: {
-      buildingFills: ['#ffe3c2', '#ffd3c4', '#e7f3c9', '#d2e7fb'],
+      buildingFills: ['#fff0dc', '#ffe6c8', '#fbdcb6', '#f4d1a6'], // クリームの濃淡（2026-11-10 オーナーが案Bを選択）
       buildingShadow: 'rgba(130, 75, 35, 0.28)',
       roadScale: 1.5,
       majorRoadScale: 1.25,
