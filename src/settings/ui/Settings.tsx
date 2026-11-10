@@ -116,7 +116,7 @@ export function Settings(p: Props) {
         <a className="st__row st__link st__hp" href="https://webservice.recruit.co.jp/" target="_blank" rel="noopener noreferrer">
           <span>Powered by ホットペッパーグルメ Webサービス</span>
         </a>
-        <div className="st__row"><span>バージョン</span><span className="st__value">{APP_VERSION}</span></div>
+        <div className="st__row"><span>バージョン</span><span className="st__value">{`${APP_VERSION}（${__BUILD_ID__}）`}</span></div>
       </Group>
 
       <div className="st__box is-soon st__last">
