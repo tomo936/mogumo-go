@@ -299,6 +299,37 @@
   border-radius: 0 0 22px 22px;
   box-shadow: 0 3px 0 rgba(122, 74, 38, 0.18);
 }
+.shop-sheet.explore-sheet.explore-sheet--top {
+  padding-bottom: 4px;
+}
+/* 中身が長いときは中だけスクロール（シートの枠・飾りは動かさない。お店のシートの touch-action:none を中だけ戻す） */
+.explore-sheet__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -4px;
+  padding: 3px 4px 0; /* 選んだチケットの縁取りが切れないように */
+}
+/* 下のつまみ（上へスライド・タップでしまう） */
+.explore-sheet__grip {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 0 4px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.explore-sheet__grip span {
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: #c9b896;
+}
 .shop-sheet.explore-sheet.explore-sheet--top::before {
   top: -10px;
   bottom: 4px;
