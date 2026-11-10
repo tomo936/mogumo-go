@@ -23,6 +23,7 @@
   color: #6b4a2b;
 }
 .rc__back {
+  padding: 0; /* 共通の button の余白でアイコンが潰れる（iPhone） */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -264,6 +265,26 @@
   display: block;
   width: 100%;
   pointer-events: none;
+}
+/* 前の日に行ったお店は小さい点だけ（その日に行ったお店と見分ける） */
+.rc-pin:not(.rc-pin--today) {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #c2652a;
+  opacity: 0.8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.rc-pin:not(.rc-pin--today) img {
+  display: none;
+}
+/* 出てくるときは、その場でふわっと（置き場所が決まってから見せる） */
+.rc-pin {
+  animation: rc-pin-in 0.25s ease-out;
+}
+@keyframes rc-pin-in {
+  from { opacity: 0; }
 }
 .rc-pin--today {
   width: 40px;

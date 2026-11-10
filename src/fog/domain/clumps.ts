@@ -41,14 +41,15 @@ function nearestCleared(cleared: Cleared, p: LatLng, mLng: number, maxM: number)
   return best < maxM * maxM ? Math.sqrt(best) : Infinity
 }
 
-export function fogClumps(origin: LatLng, cleared: Cleared): Clump[] {
+// half: 塊を置く範囲の半幅（m）。ふだんは現在地から FOG_HALF_M、記録の地図の遠くは広く
+export function fogClumps(origin: LatLng, cleared: Cleared, half: number = FOG_HALF_M): Clump[] {
   // 格子点の番号は緯度経度の絶対値から決めるので、作り直しても同じ場所に同じ塊が出る。
   // x・y（origin からの m）だけは origin の緯度の 1度あたりの m で測る
   const mLng = M_PER_DEG_LAT * Math.cos((origin.lat * Math.PI) / 180)
-  const j0 = Math.floor((origin.lat * M_PER_DEG_LAT - FOG_HALF_M) / ROW_M)
-  const j1 = Math.ceil((origin.lat * M_PER_DEG_LAT + FOG_HALF_M) / ROW_M)
-  const i0 = Math.floor((origin.lng * GRID_M_LNG - FOG_HALF_M * (GRID_M_LNG / mLng)) / CLUMP_STEP_M) - 1
-  const i1 = Math.ceil((origin.lng * GRID_M_LNG + FOG_HALF_M * (GRID_M_LNG / mLng)) / CLUMP_STEP_M) + 1
+  const j0 = Math.floor((origin.lat * M_PER_DEG_LAT - half) / ROW_M)
+  const j1 = Math.ceil((origin.lat * M_PER_DEG_LAT + half) / ROW_M)
+  const i0 = Math.floor((origin.lng * GRID_M_LNG - half * (GRID_M_LNG / mLng)) / CLUMP_STEP_M) - 1
+  const i1 = Math.ceil((origin.lng * GRID_M_LNG + half * (GRID_M_LNG / mLng)) / CLUMP_STEP_M) + 1
   const out: Clump[] = []
   for (let j = j0; j <= j1; j++) {
     const shift = (j & 1) * 0.5
@@ -57,7 +58,7 @@ export function fogClumps(origin: LatLng, cleared: Cleared): Clump[] {
       const lng = ((i + shift) * CLUMP_STEP_M + (hash01(i, j, 1) - 0.5) * CLUMP_JITTER * CLUMP_STEP_M) / GRID_M_LNG
       const x = (lng - origin.lng) * mLng
       const y = (lat - origin.lat) * M_PER_DEG_LAT
-      if (Math.abs(x) > FOG_HALF_M || Math.abs(y) > FOG_HALF_M) continue
+      if (Math.abs(x) > half || Math.abs(y) > half) continue
       const p = { lat, lng }
       if (cleared.has(cellKey(cellOf(p)))) continue
       let w = CLUMP_MIN_M + hash01(i, j, 3) * (CLUMP_MAX_M - CLUMP_MIN_M)
