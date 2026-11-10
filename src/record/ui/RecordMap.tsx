@@ -17,11 +17,16 @@ import { cellKey } from '../../fog/domain/grid.ts'
 import { createFogLayer } from '../../fog/infra/fogLayer.ts'
 import { clearedAt, type ClearedCell } from '../domain/timeline.ts'
 import { MAX_ZOOM, MIN_ZOOM, viewOf, zoomFor } from '../domain/view.ts'
+import type { DayPin } from '../domain/dayPins.ts'
+import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
 
-type Props = { cells: ClearedCell[]; t: number; home: LatLng | null }
+type Props = { cells: ClearedCell[]; t: number; home: LatLng | null; pins: DayPin[] }
 
-export function RecordMap({ cells, t, home }: Props) {
+const mdLabel = (day: string) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`
+
+export function RecordMap({ cells, t, home, pins }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<MapLibreMap | null>(null)
   const apply = useRef<(t: number) => void>(() => {})
 
   // 地図は最初に1回だけ作る（日付は apply で変える）
@@ -46,6 +51,7 @@ export function RecordMap({ cells, t, home }: Props) {
       attributionControl: false,
     })
     map.touchZoomRotate.disableRotation()
+    mapRef.current = map
     // 自宅の目印（雲の上に出る。家のアイコンの丸とやさしい輪）
     let homeMarker: Marker | null = null
     if (home) {
@@ -91,6 +97,7 @@ export function RecordMap({ cells, t, home }: Props) {
       if (pending !== null) cancelAnimationFrame(pending)
       apply.current = () => {}
       homeMarker?.remove()
+      mapRef.current = null
       map.remove()
     }
     // 地図は日付が変わっても作り直さない（cells・home が読み込めた最初の値で作る）
@@ -100,6 +107,44 @@ export function RecordMap({ cells, t, home }: Props) {
   useEffect(() => {
     apply.current(t)
   }, [t])
+
+  // 行ったお店のピン（スライダーの日のお店は大きく番号つき）。押すと店名と日付の札
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    let openTag: HTMLElement | null = null
+    const markers = pins.map((p) => {
+      const el = document.createElement('button')
+      el.type = 'button'
+      el.className = p.today ? 'rc-pin rc-pin--today' : 'rc-pin'
+      el.setAttribute('aria-label', `${p.name} ${mdLabel(p.lastDay)}`)
+      const img = document.createElement('img')
+      img.src = PIN_ICON[p.kind]
+      img.alt = ''
+      el.append(img)
+      if (p.order !== null) {
+        const num = document.createElement('b')
+        num.className = 'rc-pin__num'
+        num.textContent = String(p.order)
+        el.append(num)
+      }
+      const tag = document.createElement('span')
+      tag.className = 'rc-pin__tag'
+      tag.textContent = `${p.name} ・ ${mdLabel(p.lastDay)}`
+      tag.hidden = true
+      el.append(tag)
+      el.addEventListener('click', () => {
+        const show = tag.hidden
+        if (openTag) openTag.hidden = true
+        tag.hidden = !show
+        openTag = show ? tag : null
+      })
+      return new Marker({ element: el, anchor: 'bottom' }).setLngLat([p.lng, p.lat]).addTo(map)
+    })
+    return () => {
+      for (const m of markers) m.remove()
+    }
+  }, [pins])
 
   return <div ref={containerRef} className="rc-map" role="img" aria-label="自宅を中心にした、晴れた場所と雲の地図（真上から）" />
 }

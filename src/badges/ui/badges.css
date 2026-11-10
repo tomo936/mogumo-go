@@ -1,0 +1,125 @@
+/* 実績の一覧（記録の「じっせき」タブ）。明るい昼の手帳の色 */
+.bd__total {
+  margin: 0 2px 10px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #8a6a48;
+}
+.bd__group {
+  margin-bottom: 14px;
+  padding: 12px 8px 6px;
+  border-radius: 18px;
+  background: #fffdf7;
+  box-shadow: 0 2px 8px rgba(107, 74, 43, 0.08);
+}
+.bd__head {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 6px 6px;
+  font-size: 15px;
+  color: #4a3b2c;
+}
+.bd__head small {
+  font-size: 12px;
+  color: #8a6a48;
+}
+.bd__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  justify-items: center;
+}
+.bd__item {
+  padding: 2px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.bd-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.bd-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: rgba(59, 47, 37, 0.35);
+}
+.bd-sheet__card {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  padding: 16px 20px calc(18px + env(safe-area-inset-bottom));
+  border-radius: 24px 24px 0 0;
+  background: #fffaf2;
+  text-align: center;
+  color: #4a3b2c;
+  animation: bd-up 0.22s ease-out;
+}
+@keyframes bd-up {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.bd-sheet__card h4 {
+  margin: 4px 0 6px;
+  font-size: 20px;
+}
+.bd-sheet__how {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.bd-sheet__got,
+.bd-sheet__left {
+  display: inline-block;
+  margin: 0 0 12px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.bd-sheet__got {
+  background: #e3f4ea;
+  color: #2f7d5a;
+}
+.bd-sheet__left {
+  background: #f6ecd8;
+  color: #c2652a;
+}
+.bd-sheet__close {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  font-size: 15px;
+  font-weight: 800;
+  color: #4a3b2c;
+}
+.bd-sheet__steps {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  margin: 0 0 14px;
+}
+.bd-sheet__steps div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2px;
+  border-radius: 12px;
+}
+.bd-sheet__steps div.is-face {
+  background: #f6ecd8;
+}
+.bd-sheet__steps small {
+  font-size: 10px;
+  font-weight: 800;
+  color: #8a6a48;
+}

@@ -1,0 +1,155 @@
+/* 設定（全画面）。記録・マイページと同じ「明るい昼の手帳」 */
+.st {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow-y: auto;
+  padding: calc(10px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom));
+  background-color: #f3e9d6;
+  background-image: radial-gradient(rgba(120, 90, 50, 0.07) 1px, transparent 1px);
+  background-size: 14px 14px;
+  color: #4a3b2c;
+}
+.st__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.st__bar h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #6b4a2b;
+}
+.st__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fffdf7;
+  box-shadow: 0 2px 6px rgba(90, 60, 30, 0.18);
+  color: #6b4a2b;
+}
+.st__group h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 4px 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #8a6a48;
+}
+.st__box {
+  overflow: hidden;
+  border-radius: 14px;
+  background: #fffdf7;
+  box-shadow: 0 2px 6px rgba(107, 74, 43, 0.06);
+}
+.st__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 14px;
+  border: 0;
+  border-top: 1px solid #f0e6d4;
+  background: none;
+  font-size: 14px;
+  font-weight: 700;
+  color: #4a3b2c;
+  text-align: left;
+  text-decoration: none;
+}
+.st__box > .st__row:first-child {
+  border-top: 0;
+}
+.st__row small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #8a6a48;
+}
+.st__row.is-soon {
+  opacity: 0.55;
+}
+.st__link {
+  cursor: pointer;
+}
+.st__link > span:last-child {
+  color: #b9a88c;
+}
+.st__warn {
+  color: #c2452a;
+}
+.st__hp span {
+  font-size: 12px;
+  font-weight: 500;
+}
+.st__value {
+  font-weight: 500;
+}
+.st__soon {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #b9a88c;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+}
+.st__vol {
+  width: 120px;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #6cbf93 60%, #e2d6c0 60%);
+}
+.st__switch {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 13px;
+  background: #d8ccb6;
+  transition: background 0.15s;
+}
+.st__switch::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: left 0.15s;
+}
+.st__switch.is-on {
+  background: #6cbf93;
+}
+.st__switch.is-on::after {
+  left: 21px;
+}
+.st__text {
+  margin: 0;
+  padding: 0 14px 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #5a4634;
+}
+.st__text p {
+  margin: 4px 0;
+}
+.st__last {
+  margin-top: 18px;
+}

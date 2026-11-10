@@ -7,6 +7,7 @@ export type ProfileRepo = {
   exists(userId: string): Promise<boolean>
   load(userId: string): Promise<{ nickname: string; starterId: StarterId } | null>
   create(input: { nickname: string; starterId: StarterId }): Promise<void>
+  updateNickname(userId: string, nickname: string): Promise<void>
 }
 
 // profiles に送るのはニックネームとキャラの番号だけ。自宅の位置は送らない
@@ -27,6 +28,11 @@ export function createProfileRepo(client: SupabaseClient): ProfileRepo {
     async create({ nickname, starterId }) {
       const { error } = await client.from('profiles').insert({ nickname, starter_character_id: starterId })
       if (error) throw new Error('profiles の作成に失敗しました')
+    },
+    // マイページのニックネームの変更（S15: 後から変更可・重複OK）
+    async updateNickname(userId, nickname) {
+      const { error } = await client.from('profiles').update({ nickname }).eq('user_id', userId)
+      if (error) throw new Error('profiles の更新に失敗しました')
     },
   }
 }

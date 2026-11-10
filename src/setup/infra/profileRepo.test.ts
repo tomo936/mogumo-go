@@ -37,3 +37,18 @@ test('読むのに失敗したら知らせる', async () => {
   const f = fakeClient({ data: null, error: { message: 'x' } })
   await expect(createProfileRepo(f.client).exists('u')).rejects.toThrow()
 })
+
+test('ニックネームの変更は profiles の nickname だけを、本人の行で更新する', async () => {
+  const eq = vi.fn(async () => ({ error: null }))
+  const update = vi.fn(() => ({ eq }))
+  const from = vi.fn(() => ({ update }))
+  await createProfileRepo({ from } as unknown as SupabaseClient).updateNickname('u1', 'もぐもぐ')
+  expect(from).toHaveBeenCalledWith('profiles')
+  expect(update).toHaveBeenCalledWith({ nickname: 'もぐもぐ' })
+  expect(eq).toHaveBeenCalledWith('user_id', 'u1')
+})
+
+test('ニックネームの変更に失敗したら知らせる', async () => {
+  const from = vi.fn(() => ({ update: () => ({ eq: async () => ({ error: { message: 'x' } }) }) }))
+  await expect(createProfileRepo({ from } as unknown as SupabaseClient).updateNickname('u1', 'もぐ')).rejects.toThrow()
+})

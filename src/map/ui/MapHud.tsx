@@ -1,7 +1,6 @@
 // 地図の上に重ねる部品: 左上のキャラ札（Lv）、上の真ん中の気配、下の真ん中のメニュー（扇で5つ）。
 // 2026-11-10 オーナー決定の配置。メニューの丸のアイコンは仮（絵はミシェーラに依頼予定）。
 import { useState } from 'react'
-import type { ReactNode } from 'react'
 import { fanPositions } from '../domain/menuFan.ts'
 import { Icon } from '../../ui/Icon.tsx'
 import type { IconName } from '../../ui/Icon.tsx'
@@ -27,21 +26,21 @@ type Props = {
   onHintTap: () => void
   onZukan: () => void
   onRecord: () => void
+  onMyPage: () => void
+  onSettings: () => void
   onSoon: (name: string) => void
-  settings: ReactNode // 設定の中身（出典・ピンの表示・ログアウト）
   pinsHidden: boolean
   onTogglePins: () => void
 }
 
 export function MapHud(p: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const items: { icon: IconName; name: string; run: () => void }[] = [
     { icon: 'zukan', name: '図鑑', run: () => p.onZukan() },
     { icon: 'record', name: '記録', run: () => p.onRecord() },
     { icon: 'gacha', name: 'ガチャ', run: () => p.onSoon('ガチャ') },
-    { icon: 'person', name: 'マイページ', run: () => p.onSoon('マイページ') },
-    { icon: 'settings', name: '設定', run: () => setSettingsOpen(true) },
+    { icon: 'person', name: 'マイページ', run: () => p.onMyPage() },
+    { icon: 'settings', name: '設定', run: () => p.onSettings() },
   ]
   const spots = fanPositions(items.length, 0, 0, FAN_RADIUS)
   return (
@@ -97,17 +96,6 @@ export function MapHud(p: Props) {
         </button>
       </div>
 
-      {settingsOpen && (
-        <section className="hud-screen" aria-label="設定">
-          <header className="hud-screen__bar">
-            <button type="button" className="hud-screen__back" aria-label="戻る" onClick={() => setSettingsOpen(false)}>
-              ←
-            </button>
-            <h2>設定</h2>
-          </header>
-          <div className="hud-screen__body">{p.settings}</div>
-        </section>
-      )}
     </>
   )
 }

@@ -13,8 +13,8 @@ import { Record } from './Record.tsx'
 const day = (s: string) => Date.parse(`${s}T12:00:00+09:00`)
 const cells: ClearedCell[] = Array.from({ length: 1600 }, (_, i) => ({ x: i % 40, y: Math.floor(i / 40), at: day(i < 800 ? '2026-10-01' : '2026-11-03') }))
 const visits: VisitEntry[] = [
-  { shopId: 'hp:A', name: '麺屋A', kind: 'ramen', photoUrl: null, day: '2026-10-05' },
-  { shopId: 'hp:B', name: 'カフェB', kind: 'cafe', photoUrl: null, day: '2026-11-03' },
+  { shopId: 'hp:A', name: '麺屋A', kind: 'ramen', photoUrl: null, day: '2026-10-05', at: Date.parse('2026-10-05T03:00:00Z'), lat: 35, lng: 139, wasHint: false, mysteryHint: false },
+  { shopId: 'hp:B', name: 'カフェB', kind: 'cafe', photoUrl: null, day: '2026-11-03', at: Date.parse('2026-11-03T03:00:00Z'), lat: 35, lng: 139, wasHint: false, mysteryHint: false },
 ]
 
 test('読み込み中の文を出し、読めたら数字と履歴を出す（いちばん新しい日で）', async () => {
@@ -24,7 +24,7 @@ test('読み込み中の文を出し、読めたら数字と履歴を出す（�
   // 1600 マス = 1km²
   expect(await screen.findByText('1.00')).toBeInTheDocument()
   expect(screen.getByText('麺屋A')).toBeInTheDocument()
-  expect(screen.getByText('カフェB')).toBeInTheDocument()
+  expect(screen.getAllByText('カフェB')).toHaveLength(2) // この日に行ったお店 と 履歴
   expect(screen.getByText('2026年11月')).toBeInTheDocument()
 })
 
@@ -38,11 +38,17 @@ test('スライダーを前の日に動かすと、そのあとに晴れた場�
   expect(screen.queryByText('カフェB')).not.toBeInTheDocument()
 })
 
-test('1週前ボタンで日付が戻る', async () => {
+test('‹ は前の行った日へ跳び、見出しに曜日と軒数、その日のお店の一覧', async () => {
   load.mockResolvedValueOnce({ cells, visits })
   render(<Record home={null} onClose={() => {}} />)
-  await userEvent.click(await screen.findByRole('button', { name: '1週間前' }))
-  expect(screen.getByText('0.50')).toBeInTheDocument() // 11/3 から 1 週戻ると 10/27 → 10/01 分だけ
+  expect(await screen.findByText(/^11\/3（火）\s+1軒$/)).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '前の行った日' }))
+  expect(screen.getByText(/^10\/5（月）\s+1軒$/)).toBeInTheDocument()
+  expect(screen.getByText('0.50')).toBeInTheDocument() // 10/01 に晴れた分だけ
+  expect(screen.getByText('この日に行ったお店')).toBeInTheDocument()
+  expect(screen.getByText('12:00')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '前の行った日' }))
+  expect(screen.getByText(/^10\/5（月）\s+1軒$/)).toBeInTheDocument() // それより前は無いので止まる
 })
 
 test('晴れた場所が無ければ案内を出し、スライダーは出さない', async () => {
@@ -65,4 +71,18 @@ test('町のクリア・コンプリートは準備中の枠、戻るボタン�
   expect(await screen.findByText('町のクリア・コンプリート')).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: '戻る' }))
   expect(onClose).toHaveBeenCalled()
+})
+
+test('じっせきのタブに切りかえるとバッジが出る', async () => {
+  load.mockResolvedValueOnce({ cells, visits })
+  render(<Record home={null} onClose={() => {}} />)
+  await userEvent.click(await screen.findByRole('tab', { name: 'じっせき' }))
+  expect(screen.getByRole('img', { name: 'はじめてのラーメン' })).toBeInTheDocument()
+  expect(screen.getByText(/とった実績 \d+ \/ \d+/)).toBeInTheDocument()
+})
+
+test('はじめから じっせき のタブで開ける', async () => {
+  load.mockResolvedValueOnce({ cells, visits })
+  render(<Record home={null} onClose={() => {}} initialTab="badges" />)
+  expect(await screen.findByRole('img', { name: 'はじめてのカフェ' })).toBeInTheDocument()
 })

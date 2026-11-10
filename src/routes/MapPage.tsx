@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthContext.ts'
-import { CreditsButton } from '../credits/CreditsButton.tsx'
 import { LocationOverlay } from '../map/ui/LocationOverlay.tsx'
 import { MapView } from '../map/ui/MapView.tsx'
 import type { MapViewHandle } from '../map/ui/MapView.tsx'
@@ -11,7 +10,9 @@ import { loadProgress, postCheckin } from '../checkin/infra/checkinApi.ts'
 import { profileRepo } from '../setup/infra/profileRepo.ts'
 import { levelFor } from '../zukan/domain/level.ts'
 import { MapHud } from '../map/ui/MapHud.tsx'
-import { Record } from '../record/ui/Record.tsx'
+import { Record, type RecordTab } from '../record/ui/Record.tsx'
+import { MyPage } from '../mypage/ui/MyPage.tsx'
+import { Settings } from '../settings/ui/Settings.tsx'
 import type { StarterId } from '../setup/infra/profileRepo.ts'
 import { CheckinEffect } from '../checkin/ui/CheckinEffect.tsx'
 import { BuildingSheet } from '../checkin/ui/BuildingSheet.tsx'
@@ -129,7 +130,9 @@ export function MapPage() {
     hints.openSheet()
   }
   const [zukanOpen, setZukanOpen] = useState(false) // 図鑑（メニューから開く）
-  const [recordOpen, setRecordOpen] = useState(false) // 記録（メニューから開く）
+  const [recordTab, setRecordTab] = useState<RecordTab | null>(null) // 記録（メニューから開く。マイページからは じっせき で）
+  const [myPageOpen, setMyPageOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [profile, setProfile] = useState<{ nickname: string; starterId: StarterId } | null>(null)
   const [visitedCount, setVisitedCount] = useState(0) // プレイヤーのレベルの元（行ったお店の数）
   const [soonName, setSoonName] = useState<string | null>(null) // まだ作っていない画面の名前（短く出す）
@@ -293,7 +296,30 @@ export function MapPage() {
           onClose={() => setZukanOpen(false)}
         />
       )}
-      {recordOpen && <Record home={home} onClose={() => setRecordOpen(false)} />}
+      {recordTab && <Record home={home} initialTab={recordTab} onClose={() => setRecordTab(null)} />}
+      {myPageOpen && userId && (
+        <MyPage
+          userId={userId}
+          nickname={profile?.nickname ?? null}
+          starterId={profile?.starterId ?? 101}
+          home={home}
+          onNicknameChanged={(nickname) => setProfile((p) => (p ? { ...p, nickname } : p))}
+          onOpenBadges={() => {
+            setMyPageOpen(false)
+            setRecordTab('badges')
+          }}
+          onClose={() => setMyPageOpen(false)}
+        />
+      )}
+      {settingsOpen && (
+        <Settings
+          email={session?.user.email ?? null}
+          pinsHidden={pinsHidden}
+          onTogglePins={togglePins}
+          onSignOut={() => void signOut()}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
       {pickedHintData && (
         <HintSheet hint={pickedHintData} distanceM={distances.get(pickedHintData.id) ?? null} onClose={closeHint} />
       )}
@@ -320,19 +346,19 @@ export function MapPage() {
           }}
           onRecord={() => {
             closeExplore()
-            setRecordOpen(true)
+            setRecordTab('record')
+          }}
+          onMyPage={() => {
+            closeExplore()
+            setMyPageOpen(true)
+          }}
+          onSettings={() => {
+            closeExplore()
+            setSettingsOpen(true)
           }}
           onSoon={(name) => setSoonName(name)}
           pinsHidden={pinsHidden}
           onTogglePins={togglePins}
-          settings={
-            <div className="hud-settings__list">
-              <CreditsButton />
-              <button type="button" className="hud-settings__item" onClick={() => void signOut()}>
-                ログアウト
-              </button>
-            </div>
-          }
         />
         {soonName && <p className="hud-soon" role="status">{`${soonName}は準備中です`}</p>}
       </div>
