@@ -24,7 +24,7 @@ test('読み込み中の文を出し、読めたら数字と履歴を出す（�
   // 1600 マス = 1km²
   expect(await screen.findByText('1.00')).toBeInTheDocument()
   expect(screen.getByText('麺屋A')).toBeInTheDocument()
-  expect(screen.getByText('カフェB')).toBeInTheDocument()
+  expect(screen.getAllByText('カフェB')).toHaveLength(2) // この日に行ったお店 と 履歴
   expect(screen.getByText('2026年11月')).toBeInTheDocument()
 })
 
@@ -38,11 +38,17 @@ test('スライダーを前の日に動かすと、そのあとに晴れた場�
   expect(screen.queryByText('カフェB')).not.toBeInTheDocument()
 })
 
-test('1週前ボタンで日付が戻る', async () => {
+test('‹ は前の行った日へ跳び、見出しに曜日と軒数、その日のお店の一覧', async () => {
   load.mockResolvedValueOnce({ cells, visits })
   render(<Record home={null} onClose={() => {}} />)
-  await userEvent.click(await screen.findByRole('button', { name: '1週間前' }))
-  expect(screen.getByText('0.50')).toBeInTheDocument() // 11/3 から 1 週戻ると 10/27 → 10/01 分だけ
+  expect(await screen.findByText(/^11\/3（火）\s+1軒$/)).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '前の行った日' }))
+  expect(screen.getByText(/^10\/5（月）\s+1軒$/)).toBeInTheDocument()
+  expect(screen.getByText('0.50')).toBeInTheDocument() // 10/01 に晴れた分だけ
+  expect(screen.getByText('この日に行ったお店')).toBeInTheDocument()
+  expect(screen.getByText('12:00')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '前の行った日' }))
+  expect(screen.getByText(/^10\/5（月）\s+1軒$/)).toBeInTheDocument() // それより前は無いので止まる
 })
 
 test('晴れた場所が無ければ案内を出し、スライダーは出さない', async () => {

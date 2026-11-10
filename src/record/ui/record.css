@@ -249,3 +249,90 @@
   from { transform: scale(0.7); opacity: 1; }
   to { transform: scale(1.5); opacity: 0; }
 }
+
+/* 行ったお店のピン（記録の地図）。マーカーは absolute のまま（relative にすると他のマーカーを押し下げる） */
+.rc-pin {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  background: none;
+  width: 22px;
+  opacity: 0.75;
+  cursor: pointer;
+}
+.rc-pin img {
+  display: block;
+  width: 100%;
+  pointer-events: none;
+}
+.rc-pin--today {
+  width: 40px;
+  opacity: 1;
+  z-index: 2;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.3));
+  animation: rc-pin-pop 0.5s ease-out 1;
+}
+@keyframes rc-pin-pop {
+  0% { translate: 0 0; scale: 0.6; }
+  60% { translate: 0 -8px; scale: 1.08; }
+  100% { translate: 0 0; scale: 1; }
+}
+.rc-pin__num {
+  position: absolute;
+  left: 50%;
+  top: -10px;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 20px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #c2652a;
+  color: #fff;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+.rc-pin__tag {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  padding: 4px 9px;
+  border-radius: 10px;
+  background: #fffdf7;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  color: #4a3b2c;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.rc__today {
+  margin: 4px 0 10px;
+}
+.rc__today-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #fffdf7;
+  font-size: 13px;
+}
+.rc__today-item b {
+  flex: 1;
+}
+.rc__today-item span:last-child {
+  color: #8a6a48;
+}
+.rc__today-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #c2652a;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+}

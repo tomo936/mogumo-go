@@ -7,16 +7,24 @@ import { levelFor } from '../../zukan/domain/level.ts'
 import { loadRecord } from '../infra/recordApi.ts'
 import { RecordMap } from './RecordMap.tsx'
 import type { LatLng } from '../../map/domain/geo.ts'
-import { areaKm2, clearedAt, groupByMonth, stepWeek, timeRange, type ClearedCell, type VisitEntry } from '../domain/timeline.ts'
+import { areaKm2, clearedAt, groupByMonth, timeRange, type ClearedCell, type VisitEntry } from '../domain/timeline.ts'
+import { pinsAt, stepVisitDay, visitsOnDay } from '../domain/dayPins.ts'
 
 type State = { status: 'loading' } | { status: 'error' } | { status: 'ready'; cells: ClearedCell[]; visits: VisitEntry[] }
 
 const NO_CELLS: ClearedCell[] = []
 const NO_VISITS: VisitEntry[] = []
 
+const WEEK = ['日', '月', '火', '水', '木', '金', '土']
+const jstDate = (ms: number) => new Date(ms + 9 * 3600_000) // 日本時間（UTC の読み出しで使う）
 const dayLabel = (ms: number) => {
-  const d = new Date(ms + 9 * 3600_000) // 日本時間
+  const d = jstDate(ms)
   return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`
+}
+const dayWithWeek = (ms: number) => `${dayLabel(ms)}（${WEEK[jstDate(ms).getUTCDay()]}）`
+const timeLabel = (ms: number) => {
+  const d = jstDate(ms)
+  return `${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2, '0')}`
 }
 
 export function Record({ home, onClose }: { home: LatLng | null; onClose: () => void }) {
@@ -39,6 +47,8 @@ export function Record({ home, onClose }: { home: LatLng | null; onClose: () => 
   const now = t ?? range?.end ?? 0
   const shown = useMemo(() => clearedAt(cells, now), [cells, now])
   const history = useMemo(() => groupByMonth(visits, now), [visits, now])
+  const pins = useMemo(() => pinsAt(visits, now), [visits, now])
+  const today = useMemo(() => visitsOnDay(visits, now), [visits, now])
   const visitedShops = new Set(history.flatMap((g) => g.items.map((i) => i.shopId))).size
   const lv = levelFor(new Set(visits.map((v) => v.shopId)).size)
 
@@ -57,16 +67,16 @@ export function Record({ home, onClose }: { home: LatLng | null; onClose: () => 
       {state.status === 'ready' && (
         <>
           <div className="rc__mapcard">
-            <RecordMap cells={cells} t={now} home={home} />
+            <RecordMap cells={cells} t={now} home={home} pins={pins} />
             {range === null && <p className="rc__empty">まだ晴れた場所がありません。お店に行くと、ここに光が広がります</p>}
           </div>
 
           {range !== null && (
             <div className="rc__slider">
               <div className="rc__slider-head">
-                <button type="button" aria-label="1週間前" onClick={() => setT(stepWeek(now, -1, range))}>‹</button>
-                <b>{dayLabel(now)}</b>
-                <button type="button" aria-label="1週間後" onClick={() => setT(stepWeek(now, 1, range))}>›</button>
+                <button type="button" aria-label="前の行った日" onClick={() => setT(stepVisitDay(now, -1, visits, range))}>‹</button>
+                <b>{today.length > 0 ? `${dayWithWeek(now)}　${today.length}軒` : dayWithWeek(now)}</b>
+                <button type="button" aria-label="次の行った日" onClick={() => setT(stepVisitDay(now, 1, visits, range))}>›</button>
               </div>
               <input
                 type="range"
@@ -78,6 +88,19 @@ export function Record({ home, onClose }: { home: LatLng | null; onClose: () => 
                 onChange={(e) => setT(Number(e.target.value))}
               />
               <div className="rc__slider-ends"><span>{dayLabel(range.start)}</span><span>{dayLabel(range.end)}</span></div>
+            </div>
+          )}
+
+          {today.length > 0 && (
+            <div className="rc__today">
+              <h3 className="rc__h">この日に行ったお店</h3>
+              {today.map((v, i) => (
+                <div className="rc__today-item" key={`${v.shopId}-${v.at}`}>
+                  <span className="rc__today-num">{i + 1}</span>
+                  <b>{v.name}</b>
+                  <span>{timeLabel(v.at)}</span>
+                </div>
+              ))}
             </div>
           )}
 
