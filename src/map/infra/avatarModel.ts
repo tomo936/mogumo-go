@@ -34,7 +34,12 @@ export function createAvatarModel(map: MapLibreMap) {
             const mesh = o as THREE.Mesh
             if (!mesh.isMesh) return
             for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
-              ;(m as THREE.MeshStandardMaterial).envMapIntensity = 0 // 店の模型と同じマットな見た目
+              const std = m as THREE.MeshStandardMaterial
+              std.envMapIntensity = 0 // 店の模型と同じマットな見た目
+              // ファイルに金属っぽさの値が無いと、glTF の決まりで「金属（1）」になり、映す景色が無いので真っ黒になる。
+              // 布や肌なので、金属っぽさ 0・ざらっとした面にする（2026-11-10 黒く見えた原因）
+              std.metalness = 0
+              std.roughness = 0.85
             }
           })
           body.add(gltf.scene)
