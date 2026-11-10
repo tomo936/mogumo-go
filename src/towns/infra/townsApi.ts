@@ -6,7 +6,7 @@ import { SYNC_INTERVAL_MS, SYNC_MAX } from '../config.ts'
 import { parseSync } from '../domain/progress.ts'
 import type { TownSync } from '../domain/progress.ts'
 import { bboxOf, isGeometry } from '../domain/shape.ts'
-import type { ClearedTown } from '../domain/shape.ts'
+import type { Bbox, ClearedTown, Geometry } from '../domain/shape.ts'
 
 const TIMEOUT_MS = 25000
 
@@ -108,4 +108,20 @@ export async function loadClearedTowns(client?: TownsClient): Promise<ClearedTow
     }
   }
   return towns.sort((a, b) => a.at - b.at)
+}
+
+// 行った町の名前と形（記録の地図に「町の範囲」を出すため）。形は towns.boundary（認証済みなら誰でも読める町の公開情報）。
+// 失敗したら throw（呼び出し側は線を出さないだけ）
+export async function loadTownShapes(ids: string[], client?: TownsClient): Promise<Map<string, { name: string; geom: Geometry; bbox: Bbox }>> {
+  const c = client ?? ((await import('../../lib/supabase.ts')).supabase as unknown as TownsClient)
+  const out = new Map<string, { name: string; geom: Geometry; bbox: Bbox }>()
+  for (let i = 0; i < ids.length; i += IN_CHUNK) {
+    const { data, error } = await c.from('towns').select('town_id, name, boundary').in('town_id', ids.slice(i, i + IN_CHUNK))
+    if (error || !Array.isArray(data)) throw new Error('towns_unavailable')
+    for (const r of data as Record<string, unknown>[]) {
+      if (typeof r.town_id !== 'string' || typeof r.name !== 'string' || !isGeometry(r.boundary)) continue
+      out.set(r.town_id, { name: r.name, geom: r.boundary, bbox: bboxOf(r.boundary) })
+    }
+  }
+  return out
 }

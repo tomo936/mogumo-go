@@ -17,7 +17,9 @@ import { BadgeList } from '../../badges/ui/BadgeList.tsx'
 import { areaKm2At, areaTimeline } from '../../towns/domain/area.ts'
 import type { ClearedTown } from '../../towns/domain/shape.ts'
 import type { TownSync } from '../../towns/domain/progress.ts'
-import { syncUntilSettled } from '../../towns/infra/townsApi.ts'
+import { loadTownShapes, syncUntilSettled } from '../../towns/infra/townsApi.ts'
+import type { OutlineTown } from '../../towns/domain/outline.ts'
+import type { Geometry } from '../../towns/domain/shape.ts'
 import { TownList, type TownListState } from '../../towns/ui/TownList.tsx'
 
 type State = { status: 'loading' } | { status: 'error' } | { status: 'ready'; cells: ClearedCell[]; visits: VisitEntry[]; towns: ClearedTown[] }
@@ -25,6 +27,7 @@ type State = { status: 'loading' } | { status: 'error' } | { status: 'ready'; ce
 const NO_CELLS: ClearedCell[] = []
 const NO_VISITS: VisitEntry[] = []
 const NO_TOWNS: ClearedTown[] = []
+const NO_OUTLINES: OutlineTown[] = []
 
 const WEEK = ['日', '月', '火', '水', '木', '金', '土']
 const jstDate = (ms: number) => new Date(ms + 9 * 3600_000) // 日本時間（UTC の読み出しで使う）
@@ -55,6 +58,8 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync }: Pro
   const [gained, setGained] = useState<ClearedTown[]>(NO_TOWNS) // 開いているあいだに新しくクリアした町
   const [tab, setTab] = useState<RecordTab>(initialTab)
   const [byStep, setByStep] = useState(false) // 日付を ‹ › で送ったときだけ、晴れる動きを見せる（スライダーは引いたぶんをすぐ反映）
+  const [showRange, setShowRange] = useState(false) // 「町の範囲」（行った町の境目と名前）を地図に出すか
+  const [shapes, setShapes] = useState<Map<string, { name: string; geom: Geometry; bbox: OutlineTown['bbox'] }> | null>(null)
   const [t, setT] = useState<number | null>(null) // スライダーの日付（null = いちばん新しい）
 
   useEffect(() => {
@@ -91,6 +96,26 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync }: Pro
     return () => closed.abort()
   }, [])
 
+  // 範囲を出すと決めたとき、行った町（サーバーの一覧）の形をまとめて読む（一度読んだ町は読み直さない）
+  const progressIds = townState.status === 'ready' ? townState.towns.map((x) => x.id).join('|') : ''
+  const loadedShapes = useRef(new Map<string, unknown>()) // 読み終えた町（増えた分だけ読む）
+  useEffect(() => {
+    if (!showRange || progressIds === '') return
+    const want = progressIds.split('|').filter((id) => !loadedShapes.current.has(id))
+    if (want.length === 0) return
+    const closed = new AbortController()
+    loadTownShapes(want)
+      .then((got) => {
+        if (closed.signal.aborted) return
+        for (const id of got.keys()) loadedShapes.current.set(id, true)
+        setShapes((prev) => new Map([...(prev ?? []), ...got]))
+      })
+      .catch(() => {
+        if (!closed.signal.aborted) setShowRange(false) // 読めなければスイッチを戻す（押したのに何も出ない状態にしない）
+      })
+    return () => closed.abort()
+  }, [showRange, progressIds])
+
   const cells = state.status === 'ready' ? state.cells : NO_CELLS
   const visits = state.status === 'ready' ? state.visits : NO_VISITS
   const loadedTowns = state.status === 'ready' ? state.towns : NO_TOWNS
@@ -98,6 +123,14 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync }: Pro
     () => (gained.length === 0 ? loadedTowns : [...loadedTowns, ...gained.filter((g) => !loadedTowns.some((t) => t.id === g.id))]),
     [loadedTowns, gained],
   )
+  const outlines = useMemo(() => {
+    if (!showRange || !shapes || townState.status !== 'ready') return NO_OUTLINES
+    const clearedIds = new Set(towns.map((x) => x.id))
+    return townState.towns.flatMap((p) => {
+      const sh = shapes.get(p.id)
+      return sh ? [{ id: p.id, name: sh.name, geom: sh.geom, bbox: sh.bbox, cleared: p.clearedAt !== null || clearedIds.has(p.id) }] : []
+    })
+  }, [showRange, shapes, townState, towns])
   const area = useMemo(() => areaTimeline(cells, towns), [cells, towns])
   const range = useMemo(() => timeRange(cells, towns.map((x) => x.at)), [cells, towns])
   const now = t ?? range?.end ?? 0
@@ -132,7 +165,19 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync }: Pro
       {state.status === 'ready' && tab === 'record' && (
         <>
           <div className="rc__mapcard">
-            <RecordMap cells={cells} towns={towns} t={now} home={home} pins={pins} wave={byStep} />
+            <RecordMap cells={cells} towns={towns} t={now} home={home} pins={pins} wave={byStep} outlines={outlines} />
+            <button
+              type="button"
+              className="rc__range"
+              aria-label={showRange ? '町の範囲を隠す' : '町の範囲を出す'}
+              aria-pressed={showRange}
+              onClick={() => setShowRange((v) => !v)}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 7.5l6-3.5 8 4v8.5l-7 3.5-7-4z" strokeDasharray={showRange ? undefined : '3 3'} />
+              </svg>
+              <small>町</small>
+            </button>
             {range === null && <p className="rc__empty">まだ晴れた場所がありません。お店に行くと、ここに光が広がります</p>}
           </div>
 
