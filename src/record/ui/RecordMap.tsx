@@ -3,6 +3,7 @@
 // クリアした町は、クリアした日から町の形の中がぜんぶ晴れる（マスは雲を置く範囲の分だけ、その場で計算する）。
 import { useEffect, useRef, useState } from 'react'
 import { Map as MapLibreMap, Marker } from 'maplibre-gl'
+import type { GeoJSONSource } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import '../../map/infra/maplibreWorker.ts' // 地図の作業用プログラムの読み込み先（アプリ本体と同じ設定）
 import { MAP_THEME, STYLE_URL } from '../../map/config.ts'
@@ -24,12 +25,23 @@ import type { DayPin } from '../domain/dayPins.ts'
 import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
 import { cellsInTown } from '../../towns/domain/shape.ts'
 import type { ClearedTown } from '../../towns/domain/shape.ts'
+import { inView, labelCollection, lineCollection } from '../../towns/domain/outline.ts'
+import type { OutlineTown } from '../../towns/domain/outline.ts'
 
-type Props = { cells: ClearedCell[]; towns: ClearedTown[]; t: number; home: LatLng | null; pins: DayPin[]; wave?: boolean }
+type Props = {
+  cells: ClearedCell[]
+  towns: ClearedTown[]
+  t: number
+  home: LatLng | null
+  pins: DayPin[]
+  wave?: boolean
+  outlines?: OutlineTown[] // 「町の範囲」を出すとき、行った町の形（出さないときは空）
+}
 
+const NO_OUTLINES: OutlineTown[] = []
 const mdLabel = (day: string) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`
 
-export function RecordMap({ cells, towns, t, home, pins, wave = true }: Props) {
+export function RecordMap({ cells, towns, t, home, pins, wave = true, outlines = NO_OUTLINES }: Props) {
   const waveRef = useRef(wave) // 晴れる動き（波）を出すか。スライダーを引いているときは出さずにすぐ反映する
   waveRef.current = wave
   const containerRef = useRef<HTMLDivElement>(null)
@@ -37,6 +49,7 @@ export function RecordMap({ cells, towns, t, home, pins, wave = true }: Props) {
   const [loaded, setLoaded] = useState(false) // 地図の準備ができてからピンを置く（前に置くと左上に出る）
   const apply = useRef<(t: number) => void>(() => {})
   const applyTowns = useRef<(towns: ClearedTown[]) => void>(() => {})
+  const applyOutlines = useRef<(list: OutlineTown[]) => void>(() => {})
 
   // 地図は最初に1回だけ作る（日付は apply で変える）
   useEffect(() => {
@@ -135,8 +148,58 @@ export function RecordMap({ cells, towns, t, home, pins, wave = true }: Props) {
       rebuildBase()
       if (ready) draw(shown)
     }
+    // 町の範囲: 見えている範囲の町だけを線と名前にして、雲の上に重ねる（クリア = 橙の実線、途中 = 茶色の点線）
+    let outlineList: OutlineTown[] = []
+    const drawOutlines = () => {
+      const lines = map.getSource('town-lines')
+      const labels = map.getSource('town-labels')
+      if (!lines || !labels) return
+      const b = map.getBounds()
+      const seen = inView(outlineList, [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()])
+      ;(lines as GeoJSONSource).setData(lineCollection(seen) as never)
+      ;(labels as GeoJSONSource).setData(labelCollection(seen) as never)
+    }
+    applyOutlines.current = (list) => {
+      outlineList = list
+      drawOutlines()
+    }
+    map.on('moveend', drawOutlines)
     map.on('load', () => {
       map.addLayer(fog)
+      map.addSource('town-lines', { type: 'geojson', data: lineCollection([]) as never })
+      map.addSource('town-labels', { type: 'geojson', data: labelCollection([]) as never })
+      // 白いふち取り（細かい地図の上でも線が見えるように）
+      map.addLayer({
+        id: 'town-lines-edge',
+        type: 'line',
+        source: 'town-lines',
+        layout: { 'line-join': 'round' },
+        paint: { 'line-color': '#fffdf7', 'line-width': 5.5, 'line-opacity': 0.75 },
+      })
+      map.addLayer({
+        id: 'town-lines-done',
+        type: 'line',
+        source: 'town-lines',
+        filter: ['==', ['get', 'cleared'], true],
+        layout: { 'line-join': 'round' },
+        paint: { 'line-color': '#c2652a', 'line-width': 2.5, 'line-opacity': 0.9 },
+      })
+      map.addLayer({
+        id: 'town-lines-going',
+        type: 'line',
+        source: 'town-lines',
+        filter: ['==', ['get', 'cleared'], false],
+        layout: { 'line-join': 'round' },
+        paint: { 'line-color': '#6b5239', 'line-width': 2.4, 'line-dasharray': [2, 1.6], 'line-opacity': 0.95 },
+      })
+      map.addLayer({
+        id: 'town-names',
+        type: 'symbol',
+        source: 'town-labels',
+        layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': 14, 'text-max-width': 7, 'text-allow-overlap': false },
+        paint: { 'text-color': ['case', ['get', 'cleared'], '#a24d18', '#6b5239'], 'text-halo-color': '#fffdf7', 'text-halo-width': 2 },
+      })
+      drawOutlines()
       ready = true
       draw(t)
       setLoaded(true)
@@ -145,6 +208,7 @@ export function RecordMap({ cells, towns, t, home, pins, wave = true }: Props) {
       if (pending !== null) cancelAnimationFrame(pending)
       apply.current = () => {}
       applyTowns.current = () => {}
+      applyOutlines.current = () => {}
       homeMarker?.remove()
       mapRef.current = null
       map.remove()
@@ -159,6 +223,9 @@ export function RecordMap({ cells, towns, t, home, pins, wave = true }: Props) {
   useEffect(() => {
     applyTowns.current(towns)
   }, [towns])
+  useEffect(() => {
+    applyOutlines.current(outlines)
+  }, [outlines, loaded])
 
   // 行ったお店のピン（スライダーの日のお店は大きく番号つき）。押すと店名と日付の札。
   // ピンは作り直さない（作り直すと、置き直すまでの一瞬だけ地図の左上に出て、ピンが跳ねて見える）。

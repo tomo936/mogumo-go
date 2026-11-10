@@ -5,6 +5,8 @@
 最終更新: 2026-11-09 夜（Claude Code）。区切りごとに上書きする。
 
 ## いまの状態
+- 【2026-11-10 深夜3】記録の地図に「町の範囲」スイッチを実装（オーナーが見本で OK）。tester 確認済み・指摘（失敗時にスイッチを戻す／増えた町だけ読む／loadTownShapes のテスト）は反映。実機での確認（日本語の町名・点線の見え方・町を新しくクリアした直後）は未。次は週ミッション → 地図の検索・ジャンプ。
+
 - ブランチ **`cycle1-building`**（`cycle1-checkin` から分岐）に **ビル（同じ建物に複数のお店）** を実装（2026-11-07、オーナー就寝中にシロの依頼で進めた）。設計 `docs/superpowers/specs/2026-11-07-multi-shop-building-design.md`、計画 `docs/superpowers/plans/2026-11-07-multi-shop-building.md`。テスト 370 件・型・ビルド OK。**dev に反映済み（14b1e0a）、実機確認待ち**（確認事項は `handoff/to-shiro/2026-11-07-building-owner-check.md`）
 - `cycle1-checkin`（ホットペッパー＋チェックイン）は完成・実機確認済みで dev に反映済み。本番 `main` は未反映（本人の OK まで出さない）
 - 開発用 Supabase `mogumo-go-dev` に置き済み: SQL 0002・0003、関数 `shops-hotpepper`・`checkin`。キー `HOTPEPPER_API_KEY` は Secrets
