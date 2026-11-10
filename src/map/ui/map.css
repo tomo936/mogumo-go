@@ -351,13 +351,3 @@
   pointer-events: none;
 }
 
-/* 地図の上の青空（イラスト調・2026-11-10）。指の操作は通す */
-.map-sky {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 20vh;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(84, 168, 236, 0.85) 0, rgba(150, 205, 246, 0.45) 45%, rgba(255, 255, 255, 0) 100%);
-}
