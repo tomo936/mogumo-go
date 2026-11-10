@@ -2,6 +2,7 @@
 // 1つずつ出す: 呼び出し側が key を変えて次の知らせを渡す。
 import { useEffect, useRef } from 'react'
 import type { TownNews } from '../domain/progress.ts'
+import { TownIcon } from './TownIcon.tsx'
 import './towns.css'
 
 export const TOWN_BANNER_MS = 4000
@@ -23,10 +24,11 @@ export function TownBanner({ news, onDone }: Props) {
   const clear = news.kind === 'clear'
   return (
     <div className={`town-banner town-banner--${news.kind}`} role="status" onClick={onDone}>
-      <span className="town-banner__stamp" aria-hidden="true">{clear ? 'クリア' : 'コンプ'}</span>
+      <span className="town-banner__dots" aria-hidden="true"><i /><i /><i /></span>
+      <span className="town-banner__icon"><TownIcon kind={clear ? 'sun' : 'crown'} size={52} /></span>
       <span className="town-banner__body">
         <span className="town-banner__title">{`${news.name} ${clear ? 'クリア！' : 'コンプリート！'}`}</span>
-        <span className="town-banner__sub">{clear ? '町の霧がぜんぶ晴れた' : '町のお店をぜんぶ回った'}</span>
+        <span className="town-banner__sub">{clear ? '町の霧がぜんぶ晴れたよ' : '町のお店をぜんぶ回ったよ'}</span>
       </span>
       {news.coins > 0 && (
         <span className="town-banner__coin">

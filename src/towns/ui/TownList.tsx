@@ -2,6 +2,7 @@
 // 数はサーバーの関数 towns の返事（スライダーの日付とは関係なく、今の進み具合）。
 import { percent } from '../domain/progress.ts'
 import type { TownProgress } from '../domain/progress.ts'
+import { TownIcon } from './TownIcon.tsx'
 import './towns.css'
 
 export type TownListState =
@@ -24,21 +25,26 @@ export function TownList({ state }: { state: TownListState }) {
           const mark = t.completedAt !== null ? 'complete' : t.clearedAt !== null ? 'clear' : null
           return (
             <li key={t.id} className={`town-row${mark ? ` town-row--${mark}` : ''}`}>
-              <div className="town-row__head">
-                <div className="town-row__name">
-                  <b>{t.name}</b>
-                  {t.city && <span>{t.city}</span>}
+              <span className="town-row__icon"><TownIcon kind={mark === 'complete' ? 'crown' : mark === 'clear' ? 'sun' : 'cloud'} size={mark === 'clear' ? 38 : 34} /></span>
+              <div className="town-row__main">
+                <div className="town-row__head">
+                  <div className="town-row__name">
+                    <b>{t.name}</b>
+                    {t.city && <span>{t.city}</span>}
+                  </div>
+                  {mark && <span className="town-row__stamp">{mark === 'complete' ? 'コンプリート' : 'クリア'}</span>}
                 </div>
-                {mark && <span className="town-row__stamp">{mark === 'complete' ? 'コンプリート' : 'クリア'}</span>}
-              </div>
-              {t.counting ? (
-                <p className="town-row__counting">数えています…</p>
-              ) : (
-                <div className="town-row__progress">
+                {t.counting ? (
+                  <p className="town-row__counting">数えています…</p>
+                ) : (
                   <div className="town-row__bar" role="progressbar" aria-label={`${t.name}の進み具合`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
                     <i style={{ width: `${pct}%` }} />
                     <span className="town-row__half" aria-hidden="true" />
                   </div>
+                )}
+              </div>
+              {!t.counting && (
+                <div className="town-row__num">
                   <span className="town-row__count">{`${t.visited} / ${t.total}`}</span>
                   <span className="town-row__pct">{`${pct}%`}</span>
                 </div>
