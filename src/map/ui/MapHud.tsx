@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { fanPositions } from '../domain/menuFan.ts'
 import { Icon } from '../../ui/Icon.tsx'
+import { CoinIcon } from '../../ui/CoinIcon.tsx'
 import type { IconName } from '../../ui/Icon.tsx'
 
 const CHARACTERS = import.meta.glob<string>('../../assets/characters/starter-*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>
@@ -60,10 +61,7 @@ export function MapHud(p: Props) {
 
       {p.coins !== null && (
         <div className="hud-coins" role="img" aria-label={`コイン ${p.coins}`}>
-          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" fill="#dba400" stroke="#a87a00" strokeWidth="1.5" />
-            <circle cx="12" cy="12" r="6.2" fill="none" stroke="#fff3c4" strokeWidth="1.6" />
-          </svg>
+          <CoinIcon size={18} />
           <b>{p.coins}</b>
         </div>
       )}
