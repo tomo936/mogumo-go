@@ -15,7 +15,8 @@ const handlers: { select: (s: Shop | null) => void; building: (s: Shop[] | null)
 const checkinCalls: { id: string; cells: unknown[] }[] = []
 const unfocusCalls: number[] = []
 const postCheckin = vi.fn()
-vi.mock('../checkin/infra/checkinApi.ts', () => ({ postCheckin: (...a: unknown[]) => postCheckin(...a) }))
+vi.mock('../checkin/infra/checkinApi.ts', () => ({ postCheckin: (...a: unknown[]) => postCheckin(...a), loadProgress: () => Promise.resolve({ visitsByShop: new Map() }) }))
+vi.mock('../mypage/infra/coins.ts', () => ({ loadCoins: () => Promise.resolve(420) }))
 const readTodayHints = vi.fn()
 const postDailyHints = vi.fn()
 vi.mock('../hints/infra/hintsApi.ts', () => ({
@@ -340,6 +341,16 @@ test('ピンのボタンで出す・出さないが切りかわり、その端�
   expect(screen.getByTestId('map-view')).toHaveAttribute('data-pins-hidden', 'true')
   await userEvent.click(screen.getByRole('button', { name: 'ピンを出す' }))
   expect(localStorage.getItem('mogumo.pinsHidden')).toBe('0')
+})
+
+test('チェックインのあと、持っているコインが地図の上に出る', async () => {
+  postCheckin.mockResolvedValue({ ok: true, checkinId: 'c1', coins: 30, newCells: [] })
+  syncUntilSettled.mockResolvedValue(undefined)
+  renderPage()
+  act(() => last().position(here))
+  act(() => last().select(shop))
+  await userEvent.click(screen.getByRole('button', { name: 'チェックイン' }))
+  expect(await screen.findByRole('img', { name: 'コイン 420' })).toBeInTheDocument()
 })
 
 // ---- 町のクリア・コンプリート ----

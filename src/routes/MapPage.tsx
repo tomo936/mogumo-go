@@ -8,7 +8,8 @@ import type { LatLng } from '../map/domain/geo.ts'
 import { farFromHome } from '../checkin/domain/far.ts'
 import { loadProgress, postCheckin } from '../checkin/infra/checkinApi.ts'
 import { profileRepo } from '../setup/infra/profileRepo.ts'
-import { levelFor } from '../zukan/domain/level.ts'
+import { levelFor, needFor } from '../zukan/domain/level.ts'
+import { loadCoins } from '../mypage/infra/coins.ts'
 import { MapHud } from '../map/ui/MapHud.tsx'
 import { Record, type RecordTab } from '../record/ui/Record.tsx'
 import { MyPage } from '../mypage/ui/MyPage.tsx'
@@ -98,6 +99,7 @@ export function MapPage() {
       aliveRef.current = false // 画面を離れたら、町の呼び直しを止める
     }
   }, [])
+  const [coins, setCoins] = useState<number | null>(null) // 持っているコイン（地図の上に出す）
   const onTownSync = useCallback((s: TownSync) => {
     const fresh = s.newly.filter((n) => !townSeen.current.has(`${n.id}:${n.kind}`))
     if (fresh.length === 0) return
@@ -106,6 +108,7 @@ export function MapPage() {
       if (n.kind === 'clear' && n.town) mapRef.current?.addTown(n.town)
     }
     setTownNews((q) => [...q, ...fresh])
+    if (fresh.some((n) => n.coins > 0)) loadCoins().then(setCoins).catch(() => {}) // 町のコインを数字に反映
   }, [])
   const busyRef = useRef(false)
   const effectSeq = useRef(0)
@@ -158,12 +161,16 @@ export function MapPage() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [profile, setProfile] = useState<{ nickname: string; starterId: StarterId } | null>(null)
   const [visitedCount, setVisitedCount] = useState(0) // プレイヤーのレベルの元（行ったお店の数）
+  const refreshStats = useCallback(() => {
+    loadProgress().then((p) => setVisitedCount(p.visitsByShop.size)).catch(() => {})
+    loadCoins().then(setCoins).catch(() => {})
+  }, [])
   const [soonName, setSoonName] = useState<string | null>(null) // まだ作っていない画面の名前（短く出す）
   useEffect(() => {
     if (!userId) return
     profileRepo.load(userId).then(setProfile).catch(() => setProfile(null))
-    loadProgress().then((p) => setVisitedCount(p.visitsByShop.size)).catch(() => {})
-  }, [userId])
+    refreshStats()
+  }, [userId, refreshStats])
   useEffect(() => {
     if (!soonName) return
     const t = setTimeout(() => setSoonName(null), 1600)
@@ -217,6 +224,7 @@ export function MapPage() {
       if (result.wasHint) hints.markCompleted(posted)
       mapRef.current?.checkin(posted, result.newCells)
       // 町の進み具合をサーバーに確かめる（失敗しても、チェックインはそのまま）
+      refreshStats() // コインとレベルの数字を読み直す
       void syncUntilSettled(onTownSync, { alive: () => aliveRef.current })
     } else {
       if (selectedRef.current?.id === posted.id) setCheckinError(result.reason)
@@ -384,6 +392,9 @@ export function MapPage() {
           nickname={profile?.nickname ?? null}
           starterId={profile?.starterId ?? 101}
           level={levelFor(visitedCount).level}
+          expInto={visitedCount - needFor(levelFor(visitedCount).level)}
+          expSpan={needFor(levelFor(visitedCount).level + 1) - needFor(levelFor(visitedCount).level)}
+          coins={coins}
           hintsRemaining={hints.set ? hints.set.hints.filter((h) => !h.completed).length : null}
           hintOpen={exploreOpen}
           onHintTap={() => (exploreOpen ? closeExplore() : openExplore())}
