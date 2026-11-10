@@ -180,13 +180,18 @@ export function tilesForGeometry(g: Geometry, z: number): [number, number][] {
 // 飲食店の種類。checkin/core.ts の FOOD と同じにしておくこと（keep in sync）
 const FOOD = new Set(['restaurant', 'cafe', 'fast_food', 'bar', 'pub', 'bakery', 'confectionery', 'ice_cream'])
 
+// 名前のある飲食店の点か（タイルを読む側が、位置を取り出す前のふるいにも使う）
+export function isNamedFood(name: unknown, subclass: unknown): boolean {
+  return typeof subclass === 'string' && FOOD.has(subclass) && typeof name === 'string' && name.trim() !== ''
+}
+
 // タイルの点のうち、名前のある飲食店で、形の中にあるもの
 export function foodInTown(features: readonly PoiFeature[], g: Geometry): TownShop[] {
   const out: TownShop[] = []
+  const [minLng, minLat, maxLng, maxLat] = bboxOf(g)
   for (const f of features) {
-    if (f.id === undefined) continue
-    if (typeof f.subclass !== 'string' || !FOOD.has(f.subclass)) continue
-    if (typeof f.name !== 'string' || f.name.trim() === '') continue
+    if (f.id === undefined || !isNamedFood(f.name, f.subclass) || typeof f.name !== 'string') continue
+    if (f.lng < minLng || f.lng > maxLng || f.lat < minLat || f.lat > maxLat) continue
     if (!inGeometry(g, f.lat, f.lng)) continue
     out.push({ id: `osm:${f.id}`, name: f.name, lat: f.lat, lng: f.lng })
   }
@@ -258,4 +263,42 @@ export function needsCount(countedAt: string | null, now: Date): boolean {
   if (countedAt === null) return true
   const t = Date.parse(countedAt)
   return !Number.isFinite(t) || now.getTime() - t > RECOUNT_DAYS * 24 * 3600 * 1000
+}
+
+// ---- 返事の組み立て（index.ts が使う） ----
+export type TownRow = { town_id: string; name: string; city_name: string | null; shops: TownShop[] | null }
+export type UserShop = TownShop & { lastAt: string } // その人がその町で行った店と、最後に行った時刻
+export type Conquest = { conquered_at: string; completed_at: string | null }
+export type TownView = {
+  id: string; name: string; city: string | null; visited: number; total: number
+  cleared_at: string | null; completed_at: string | null; counting: boolean; last_at: string | null
+}
+
+// 1つの町の進み具合と、今付けるべきもの。一覧がまだ無い町（数えている途中）は判定しない
+export function townView(town: TownRow, mine: readonly UserShop[], have: Conquest | undefined): { view: TownView; clear: boolean; complete: boolean } {
+  let last: string | null = null
+  for (const s of mine) if (last === null || s.lastAt > last) last = s.lastAt
+  const counting = town.shops === null
+  const p = counting ? { visited: new Set(mine.map((s) => s.id)).size, total: 0 } : progress(town.shops ?? [], mine)
+  const j = counting ? { clear: false, complete: false } : judge(p)
+  return {
+    view: {
+      id: town.town_id, name: town.name, city: town.city_name, visited: p.visited, total: p.total,
+      cleared_at: have?.conquered_at ?? null, completed_at: have?.completed_at ?? null, counting, last_at: last,
+    },
+    clear: j.clear && !have,
+    complete: j.complete && !have?.completed_at,
+  }
+}
+
+// 格子の一覧（g/index.json）。置いてある格子の名前。これが読めないうちは、店を「町なし」と決めない
+export function parseIndex(v: unknown): Set<string> | null {
+  if (typeof v !== 'object' || v === null) return null
+  const keys = (v as { keys?: unknown }).keys
+  if (!Array.isArray(keys) || keys.length === 0 || !keys.every((k) => typeof k === 'string')) return null
+  return new Set(keys as string[])
+}
+
+export function isChunk(v: unknown): v is Chunk {
+  return typeof v === 'object' && v !== null && (v as { v?: unknown }).v === 1 && Array.isArray((v as { towns?: unknown }).towns)
 }

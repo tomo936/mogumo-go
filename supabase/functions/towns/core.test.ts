@@ -2,10 +2,10 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import * as checkin from '../checkin/core.ts'
 import {
-  bboxOf, chunkKey, chunkKeysForGeometry, distanceM, findTown, foodInTown, inGeometry, judge, mergeShops, namesMatch, needsCount,
-  normalizeName, progress, tileBounds, tilesForGeometry, tileXY,
+  bboxOf, chunkKey, chunkKeysForGeometry, distanceM, findTown, foodInTown, inGeometry, isChunk, isNamedFood, judge, mergeShops, namesMatch,
+  needsCount, normalizeName, parseIndex, progress, tileBounds, tilesForGeometry, tileXY, townView,
 } from './core.ts'
-import type { ChunkTown, Geometry, PoiFeature, TownShop } from './core.ts'
+import type { ChunkTown, Geometry, PoiFeature, TownRow, TownShop, UserShop } from './core.ts'
 
 // 四角（経度・緯度の順）。穴は holes に
 const ring = (minLng: number, minLat: number, maxLng: number, maxLat: number): number[][] => [
@@ -233,5 +233,73 @@ describe('needsCount', () => {
     expect(needsCount(null, now)).toBe(true)
     expect(needsCount('2026-10-12T00:00:00Z', now)).toBe(false) // 29日前
     expect(needsCount('2026-10-10T00:00:00Z', now)).toBe(true) // 31日前
+  })
+})
+
+describe('isNamedFood', () => {
+  it('飲食の種類で 名前があるものだけ', () => {
+    expect(isNamedFood('麺屋', 'restaurant')).toBe(true)
+    expect(isNamedFood('麺屋', 'bank')).toBe(false)
+    expect(isNamedFood(' ', 'cafe')).toBe(false)
+    expect(isNamedFood(undefined, 'cafe')).toBe(false)
+  })
+})
+
+describe('townView', () => {
+  const list: TownShop[] = [
+    { id: 'osm:1', name: 'カフェことり', lat: 35.0, lng: 139.0 },
+    { id: 'osm:2', name: 'ラーメン花', lat: 35.001, lng: 139.0 },
+    { id: 'osm:3', name: 'すし松', lat: 35.002, lng: 139.0 },
+  ]
+  const town: TownRow = { town_id: '13112-経堂', name: '経堂', city_name: '世田谷区', shops: list }
+  const mine = (...ids: number[]): UserShop[] => ids.map((i) => ({ ...list[i - 1], lastAt: `2026-11-0${i}T03:00:00Z` }))
+
+  it('進み具合と、最後に行った時刻', () => {
+    const r = townView(town, mine(1), undefined)
+    expect(r.view).toEqual({
+      id: '13112-経堂', name: '経堂', city: '世田谷区', visited: 1, total: 3,
+      cleared_at: null, completed_at: null, counting: false, last_at: '2026-11-01T03:00:00Z',
+    })
+    expect(r.clear).toBe(false)
+    expect(r.complete).toBe(false)
+  })
+  it('半分以上で クリアを付ける。すでにあれば付けない', () => {
+    expect(townView(town, mine(1, 2), undefined).clear).toBe(true)
+    const have = { conquered_at: '2026-11-02T03:00:05Z', completed_at: null }
+    const r = townView(town, mine(1, 2), have)
+    expect(r.clear).toBe(false)
+    expect(r.view.cleared_at).toBe('2026-11-02T03:00:05Z')
+    expect(r.view.last_at).toBe('2026-11-02T03:00:00Z')
+  })
+  it('全部で コンプリートを付ける。すでにあれば付けない', () => {
+    const have = { conquered_at: '2026-11-02T03:00:05Z', completed_at: null }
+    expect(townView(town, mine(1, 2, 3), have)).toMatchObject({ clear: false, complete: true })
+    expect(townView(town, mine(1, 2, 3), { ...have, completed_at: '2026-11-03T03:00:05Z' })).toMatchObject({ clear: false, complete: false })
+  })
+  it('一覧がまだ無い町は 数えている途中（判定しない）', () => {
+    const r = townView({ ...town, shops: null }, mine(1, 2, 3), undefined)
+    expect(r.view).toMatchObject({ visited: 3, total: 0, counting: true })
+    expect(r.clear).toBe(false)
+    expect(r.complete).toBe(false)
+  })
+  it('あとで分母が増えても、付いたクリアは残る', () => {
+    const have = { conquered_at: '2026-11-02T03:00:05Z', completed_at: '2026-11-03T03:00:05Z' }
+    const more: TownRow = { ...town, shops: [...list, { id: 'osm:4', name: '新しい店', lat: 35.003, lng: 139.0 }, { id: 'osm:5', name: 'もう1軒', lat: 35.004, lng: 139.0 }, { id: 'osm:6', name: 'さらに1軒', lat: 35.005, lng: 139.0 }, { id: 'osm:7', name: 'まだある', lat: 35.006, lng: 139.0 }] }
+    const r = townView(more, mine(1, 2, 3), have)
+    expect(r.view).toMatchObject({ visited: 3, total: 7, cleared_at: have.conquered_at, completed_at: have.completed_at })
+  })
+})
+
+describe('格子の一覧とファイルの形', () => {
+  it('parseIndex は 名前の集まり。空・形ちがいは null', () => {
+    expect(parseIndex({ v: 1, keys: ['558_142', '559_142'] })?.has('558_142')).toBe(true)
+    expect(parseIndex({ v: 1, keys: [] })).toBeNull()
+    expect(parseIndex({ keys: [1] })).toBeNull()
+    expect(parseIndex(null)).toBeNull()
+  })
+  it('isChunk', () => {
+    expect(isChunk({ v: 1, towns: [] })).toBe(true)
+    expect(isChunk({ v: 2, towns: [] })).toBe(false)
+    expect(isChunk(null)).toBe(false)
   })
 })
