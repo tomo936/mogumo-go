@@ -589,3 +589,279 @@
   height: 100%;
   background: linear-gradient(90deg, #ffb27a, #ff7a3d);
 }
+
+/* ---- 手帳風（2026-11-10 A 改）。AI っぽさを減らす: 茶色の線＋点線のステッチ、平らな色、線の厚み ----
+   設計 docs/superpowers/specs/2026-11-10-shop-sheet-notebook-design.md */
+.shop-sheet {
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  background: #fffaf0;
+  border: 2.5px solid #7a4a26;
+  border-radius: 22px;
+  box-shadow: 0 4px 0 rgba(122, 74, 38, 0.25);
+  color: #4a3b2c;
+}
+.shop-sheet::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1.5px dashed #e3cfaa;
+  border-radius: 17px;
+  pointer-events: none;
+}
+.shop-sheet--full {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-width: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: #fffaf0;
+}
+.shop-sheet--full::before {
+  display: none;
+}
+.shop-sheet__grab::after {
+  background: #d8c09a;
+}
+.shop-sheet__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  border: 2px solid #7a4a26;
+  background: #fff;
+  color: #7a4a26;
+  z-index: 3;
+}
+.shop-sheet__back {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 55%;
+  padding: 4px 10px 4px 6px;
+  border: 2px solid #7a4a26;
+  border-radius: 999px;
+  background: #fff;
+  color: #7a4a26;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.shop-sheet--full .shop-sheet__back {
+  top: calc(8px + env(safe-area-inset-top));
+}
+.shop-sheet__back + .shop-sheet__stage .shop-sheet__head {
+  margin-top: 36px;
+}
+.shop-sheet__head {
+  align-items: flex-start;
+  gap: 14px;
+}
+.shop-sheet__name {
+  margin: 6px 0 0;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1.25;
+  color: #4a3b2c;
+}
+.shop-sheet__name--big {
+  font-size: 23px;
+}
+.shop-tag {
+  border: 1.5px solid #7a4a26;
+  border-radius: 6px;
+  background: #fff;
+  color: #7a4a26;
+  font-weight: 800;
+}
+.shop-tag--genre {
+  background: #ffd9a8;
+  color: #7a4a26;
+}
+.shop-tag--budget {
+  background: #fff;
+  color: #7a4a26;
+}
+.shop-sheet__open,
+.shop-sheet__distance {
+  color: #7a6450;
+}
+/* 小さい段の1行（距離・営業時間・回数）。箱に入れず、線の絵と文字で */
+.shop-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin: 12px 2px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #4a3b2c;
+}
+.shop-facts span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.shop-facts svg {
+  flex: none;
+}
+.shop-facts__near {
+  color: #2f7d5a;
+}
+.shop-facts__open {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.shop-facts__new {
+  color: #c2652a;
+}
+.shop-sheet__go {
+  height: 52px;
+  border: 2.5px solid #7a4a26;
+  border-radius: 14px;
+  background: #e57a35;
+  box-shadow: 0 4px 0 #7a4a26;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+.shop-sheet__go:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #7a4a26;
+}
+.shop-sheet__go:disabled {
+  border-color: #c9b28d;
+  background: #f1e4cc;
+  box-shadow: 0 3px 0 #c9b28d;
+  color: #9c8466;
+  font-size: 15px;
+  letter-spacing: 0;
+  opacity: 1;
+}
+.shop-sheet__more {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px auto 0;
+  padding: 2px 6px;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 800;
+  color: #7a4a26;
+}
+.shop-sheet__more span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #7a4a26;
+  border-radius: 50%;
+  font-size: 10px;
+  line-height: 1;
+}
+.shop-sheet__catch {
+  padding: 10px 12px;
+  border: 1.5px solid #e3cfaa;
+  border-radius: 12px;
+  background: #fff;
+  color: #4a3b2c;
+}
+.shop-sheet__hp {
+  border: 2px solid #7a4a26;
+  background: #fff;
+  color: #7a4a26;
+  box-shadow: 0 3px 0 #7a4a26;
+}
+/* 写真のシール: 茶色の線のポラロイド＋黄色いマスキングテープ（地図だけのお店は水色のテープ） */
+.shop-sticker {
+  padding: 5px 5px 16px;
+  border: 2px solid #7a4a26;
+  border-radius: 4px;
+  box-shadow: none;
+}
+.shop-sticker--card .shop-sticker__window {
+  width: 84px;
+  height: 84px;
+  border-radius: 2px;
+  background: #f3b77a;
+}
+.shop-sticker--map .shop-sticker__window {
+  background: #cfe3f6;
+}
+.shop-sticker--card .shop-sticker__window img.shop-sticker__model {
+  width: 72%;
+  height: 72%;
+}
+.shop-sticker__tape {
+  top: -9px;
+  width: 44px;
+  height: 14px;
+  margin-left: -22px;
+  background: rgba(244, 215, 122, 0.9);
+  transform: rotate(5deg);
+}
+.shop-sticker--map .shop-sticker__tape {
+  background: rgba(169, 211, 232, 0.9);
+}
+.shop-sticker--big {
+  padding: 10px 10px 30px;
+  border-width: 2.5px;
+  box-shadow: none;
+}
+.shop-sticker--big .shop-sticker__tape {
+  width: 72px;
+  height: 20px;
+  margin-left: -36px;
+}
+.shop-sticker--silver {
+  border-color: #8f97a6;
+  box-shadow: 0 0 0 3px #dfe4ec;
+}
+.shop-sticker--gold {
+  border-color: #b07d0a;
+  box-shadow: 0 0 0 3px #f6d66a;
+}
+.shop-record {
+  border: 1.5px solid #e3cfaa;
+  background: #fff;
+}
+.shop-facts__open.is-open {
+  color: #2f7d5a;
+}
+.shop-facts__open.is-closed {
+  color: #9c8466;
+}
+.shop-record__title {
+  color: #4a3b2c;
+}
+.shop-record__stats b {
+  color: #c2652a;
+}
+.shop-record__stats div,
+.shop-record__next {
+  color: #7a6450;
+}
+.shop-record__bar {
+  background: #efe3cc;
+}
+.shop-record__bar i {
+  background: #e57a35;
+}

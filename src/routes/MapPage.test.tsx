@@ -210,6 +210,15 @@ test('一覧で店を選ぶと、一覧が閉じてお店のシートが出る',
   await userEvent.click(screen.getByRole('button', { name: /らーめん太郎/ }))
   expect(screen.queryByRole('region', { name: 'ビルのお店' })).toBeNull()
   expect(screen.getByRole('region', { name: 'お店の情報' })).toBeInTheDocument()
+  // 「‹ このビル」でビルの一覧に戻れる
+  await userEvent.click(screen.getByRole('button', { name: 'このビル' }))
+  expect(screen.getByRole('region', { name: 'ビルのお店' })).toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: 'お店の情報' })).toBeNull()
+  // × はお店もビルも閉じる
+  await userEvent.click(screen.getByRole('button', { name: /カフェ花/ }))
+  await userEvent.click(screen.getByRole('button', { name: '閉じる' }))
+  expect(screen.queryByRole('region', { name: 'ビルのお店' })).toBeNull()
+  expect(screen.queryByRole('region', { name: 'お店の情報' })).toBeNull()
 })
 
 

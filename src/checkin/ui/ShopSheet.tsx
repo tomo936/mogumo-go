@@ -10,11 +10,13 @@ import { hotpepperPageUrl } from '../../shops/domain/hotpepperLink.ts'
 import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
 import { CHECKIN_M } from '../../shops/config.ts'
 import { formatOpen } from '../domain/openHours.ts'
+import { openNow } from '../domain/openNow.ts'
 import { frameTier, nextTier } from '../domain/visits.ts'
 import { dragHeight, sheetStop } from '../domain/sheetDrag.ts'
 import type { SheetStop } from '../domain/sheetDrag.ts'
 import type { FrameTier, Visits } from '../domain/visits.ts'
 import { hintLines } from '../../hints/domain/hint.ts'
+import { Icon } from '../../ui/Icon.tsx'
 import type { DailyHint } from '../../hints/domain/hint.ts'
 
 export type CheckinError = 'too_far' | 'network' | 'not_found' | 'no_profile' | 'already_today'
@@ -52,10 +54,13 @@ type Props = {
   onCheckin: () => void
   onClose: () => void
   onLocate?: () => void // 地図の視点をこのお店へ寄せる（図鑑から開いたときだけ出す。名前は仮）
+  backLabel?: string | null // ビルの一覧から開いたとき、左上の「‹ ビル名」（押すと onBack）
+  onBack?: () => void
 }
 
-export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, masked = false, visits = null, recordReady, busy, error, onCheckin, onClose, onLocate }: Props) {
+export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, masked = false, visits = null, recordReady, busy, error, onCheckin, onClose, onLocate, backLabel = null, onBack }: Props) {
   const [expanded, setExpanded] = useState(false) // 止まっている段（全画面か）
+  const [openedAt] = useState(() => new Date()) // 営業中かは、シートを開いた時刻で決める
   const [height, setHeight] = useState<number | null>(null) // 引いている間・全画面の高さ（px）。小さい段で止まっているときは null（中身の高さ）
   const [settling, setSettling] = useState<SheetStop | null>(null) // 指を離して収まっていく途中の行き先
   const sectionRef = useRef<HTMLElement>(null)
@@ -196,9 +201,10 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
     </div>
   )
   const hintRows = masked && hint ? hintLines(hint).map((l) => <p key={l} className="shop-sheet__open">{l}</p>) : null
+  // big = 全画面の大きいシール。小さい段は手帳のカードの大きさ（shop-sticker--card）
   const sticker = (big: boolean) => (
-    <div className={`shop-sticker shop-sticker--${tier}${big ? ' shop-sticker--big' : ''}`}>
-      {big && <span className="shop-sticker__tape" aria-hidden="true" />}
+    <div className={`shop-sticker shop-sticker--${tier}${big ? ' shop-sticker--big' : ' shop-sticker--card'}${photo ? '' : ' shop-sticker--map'}`}>
+      <span className="shop-sticker__tape" aria-hidden="true" />
       <div className="shop-sticker__window">
         {photo ? (
           <img src={photo} alt={`${shop.name} の写真`} referrerPolicy="no-referrer" />
@@ -221,7 +227,7 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
   )
   const button = (
     <button type="button" className="shop-sheet__go" disabled={doneToday || !inRange || busy} onClick={onCheckin}>
-      {doneToday ? '今日はチェックイン済み' : busy ? 'チェックイン中…' : inRange ? 'チェックイン' : `あと ${Math.ceil(distanceM - CHECKIN_M)}m`}
+      {doneToday ? '今日はチェックイン済み' : busy ? 'チェックイン中…' : inRange ? 'チェックイン' : `あと ${Math.ceil(distanceM - CHECKIN_M)}m 近づくとチェックイン`}
     </button>
   )
   const errorRow = error && (
@@ -244,12 +250,18 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
       <button
         type="button"
         className="shop-sheet__grab"
-        aria-label={expanded ? '小さくする' : 'くわしく見る'}
+        aria-label={expanded ? '小さくする' : 'シートを広げる'}
         onClick={() => settle(expanded ? 'small' : 'full')}
       />
       <button type="button" className="shop-sheet__close" aria-label="閉じる" onClick={onClose}>
-        ×
+        <Icon name="close" size={16} />
       </button>
+      {onBack && (
+        <button type="button" className="shop-sheet__back" onClick={onBack}>
+          <Icon name="back" size={14} />
+          {backLabel ?? 'このビル'}
+        </button>
+      )}
       <div className="shop-sheet__stage">
         {progress < 0.5 && (
           <div className="shop-sheet__head" style={{ opacity: 1 - progress * 2 }}>
@@ -257,13 +269,26 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
             <div>
               <h2 className="shop-sheet__name">{name}</h2>
               {tags}
-              {hintRows ?? (open && <p className="shop-sheet__open">{formatOpen(open)}</p>)}
-              <p className="shop-sheet__distance">
-                {`ここから ${Math.ceil(distanceM)}m`}
-                {visits && <b className="shop-sheet__count">{`${visits.count}回行った`}</b>}
-              </p>
+              {hintRows}
             </div>
           </div>
+        )}
+        {progress < 0.5 && (
+          <p className="shop-facts" style={{ opacity: 1 - progress * 2 }}>
+            <span className={inRange ? 'shop-facts__near' : undefined}>
+              <Icon name="pin" size={16} />
+              {`ここから ${Math.ceil(distanceM)}m`}
+            </span>
+            {open && <OpenFact text={open} now={openedAt} />}
+            {showRecord && (visits ? (
+              <span>
+                <Icon name="star" size={16} />
+                {`${visits.count}回行った`}
+              </span>
+            ) : (
+              <span className="shop-facts__new">はじめてのお店</span>
+            ))}
+          </p>
         )}
         {fullShown && (
           <div
@@ -326,8 +351,26 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
         {errorRow}
         {button}
         {locateButton}
-        {!expanded && progress === 0 && <p className="shop-sheet__more">︿ 上にスライドでくわしく</p>}
+        {!expanded && progress === 0 && (
+          <button type="button" className="shop-sheet__more" onClick={() => settle('full')}>
+            <span aria-hidden="true">︿</span>くわしく見る
+          </button>
+        )}
       </div>
     </section>
+  )
+}
+
+// 営業中か（読めたとき）。読めない書き方なら営業時間の文をそのまま
+function OpenFact({ text, now }: { text: string; now: Date }) {
+  const o = openNow(text, now)
+  const label =
+    o.state === 'open' ? `営業中 ${o.until}まで` : o.state === 'closed' ? (o.from ? `準備中 ${o.from}から` : '営業時間外') : formatOpen(text)
+  const cls = o.state === 'open' ? 'shop-facts__open is-open' : o.state === 'closed' ? 'shop-facts__open is-closed' : 'shop-facts__open'
+  return (
+    <span className={cls}>
+      <Icon name="clock" size={16} />
+      {label}
+    </span>
   )
 }

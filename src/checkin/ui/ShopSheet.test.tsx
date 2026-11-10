@@ -20,7 +20,7 @@ const setup = (p: Partial<Parameters<typeof ShopSheet>[0]> = {}) => {
 test('名前・営業時間・距離を出し、50m以内なら押せる', async () => {
   const props = setup({ distanceM: 50 })
   expect(screen.getByText('麺屋もぐも')).toBeInTheDocument()
-  expect(screen.getByText('11:00〜22:00')).toBeInTheDocument()
+  expect(screen.getAllByText(/11:00〜22:00|営業中|準備中|営業時間外/).length).toBeGreaterThan(0)
   expect(screen.getByText('ここから 50m')).toBeInTheDocument()
   const btn = screen.getByRole('button', { name: 'チェックイン' })
   expect(btn).toBeEnabled()
@@ -28,9 +28,9 @@ test('名前・営業時間・距離を出し、50m以内なら押せる', async
   expect(props.onCheckin).toHaveBeenCalledTimes(1)
 })
 
-test('50.4m だと押せず「あと 1m」', () => {
+test('50.4m だと押せず「あと 1m 近づくとチェックイン」', () => {
   setup({ distanceM: 50.4 })
-  const btn = screen.getByRole('button', { name: 'あと 1m' })
+  const btn = screen.getByRole('button', { name: 'あと 1m 近づくとチェックイン' })
   expect(btn).toBeDisabled()
 })
 
@@ -192,4 +192,35 @@ test('onLocate があるときだけ「地図で見る」を出し、押すと�
 test('onLocate が無ければ「地図で見る」は出ない', () => {
   setup()
   expect(screen.queryByRole('button', { name: '地図で見る' })).not.toBeInTheDocument()
+})
+
+test('ビルから開いたときは左上に「‹ ビル名」、押すと onBack', async () => {
+  const onBack = vi.fn()
+  setup({ backLabel: '経堂コルティ', onBack })
+  await userEvent.click(screen.getByRole('button', { name: '経堂コルティ' }))
+  expect(onBack).toHaveBeenCalled()
+})
+
+test('ビルから開いていなければ戻るボタンは出ない', () => {
+  setup()
+  expect(screen.queryByRole('button', { name: /ビル/ })).not.toBeInTheDocument()
+})
+
+test('小さい段の1行: 行っていないお店は「はじめてのお店」、行ったお店は回数', () => {
+  const { unmount } = render(<ShopSheet shop={hp} distanceM={32} busy={false} error={null} onCheckin={vi.fn()} onClose={vi.fn()} recordReady visits={null} />)
+  expect(screen.getByText('はじめてのお店')).toBeInTheDocument()
+  unmount()
+  setup({ visits: { count: 2, firstDay: '2026-11-03', lastDay: '2026-11-08' } })
+  expect(screen.getByText('2回行った')).toBeInTheDocument()
+})
+
+test('営業時間が読めれば「営業中 22:00まで」', () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-11-10T12:00:00+09:00'))
+  try {
+    setup()
+    expect(screen.getByText('営業中 22:00まで')).toBeInTheDocument()
+  } finally {
+    vi.useRealTimers()
+  }
 })
