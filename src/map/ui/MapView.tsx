@@ -74,6 +74,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   const onHintTapRef = useRef(onHintTap)
   const worldRef = useRef<ReturnType<typeof attachWorld> | null>(null)
   const pinsHiddenRef = useRef(pinsHidden) // 世界ができる前に決まっていた分も、できたときに渡す
+  const hintPinsRef = useRef<ReturnType<typeof createHintPins> | null>(null)
   useEffect(() => {
     pinsHiddenRef.current = pinsHidden
     worldRef.current?.setPinsVisible(!pinsHidden)
@@ -95,7 +96,6 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   const tapRef = useRef<(ids: string[] | null) => void>(() => {})
   const focusAtRef = useRef<(p: LatLng) => void>(() => {})
   // 気配のピン。最後に渡された内容は覚えておき、地図を作り直したときに出し直す
-  const hintPinsRef = useRef<ReturnType<typeof createHintPins> | null>(null)
   const lastHintsRef = useRef<Parameters<MapViewHandle['setHints']> | null>(null)
   // お店の読み込みがそろうのを待つ口。そろう前に地図を作り直しても、待っている人はそのまま待てる
   const readyRef = useRef<{ promise: Promise<void>; resolve: () => void; done: boolean } | null>(null)
