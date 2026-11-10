@@ -352,15 +352,9 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
         {errorRow}
         {button}
         {locateButton}
-        {/* 続きの頭を少しだけのぞかせる（画面の下で切れて、まだ続きがあると分かる）。押すと全体へ */}
         {!expanded && progress === 0 && (
-          <button type="button" className="shop-sheet__peek" aria-label="くわしく見る" onClick={() => settle('full')}>
-            <span className="shop-sheet__peek-head">
-              <span aria-hidden="true">︿</span>くわしく見る
-            </span>
-            <span className="shop-sheet__peek-body">
-              {!masked && d?.catch ? d.catch : showRecord ? 'わたしの記録・お店の情報' : 'お店の情報'}
-            </span>
+          <button type="button" className="shop-sheet__more" onClick={() => settle('full')}>
+            <span aria-hidden="true">︿</span>くわしく見る
           </button>
         )}
       </div>

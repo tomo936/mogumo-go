@@ -867,7 +867,8 @@
 }
 
 /* 2026-11-10 オーナー「ちょっとでかい」「上にあげるカードのように、画面外にまだあるようなイメージ」:
-   小さい段は一回り小さく、下の端は画面の外まで（下のふちを見せない）。続きの頭をのぞかせる */
+   小さい段は一回り小さく、下の端は画面の外まで（下のふちを見せない）。
+   （続きの頭をのぞかせる白い箱は「変」で取りやめ。戻すときの高さもずれたため） */
 .shop-sheet:not(.shop-sheet--full) {
   bottom: -28px;
   padding: 10px 14px calc(28px + env(safe-area-inset-bottom));
@@ -913,46 +914,6 @@
 .shop-sheet:not(.shop-sheet--full) .shop-sheet__go:disabled {
   font-size: 14px;
 }
-.shop-sheet__peek {
-  display: block;
-  width: 100%;
-  margin: 12px 0 -46px; /* 下は画面の外へ（切れて見える） */
-  padding: 8px 12px 40px;
-  border: 1.5px solid #e3cfaa;
-  border-radius: 14px;
-  background: #fff;
-  text-align: left;
-  color: #4a3b2c;
-}
-.shop-sheet__peek-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 800;
-  color: #7a4a26;
-}
-.shop-sheet__peek-head span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border: 2px solid #7a4a26;
-  border-radius: 50%;
-  font-size: 9px;
-  line-height: 1;
-}
-.shop-sheet__peek-body {
-  display: block;
-  margin-top: 4px;
-  font-size: 13px;
-  line-height: 1.5;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
 /* 横幅いっぱい（2026-11-10 オーナー「ちょっとズレてる」「横幅もいっぱいでいい」）。左右の線は無し、上のふちだけ */
 .shop-sheet:not(.shop-sheet--full) {
   left: 0;
@@ -985,8 +946,9 @@
 .shop-sheet.shop-sheet--full {
   padding-bottom: calc(28px + 14px + env(safe-area-inset-bottom));
 }
+/* 全画面は画面の外の 28px（BELOW_PX）ぶん高くなるので、上限もそのぶん足す */
 .shop-sheet {
-  transition: padding-top 0.28s;
+  max-height: calc(100dvh + 28px);
 }
 /* ビルの一覧（2026-11-10）: 色の丸をやめて、地図と同じジャンルのピンの絵。手帳の色に */
 .bldg-sheet__pin {
