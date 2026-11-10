@@ -8,7 +8,7 @@ import type { LatLng } from '../map/domain/geo.ts'
 import { farFromHome } from '../checkin/domain/far.ts'
 import { loadProgress, postCheckin } from '../checkin/infra/checkinApi.ts'
 import { profileRepo } from '../setup/infra/profileRepo.ts'
-import { levelFor, needFor } from '../zukan/domain/level.ts'
+import { EXP_NEW, EXP_REVISIT, expFromCounts, levelFor } from '../zukan/domain/level.ts'
 import { loadCoins } from '../mypage/infra/coins.ts'
 import { syncMissions } from '../missions/infra/missionsApi.ts'
 import { nearbyKinds } from '../missions/domain/nearbyKinds.ts'
@@ -83,7 +83,7 @@ export function MapPage() {
   const [me, setMe] = useState<LatLng | null>(null)
   const [busy, setBusy] = useState(false)
   const [checkinError, setCheckinError] = useState<CheckinError | null>(null)
-  const [effect, setEffect] = useState<{ coins: 0 | 30 | 40; reveal: string | null; key: number } | null>(null)
+  const [effect, setEffect] = useState<{ coins: 0 | 30 | 40; reveal: string | null; key: number; exp: number; levelUp: number | null } | null>(null)
   const [doneToday, setDoneToday] = useState(false)
   const [record, setRecord] = useState<{ visits: Visits | null; ready: boolean }>({ visits: null, ready: false })
   const [exploreOpen, setExploreOpen] = useState(false)
@@ -193,9 +193,15 @@ export function MapPage() {
   const [myPageOpen, setMyPageOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [profile, setProfile] = useState<{ nickname: string; starterId: StarterId } | null>(null)
-  const [visitedCount, setVisitedCount] = useState(0) // プレイヤーのレベルの元（行ったお店の数）
+  const [exp, setExp] = useState(0) // プレイヤーの経験値（新しいお店 +10・もう一度 +2。記録から計算）
+  const visitedIds = useRef(new Set<string>()) // 行ったことのあるお店（チェックインで +10 か +2 かを決める）
   const refreshStats = useCallback(() => {
-    loadProgress().then((p) => setVisitedCount(p.visitsByShop.size)).catch(() => {})
+    loadProgress()
+      .then((p) => {
+        setExp(expFromCounts([...p.visitsByShop.values()].map((v) => v.count)))
+        visitedIds.current = new Set(p.visitsByShop.keys())
+      })
+      .catch(() => {})
     loadCoins().then(setCoins).catch(() => {})
   }, [])
   const [soonName, setSoonName] = useState<string | null>(null) // まだ作っていない画面の名前（短く出す）
@@ -253,7 +259,14 @@ export function MapPage() {
     setBusy(false)
     if (result.ok) {
       setSelected((cur) => (cur?.id === posted.id ? null : cur))
-      setEffect({ coins: result.coins, reveal: maskedBefore ? posted.name : null, key: ++effectSeq.current })
+      // 経験値: 初めてのお店 +10、行ったことのあるお店 +2（コインを受け取り済みの日は 0）
+      const isNew = !(visitedIds.current.has(posted.id) || (posted.mapId !== null && visitedIds.current.has(posted.mapId)))
+      const gain = result.coins === 0 ? 0 : isNew ? EXP_NEW : EXP_REVISIT
+      visitedIds.current.add(posted.id)
+      const before = levelFor(exp).level
+      const after = levelFor(exp + gain).level
+      setExp(exp + gain)
+      setEffect({ coins: result.coins, reveal: maskedBefore ? posted.name : null, key: ++effectSeq.current, exp: gain, levelUp: after > before ? after : null })
       if (result.wasHint) hints.markCompleted(posted)
       mapRef.current?.checkin(posted, result.newCells)
       // 町の進み具合をサーバーに確かめる（失敗しても、チェックインはそのまま）
@@ -421,7 +434,7 @@ export function MapPage() {
       {!effect && townNews.length === 0 && missionNews.length > 0 && (
         <MissionBanner key={missionNews[0].id} mission={missionNews[0]} onDone={() => setMissionNews((q) => q.slice(1))} />
       )}
-      {effect && <CheckinEffect key={effect.key} coins={effect.coins} reveal={effect.reveal} onDone={() => {
+      {effect && <CheckinEffect key={effect.key} coins={effect.coins} exp={effect.exp} levelUp={effect.levelUp} reveal={effect.reveal} onDone={() => {
             setEffect(null)
             if (!selectedRef.current) mapRef.current?.unfocus() // 演出が終わったらカメラを自分に戻す
           }} />}
@@ -431,9 +444,9 @@ export function MapPage() {
         <MapHud
           nickname={profile?.nickname ?? null}
           starterId={profile?.starterId ?? 101}
-          level={levelFor(visitedCount).level}
-          expInto={visitedCount - needFor(levelFor(visitedCount).level)}
-          expSpan={needFor(levelFor(visitedCount).level + 1) - needFor(levelFor(visitedCount).level)}
+          level={levelFor(exp).level}
+          expInto={levelFor(exp).into}
+          expSpan={levelFor(exp).span}
           coins={coins}
           hintsRemaining={hints.set ? hints.set.hints.filter((h) => !h.completed).length : null}
           hintOpen={exploreOpen}

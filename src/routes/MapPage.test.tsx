@@ -357,6 +357,15 @@ test('チェックインのあと、持っているコインが地図の上に�
   expect(await screen.findByRole('img', { name: 'コイン 420' })).toBeInTheDocument()
 })
 
+test('チェックインで経験値: 初めてのお店は +10、Lv が上がるときは「Lv 2 になった！」', async () => {
+  postCheckin.mockResolvedValue({ ok: true, checkinId: 'c1', coins: 30, newCells: [] })
+  renderPage()
+  act(() => last().position(here))
+  act(() => last().select(shop))
+  await userEvent.click(screen.getByRole('button', { name: 'チェックイン' }))
+  expect(await screen.findByText('+10 EXP')).toBeInTheDocument()
+})
+
 // ---- 週ミッション ----
 const week = (o: { progress?: number; completed?: boolean; newly?: string[] } = {}) => ({
   weekEnd: '2026-11-15', newly: o.newly ?? [],

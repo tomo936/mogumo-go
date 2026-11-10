@@ -5,7 +5,7 @@ import './mypage.css'
 import { Icon } from '../../ui/Icon.tsx'
 import { checkNickname, NICKNAME_MAX } from '../../setup/domain/nickname.ts'
 import { profileRepo, type StarterId } from '../../setup/infra/profileRepo.ts'
-import { levelFor, needFor } from '../../zukan/domain/level.ts'
+import { expFromShopIds, levelFor } from '../../zukan/domain/level.ts'
 import { loadRecord } from '../../record/infra/recordApi.ts'
 import type { ClearedCell, VisitEntry } from '../../record/domain/timeline.ts'
 import { areaKm2At, areaTimeline } from '../../towns/domain/area.ts'
@@ -51,9 +51,8 @@ export function MyPage(p: Props) {
   }, [attempt])
 
   const visited = data ? new Set(data.visits.map((v) => v.shopId)).size : 0
-  const lv = levelFor(visited)
-  const span = needFor(lv.level + 1) - needFor(lv.level)
-  const progress = span > 0 ? (visited - needFor(lv.level)) / span : 0
+  const lv = levelFor(data ? expFromShopIds(data.visits.map((v) => v.shopId)) : 0)
+  const progress = lv.span > 0 ? lv.into / lv.span : 0
   // 晴れた広さ = マス ＋ クリアした町（二重に数えない）
   const area = useMemo(() => (data ? areaTimeline(data.cells, data.towns) : null), [data])
   const badges = useMemo(
@@ -117,7 +116,7 @@ export function MyPage(p: Props) {
           {saveError && <p className="mp__error" role="alert">{saveError}</p>}
           <div className="mp__lv">{`Lv ${lv.level}`}</div>
           <div className="mp__lvbar"><i style={{ width: `${Math.round(progress * 100)}%` }} /></div>
-          <small>{`次の Lv まで あと ${lv.toNext}軒`}</small>
+          <small>{`次の Lv まで あと ${lv.toNext} EXP`}</small>
         </div>
       </div>
 

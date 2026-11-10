@@ -8,7 +8,7 @@ import { frameTier } from '../../checkin/domain/visits.ts'
 import { KIND_ORDER, PAGE_SIZE, buildZukan, filledCount, pageCount, type ZukanShop } from '../domain/zukan.ts'
 import { loadZukan } from '../infra/zukanApi.ts'
 import { ZukanDetail } from './ZukanDetail.tsx'
-import { levelFor } from '../domain/level.ts'
+import { expFromCounts, levelFor } from '../domain/level.ts'
 import { KIND_LABEL } from '../../shops/domain/kindLabel.ts'
 
 const KIND_NAME = KIND_LABEL
@@ -46,7 +46,7 @@ export function Zukan({ onLocate, onClose }: Props) {
   const total = all.length
   const filledAll = filledCount(all)
   const percent = total === 0 ? 0 : Math.round((filledAll / total) * 100)
-  const lv = levelFor(filledAll)
+  const lv = levelFor(expFromCounts(all.map((s) => s.visits?.count ?? 0)))
 
   if (detail) {
     return <ZukanDetail shop={detail} onBack={() => setDetail(null)} onLocate={() => onLocate(detail)} />
@@ -62,7 +62,7 @@ export function Zukan({ onLocate, onClose }: Props) {
         {byKind && (
           <div className="zukan__progress">
             <span>{`Lv ${lv.level}・あなたのお店コレクション ${filledAll}/${total} 訪問済み`}</span>
-            <span className="zukan__next">{`次のレベルまであと ${lv.toNext} 店`}</span>
+            <span className="zukan__next">{`次のレベルまであと ${lv.toNext} EXP`}</span>
             <div className="zukan__bar" role="img" aria-label={`${percent}%`}>
               <i style={{ width: `${percent}%` }} />
             </div>

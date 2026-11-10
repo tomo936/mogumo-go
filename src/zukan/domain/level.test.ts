@@ -1,18 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { levelFor, needFor } from './level.ts'
+import { EXP_NEW, EXP_REVISIT, expFromCounts, expFromShopIds, levelFor, needFor } from './level.ts'
 
-describe('levelFor', () => {
-  it('必要な訪問数: Lv1=0, Lv2=3, Lv3=9, Lv4=18', () => {
-    expect([1, 2, 3, 4].map(needFor)).toEqual([0, 3, 9, 18])
+describe('経験値とレベル', () => {
+  it('必要な経験値: Lv1=0, Lv2=30, Lv3=90, Lv4=180, Lv5=300', () => {
+    expect([1, 2, 3, 4, 5].map(needFor)).toEqual([0, 30, 90, 180, 300])
   })
-  it('0 店でも Lv1、次まで 3 店', () => {
-    expect(levelFor(0)).toEqual({ level: 1, toNext: 3 })
+  it('新しいお店 +10、もう一度 +2', () => {
+    expect(EXP_NEW).toBe(10)
+    expect(EXP_REVISIT).toBe(2)
+    expect(expFromCounts([1, 3, 0])).toBe(10 + (10 + 4))
+    expect(expFromShopIds(['a', 'b', 'a', 'a'])).toBe(10 + (10 + 4))
   })
-  it('3 店で Lv2、次（Lv3）まであと 6 店', () => {
-    expect(levelFor(3)).toEqual({ level: 2, toNext: 6 })
+  it('0 でも Lv1、次まであと 30', () => {
+    expect(levelFor(0)).toEqual({ level: 1, into: 0, span: 30, toNext: 30 })
   })
-  it('8 店はまだ Lv2、9 店で Lv3', () => {
-    expect(levelFor(8).level).toBe(2)
-    expect(levelFor(9).level).toBe(3)
+  it('30 で Lv2（次まであと 60・今のレベルで 0/60）、29 はまだ Lv1', () => {
+    expect(levelFor(29).level).toBe(1)
+    expect(levelFor(30)).toEqual({ level: 2, into: 0, span: 60, toNext: 60 })
+    expect(levelFor(90).level).toBe(3)
   })
 })

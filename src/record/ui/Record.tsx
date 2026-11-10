@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './record.css'
 import { Icon } from '../../ui/Icon.tsx'
-import { levelFor } from '../../zukan/domain/level.ts'
+import { expFromShopIds, levelFor } from '../../zukan/domain/level.ts'
 import { loadRecord } from '../infra/recordApi.ts'
 import { RecordMap } from './RecordMap.tsx'
 import type { LatLng } from '../../map/domain/geo.ts'
@@ -141,7 +141,7 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync }: Pro
   const pins = useMemo(() => pinsAt(visits, dayAt), [visits, dayAt])
   const today = useMemo(() => visitsOnDay(visits, dayAt), [visits, dayAt])
   const visitedShops = new Set(history.flatMap((g) => g.items.map((i) => i.shopId))).size
-  const lv = levelFor(new Set(visits.map((v) => v.shopId)).size)
+  const lv = levelFor(expFromShopIds(visits.map((v) => v.shopId)))
   const badges = useMemo(() => (tab === 'badges' ? evaluate({ visits, cellTimes: area.cellTimes, townAreas: area.townAreas, home }) : []), [tab, visits, area, home])
 
   return (

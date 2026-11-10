@@ -62,3 +62,13 @@ test('reveal があれば帯に「『○○亭』だった！」が出る。無�
   render(<CheckinEffect coins={30} onDone={() => {}} />)
   expect(screen.queryByText(/だった！/)).not.toBeInTheDocument()
 })
+
+test('経験値とレベルアップを帯に出す（0 のときは出さない）', () => {
+  const { unmount } = render(<CheckinEffect coins={30} exp={10} levelUp={3} onDone={() => {}} />)
+  expect(screen.getByText('+10 EXP')).toBeInTheDocument()
+  expect(screen.getByText('Lv 3 になった！')).toBeInTheDocument()
+  unmount()
+  render(<CheckinEffect coins={0} exp={0} onDone={() => {}} />)
+  expect(screen.queryByText(/EXP/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/になった/)).not.toBeInTheDocument()
+})
