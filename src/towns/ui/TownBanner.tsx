@@ -24,11 +24,10 @@ export function TownBanner({ news, onDone }: Props) {
   const clear = news.kind === 'clear'
   return (
     <div className={`town-banner town-banner--${news.kind}`} role="status" onClick={onDone}>
-      <span className="town-banner__dots" aria-hidden="true"><i /><i /><i /></span>
-      <span className="town-banner__icon"><TownIcon kind={clear ? 'sun' : 'crown'} size={52} /></span>
+      <span className="town-banner__icon"><TownIcon kind={news.kind} size={46} /></span>
       <span className="town-banner__body">
         <span className="town-banner__title">{`${news.name} ${clear ? 'クリア！' : 'コンプリート！'}`}</span>
-        <span className="town-banner__sub">{clear ? '町の霧がぜんぶ晴れたよ' : '町のお店をぜんぶ回ったよ'}</span>
+        <span className="town-banner__sub">{clear ? '町の霧がぜんぶ晴れた' : '町のお店をぜんぶ回った'}</span>
       </span>
       {news.coins > 0 && (
         <span className="town-banner__coin">

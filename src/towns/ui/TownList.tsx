@@ -25,7 +25,7 @@ export function TownList({ state }: { state: TownListState }) {
           const mark = t.completedAt !== null ? 'complete' : t.clearedAt !== null ? 'clear' : null
           return (
             <li key={t.id} className={`town-row${mark ? ` town-row--${mark}` : ''}`}>
-              <span className="town-row__icon"><TownIcon kind={mark === 'complete' ? 'crown' : mark === 'clear' ? 'sun' : 'cloud'} size={mark === 'clear' ? 38 : 34} /></span>
+              <span className="town-row__icon"><TownIcon kind={mark ?? 'none'} size={40} /></span>
               <div className="town-row__main">
                 <div className="town-row__head">
                   <div className="town-row__name">
