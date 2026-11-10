@@ -8,7 +8,14 @@ import type { LatLng } from '../map/domain/geo.ts'
 import { farFromHome } from '../checkin/domain/far.ts'
 import { loadProgress, postCheckin } from '../checkin/infra/checkinApi.ts'
 import { profileRepo } from '../setup/infra/profileRepo.ts'
-import { levelFor } from '../zukan/domain/level.ts'
+import { levelFor, needFor } from '../zukan/domain/level.ts'
+import { loadCoins } from '../mypage/infra/coins.ts'
+import { syncMissions } from '../missions/infra/missionsApi.ts'
+import { nearbyKinds } from '../missions/domain/nearbyKinds.ts'
+import type { Mission, MissionWeek } from '../missions/domain/mission.ts'
+import { MissionTickets } from '../missions/ui/MissionTickets.tsx'
+import type { MissionsState } from '../missions/ui/MissionTickets.tsx'
+import { MissionBanner } from '../missions/ui/MissionBanner.tsx'
 import { MapHud } from '../map/ui/MapHud.tsx'
 import { Record, type RecordTab } from '../record/ui/Record.tsx'
 import { MyPage } from '../mypage/ui/MyPage.tsx'
@@ -98,6 +105,7 @@ export function MapPage() {
       aliveRef.current = false // 画面を離れたら、町の呼び直しを止める
     }
   }, [])
+  const [coins, setCoins] = useState<number | null>(null) // 持っているコイン（地図の上に出す）
   const onTownSync = useCallback((s: TownSync) => {
     const fresh = s.newly.filter((n) => !townSeen.current.has(`${n.id}:${n.kind}`))
     if (fresh.length === 0) return
@@ -106,6 +114,7 @@ export function MapPage() {
       if (n.kind === 'clear' && n.town) mapRef.current?.addTown(n.town)
     }
     setTownNews((q) => [...q, ...fresh])
+    if (fresh.some((n) => n.coins > 0)) loadCoins().then(setCoins).catch(() => {}) // 町のコインを数字に反映
   }, [])
   const busyRef = useRef(false)
   const effectSeq = useRef(0)
@@ -142,6 +151,32 @@ export function MapPage() {
     }
   }, [closeHintSheet])
 
+  // 週ミッション（気配のシートの下）。開いたときは出題つき、チェックインのあとは数え直しだけ
+  const [missions, setMissions] = useState<MissionsState>({ status: 'loading' })
+  const [missionNews, setMissionNews] = useState<Mission[]>([]) // 達成の帯の順番待ち
+  const missionSeen = useRef(new Set<string>())
+  const missionOpen = useRef(new Set<string>()) // 見たときにまだ達成していなかったもの（チェックイン後の呼び出しが失敗しても、次に読んだときに帯を出す）
+  const applyMissions = useCallback((w: MissionWeek) => {
+    setMissions({ status: 'ready', week: w })
+    const fresh = w.missions.filter((m) => m.completed && (w.newly.includes(m.id) || missionOpen.current.has(m.id)) && !missionSeen.current.has(m.id))
+    for (const m of w.missions) if (!m.completed) missionOpen.current.add(m.id)
+    if (fresh.length === 0) return
+    for (const m of fresh) missionSeen.current.add(m.id)
+    setMissionNews((q) => [...q, ...fresh])
+    loadCoins().then(setCoins).catch(() => {})
+  }, [])
+  const loadMissions = useCallback(async () => {
+    setMissions((cur) => (cur.status === 'ready' ? cur : { status: 'loading' }))
+    // まわりのお店がそろうのを少しだけ待つ（そろわなければ、ジャンル指定なしで出題される）
+    const handle = mapRef.current
+    if (handle) await Promise.race([handle.whenShopsReady().catch(() => {}), new Promise((r) => setTimeout(r, 4000))])
+    const shops = mapRef.current?.hintInputs()?.shops ?? []
+    const w = await syncMissions({ kinds: nearbyKinds(shops, home, me), hasHome: home !== null })
+    if (!aliveRef.current) return
+    if (w) applyMissions(w)
+    else setMissions((cur) => (cur.status === 'ready' ? cur : { status: 'error' }))
+  }, [home, me, applyMissions])
+
   // 探索シート
   const openExplore = () => {
     if (busyRef.current) return
@@ -151,6 +186,7 @@ export function MapPage() {
     mapRef.current?.unfocus()
     setExploreOpen(true)
     hints.openSheet()
+    void loadMissions()
   }
   const [zukanOpen, setZukanOpen] = useState(false) // 図鑑（メニューから開く）
   const [recordTab, setRecordTab] = useState<RecordTab | null>(null) // 記録（メニューから開く。マイページからは じっせき で）
@@ -158,12 +194,16 @@ export function MapPage() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [profile, setProfile] = useState<{ nickname: string; starterId: StarterId } | null>(null)
   const [visitedCount, setVisitedCount] = useState(0) // プレイヤーのレベルの元（行ったお店の数）
+  const refreshStats = useCallback(() => {
+    loadProgress().then((p) => setVisitedCount(p.visitsByShop.size)).catch(() => {})
+    loadCoins().then(setCoins).catch(() => {})
+  }, [])
   const [soonName, setSoonName] = useState<string | null>(null) // まだ作っていない画面の名前（短く出す）
   useEffect(() => {
     if (!userId) return
     profileRepo.load(userId).then(setProfile).catch(() => setProfile(null))
-    loadProgress().then((p) => setVisitedCount(p.visitsByShop.size)).catch(() => {})
-  }, [userId])
+    refreshStats()
+  }, [userId, refreshStats])
   useEffect(() => {
     if (!soonName) return
     const t = setTimeout(() => setSoonName(null), 1600)
@@ -217,6 +257,10 @@ export function MapPage() {
       if (result.wasHint) hints.markCompleted(posted)
       mapRef.current?.checkin(posted, result.newCells)
       // 町の進み具合をサーバーに確かめる（失敗しても、チェックインはそのまま）
+      refreshStats() // コインとレベルの数字を読み直す
+      void syncMissions(null).then((w) => {
+        if (w && aliveRef.current && w.missions.length > 0) applyMissions(w)
+      })
       void syncUntilSettled(onTownSync, { alive: () => aliveRef.current })
     } else {
       if (selectedRef.current?.id === posted.id) setCheckinError(result.reason)
@@ -328,6 +372,7 @@ export function MapPage() {
           onRetry={hints.retry}
           placement="top"
           onClose={closeExplore}
+          extra={<MissionTickets state={missions} onRetry={() => void loadMissions()} />}
         />
       )}
       {zukanOpen && (
@@ -373,6 +418,9 @@ export function MapPage() {
       {townNews.length > 0 && (
         <TownBanner key={`${townNews[0].id}:${townNews[0].kind}`} news={townNews[0]} onDone={() => setTownNews((q) => q.slice(1))} />
       )}
+      {!effect && townNews.length === 0 && missionNews.length > 0 && (
+        <MissionBanner key={missionNews[0].id} mission={missionNews[0]} onDone={() => setMissionNews((q) => q.slice(1))} />
+      )}
       {effect && <CheckinEffect key={effect.key} coins={effect.coins} reveal={effect.reveal} onDone={() => {
             setEffect(null)
             if (!selectedRef.current) mapRef.current?.unfocus() // 演出が終わったらカメラを自分に戻す
@@ -384,6 +432,9 @@ export function MapPage() {
           nickname={profile?.nickname ?? null}
           starterId={profile?.starterId ?? 101}
           level={levelFor(visitedCount).level}
+          expInto={visitedCount - needFor(levelFor(visitedCount).level)}
+          expSpan={needFor(levelFor(visitedCount).level + 1) - needFor(levelFor(visitedCount).level)}
+          coins={coins}
           hintsRemaining={hints.set ? hints.set.hints.filter((h) => !h.completed).length : null}
           hintOpen={exploreOpen}
           onHintTap={() => (exploreOpen ? closeExplore() : openExplore())}

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { fanPositions } from '../domain/menuFan.ts'
 import { Icon } from '../../ui/Icon.tsx'
+import { CoinIcon } from '../../ui/CoinIcon.tsx'
 import type { IconName } from '../../ui/Icon.tsx'
 
 const CHARACTERS = import.meta.glob<string>('../../assets/characters/starter-*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>
@@ -21,6 +22,9 @@ type Props = {
   nickname: string | null
   starterId: 101 | 102
   level: number
+  expInto: number // 今の Lv に入ってから行ったお店の数（経験値）
+  expSpan: number // 次の Lv まで必要な軒数
+  coins: number | null
   hintsRemaining: number | null
   hintOpen: boolean
   onHintTap: () => void
@@ -45,10 +49,22 @@ export function MapHud(p: Props) {
   const spots = fanPositions(items.length, 0, 0, FAN_RADIUS)
   return (
     <>
-      <div className="hud-player" role="img" aria-label={`${p.nickname ?? 'あなた'} Lv ${p.level}`}>
+      <div
+        className="hud-player"
+        role="img"
+        aria-label={`${p.nickname ?? 'あなた'} Lv ${p.level} 次のレベルまであと${Math.max(0, p.expSpan - p.expInto)}軒`}
+        style={{ '--exp': `${Math.min(100, Math.max(0, (p.expInto / Math.max(1, p.expSpan)) * 100))}%` } as React.CSSProperties}
+      >
         <img src={characterUrl(p.starterId)} alt="" />
         <span className="hud-player__lv">{`Lv ${p.level}`}</span>
       </div>
+
+      {p.coins !== null && (
+        <div className="hud-coins" role="img" aria-label={`コイン ${p.coins}`}>
+          <CoinIcon size={18} />
+          <b>{p.coins}</b>
+        </div>
+      )}
 
       <button
         type="button"
