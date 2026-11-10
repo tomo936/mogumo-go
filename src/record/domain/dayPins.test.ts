@@ -9,18 +9,19 @@ const v = (shopId: string, when: string, o: Partial<VisitEntry> = {}): VisitEntr
   lat: 35, lng: 139, wasHint: false, mysteryHint: false, ...o,
 })
 
-test('pinsAt: 同じ日の2軒に順番、前の日の店は小さい', () => {
+test('pinsAt: その日に行ったお店だけ、回った順の番号つき（前の日の店は出さない）', () => {
   const pins = pinsAt([v('A', '2026-11-05 10:00'), v('C', '2026-11-06 15:40'), v('B', '2026-11-06 12:10')], jst('2026-11-06 20:00'))
-  const by = new Map(pins.map((p) => [p.shopId, p]))
-  expect(by.get('B')).toMatchObject({ today: true, order: 1 })
-  expect(by.get('C')).toMatchObject({ today: true, order: 2 })
-  expect(by.get('A')).toMatchObject({ today: false, order: null, lastDay: '2026-11-05' })
+  expect(pins.map((p) => [p.shopId, p.order])).toEqual([['B', 1], ['C', 2]])
+})
+
+test('pinsAt: 行っていない日はピンなし', () => {
+  expect(pinsAt([v('A', '2026-11-05 10:00')], jst('2026-11-06 12:00'))).toEqual([])
 })
 
 test('pinsAt: 同じ店に2回は1つ', () => {
   const pins = pinsAt([v('A', '2026-11-05 10:00'), v('A', '2026-11-06 10:00')], jst('2026-11-06 20:00'))
   expect(pins).toHaveLength(1)
-  expect(pins[0]).toMatchObject({ today: true, order: 1, lastDay: '2026-11-06' })
+  expect(pins[0]).toMatchObject({ order: 1, lastDay: '2026-11-06' })
 })
 
 test('pinsAt: 日本時間の境目（UTC 15:30 は翌日）', () => {
@@ -29,7 +30,7 @@ test('pinsAt: 日本時間の境目（UTC 15:30 は翌日）', () => {
 })
 
 test('pinsAt: 位置の無い店と、その日より後の店は出ない', () => {
-  const pins = pinsAt([v('A', '2026-11-05 10:00', { lat: null, lng: null }), v('B', '2026-11-07 10:00')], jst('2026-11-06 12:00'))
+  const pins = pinsAt([v('A', '2026-11-06 10:00', { lat: null, lng: null }), v('B', '2026-11-07 10:00')], jst('2026-11-06 12:00'))
   expect(pins).toEqual([])
 })
 

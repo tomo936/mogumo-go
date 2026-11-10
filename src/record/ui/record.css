@@ -266,26 +266,6 @@
   width: 100%;
   pointer-events: none;
 }
-/* 前の日に行ったお店は小さい点だけ（その日に行ったお店と見分ける） */
-.rc-pin:not(.rc-pin--today) {
-  width: 12px;
-  height: 12px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  background: #c2652a;
-  opacity: 0.8;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-.rc-pin:not(.rc-pin--today) img {
-  display: none;
-}
-/* 出てくるときは、その場でふわっと（置き場所が決まってから見せる） */
-.rc-pin {
-  animation: rc-pin-in 0.25s ease-out;
-}
-@keyframes rc-pin-in {
-  from { opacity: 0; }
-}
 .rc-pin--today {
   width: 40px;
   opacity: 1;
@@ -293,12 +273,18 @@
   filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.3));
 }
 .rc-pin--pop {
-  animation: rc-pin-pop 0.5s ease-out 1;
+  animation: rc-pin-pop 0.6s ease-out 1 both;
+}
+/* その場所から、下からぴょんと飛び出す（足元を軸に） */
+.rc-pin {
+  transform-origin: 50% 100%;
 }
 @keyframes rc-pin-pop {
-  0% { translate: 0 0; scale: 0.6; }
-  60% { translate: 0 -8px; scale: 1.08; }
-  100% { translate: 0 0; scale: 1; }
+  0% { translate: 0 0; scale: 0.2 0.2; }
+  45% { translate: 0 -14px; scale: 1.1 1.1; }
+  70% { translate: 0 0; scale: 1 0.9; }
+  85% { translate: 0 -4px; scale: 1 1.03; }
+  100% { translate: 0 0; scale: 1 1; }
 }
 .rc-pin__num {
   position: absolute;

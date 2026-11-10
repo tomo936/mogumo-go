@@ -1,5 +1,5 @@
-// 記録の地図に出す「行ったお店」のピンの計算。スライダーの日（日本時間）に行ったお店は大きく番号つき、
-// それより前の日のお店は小さく出す（1店1つ）。‹ › は行った日から行った日へ跳ぶ。
+// 記録の地図に出す「行ったお店」のピンの計算。スライダーの日（日本時間）に行ったお店だけを、回った順の番号つきで出す。
+// （前の日のお店も出すと、その日に行っていないのに出て見えるため出さない。2026-11-10 オーナー）‹ › は行った日から行った日へ跳ぶ。
 import type { ShopKind } from '../../shops/domain/shop.ts'
 import { jstDay } from '../../checkin/domain/day.ts'
 import { stepWeek, type VisitEntry } from './timeline.ts'
@@ -24,14 +24,10 @@ export function visitsOnDay(visits: VisitEntry[], t: number): VisitEntry[] {
 }
 
 export function pinsAt(visits: VisitEntry[], t: number): DayPin[] {
-  const day = jstDay(new Date(t))
-  const order = new Map<string, number>()
-  for (const x of visitsOnDay(visits, t)) if (!order.has(x.shopId)) order.set(x.shopId, order.size + 1)
   const pins = new Map<string, DayPin>()
-  for (const x of [...visits].sort(byTime)) {
-    if (x.day > day || x.lat === null || x.lng === null) continue
-    const n = order.get(x.shopId) ?? null
-    pins.set(x.shopId, { shopId: x.shopId, name: x.name, kind: x.kind, lat: x.lat, lng: x.lng, today: n !== null, order: n, lastDay: x.day })
+  for (const x of visitsOnDay(visits, t)) {
+    if (pins.has(x.shopId) || x.lat === null || x.lng === null) continue
+    pins.set(x.shopId, { shopId: x.shopId, name: x.name, kind: x.kind, lat: x.lat, lng: x.lng, today: true, order: pins.size + 1, lastDay: x.day })
   }
   return [...pins.values()]
 }

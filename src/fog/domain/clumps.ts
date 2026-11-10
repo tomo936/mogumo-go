@@ -41,8 +41,12 @@ function nearestCleared(cleared: Cleared, p: LatLng, mLng: number, maxM: number)
   return best < maxM * maxM ? Math.sqrt(best) : Infinity
 }
 
-// half: 塊を置く範囲の半幅（m）。ふだんは現在地から FOG_HALF_M、記録の地図の遠くは広く
-export function fogClumps(origin: LatLng, cleared: Cleared, half: number = FOG_HALF_M): Clump[] {
+// 塊を置く範囲を、origin からの m の四角で絞るとき
+export type ClumpBox = { x0: number; x1: number; y0: number; y1: number }
+
+// half: 塊を置く範囲の半幅（m）。ふだんは現在地から FOG_HALF_M、記録の地図は広く。
+// box: さらに置く範囲を絞る（記録の地図で、晴れた場所のまわりだけ作り直すとき）
+export function fogClumps(origin: LatLng, cleared: Cleared, half: number = FOG_HALF_M, box?: ClumpBox): Clump[] {
   // 格子点の番号は緯度経度の絶対値から決めるので、作り直しても同じ場所に同じ塊が出る。
   // x・y（origin からの m）だけは origin の緯度の 1度あたりの m で測る
   const mLng = M_PER_DEG_LAT * Math.cos((origin.lat * Math.PI) / 180)
@@ -59,6 +63,7 @@ export function fogClumps(origin: LatLng, cleared: Cleared, half: number = FOG_H
       const x = (lng - origin.lng) * mLng
       const y = (lat - origin.lat) * M_PER_DEG_LAT
       if (Math.abs(x) > half || Math.abs(y) > half) continue
+      if (box && (x < box.x0 || x > box.x1 || y < box.y0 || y > box.y1)) continue
       const p = { lat, lng }
       if (cleared.has(cellKey(cellOf(p)))) continue
       let w = CLUMP_MIN_M + hash01(i, j, 3) * (CLUMP_MAX_M - CLUMP_MIN_M)
