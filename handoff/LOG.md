@@ -52,3 +52,4 @@
 - 2026-11-09 Claude Code: お店のシートの飾り（ポラロイドの枠3種・テープ・窓の背景）を依頼（to-shiro/2026-11-09-shop-sheet-art.md）。
 - 2026-11-10 Claude Code: 実績のメダルの正式な絵（台5・リボン5・ジャンル以外の絵15）を依頼（to-shiro/2026-11-10-badge-art.md）。今は SVG のメダルで動いている。
 - 2026-11-11 Claude Code（Fable）: 3D のアバター用の絵（三面図・色の見本・顔の絵 6 種）を依頼（to-shiro/2026-11-11-avatar-3d-art.md）。着手は設計メモ（docs/superpowers/specs/2026-11-11-avatar-design.md）にオーナーの OK が出てから。
+- 2026-11-11 Claude Code（Fable）: 3D のアバター用の絵の依頼を見直し（to-shiro/2026-11-11-avatar-3d-art.md）。オーナーの参考画像（art/reference/avatar/boy/）があるので三面図・色の見本は取り下げ。男の子の試作に OK が出たあとに、顔の参考 2 枚と女の子の参考画像 6 枚だけ。
