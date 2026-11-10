@@ -280,3 +280,7 @@
   from { transform: translateY(-100%); }
   to { transform: translateY(0); }
 }
+/* 「ピン」ボタンで出さないとき */
+.hint-pin[hidden] {
+  display: none;
+}

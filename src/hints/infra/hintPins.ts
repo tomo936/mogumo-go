@@ -13,6 +13,7 @@ type Shown = { m: Marker; el: HTMLButtonElement; id: string; timer: ReturnType<t
 export function createHintPins(map: MapLibreMap, onTap: (hintId: string) => void) {
   let shown: Shown[] = []
   let shownKey = ''
+  let hidden = false // 「ピン」ボタンで出さないとき（2026-11-10 オーナー: 気配のピンも消す）
 
   const clear = () => {
     for (const s of shown) {
@@ -58,9 +59,14 @@ export function createHintPins(map: MapLibreMap, onTap: (hintId: string) => void
           onTap(h.id)
         })
         // ピンの先を地面の点に付ける（画面の px で浮かせると、カメラを引く・回すとずれて見える）
+        el.hidden = hidden
         const m = new Marker({ element: el, anchor: 'bottom' }).setLngLat([p.lng, p.lat]).addTo(map)
         shown.push({ m, el, id: h.id, timer: null })
       }
+    },
+    setHidden(h: boolean) {
+      hidden = h
+      for (const s of shown) s.el.hidden = h
     },
     // ぽんと弾ませる（約0.4秒）
     bounce(hintId: string) {

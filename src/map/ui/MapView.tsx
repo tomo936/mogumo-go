@@ -52,7 +52,7 @@ type Props = {
   onSelectBuilding: (shops: Shop[] | null, title?: string | null) => void // ビル・施設・駅（同じ建物の複数のお店）が押された。title は施設・駅の名前
   onPosition: (me: LatLng) => void // 1秒に4回まで
   onHintTap: (hintId: string) => void // 気配のピンが押された
-  pinsHidden?: boolean // 店のピン（1軒・ビル・施設）と名前の札を出さない（気配のピンは出す）
+  pinsHidden?: boolean // 店のピン（1軒・ビル・施設）・名前の札・気配のピンを出さない（2026-11-10 オーナー: 気配のピンも消す）
   ref?: Ref<MapViewHandle>
 }
 
@@ -77,6 +77,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   useEffect(() => {
     pinsHiddenRef.current = pinsHidden
     worldRef.current?.setPinsVisible(!pinsHidden)
+    hintPinsRef.current?.setHidden(pinsHidden)
   }, [pinsHidden])
   useLayoutEffect(() => {
     onStatusRef.current = onStatus
@@ -162,6 +163,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     if (readyRef.current!.done) newReady()
     const hintPins = createHintPins(map, (id) => onHintTapRef.current(id))
     hintPinsRef.current = hintPins
+    hintPins.setHidden(pinsHiddenRef.current)
     if (lastHintsRef.current) hintPins.update(...lastHintsRef.current)
 
     const avatar = createAvatar(map) // 自分のアバター（お試し版）

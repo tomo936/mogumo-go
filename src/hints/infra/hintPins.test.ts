@@ -90,3 +90,14 @@ test('dispose で全部消える', () => {
   pins.dispose()
   expect(live()).toHaveLength(0)
 })
+
+test('「ピン」で出さないときは気配のピンも隠す（あとから出すと戻る・隠したまま作り直しても隠れる）', () => {
+  const pins = createHintPins(map, vi.fn())
+  pins.update([hint('a')], pos('a'), new Set())
+  pins.setHidden(true)
+  expect(live()[0].el.hidden).toBe(true)
+  pins.update([hint('a'), hint('b')], pos('a', 'b'), new Set())
+  expect(live().every((m) => m.el.hidden)).toBe(true)
+  pins.setHidden(false)
+  expect(live().some((m) => m.el.hidden)).toBe(false)
+})
