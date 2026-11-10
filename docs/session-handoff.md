@@ -110,3 +110,10 @@
 3. 週ミッション3つ（かんたん/ふつう/むずかしい、19種の案。ごほうび 50/100/150 なら coin_ledger の check を変える migration が要る）
 4. 地図の検索・飛べる機能（まず行った場所へ飛ぶ）
 **メモ**: CSS は checkin.css の .shop-sheet の規則が強いので、ほかのシートで上書きするときはクラスを重ねる。CSS のコメントを途中で閉じない（後ろの規則が消える）。
+
+## 2026-11-10 夜: 町の機能の設計メモ（オーナーの確認待ち）
+- 気配1つのシート（HintSheet.tsx）は手帳風にして反映済み（2b26967）。
+- Vercel は1日の上限（Deployment rate limited）に当たった。vercel.json で dev と main だけ版を作るようにした（97c6a82）。**文書だけの変更は dev に送らず、作業ブランチにだけ送る**（版の数を使わないため）。
+- 町の設計メモ: docs/superpowers/specs/2026-11-10-towns-design.md。採用は「境目だけ全国分をファイルで置き、お店の数は初めての町だけ数えて覚える」。確認待ちの点はメモの §11（広い町も全体が晴れる／地図に無い店は分母と分子の両方に足す／町のセルをサーバーに保存しない）。
+- 実測の材料（消えてもよい）: スクラッチの estat/（東京・北海道・長野の境目）と tools/（mapshaper）。作り方は `mapshaper r2kaNN.shp encoding=sjis -filter 'HCODE==8101' -each 'town=…丁目を取る' -dissolve2 CITY,town copy-fields=PREF,CITY_NAME -simplify dp interval=10 keep-shapes -o precision=0.00001`。e-Stat の URL は `https://www.e-stat.go.jp/gis/statmap-search/data?dlserveyId=A002005212020&code=<県番号>&coordSys=1&format=shape&downloadType=5&datum=2011`。
+- 承認が出たら: superpowers:writing-plans で計画 → 実装。
