@@ -9,6 +9,7 @@ import { RecordMap } from './RecordMap.tsx'
 import type { LatLng } from '../../map/domain/geo.ts'
 import { areaKm2, clearedAt, groupByMonth, timeRange, type ClearedCell, type VisitEntry } from '../domain/timeline.ts'
 import { pinsAt, stepVisitDay, visitsOnDay } from '../domain/dayPins.ts'
+import { jstDay } from '../../checkin/domain/day.ts'
 import { evaluate } from '../../badges/domain/evaluate.ts'
 import { BadgeList } from '../../badges/ui/BadgeList.tsx'
 
@@ -52,8 +53,11 @@ export function Record({ home, onClose, initialTab = 'record' }: { home: LatLng 
   const now = t ?? range?.end ?? 0
   const shown = useMemo(() => clearedAt(cells, now), [cells, now])
   const history = useMemo(() => groupByMonth(visits, now), [visits, now])
-  const pins = useMemo(() => pinsAt(visits, now), [visits, now])
-  const today = useMemo(() => visitsOnDay(visits, now), [visits, now])
+  // ピンとその日の一覧は、日付（日本時間）が変わったときだけ計算し直す（スライダーは1時間ずつ動くため）
+  const dayKey = jstDay(new Date(now))
+  const dayAt = useMemo(() => Date.parse(`${dayKey}T12:00:00+09:00`), [dayKey])
+  const pins = useMemo(() => pinsAt(visits, dayAt), [visits, dayAt])
+  const today = useMemo(() => visitsOnDay(visits, dayAt), [visits, dayAt])
   const visitedShops = new Set(history.flatMap((g) => g.items.map((i) => i.shopId))).size
   const lv = levelFor(new Set(visits.map((v) => v.shopId)).size)
   const badges = useMemo(() => (tab === 'badges' ? evaluate({ visits, cellTimes: cells.map((c) => c.at), home }) : []), [tab, visits, cells, home])

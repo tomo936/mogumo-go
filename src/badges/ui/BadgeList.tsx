@@ -1,10 +1,12 @@
 // 実績の一覧（記録の「じっせき」タブ）。グループごとに見出しと「取れた数 / 全部」、メダルの格子。
-// 段のある実績（はじめてのラーメン → ラーメンマスター など）は1つにまとめ、今の段を見せる。
-// 押すと下から小さいシートで、名前・条件・取った日か「あと N」と、段の並び。ひみつは取るまで条件も「？？？」。
+// 段のある実績（はじめてのラーメン → ラーメンマスター など）は1行に全部の段を並べる（まだの段は灰色）。
+// 1つだけの実績は格子に並べる。押すと下から小さいシートで、名前・条件・取った日か「あと N」と、段の並び。
+// ひみつは取るまで条件も「？？？」。
 import { useState } from 'react'
 import './badges.css'
 import { remaining, seriesOf, type BadgeSeries } from '../domain/evaluate.ts'
 import { GROUP_LABEL, GROUP_ORDER, type BadgeState } from '../domain/types.ts'
+import { KIND_LABEL } from '../../shops/domain/kindLabel.ts'
 import { BadgeMedal } from './BadgeMedal.tsx'
 
 const dateLabel = (ms: number) => {
@@ -12,8 +14,10 @@ const dateLabel = (ms: number) => {
   return `${d.getUTCFullYear()}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.${String(d.getUTCDate()).padStart(2, '0')}`
 }
 
+const EVOLVE = new URLSearchParams(globalThis.location?.search ?? '').has('evo') // 比べる用（一時）
+
 export function BadgeList({ states, hasHome }: { states: BadgeState[]; hasHome: boolean }) {
-  const [open, setOpen] = useState<BadgeSeries | null>(null)
+  const [open, setOpen] = useState<{ series: BadgeSeries; state: BadgeState } | null>(null)
   const series = seriesOf(states)
   const earned = states.filter((s) => s.earnedAt !== null).length
   return (
@@ -29,27 +33,65 @@ export function BadgeList({ states, hasHome }: { states: BadgeState[]; hasHome: 
               <span>{GROUP_LABEL[g]}</span>
               <small>{`${list.filter((s) => s.earnedAt !== null).length} / ${list.length}`}</small>
             </h3>
-            <div className="bd__grid">
-              {items.map((x) => (
-                <button key={x.face.def.series} type="button" className="bd__item" onClick={() => setOpen(x)}>
-                  <BadgeMedal state={x.face} size={80} />
-                </button>
-              ))}
-            </div>
+            {EVOLVE && (
+              <div className="bd__grid">
+                {items.map((x) => (
+                  <button key={x.face.def.series} type="button" className="bd__item bd__evo" onClick={() => setOpen({ series: x, state: x.face })}>
+                    <BadgeMedal state={x.face} size={80} />
+                    {x.steps.length > 1 && (
+                      <span className="bd__pips" aria-label={`${x.steps.filter((s) => s.earnedAt !== null).length} / ${x.steps.length} 段`}>
+                        {x.steps.map((s) => <i key={s.def.id} className={s.earnedAt !== null ? 'on' : ''} />)}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+            {!EVOLVE && items.filter((x) => x.steps.length > 1).map((x) => (
+              <div key={x.face.def.series} className="bd__row">
+                <div className="bd__rowhead">
+                  <span>{rowLabel(x)}</span>
+                  <small>{`${x.steps.filter((s) => s.earnedAt !== null).length} / ${x.steps.length}`}</small>
+                </div>
+                <div className="bd__steps">
+                  {x.steps.map((s) => (
+                    <button key={s.def.id} type="button" className="bd__item" onClick={() => setOpen({ series: x, state: s })}>
+                      <BadgeMedal state={s} size={64} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {!EVOLVE && items.some((x) => x.steps.length === 1) && (
+              <div className="bd__grid">
+                {items.filter((x) => x.steps.length === 1).map((x) => (
+                  <button key={x.face.def.series} type="button" className="bd__item" onClick={() => setOpen({ series: x, state: x.face })}>
+                    <BadgeMedal state={x.face} size={80} />
+                  </button>
+                ))}
+              </div>
+            )}
           </section>
         )
       })}
 
-      {open && <BadgeDetail series={open} hasHome={hasHome} onClose={() => setOpen(null)} />}
+      {open && <BadgeDetail series={open.series} state={open.state} hasHome={hasHome} onClose={() => setOpen(null)} />}
     </div>
   )
 }
 
-function BadgeDetail({ series, hasHome, onClose }: { series: BadgeSeries; hasHome: boolean; onClose: () => void }) {
-  const state = series.face
+// 行の名前（ジャンルは種類の名前、それ以外は最初の段の名前）
+const rowLabel = (x: BadgeSeries) => {
+  const art = x.steps[0].def.art
+  if ('kind' in art) return art.kind === 'mystery' ? 'なぞ' : KIND_LABEL[art.kind]
+  return x.steps[0].def.how.replace(/\s*\d[\d.]*\s*(回|軒|日|km²|km)/, ' ◯$1')
+}
+
+function BadgeDetail({ series, state, hasHome, onClose }: { series: BadgeSeries; state: BadgeState; hasHome: boolean; onClose: () => void }) {
   const { def } = state
   const hidden = def.secret && state.earnedAt === null
-  const target = series.next // 次にねらう段（全部取れていれば null）
+  // ねらう段: 押した段がまだならその段、取れていれば次のまだの段
+  const target = state.earnedAt === null ? state : series.next
   const left = target ? remaining(target) : null
   return (
     <div className="bd-sheet" role="dialog" aria-label="実績のくわしく">

@@ -15,11 +15,11 @@ test('グループの見出しと「取れた数 / 全部」', () => {
   expect(screen.getByRole('region', { name: 'ちょっと変わった' })).toBeInTheDocument()
 })
 
-test('段のある実績は1つにまとめ、今の段を見せる。押すと取った日・次の段・5段の並び', async () => {
+test('段のある実績は1行に全部の段を並べる。押すと取った日・次の段・段の並び', async () => {
   render(<BadgeList states={states} hasHome={false} />)
   const genre = screen.getByRole('region', { name: 'ジャンル' })
-  expect(within(genre).getAllByRole('button')).toHaveLength(18)
-  expect(within(genre).queryByRole('img', { name: 'ラーメン通（まだ）' })).not.toBeInTheDocument()
+  expect(within(genre).getAllByRole('button')).toHaveLength(90)
+  expect(within(genre).getByRole('img', { name: 'ラーメン通（まだ）' })).toBeInTheDocument()
   await userEvent.click(within(genre).getByRole('img', { name: 'ラーメン好き' }))
   expect(screen.getByText('2026.11.03 にとった')).toBeInTheDocument()
   expect(screen.getByText('つぎは「ラーメン通」 あと 7回')).toBeInTheDocument()

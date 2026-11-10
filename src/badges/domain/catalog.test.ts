@@ -26,3 +26,12 @@ test('名前と条件が空でなく、季節・ちょっと変わったはひ�
     if (d.group === 'season' || d.group === 'quirky') expect(d.secret).toBe(true)
   }
 })
+
+test('段のつながりの中では ★ が 1 から順に1つずつ上がる（飛ばない）', () => {
+  const series = new Map<string, number[]>()
+  for (const d of CATALOG) series.set(d.series, [...(series.get(d.series) ?? []), d.stars])
+  for (const [name, stars] of series) {
+    if (stars.length < 2) continue
+    expect({ name, stars }).toEqual({ name, stars: stars.map((_, i) => i + 1) })
+  }
+})
