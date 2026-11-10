@@ -5,9 +5,10 @@
 - 再開: 新しい担当（またはこのエージェントの続き）は、まずこのファイルと依頼書を読み、「次にやること」から始める。試作の画像・数字・ファイルの場所も、ここに書いておく。
 
 ## いまの段
-**参考画像に忠実な 3D の試作を作っている途中**（形の生成は済み。色の貼り付け・リュックの作り直し・骨組み・顔の差し替えの 1 周目ができ、直しの途中）。仕事2 にはまだ進まない。
+**参考画像に忠実な 3D の試作（男の子）ができた。オーナーの確認待ち。** 仕事2（アプリへの実装）にはまだ進まない。
 
 ## やったこと（新しい順）
+- 2026-11-11 朝（Fable 5.2）: 試作の 1 周が終わった。形（オーナーが生成、198 秒）→ AI のリュックを切り取り → 1.4 万三角形に軽く → 参考画像の色を貼る（正面は全部、髪は横・後ろも）→ リュックを別部品で作り直し → 骨組み 11 本＋重み → 顔の膜と表情 5 つ → 並べた PNG 4 枚。模型は 989KB。設計メモ §A を結果で書き直した。うまくいっていない所は §A.5。
 - 2026-11-11 未明（途中の保存）: オーナーが生成を実行（198 秒）。形は使えると判断（正面は髪の毛束・パーカーのひも・ポケットまで出ている。リュックだけ大きな箱で参考とちがう → オーナーも「リュックが汚い」）。1 周目ができた: `blender-paint.py`（軽くする 2 万三角形 → AI のリュックを切り取って背中をふさぐ → 正面の参考画像の色を貼る → 見えない所は区分けした代表の色）、`blender-finish.py`（きれいなリュックを別の部品で作る・顔の膜と表情 5 つの並べ絵・骨組み 11 本と重み）、`faithful-page.ts.txt`（参考画像と並べるページ）。残り: 横・後ろの髪が平らな 1 色／手・ひざ下の後ろの色ちがい／容量 1.29MB（1MB を超えている）／走りのときの腰まわりのゆがみ。
 - 2026-11-11 未明（Fable 5.2）: 設計メモに「§A 追記」（新しい作り方 5 段・止まっている理由・生成を動かす手順・続きの手順）。ミシェーラへの依頼を見直し（三面図・色の見本は取り下げ。OK のあとに、顔の参考 2 枚と女の子の参考画像だけ）。
 - 2026-11-11 未明: 骨組み（11 本）＋重みの自動付け＋計算の歩き・走り（ひざ・ひじも曲がる）を、**代役の形**（前回の古い形）で試作して動いた。`art/prototypes/avatar/rig-standin.png`。重みの自動付けは 1 回失敗 → 余分な殻を消す＋10 倍の大きさで計算、で通った。
@@ -21,16 +22,17 @@
 
 ## 実測した数字・試作の置き場
 - 参考画像: `art/reference/avatar/boy/`（6 枚、1600×1600）
-- 画像（PNG）: `art/prototypes/avatar/rig-standin.png`（骨組み＋歩き・走り。代役の形なので見た目の比較には使えない）、`compare-look.png`・`expressions.png`・`motion.png`（組み立て式＝不合格の記録）、`size.png`（大きさの案。そのまま使える）
-- 台本: `art/prototypes/avatar/prep-ref.py`（背景を消す）、`hunyuan-run.py`（生成。Windows 側で動かす）、`blender-rig.py`（面の作り直し → 骨組み → 重み → GLB。`blender -b -P blender-rig.py -- 入力.glb 出力.glb [voxel 0.008] [三角形 24000]`。入力に点の色があれば写す）、`rig-page.ts.txt`（骨を計算で動かすページ。式 `poseFor`・`applyPose`）、`blender-chibi.py`・`blender-repaint.py`・`compare-page.ts.txt`（前の試作）
-- 動かす場所（git 管理外）: `.superpowers/preview/avatar/`（`rig.html?glb=<ファイル名>` で骨つきの GLB を見る。撮るのは作業用フォルダの `av/shot.sh rig.html rig`）。Blender は `f1bcb96d…/scratchpad/blender/blender-4.2.3-linux-x64/blender`、Playwright は `f1bcb96d…/scratchpad/pw/`（`avproto2.mjs <url> <出力先> <枠の id>`）。
-- 数字: 代役の骨つき GLB 802KB・2.4 万三角形・骨 11 本・骨の計算 1 コマ 約 0.009ms（この PC）／今の 3D 897KB・5,000 三角形／地図の縮尺 ズーム 17 で 1px = 0.4853m（今の式は 0.9705m で 2 倍）／大きさの案 20m（引き 17px・標準 34px・寄り 68px）。
-- 生成の環境: `D:\mogumo-3d`（`/mnt/d/mogumo-3d`）。入っているモデルは `hunyuan3d-dit-v2-0-fp16`（1 枚の絵から作る版）・delight・paint。前回は色付きまで 192 秒。ComfyUI は止まっている。
+- **できた画像**: `art/prototypes/avatar/faithful-compare.png`（参考画像／試作／今の 3D）・`faithful-backpack.png`・`faithful-walk.png`・`faithful-faces.png`。模型 `art/prototypes/avatar/boy-faithful.glb`（989,048 バイト、17,348 三角形、骨 11 本、描く回数 4）。
+- 台本: `prep-ref.py`（背景を消す）→ `hunyuan-run.py`（生成。Windows 側）→ `blender-paint.py`（軽くする・リュックを切る・色を貼る）→ `blender-finish.py`（リュック・顔の膜と表情・骨組み・GLB）→ `faithful-page.ts.txt`（並べるページ。動きの式もここ）。使い方は各台本の先頭と、設計メモ §A.6。
+- 生成した形: `/mnt/d/mogumo-3d/ComfyUI/output/mogumo/boy_ref123_shape_00001_.glb`・`…_textured_00001_.glb`（リポジトリには入れていない）。
+- 動かす場所（git 管理外・消えてもよい）: `.superpowers/preview/avatar/`（`faithful.html`）。作業用フォルダ `510e9a37…/scratchpad/av/build.sh` が、作り直しから撮影までを 1 回で行う（Blender は `f1bcb96d…/scratchpad/blender/…/blender`、Playwright は `f1bcb96d…/scratchpad/pw/avproto2.mjs`、参考画像の PNG は `510e9a37…/scratchpad/ref/`、生成物の写しは `…/scratchpad/gen/`）。作業用フォルダが消えていたら、参考画像は ffmpeg で PNG に直し、Blender は `download.blender.org` の 4.2.3 を展開する。
+- 前の試作（組み立て式＝不合格の記録）: `compare-look.png`・`expressions.png`・`motion.png`、`blender-chibi.py`・`blender-repaint.py`・`compare-page.ts.txt`。大きさの案 `size.png` はそのまま使える（推奨 20m: 引き 17px・標準 34px・寄り 68px）。
+- 地図の縮尺: ズーム 17 で 1px = 0.4853m（今のコードの式は 0.9705m で 2 倍。今の 3D は標準でも約 66px で出ている）。
+- 注意: Windows 側（ComfyUI）は、この担当の Sandbox からは動かせない（Sandbox の外での実行は権限の判定で不許可だった）。生成はオーナーかリーダーが行う。
 
 ## 次にやること
-1. **形の生成**（設計メモ §A.4 の手順。リーダーかオーナーが Sandbox の外で）。できた `boy_ref*_shape_*.glb` の場所を受け取る。
-2. 設計メモ §A.5 の 1〜5（面の作り直し → 参考画像の色の投影 → 顔の膜と表情 → 骨組み → 並べた PNG）。
-3. 設計メモの §A を、選んだ方式・実測の数字で書き直す。最後に `npm test`・`npx tsc -b`・`npm run lint`。
+1. オーナーの返事を待つ（設計メモ §A.8 の 5 つ）。
+2. OK なら、§A.5 の直し（服の後ろの陰影・わきと腰の重み・リュックの肩ひも・手足の色）→ 女の子（参考画像 6 枚が要る）→ 仕事2。
 
 ## 止めて聞きたいこと
-- 設計メモ §A.7（生成を動かす方法／3 枚を同時に入れる版のモデルを入れるか）。
+- 設計メモ §A.8。

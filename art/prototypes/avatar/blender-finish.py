@@ -44,7 +44,7 @@ pmat.node_tree.links.new(vc.outputs['Color'], pb.inputs['Base Color'])
 
 def paint(o, k):
     ca = o.data.color_attributes.new('Col', 'FLOAT_COLOR', 'CORNER')
-    c = lin([min(1.0, x * k) for x in pink])
+    c = lin([min(1.0, x * k * s_) for x, s_ in zip(pink, (0.97, 0.9, 0.93))])
     for d in ca.data:
         d.color = c
     o.data.materials.append(pmat)
@@ -55,7 +55,7 @@ def paint(o, k):
     return o
 
 
-def rbox(loc, size, bevel, k, seg=5):
+def rbox(loc, size, bevel, k, seg=3):
     bpy.ops.mesh.primitive_cube_add(size=1, location=loc)
     o = bpy.context.object
     o.scale = size
@@ -69,18 +69,65 @@ def rbox(loc, size, bevel, k, seg=5):
 
 
 # リュックの中だけの座標: x 左右、y 後ろ向き（0 が背中に当たる面）、z 上下（0 がまん中）
-W, D, H = 0.235, 0.115, 0.225
-parts = [rbox((0, D / 2, 0), (W, D, H), 0.042, 1.0, 6)]
-parts.append(rbox((0, D + 0.012, -0.048), (0.165, 0.036, 0.098), 0.016, 0.985))  # 前のポケット
-parts.append(rbox((0, D + 0.03, -0.012), (0.178, 0.02, 0.05), 0.009, 0.93))  # ポケットのふた
+W, D, H = 0.25, 0.12, 0.25
+
+
+def arch(w, h, d, y0, k, bevel, top=0.42, corner=0.035):
+    """後ろから見て「上が丸いアーチ・下は角の丸い四角」の形を、奥行き d で作る。"""
+    pts = []
+    zt = h / 2 - h * top  # ここから上がアーチ
+    n = 14
+    for i in range(n + 1):  # 上のアーチ（右 → 左）
+        t = math.pi * i / n
+        pts.append((w / 2 * math.cos(t), zt + h * top * math.sin(t) ** 0.8))
+    for cx, sgn in ((-w / 2 + corner, 1), (w / 2 - corner, -1)):  # 下の角（左下 → 右下）
+        for i in range(5):
+            t = math.pi / 2 * i / 4
+            if sgn == 1:
+                pts.append((cx - corner * math.cos(t), -h / 2 + corner - corner * math.sin(t)))
+            else:
+                pts.append((cx + corner * math.sin(t), -h / 2 + corner - corner * math.cos(t)))
+    bm_ = bmesh.new()
+    vs = [bm_.verts.new((x, y0, z_)) for x, z_ in pts]
+    f_ = bm_.faces.new(vs)
+    ext = bmesh.ops.extrude_face_region(bm_, geom=[f_])
+    bmesh.ops.translate(bm_, verts=[e for e in ext['geom'] if isinstance(e, bmesh.types.BMVert)], vec=(0, d, 0))
+    bmesh.ops.recalc_face_normals(bm_, faces=bm_.faces)
+    m_ = bpy.data.meshes.new('arch')
+    bm_.to_mesh(m_)
+    bm_.free()
+    o_ = bpy.data.objects.new('arch', m_)
+    bpy.context.collection.objects.link(o_)
+    active(o_)
+    md = o_.modifiers.new('b', 'BEVEL')
+    md.width = bevel
+    md.segments = 4
+    md.limit_method = 'ANGLE'
+    md.angle_limit = math.radians(50)
+    bpy.ops.object.modifier_apply(modifier='b')
+    md = o_.modifiers.new('t', 'TRIANGULATE')
+    bpy.ops.object.modifier_apply(modifier='t')
+    md = o_.modifiers.new('n', 'WEIGHTED_NORMAL')
+    md.keep_sharp = False
+    bpy.ops.object.modifier_apply(modifier='n')
+    return paint(o_, k)
+
+
+parts = [arch(W, H, D, 0, 1.0, 0.03)]
+parts.append(arch(W + 0.008, H + 0.008, 0.012, D * 0.5, 0.9, 0.005))  # ファスナーの線（ぐるっと 1 周の細い帯）
+parts.append(rbox((0, D + 0.013, -0.062), (0.168, 0.034, 0.092), 0.016, 0.985))  # 前のポケット
+parts.append(rbox((0, D + 0.03, -0.032), (0.178, 0.018, 0.046), 0.008, 0.93))  # ポケットのふた
 for sx in (-1, 1):
-    parts.append(rbox((sx * 0.042, D + 0.04, -0.036), (0.022, 0.011, 0.07), 0.004, 0.84, 3))  # ベルト
-    parts.append(rbox((sx * 0.042, D + 0.046, -0.058), (0.028, 0.008, 0.014), 0.003, 0.74, 2))  # 留め具
-    parts.append(rbox((sx * (W / 2 + 0.008), D / 2 + 0.005, -0.055), (0.03, 0.07, 0.085), 0.013, 0.95))  # 横のポケット
-# ふた（上の 3 分の 1 にかぶさる、ひとまわり大きい帯）
-parts.append(rbox((0, D / 2 + 0.004, H / 2 - 0.045), (W + 0.012, D + 0.012, 0.085), 0.04, 0.955, 6))
-bpy.ops.mesh.primitive_torus_add(major_radius=0.03, minor_radius=0.0085, major_segments=24, minor_segments=10, location=(0, D / 2, H / 2 - 0.004), rotation=(math.pi / 2, 0, 0))
-parts.append(paint(bpy.context.object, 0.88))  # 持ち手
+    parts.append(rbox((sx * 0.045, D + 0.039, -0.05), (0.02, 0.01, 0.05), 0.004, 0.86, 2))  # ベルト
+    parts.append(rbox((sx * 0.045, D + 0.044, -0.068), (0.026, 0.008, 0.013), 0.003, 0.76, 2))  # 留め具
+    parts.append(rbox((sx * (W / 2 + 0.006), D * 0.5, -0.068), (0.03, 0.068, 0.08), 0.013, 0.95))  # 横のポケット
+    st = rbox((0, 0, 0), (0.03, 0.012, 0.085), 0.005, 0.93, 2)  # 肩ひも（リュックの上から肩へ。上のはしはフードの中へ）
+    st.matrix_world = Matrix.Translation((sx * 0.082, -0.004, H / 2 - 0.012)) @ Matrix.Rotation(-sx * 0.5, 4, 'Y') @ Matrix.Rotation(0.5, 4, 'X')
+    active(st)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    parts.append(st)
+bpy.ops.mesh.primitive_torus_add(major_radius=0.03, minor_radius=0.0085, major_segments=16, minor_segments=8, location=(0, D * 0.42, H / 2 - 0.006), rotation=(math.pi / 2, 0, 0))
+parts.append(paint(bpy.context.object, 0.9))  # 持ち手
 bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 active(parts[0])
 for p in parts:
@@ -91,7 +138,7 @@ pack.name = 'backpack'
 # 背中の面（blender-paint.py の切り口）に合わせて置く
 CUT_CO = Vector((0, 0.078, 0.20))
 SLOPE = 0.115
-zc = 0.385
+zc = 0.375
 pack.matrix_world = Matrix.Translation((0, CUT_CO.y + SLOPE * (zc - CUT_CO.z) - 0.012, zc)) @ Matrix.Rotation(-math.atan(SLOPE), 4, 'X')
 active(pack)
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
@@ -133,13 +180,13 @@ def blur(m, n):
 
 
 yy, xx = np.mgrid[0:CH, 0:CW].astype(np.float32)
-edge = np.clip(np.minimum(np.minimum(xx, CW - 1 - xx), np.minimum(yy, CH - 1 - yy)) / 14, 0, 1)
+edge = np.clip(np.minimum(np.minimum(xx, CW - 1 - xx) / 16, np.minimum(yy / 10, (CH - 1 - yy) / 30)), 0, 1)
 alpha = np.clip(1 - blur(hair, 3) * 1.6, 0, 1) * edge
 skin = np.median(base[(~dark) & (base[:, :, 0] > 0.85)].reshape(-1, 3), axis=0)
 print('skin', np.round(skin, 3))
 
 
-def ell(cx, cy, rx, ry, soft=6.0):  # やわらかいふちの楕円（1 = 中）
+def ell(cx, cy, rx, ry, soft=16.0):  # やわらかいふちの楕円（1 = 中）
     d = np.sqrt(((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2)
     return np.clip((1 - d) * min(rx, ry) / soft + 0.5, 0, 1)
 
@@ -149,10 +196,10 @@ N_EYES = ((680, 572), (912, 572))
 N_MOUTH = (797, 664)
 ne = [(ex - x0, ey - y0) for ex, ey in N_EYES]
 nm = (N_MOUTH[0] - x0, N_MOUTH[1] - y0)
-EYE_R = (62, 66)  # 目（まゆの下まで）を入れ替える範囲
+EYE_R = (78, 92)  # 目とまゆを入れ替える範囲
 MOUTH_R = (70, 46)
-eye_mask = np.maximum(ell(ne[0][0], ne[0][1] - 4, *EYE_R), ell(ne[1][0], ne[1][1] - 4, *EYE_R))
-mouth_mask = ell(nm[0], nm[1] + 6, *MOUTH_R)
+eye_mask = np.maximum(ell(ne[0][0] - 6, ne[0][1] - 24, *EYE_R), ell(ne[1][0] + 6, ne[1][1] - 24, *EYE_R))
+mouth_mask = ell(nm[0], nm[1] + 6, *MOUTH_R, 12)
 
 
 def warp(name, eyes, mouth_from=None):
@@ -190,8 +237,11 @@ cells['yummy'] = y_img
 # ねむい: ふつうの目の上半分を、肌の色のまぶたでかくし、まぶたの線を引く
 s_img = base.copy()
 for ex, ey in ne:
-    lid = ell(ex, ey - 4, 52, 56, 3) * np.clip((ey + 6 - yy) / 4, 0, 1)
-    s_img = mix(s_img, np.broadcast_to(skin, s_img.shape), lid)
+    # まぶたの色は、その目のすぐ上の肌の色（顔の場所で明るさがちがうので、目ごとに取る）
+    ring = (ell(ex, ey - 4, 70, 74, 2) > 0.5) & (ell(ex, ey - 4, 54, 58, 2) < 0.5) & (yy < ey - 20) & (base[:, :, 0] > 0.85)
+    lidc = np.median(base[ring].reshape(-1, 3), axis=0) if ring.sum() > 20 else skin
+    lid = ell(ex, ey - 4, 54, 58, 5) * np.clip((ey + 6 - yy) / 4, 0, 1)
+    s_img = mix(s_img, np.broadcast_to(lidc.astype(np.float32), s_img.shape), lid)
     line = ell(ex, ey + 8, 42, 5.5, 2.5)
     s_img = mix(s_img, np.broadcast_to(np.array([0.3, 0.17, 0.12], np.float32), s_img.shape), line)
 cells['sleepy'] = s_img
@@ -199,7 +249,7 @@ ORDER = ['normal', 'happy', 'surprised', 'yummy', 'sleepy']
 atlas = np.zeros((CH, CW * len(ORDER), 4), np.float32)
 for i, n in enumerate(ORDER):
     atlas[:, i * CW:(i + 1) * CW, :3] = cells[n]
-    atlas[:, i * CW:(i + 1) * CW, 3] = alpha
+    atlas[:, i * CW:(i + 1) * CW, 3] = alpha if n in ('normal', 'sleepy') else np.maximum(alpha, np.clip(eye_mask * 1.6, 0, 1) * edge)
 aimg = bpy.data.images.new('faces', CW * len(ORDER), CH, alpha=True)
 aimg.pixels = atlas[::-1].ravel()
 aimg.filepath_raw = atlas_png
@@ -340,6 +390,13 @@ def skin_to(ob, fixed=None):
         for _, j, d in near:
             w += PW[j] / (d + 1e-4)
         # あごの下〜首は、頭と胸だけで分ける（顔がうでに引っぱられないように）
+        ax = abs(v.co.x)
+        fade = min(1.0, max(0.0, (ax - 0.14) / 0.03))  # 体のまん中寄りは、うでの骨の影響を 0 に
+        for gi, n in enumerate(gnames):
+            if 'arm' in n:
+                w[gi] *= fade
+            if ('thigh' in n or 'shin' in n) and v.co.z > 0.27:
+                w[gi] = 0
         if w.sum() <= 0:
             w[gnames.index('chest')] = 1
         w /= w.sum()
@@ -360,5 +417,5 @@ for n in gnames:
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.export_scene.gltf(filepath=dst, export_format='GLB', export_apply=False, export_normals=True, export_texcoords=True,
                           export_vertex_color='ACTIVE', export_skins=True, export_animations=False, export_yup=True,
-                          export_image_format='WEBP', export_image_quality=88)
+                          export_image_format='WEBP', export_image_quality=84)
 print('saved', dst)

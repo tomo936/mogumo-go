@@ -1,5 +1,5 @@
 # AI が作った形（色なし）を軽くして、参考画像（正面）の色を貼り付けた色の絵を作る。
-# 使い方: blender -b -P blender-paint.py -- 形.glb AIの色付き.glb 正面の透明PNG(1024) 出力.blend 出力の絵.png [三角形の目安] [絵の一辺]
+# 使い方: blender -b -P blender-paint.py -- 形.glb AIの色付き.glb 正面の透明PNG(1024) 出力.blend 出力の絵.png 参考画像のフォルダ(side-stand.png・back.png) [三角形の目安] [絵の一辺]
 # - 正面から見える所: 参考画像の色をそのまま（顔・パーカーのひも・ポケットなど）
 # - 正面から見えない所: AI の色で「髪・肌・青・ピンク…」の区分けだけを借り、色そのものは参考画像から取った代表の色にする
 import bpy, sys, bmesh, math
@@ -8,9 +8,9 @@ from mathutils import Vector, kdtree
 from mathutils.bvhtree import BVHTree
 
 a = sys.argv[sys.argv.index('--') + 1:]
-shape_glb, ai_glb, front_png, out_blend, out_png = a[:5]
-TARGET = int(a[5]) if len(a) > 5 else 20000
-TEX = int(a[6]) if len(a) > 6 else 1024
+shape_glb, ai_glb, front_png, out_blend, out_png, ref_dir = a[:6]
+TARGET = int(a[6]) if len(a) > 6 else 14000
+TEX = int(a[7]) if len(a) > 7 else 1024
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
@@ -112,7 +112,7 @@ print('tris', len(me.polygons), 'verts', len(me.vertices))
 # ---- 展開（色の絵のどこに、形のどの面を置くか）----
 bpy.ops.object.mode_set(mode='EDIT')
 bpy.ops.mesh.select_all(action='SELECT')
-bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.006)
+bpy.ops.uv.smart_project(angle_limit=math.radians(85), island_margin=0.006)
 bpy.ops.object.mode_set(mode='OBJECT')
 me.calc_loop_triangles()
 uvd = me.uv_layers.active.data
@@ -188,16 +188,20 @@ ai_cls = classify(ai_col)
 # まわり（半径 2.5cm）の多数決で決める（AI の色の細かいごみ・ごま塩を消す）
 NC = 4
 lab = np.zeros(len(Pn), int)
+sure = np.zeros(len(Pn), np.float32)  # まわりのうち、同じ区分けだった割合
 for i, p in enumerate(Pn):
-    near = ai_kd.find_range(Vector(p), 0.025)
+    near = ai_kd.find_range(Vector(p), 0.011 if p[2] > 0.57 else 0.025)
     if near:
-        lab[i] = np.bincount([ai_cls[j] for (_, j, _) in near], minlength=NC).argmax()
+        bc = np.bincount([ai_cls[j] for (_, j, _) in near], minlength=NC)
+        lab[i] = bc.argmax()
+        sure[i] = bc.max() / bc.sum()
     else:
         lab[i] = ai_cls[ai_kd.find(Vector(p))[1]]
 # 場所の決まり: 髪は首より上だけ。首より下の暗い色（AI の影）は服。首より上の青・ピンクは髪（AI の色のごみ）。切り口（背中）はパーカー
 z = Pn[:, 2]
 lab = np.where((lab == 0) & (z < 0.53), 3, lab)
-lab = np.where(((lab == 3) | (lab == 2)) & (z > 0.57), 0, lab)
+lab = np.where(((lab == 3) | (lab == 2)) & (z > 0.62), 0, lab)
+lab = np.where((lab == 2) & ((z < 0.13) | ((np.abs(Pn[:, 0]) > 0.17) & (z < 0.3))), 1, lab)  # ひざ下と手の赤みは肌
 on_cut = (np.abs((Pn - np.array(CUT_CO)) @ np.array(CUT_NO)) < 0.004) & (z > Z0) & (z < Z1) & (Nn @ np.array(CUT_NO) > 0.7)
 lab = np.where(on_cut, 3, lab)
 # 背中側に残った AI のリュックのピンクは服の色にする（新しいリュックは別の部品）
@@ -206,6 +210,21 @@ lab = np.where((lab == 2) & (Pn[:, 1] > -0.02) & (z > 0.15) & (z < 0.57), 3, lab
 zone = np.where(z > 0.25, 0, np.where(z > 0.075, 1, 2))
 lab = np.where(lab == 3, 3 + zone, lab)
 lab = np.where(z < 0.068, 5, lab)
+# 首より下は、正面の参考画像の同じ場所（左右・高さ）の色の区分けを、奥まで同じとみなす（手の甲・ひざの裏・服の後ろ）
+def ref_class(c):  # 参考画像の色 → 0 髪 / 1 肌 / 2 ピンク / 3 青 / -1 分からない
+    r, g, b_ = c[:, 0], c[:, 1], c[:, 2]
+    out = np.full(len(c), -1)
+    out[(b_ > r + 0.1)] = 3
+    warm = (r > b_ + 0.1) & (r >= g)
+    out[warm & (g <= 0.5)] = 0
+    out[warm & (g > 0.5) & (r > 0.7) & (r - g < 0.26) & (b_ < g + 0.02)] = 1
+    out[(r > 0.7) & (r - g > 0.2) & (b_ >= g - 0.03) & (b_ < r)] = 2
+    return out
+fcls = ref_class(samp[:, :3])
+fcls = np.where(samp[:, 3] > 0.98, fcls, -1)
+ext = (z < 0.53) & ~on_cut & ((fcls == 1) | (fcls == 3))
+lab = np.where(ext & (fcls == 1), 1, lab)
+lab = np.where(ext & (fcls == 3), 3 + zone, lab)
 names = ['hair', 'skin', 'pink', 'hoodie', 'shorts', 'shoes']
 strong = wf > 0.9
 rep = np.zeros((6, 3), np.float32)
@@ -213,25 +232,131 @@ for k in range(6):
     sel = strong & (lab == k)
     rep[k] = np.median(samp[sel][:, :3], axis=0) if sel.sum() > 100 else (0.5, 0.5, 0.5)
     print('class', names[k], 'ref', np.round(rep[k], 2), 'n', int((lab == k).sum()), 'front n', int(sel.sum()))
-base = rep[lab]
-col = samp[:, :3] * wf[:, None] + base * (1 - wf[:, None])
+def load_top(name):
+    im = bpy.data.images.load(f'{ref_dir}/{name}.png')
+    w, h = im.size
+    return np.array(im.pixels[:], dtype=np.float32).reshape(h, w, 4)[::-1, :, :3].copy()
 
-T = np.zeros((TEX, TEX, 4), np.float32)
-T[ys, xs, :3] = col
-T[ys, xs, 3] = 1
+
+def ink_of(px):  # キャラの部分（白い背景と、床のうすい影をのぞく）
+    return ~((px.min(2) > 0.80) & ((px.max(2) - px.min(2)) < 0.10))
+
+
+def read_class(px, u, v):
+    iu = np.clip(u.astype(int), 0, px.shape[1] - 1)
+    iv = np.clip(v.astype(int), 0, px.shape[0] - 1)
+    rc = ref_class(px[iv, iu])
+    return np.where(ink_of(px)[iv, iu], rc, -1)
+
+
+bk = load_top('back')
+ys_, xs_ = np.nonzero(ink_of(bk))
+bt, bb, bcx = ys_.min(), ys_.max(), (xs_.min() + xs_.max()) / 2
+bu, bv = bcx - Pn[:, 0] * (bb - bt), bb - z * (bb - bt)
+sd = load_top('side-stand')
+si = ink_of(sd)
+ys_, xs_ = np.nonzero(si)
+st, sb = ys_.min(), ys_.max()
+spx = sb - st
+rows = si[int(sb - 0.70 * spx):int(sb - 0.60 * spx)]
+cols = np.nonzero(rows.any(0))[0]
+V_ = np.array([v.co[:] for v in me.vertices])
+hv = V_[(V_[:, 2] > 0.60) & (V_[:, 2] < 0.70)]
+sc_ = cols.max() + hv[:, 1].min() * spx  # 絵の右はし（顔の前）＝ 形のいちばん前
+su, sv = sc_ - Pn[:, 1] * spx, sb - z * spx
+head = z > 0.6
+rs = read_class(sd, su, sv)
+rb = read_class(bk, bu, bv)
+side_face = head & (np.abs(Nn[:, 0]) > 0.55) & (wf < 0.5) & (rs >= 0) & (rs <= 2)
+lab = np.where(side_face, np.where(rs == 0, 0, 1), lab)
+back_face = head & (Nn[:, 1] > 0.55) & (wf < 0.5) & (rb >= 0) & (rb <= 2) & ~side_face
+lab = np.where(back_face, np.where(rb == 0, 0, 1), lab)
+print('head class from side', int(side_face.sum()), 'from back', int(back_face.sum()))
+base = rep[lab]
+broad = np.where(lab >= 3, 3, lab)
+
+
+def project(px, u, v, facing, direction, lo=0.25, span=0.35):
+    """u, v（上が 0 の px）で色を読み、向き・かくれ・色の区分けが合う所だけ重みを付ける。"""
+    H_, W_ = px.shape[:2]
+    iu = np.clip(u.astype(int), 0, W_ - 2)
+    iv = np.clip(v.astype(int), 0, H_ - 2)
+    c = (px[iv, iu] + px[iv + 1, iu] + px[iv, iu + 1] + px[iv + 1, iu + 1]) / 4
+    rc = ref_class(c)
+    # 首より下は、色の区分けが合う所だけ。頭は「髪か肌」ならその色を信じる（耳・ほお・えりあしの境目は、参考画像のほうが正しい）
+    ok = ink_of(px)[iv, iu] & (z > 0.585) & (rc == 0) & (broad == 0) & (wf < 0.99)
+    w = np.zeros(len(u), np.float32)
+    d = Vector(direction)
+    for i in np.nonzero(ok & (facing > lo))[0]:
+        if bvh.ray_cast(Vector(Pn[i]) + Vector(Nn[i]) * 0.004, d)[0] is None:
+            w[i] = min(1.0, (facing[i] - lo) / span)
+    return c, w
+
+
+cb, wb = project(bk, bu, bv, Nn[:, 1], (0, 1, 0))
+cs1, ws1 = project(sd, su, sv, -Nn[:, 0], (-1, 0, 0))
+cs2, ws2 = project(sd, su, sv, Nn[:, 0], (1, 0, 0))
+print('back-painted', int((wb > 0).sum()), 'side-painted', int((ws1 > 0).sum()), int((ws2 > 0).sum()))
+wf_front = wf.copy()
+rest = 1 - wf
+wsum = wb + ws1 + ws2
+k = np.where(wsum > 1, 1 / np.maximum(wsum, 1e-6), 1.0)
+wb, ws1, ws2 = wb * k * rest, ws1 * k * rest, ws2 * k * rest
+col = samp[:, :3] * wf[:, None] + cb * wb[:, None] + cs1 * ws1[:, None] + cs2 * ws2[:, None] + base * (rest - wb - ws1 - ws2)[:, None]
+wf = np.clip(wf + wb + ws1 + ws2, 0, 1)  # ここから下の wf は「参考画像から貼れた割合」
+
+def island_blur(img, n):  # 絵の中の「形がある所」だけで平均する
+    A = M.astype(np.float32)
+    B = img.copy()
+    for _ in range(n):
+        s_ = np.zeros_like(B)
+        c_ = np.zeros_like(A)
+        for dy, dx in ((0, 0), (0, 1), (0, -1), (1, 0), (-1, 0)):
+            s_ += np.roll(B * (A[:, :, None] if B.ndim == 3 else A), (dy, dx), (0, 1))
+            c_ += np.roll(A, (dy, dx), (0, 1))
+        cc = c_[:, :, None] if B.ndim == 3 else c_
+        B = np.where(cc > 0, s_ / np.maximum(cc, 1e-6), B)
+    return B
+
+
+Tb = np.zeros((TEX, TEX, 3), np.float32)
+Tb[ys, xs] = base
+Tb = island_blur(Tb, 8)
+hairm = np.zeros((TEX, TEX), bool)
+hairm[ys, xs] = lab == 0
+known = np.zeros((TEX, TEX), bool)
+known[ys, xs] = (lab == 0) & (wf > 0.6)
+Kc = np.zeros((TEX, TEX, 3), np.float32)
+Kc[ys, xs] = np.where(((lab == 0) & (wf > 0.6))[:, None], (col - base * (1 - wf)[:, None]) / np.maximum(wf, 1e-4)[:, None], 0)
+grown = known.copy()
+for _ in range(120):
+    s_ = np.zeros_like(Kc)
+    c_ = np.zeros((TEX, TEX), np.float32)
+    for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+        s_ += np.roll(Kc * grown[:, :, None], (dy, dx), (0, 1))
+        c_ += np.roll(grown.astype(np.float32), (dy, dx), (0, 1))
+    new_ = hairm & ~grown & (c_ > 0)
+    if not new_.any():
+        break
+    Kc[new_] = s_[new_] / c_[new_][:, None]
+    grown |= new_
+filled_hair = grown & ~known
+print('hair filled from neighbours', int(filled_hair.sum()), 'left flat', int((hairm & ~grown).sum()))
+Ks = Kc.copy()
+for _ in range(6):  # 広げた所だけ、ならす
+    Ks = np.where(filled_hair[:, :, None], (Ks + np.roll(Ks, 1, 0) + np.roll(Ks, -1, 0) + np.roll(Ks, 1, 1) + np.roll(Ks, -1, 1)) / 5, Kc)
+Tb = np.where(filled_hair[:, :, None], Ks, Tb)
+Tp = np.zeros((TEX, TEX, 3), np.float32)
+Tp[ys, xs] = (col - base * (1 - wf)[:, None]) / np.maximum(wf, 1e-4)[:, None]
 Wm = np.zeros((TEX, TEX), np.float32)
 Wm[ys, xs] = wf
-# 見えない所の色を、島の中でぼかして、区分けの境目のがたつきを消す（正面の色は動かさない）
-B = T[:, :, :3].copy()
-A = M.astype(np.float32)
-for _ in range(10):
-    s = np.zeros_like(B)
-    c = np.zeros_like(A)
-    for dy, dx in ((0, 0), (0, 1), (0, -1), (1, 0), (-1, 0)):
-        s += np.roll(B * A[:, :, None], (dy, dx), (0, 1))
-        c += np.roll(A, (dy, dx), (0, 1))
-    B = np.where(c[:, :, None] > 0, s / np.maximum(c[:, :, None], 1e-6), B)
-T[:, :, :3] = np.where(M[:, :, None], T[:, :, :3] * Wm[:, :, None] + B * (1 - Wm[:, :, None]), 0)
+Ws = np.minimum(Wm, island_blur(Wm, 3))  # 重みは、ふちで少しずつ下げる（広げはしない）
+T = np.zeros((TEX, TEX, 4), np.float32)
+T[:, :, :3] = np.where(M[:, :, None], Tp * Ws[:, :, None] + Tb * (1 - Ws[:, :, None]), 0)
+# 正面から貼った所（顔・服の細部）以外は、最後に少しだけならす（髪の細かい黒い点・境目のがたつきを消す）
+Fw = np.zeros((TEX, TEX), np.float32)
+Fw[ys, xs] = wf_front
+T[:, :, :3] = np.where((Fw > 0.8)[:, :, None], T[:, :, :3], island_blur(T[:, :, :3], 2))
 # 島のふちの外へ色を広げる（小さく表示したときに、すき間から黒や白がにじまないように）
 filled = M.copy()
 for _ in range(12):
@@ -265,5 +390,5 @@ me.materials.append(mat)
 o.name = 'avatar'
 bpy.ops.wm.save_as_mainfile(filepath=out_blend)
 bpy.ops.object.select_all(action='SELECT')
-bpy.ops.export_scene.gltf(filepath=out_blend.replace('.blend', '-static.glb'), export_format='GLB', export_image_format='WEBP', export_image_quality=90)
+bpy.ops.export_scene.gltf(filepath=out_blend.replace('.blend', '-static.glb'), export_format='GLB', export_image_format='WEBP', export_image_quality=84)
 print('saved', out_blend)
