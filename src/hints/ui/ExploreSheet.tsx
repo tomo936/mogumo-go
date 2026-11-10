@@ -8,7 +8,7 @@ import './hints.css'
 import { DoneMark } from '../../ui/DoneMark.tsx'
 import { Icon } from '../../ui/Icon.tsx'
 import { CoinIcon } from '../../ui/CoinIcon.tsx'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { catchLabel } from '../domain/hint.ts'
 import { kindFromGenre, untilResetLabel } from '../domain/sheetText.ts'
@@ -16,6 +16,7 @@ import { kindFromGenre, untilResetLabel } from '../domain/sheetText.ts'
 // 霧の窓の奥にぼかして出す料理の絵（実績のメダルと同じ、ピンの枠の無い絵）
 const FOOD = import.meta.glob<string>('../../assets/badges/food/*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>
 const foodUrl = (kind: string) => FOOD[`../../assets/badges/food/${kind}.webp`]
+const SWIPE_CLOSE_PX = 60 // これ以上上へスライドしたら閉じる
 const REWARD = 40 // チェックイン 30 ＋ 気配のボーナス 10
 
 type Props = {
@@ -111,8 +112,46 @@ export function ExploreSheet(p: Props) {
   const waiting = hints.filter((h) => !h.completed).length
   const text = STATUS_TEXT[p.status]
   const none = p.status === 'ready' && hints.length === 0
+  // 上から降りるシートは、上へスライドで閉じる（中身を下まで読んだあと・下のつまみから）
+  const sheetRef = useRef<HTMLElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const drag = useRef<{ y: number; armed: boolean; dy: number } | null>(null)
+  const top = p.placement === 'top'
+  const onTouchStart = (e: React.TouchEvent) => {
+    const sc = scrollRef.current
+    if (!top || !sc) return
+    const onGrip = (e.target as HTMLElement).closest('.explore-sheet__grip') !== null
+    const atBottom = sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 2
+    drag.current = { y: e.touches[0].clientY, armed: onGrip || atBottom, dy: 0 }
+  }
+  const onTouchMove = (e: React.TouchEvent) => {
+    const d = drag.current
+    const el = sheetRef.current
+    if (!d || !d.armed || !el) return
+    d.dy = Math.min(0, e.touches[0].clientY - d.y)
+    el.style.transform = d.dy < 0 ? `translateY(${d.dy}px)` : ''
+  }
+  const onTouchEnd = () => {
+    const d = drag.current
+    const el = sheetRef.current
+    drag.current = null
+    if (!d || !el) return
+    if (d.armed && d.dy < -SWIPE_CLOSE_PX) {
+      p.onClose()
+      return
+    }
+    el.style.transform = ''
+  }
   return (
-    <section className={`shop-sheet explore-sheet${p.placement === 'top' ? ' explore-sheet--top' : ''}`} aria-label="探索">
+    <section
+      ref={sheetRef}
+      className={`shop-sheet explore-sheet${top ? ' explore-sheet--top' : ''}`}
+      aria-label="探索"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchEnd}
+    >
       <button type="button" className="shop-sheet__close" aria-label="閉じる" onClick={p.onClose}>
         <Icon name="close" size={16} />
       </button>
@@ -126,54 +165,61 @@ export function ExploreSheet(p: Props) {
           </p>
         )}
       </div>
-      {text && <p className="explore-sheet__status" role="status">{text}</p>}
-      {p.status === 'error' && (
-        <button type="button" className="explore-sheet__retry" onClick={p.onRetry}>
-          もう一度
+      <div className="explore-sheet__scroll" ref={scrollRef}>
+        {text && <p className="explore-sheet__status" role="status">{text}</p>}
+        {p.status === 'error' && (
+          <button type="button" className="explore-sheet__retry" onClick={p.onRetry}>
+            もう一度
+          </button>
+        )}
+        {hints.length > 0 && (
+          <ul className="hint-list">
+            {hints.map((h) => (
+              <Row key={h.id} h={h} revealed={p.revealed.has(h.id)} distanceM={p.distances.get(h.id)} direction={p.directions?.get(h.id) ?? null} onPick={() => p.onPickHint(h.id)} />
+            ))}
+          </ul>
+        )}
+        {none && (
+          <div className="explore-sheet__none">
+            <p className="explore-sheet__status">今日は気配なし</p>
+            {p.guide.length > 0 ? (
+              <>
+                <p className="hint-note">近くのまだ行っていないお店</p>
+                <ul className="hint-list">
+                  {p.guide.map((g) => (
+                    <li key={g.shop.id}>
+                      <button type="button" className="hint-row" onClick={() => p.onPickShop(g.shop)}>
+                        <span className="hint-row__body">
+                          <span className="hint-row__title">{g.shop.name}</span>
+                          <span className="hint-row__dist">{`約${roundDistance(g.distanceM)}m`}</span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="hint-note">近くにまだ行っていないお店はありません</p>
+            )}
+          </div>
+        )}
+        {p.notice && <p className="explore-sheet__notice" role="status">{p.notice}</p>}
+        {p.regenVisible && (
+          <>
+            <button type="button" className="explore-sheet__regen" disabled={p.fast} onClick={p.onRegen}>
+              この辺りで探し直す
+            </button>
+            {p.fast && <p className="hint-note">降りてから探し直してね</p>}
+          </>
+        )}
+        <p className="hint-note">気配は毎日0時に入れかわります</p>
+        {p.extra}
+      </div>
+      {top && (
+        <button type="button" className="explore-sheet__grip" aria-label="上にしまう" onClick={p.onClose}>
+          <span aria-hidden="true" />
         </button>
       )}
-      {hints.length > 0 && (
-        <ul className="hint-list">
-          {hints.map((h) => (
-            <Row key={h.id} h={h} revealed={p.revealed.has(h.id)} distanceM={p.distances.get(h.id)} direction={p.directions?.get(h.id) ?? null} onPick={() => p.onPickHint(h.id)} />
-          ))}
-        </ul>
-      )}
-      {none && (
-        <div className="explore-sheet__none">
-          <p className="explore-sheet__status">今日は気配なし</p>
-          {p.guide.length > 0 ? (
-            <>
-              <p className="hint-note">近くのまだ行っていないお店</p>
-              <ul className="hint-list">
-                {p.guide.map((g) => (
-                  <li key={g.shop.id}>
-                    <button type="button" className="hint-row" onClick={() => p.onPickShop(g.shop)}>
-                      <span className="hint-row__body">
-                        <span className="hint-row__title">{g.shop.name}</span>
-                        <span className="hint-row__dist">{`約${roundDistance(g.distanceM)}m`}</span>
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <p className="hint-note">近くにまだ行っていないお店はありません</p>
-          )}
-        </div>
-      )}
-      {p.notice && <p className="explore-sheet__notice" role="status">{p.notice}</p>}
-      {p.regenVisible && (
-        <>
-          <button type="button" className="explore-sheet__regen" disabled={p.fast} onClick={p.onRegen}>
-            この辺りで探し直す
-          </button>
-          {p.fast && <p className="hint-note">降りてから探し直してね</p>}
-        </>
-      )}
-      <p className="hint-note">気配は毎日0時に入れかわります</p>
-      {p.extra}
     </section>
   )
 }
