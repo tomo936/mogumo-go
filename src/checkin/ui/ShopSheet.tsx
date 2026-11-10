@@ -32,6 +32,7 @@ const ERROR_TEXT: Record<CheckinError, string> = {
 const TIER_NAME: Record<FrameTier, string> = { normal: 'ふつう', silver: '銀', gold: '金' }
 const MOVE_PX = 6 // これより動いたら「引いている」（それまではボタンのタップとして扱う）
 const SETTLE_MS = 280 // 指を離してから段に収まるまで（CSS の transition と同じ）
+const BELOW_PX = 28 // シートの下の端は画面の外へこれだけ出す（CSS の bottom: -28px と同じ。「まだ続く」見た目）
 
 // 写真の無い店のシールに入れる、種類の模型の絵
 const cards = import.meta.glob('../../assets/shops/cards/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
@@ -84,7 +85,7 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
 
   // 指で引くとシートがついてきて、離すと段（小さい／全画面／閉じる）になめらかに収まる。
   // 中身は引いた分だけ入れかわる（小さい段の中身が薄れ、全画面の中身が下から浮かぶ）。チェックインのボタンは下に置いたまま
-  const fullH = () => window.innerHeight
+  const fullH = () => window.innerHeight + BELOW_PX // 全画面でも同じカードのまま、上の端が画面の上に来る高さ
   const currentH = () => sectionRef.current?.offsetHeight ?? 0
   // 中身の入れかわりの進み（0 = 小さい段の中身、1 = 全画面の中身）。収まっていく途中は行き先の値（CSS でなめらかに）
   const progress = (() => {
@@ -351,9 +352,15 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
         {errorRow}
         {button}
         {locateButton}
+        {/* 続きの頭を少しだけのぞかせる（画面の下で切れて、まだ続きがあると分かる）。押すと全体へ */}
         {!expanded && progress === 0 && (
-          <button type="button" className="shop-sheet__more" onClick={() => settle('full')}>
-            <span aria-hidden="true">︿</span>くわしく見る
+          <button type="button" className="shop-sheet__peek" aria-label="くわしく見る" onClick={() => settle('full')}>
+            <span className="shop-sheet__peek-head">
+              <span aria-hidden="true">︿</span>くわしく見る
+            </span>
+            <span className="shop-sheet__peek-body">
+              {!masked && d?.catch ? d.catch : showRecord ? 'わたしの記録・お店の情報' : 'お店の情報'}
+            </span>
           </button>
         )}
       </div>

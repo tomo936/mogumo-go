@@ -1,7 +1,9 @@
 // ビル（同じ建物に複数のお店）をタップしたときの、お店の一覧のシート。行を押すとそのお店のシートへ。
 import './checkin.css'
 import '../../hints/ui/hints.css'
-import { BADGE_COLOR } from '../../shops/domain/badgeColor.ts'
+import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
+import mysteryPin from '../../assets/pins/mystery.png'
+import { Icon } from '../../ui/Icon.tsx'
 import type { Shop } from '../../shops/domain/shop.ts'
 
 type Props = {
@@ -23,7 +25,7 @@ export function BuildingSheet({ shops, checkedIds, maskedIds, hintIds, title, on
   return (
     <section className="shop-sheet" aria-label="ビルのお店">
       <button type="button" className="shop-sheet__close" aria-label="閉じる" onClick={onClose}>
-        ×
+        <Icon name="close" size={16} />
       </button>
       <div className="bldg-sheet__head">
         <h2 className="shop-sheet__name">{title ?? 'このビルのお店'}</h2>
@@ -33,7 +35,8 @@ export function BuildingSheet({ shops, checkedIds, maskedIds, hintIds, title, on
         {sorted.map((s) => (
           <li key={s.id}>
             <button type="button" className="bldg-sheet__row" onClick={() => onPick(s)}>
-              <span className="bldg-sheet__badge" style={{ background: isMasked(s.id) ? '#fff' : BADGE_COLOR[s.kind] }} aria-hidden="true" />
+              {/* 地図のピンと同じジャンルの絵（気配で伏せている店は「？」のピン） */}
+              <img className="bldg-sheet__pin" src={isMasked(s.id) ? mysteryPin : PIN_ICON[s.kind]} alt="" />
               <span className="bldg-sheet__name">{isMasked(s.id) ? '？？？' : s.name}</span>
               {hintIds?.has(s.id) && !checkedIds.has(s.id) && <span className="hint-tag">気配の店 +10</span>}
               {checkedIds.has(s.id) && <span className="bldg-sheet__check">✓</span>}

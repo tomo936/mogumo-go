@@ -865,3 +865,145 @@
 .shop-record__bar i {
   background: #e57a35;
 }
+
+/* 2026-11-10 オーナー「ちょっとでかい」「上にあげるカードのように、画面外にまだあるようなイメージ」:
+   小さい段は一回り小さく、下の端は画面の外まで（下のふちを見せない）。続きの頭をのぞかせる */
+.shop-sheet:not(.shop-sheet--full) {
+  bottom: -28px;
+  padding: 10px 14px calc(28px + env(safe-area-inset-bottom));
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -3px 0 rgba(122, 74, 38, 0.18);
+}
+.shop-sheet:not(.shop-sheet--full)::before {
+  bottom: -10px;
+  border-radius: 17px 17px 0 0;
+}
+.shop-sheet__head {
+  gap: 12px;
+}
+.shop-sticker--card {
+  padding: 4px 4px 12px;
+}
+.shop-sticker--card .shop-sticker__window {
+  width: 62px;
+  height: 62px;
+}
+.shop-sticker--card .shop-sticker__tape {
+  width: 34px;
+  height: 11px;
+  margin-left: -17px;
+  top: -7px;
+}
+.shop-sheet__head .shop-sheet__name {
+  margin-top: 2px;
+  font-size: 18px;
+}
+.shop-sheet__head .shop-tag {
+  font-size: 11px;
+  padding: 0 6px;
+}
+.shop-facts {
+  margin: 8px 2px 10px;
+  font-size: 12.5px;
+}
+.shop-sheet:not(.shop-sheet--full) .shop-sheet__go {
+  height: 46px;
+  font-size: 17px;
+}
+.shop-sheet:not(.shop-sheet--full) .shop-sheet__go:disabled {
+  font-size: 14px;
+}
+.shop-sheet__peek {
+  display: block;
+  width: 100%;
+  margin: 12px 0 -46px; /* 下は画面の外へ（切れて見える） */
+  padding: 8px 12px 40px;
+  border: 1.5px solid #e3cfaa;
+  border-radius: 14px;
+  background: #fff;
+  text-align: left;
+  color: #4a3b2c;
+}
+.shop-sheet__peek-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #7a4a26;
+}
+.shop-sheet__peek-head span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #7a4a26;
+  border-radius: 50%;
+  font-size: 9px;
+  line-height: 1;
+}
+.shop-sheet__peek-body {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+/* 横幅いっぱい（2026-11-10 オーナー「ちょっとズレてる」「横幅もいっぱいでいい」）。左右の線は無し、上のふちだけ */
+.shop-sheet:not(.shop-sheet--full) {
+  left: 0;
+  right: 0;
+  border-width: 2.5px 0 0;
+}
+.shop-sheet:not(.shop-sheet--full)::before {
+  left: 6px;
+  right: 6px;
+}
+/* 小さい段も全画面も同じカードの形（スライドの途中で角・ふち・位置が切りかわらないように。2026-11-10 オーナー「スライドした時に違和感ないように」） */
+.shop-sheet,
+.shop-sheet.shop-sheet--full {
+  left: 0;
+  right: 0;
+  bottom: -28px; /* ShopSheet.tsx の BELOW_PX */
+  border-width: 2.5px 0 0;
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -3px 0 rgba(122, 74, 38, 0.18);
+  background: #fffaf0;
+}
+.shop-sheet::before,
+.shop-sheet.shop-sheet--full::before {
+  display: block;
+  left: 6px;
+  right: 6px;
+  bottom: -10px;
+  border-radius: 17px 17px 0 0;
+}
+.shop-sheet.shop-sheet--full {
+  padding-bottom: calc(28px + 14px + env(safe-area-inset-bottom));
+}
+.shop-sheet {
+  transition: padding-top 0.28s;
+}
+/* ビルの一覧（2026-11-10）: 色の丸をやめて、地図と同じジャンルのピンの絵。手帳の色に */
+.bldg-sheet__pin {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.bldg-sheet__done {
+  color: #8a6a48;
+}
+.bldg-sheet__row {
+  padding: 8px 4px;
+  border-bottom: 1.5px dashed #ead9bb;
+  color: #4a3b2c;
+  font-size: 15px;
+}
+.bldg-sheet__check {
+  color: #2f7d5a;
+}
