@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cellOf } from '../../fog/domain/grid.ts'
-import { fogBounds, isOuter, viewOf, zoomFor } from './view.ts'
+import { clearedBox, inBox, viewOf, zoomFor } from './view.ts'
 
 const home = { lat: 35.6505, lng: 139.6365 }
 
@@ -37,14 +37,13 @@ describe('zoomFor', () => {
   })
 })
 
-it('fogBounds: 遠くの雲（3000m）の内側の四角', () => {
-  const [[w, south], [e, n]] = fogBounds({ lat: 35.65, lng: 139.63 })
-  expect(((n - south) / 2) * 111_320).toBeCloseTo(2940, 0)
-  expect(w).toBeLessThan(139.63)
-  expect(e).toBeGreaterThan(139.63)
-})
-
-it('isOuter: ふだんの範囲（1200m）の外側', () => {
-  expect(isOuter({ x: 1300, y: 0 })).toBe(true)
-  expect(isOuter({ x: 100, y: -1100 })).toBe(false)
+it('clearedBox: 晴れた場所のまわり（＋120m）の四角。遠すぎる点は入れない', () => {
+  const o = { lat: 35.65, lng: 139.63 }
+  const b = clearedBox([o, { lat: 35.65 + 0.009, lng: 139.63 }, { lat: 34.7, lng: 135.5 }], o, 3000)!
+  expect(b.x0).toBeCloseTo(-120, 0)
+  expect(b.y1).toBeGreaterThan(1000)
+  expect(b.y1).toBeLessThan(1200)
+  expect(inBox({ x: 0, y: 500 }, b)).toBe(true)
+  expect(inBox({ x: 500, y: 0 }, b)).toBe(false)
+  expect(clearedBox([{ lat: 34.7, lng: 135.5 }], o, 3000)).toBeNull()
 })

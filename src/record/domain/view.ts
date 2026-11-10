@@ -2,7 +2,8 @@
 import { distanceMeters } from '../../map/domain/geo.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
 import { cellCenter } from '../../fog/domain/grid.ts'
-import { FOG_HALF_M } from '../../fog/config.ts'
+import { localFrame } from '../../map/domain/geo.ts'
+import type { ClumpBox } from '../../fog/domain/clumps.ts'
 import type { ClearedCell } from './timeline.ts'
 
 export const MIN_ZOOM = 13
@@ -38,16 +39,23 @@ export function zoomFor(radiusM: number, widthPx: number, lat: number): number {
 }
 
 
-// 記録の地図の雲は、いちばん引いたとき（MIN_ZOOM）でも画面が埋まる広さまで置く
+// 記録の地図の雲は、いちばん引いたとき（MIN_ZOOM）でも画面が埋まる広さまで置く。
+// 地図はどこまでも動かせる（出張先も見られる）。離れたら、そこを中心に雲を置き直す
 export const FAR_HALF_M = 3000
-// 地図を動かせる範囲（雲を置いた範囲の内側）。これより外は雲が無い
-const BOUNDS_MARGIN_M = 60
-export function fogBounds(center: LatLng): [[number, number], [number, number]] {
-  const half = FAR_HALF_M - BOUNDS_MARGIN_M
-  const dLat = half / 111_320
-  const dLng = half / (111_320 * Math.cos((center.lat * Math.PI) / 180))
-  return [[center.lng - dLng, center.lat - dLat], [center.lng + dLng, center.lat + dLat]]
-}
+export const REBUILD_M = 1500
 
-// 塊の範囲（ふだんの FOG_HALF_M）の外側かどうか。外側の塊は1回だけ作って使い回す
-export const isOuter = (c: { x: number; y: number }): boolean => Math.abs(c.x) > FOG_HALF_M || Math.abs(c.y) > FOG_HALF_M
+// 晴れた場所のまわりの四角（origin からの m）。雲の形が晴れ方で変わるのはこの中だけ
+const BOX_MARGIN_M = 120
+export function clearedBox(points: LatLng[], origin: LatLng, half: number): ClumpBox | null {
+  const f = localFrame(origin)
+  let box: ClumpBox | null = null
+  for (const p of points) {
+    const { x, y } = f.to(p)
+    if (Math.abs(x) > half + BOX_MARGIN_M || Math.abs(y) > half + BOX_MARGIN_M) continue
+    box = box
+      ? { x0: Math.min(box.x0, x - BOX_MARGIN_M), x1: Math.max(box.x1, x + BOX_MARGIN_M), y0: Math.min(box.y0, y - BOX_MARGIN_M), y1: Math.max(box.y1, y + BOX_MARGIN_M) }
+      : { x0: x - BOX_MARGIN_M, x1: x + BOX_MARGIN_M, y0: y - BOX_MARGIN_M, y1: y + BOX_MARGIN_M }
+  }
+  return box
+}
+export const inBox = (c: { x: number; y: number }, b: ClumpBox): boolean => c.x >= b.x0 && c.x <= b.x1 && c.y >= b.y0 && c.y <= b.y1

@@ -16,7 +16,9 @@ import { localFrame } from '../../map/domain/geo.ts'
 import { cellKey } from '../../fog/domain/grid.ts'
 import { createFogLayer } from '../../fog/infra/fogLayer.ts'
 import { clearedAt, type ClearedCell } from '../domain/timeline.ts'
-import { FAR_HALF_M, MAX_ZOOM, MIN_ZOOM, fogBounds, isOuter, viewOf, zoomFor } from '../domain/view.ts'
+import { FAR_HALF_M, MAX_ZOOM, MIN_ZOOM, REBUILD_M, clearedBox, inBox, viewOf, zoomFor } from '../domain/view.ts'
+import { distanceMeters } from '../../map/domain/geo.ts'
+import { cellCenter } from '../../fog/domain/grid.ts'
 import type { DayPin } from '../domain/dayPins.ts'
 import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
 
@@ -46,7 +48,6 @@ export function RecordMap({ cells, t, home, pins }: Props) {
       bearing: 0,
       minZoom: MIN_ZOOM,
       maxZoom: MAX_ZOOM,
-      maxBounds: fogBounds(center), // 雲を置いた範囲（3km）の外は見せない
       dragRotate: false,
       touchPitch: false,
       pitchWithRotate: false,
@@ -66,26 +67,48 @@ export function RecordMap({ cells, t, home, pins }: Props) {
     }
     const fog = createFogLayer()
     const base = clearedFromHome(home)
-    // 遠くの雲（ふだんの範囲の外〜3km）は1回だけ作る。スライダーで晴れ方が変わるのは近くだけ
-    const allCleared = new Set(base)
-    for (const c of cells) allCleared.add(cellKey(c))
-    const outer = fogClumps(center, allCleared, FAR_HALF_M).filter(isOuter)
+    // 雲は origin のまわり 3km に置く。地図を 1.5km 以上動かしたら、そこを中心に置き直す（どこまでも動かせる）。
+    // 晴れた場所から遠い雲は晴れ方で変わらないので、晴れていない前提で1回だけ作る。
+    // スライダーで作り直すのは、晴れた場所のまわりの四角（box）の中だけ
+    const points = [...(home ? [home] : []), ...cells.map(cellCenter)]
+    let origin = center
+    let plain: Clump[] = []
+    let box: ReturnType<typeof clearedBox> = null
+    const rebuildBase = () => {
+      plain = fogClumps(origin, new Set(), FAR_HALF_M)
+      box = clearedBox(points, origin, FAR_HALF_M)
+    }
+    rebuildBase()
     let last: Clump[] = []
     let ready = false
     let pending: number | null = null
+    let shown = t
     const draw = (time: number) => {
+      shown = time
       const cleared = new Set(base)
       for (const c of clearedAt(cells, time)) cleared.add(cellKey(c))
-      const next = fogClumps(center, cleared)
+      const b = box
+      const next = b ? fogClumps(origin, cleared, FAR_HALF_M, b) : []
+      const rest = b ? plain.filter((c) => !inBox(c, b)) : plain
       if (last.length > 0 && next.length < last.length) {
         // 晴れるときは、中心から外へ向かって雲が縮んで消える
-        fog.setClumps(center, [...waveClumps(last, next, localFrame(center).to(center), performance.now() / 1000), ...outer])
+        fog.setClumps(origin, [...waveClumps(last, next, localFrame(origin).to(center), performance.now() / 1000), ...rest])
       } else {
-        fog.setClumps(center, [...next, ...outer])
+        fog.setClumps(origin, [...next, ...rest])
       }
       last = next
       map.triggerRepaint()
     }
+    map.on('moveend', () => {
+      if (!ready) return
+      const c = map.getCenter()
+      const here = { lat: c.lat, lng: c.lng }
+      if (distanceMeters(here, origin) < REBUILD_M) return
+      origin = here
+      rebuildBase()
+      last = []
+      draw(shown)
+    })
     apply.current = (time) => {
       if (!ready) return
       if (pending !== null) cancelAnimationFrame(pending)
@@ -149,15 +172,19 @@ export function RecordMap({ cells, t, home, pins }: Props) {
           for (const other of markers.values()) other.tag.hidden = true
           tag.hidden = !show
         })
+        // 置き場所が決まるまでは隠す（iPhone では最初の一瞬だけ左上に見えるため）。決まったら、その場所からぴょんと出す
+        el.style.visibility = 'hidden'
         const marker = new Marker({ element: el, anchor: 'bottom' }).setLngLat([p.lng, p.lat]).addTo(map)
-        m = { marker, el, num, tag, today: false }
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            el.style.visibility = ''
+            el.classList.add('rc-pin--pop')
+          }),
+        )
+        m = { marker, el, num, tag, today: true }
         markers.set(p.shopId, m)
       }
-      // 今日になったときだけ、ぽんと弾ませる（クラスを付け直すとアニメーションがもう一度動く）
-      const becameToday = p.today && !m.today
-      m.el.className = p.today ? 'rc-pin rc-pin--today' : 'rc-pin'
-      if (becameToday) m.el.classList.add('rc-pin--pop')
-      m.today = p.today
+      if (!m.el.classList.contains('rc-pin')) m.el.classList.add('rc-pin', 'rc-pin--today')
       m.el.setAttribute('aria-label', `${p.name} ${mdLabel(p.lastDay)}`)
       m.num.textContent = p.order !== null ? String(p.order) : ''
       m.num.hidden = p.order === null
