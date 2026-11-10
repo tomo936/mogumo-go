@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
 import { evaluate } from '../domain/evaluate.ts'
@@ -24,6 +24,17 @@ test('段のある実績は1行に全部の段を並べる。押すと取った�
   expect(screen.getByText('2026.11.03 にとった')).toBeInTheDocument()
   expect(screen.getByText('つぎは「ラーメン通」 あと 7回')).toBeInTheDocument()
   expect(within(screen.getByLabelText('段')).getAllByRole('img')).toHaveLength(5)
+})
+
+test('取った日は指が触れている間だけ出る', () => {
+  render(<BadgeList states={states} hasHome={false} />)
+  const genre = screen.getByRole('region', { name: 'ジャンル' })
+  expect(within(genre).queryByText('11/3')).not.toBeInTheDocument()
+  const medal = within(genre).getByRole('img', { name: 'ラーメン好き' }).closest('button')!
+  fireEvent.pointerDown(medal)
+  expect(screen.getByRole('tooltip')).toHaveTextContent('11/3')
+  fireEvent.pointerUp(medal)
+  expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
 })
 
 test('まだ1段も取れていないジャンルは最初の段と「あと N」', async () => {

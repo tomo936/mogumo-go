@@ -14,10 +14,25 @@ const dateLabel = (ms: number) => {
   return `${d.getUTCFullYear()}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.${String(d.getUTCDate()).padStart(2, '0')}`
 }
 
-const EVOLVE = new URLSearchParams(globalThis.location?.search ?? '').has('evo') // 比べる用（一時）
+// 取った日（日本時間）を短く: 11/3。年がちがえば 2025/11/3
+const shortDate = (ms: number) => {
+  const d = new Date(ms + 9 * 3600_000)
+  const nowYear = new Date(Date.now() + 9 * 3600_000).getUTCFullYear()
+  const md = `${d.getUTCMonth() + 1}/${d.getUTCDate()}`
+  return d.getUTCFullYear() === nowYear ? md : `${d.getUTCFullYear()}/${md}`
+}
 
 export function BadgeList({ states, hasHome }: { states: BadgeState[]; hasHome: boolean }) {
   const [open, setOpen] = useState<{ series: BadgeSeries; state: BadgeState } | null>(null)
+  const [pressed, setPressed] = useState<string | null>(null) // 指が触れている間だけ取った日を出す
+  const touch = (id: string) => ({
+    onPointerDown: () => setPressed(id),
+    onPointerUp: () => setPressed(null),
+    onPointerLeave: () => setPressed(null),
+    onPointerCancel: () => setPressed(null),
+  })
+  const dateBubble = (st: BadgeState) =>
+    pressed === st.def.id && st.earnedAt !== null ? <span className="bd__date" role="tooltip">{shortDate(st.earnedAt)}</span> : null
   const series = seriesOf(states)
   const earned = states.filter((s) => s.earnedAt !== null).length
   return (
@@ -33,21 +48,7 @@ export function BadgeList({ states, hasHome }: { states: BadgeState[]; hasHome: 
               <span>{GROUP_LABEL[g]}</span>
               <small>{`${list.filter((s) => s.earnedAt !== null).length} / ${list.length}`}</small>
             </h3>
-            {EVOLVE && (
-              <div className="bd__grid">
-                {items.map((x) => (
-                  <button key={x.face.def.series} type="button" className="bd__item bd__evo" onClick={() => setOpen({ series: x, state: x.face })}>
-                    <BadgeMedal state={x.face} size={80} />
-                    {x.steps.length > 1 && (
-                      <span className="bd__pips" aria-label={`${x.steps.filter((s) => s.earnedAt !== null).length} / ${x.steps.length} 段`}>
-                        {x.steps.map((s) => <i key={s.def.id} className={s.earnedAt !== null ? 'on' : ''} />)}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-            {!EVOLVE && items.filter((x) => x.steps.length > 1).map((x) => (
+            {items.filter((x) => x.steps.length > 1).map((x) => (
               <div key={x.face.def.series} className="bd__row">
                 <div className="bd__rowhead">
                   <span>{rowLabel(x)}</span>
@@ -55,18 +56,20 @@ export function BadgeList({ states, hasHome }: { states: BadgeState[]; hasHome: 
                 </div>
                 <div className="bd__steps">
                   {x.steps.map((s) => (
-                    <button key={s.def.id} type="button" className="bd__item" onClick={() => setOpen({ series: x, state: s })}>
+                    <button key={s.def.id} type="button" className="bd__item" {...touch(s.def.id)} onClick={() => setOpen({ series: x, state: s })}>
                       <BadgeMedal state={s} size={64} />
+                      {dateBubble(s)}
                     </button>
                   ))}
                 </div>
               </div>
             ))}
-            {!EVOLVE && items.some((x) => x.steps.length === 1) && (
+            {items.some((x) => x.steps.length === 1) && (
               <div className="bd__grid">
                 {items.filter((x) => x.steps.length === 1).map((x) => (
-                  <button key={x.face.def.series} type="button" className="bd__item" onClick={() => setOpen({ series: x, state: x.face })}>
+                  <button key={x.face.def.series} type="button" className="bd__item" {...touch(x.face.def.id)} onClick={() => setOpen({ series: x, state: x.face })}>
                     <BadgeMedal state={x.face} size={80} />
+                    {dateBubble(x.face)}
                   </button>
                 ))}
               </div>
@@ -112,6 +115,7 @@ function BadgeDetail({ series, state, hasHome, onClose }: { series: BadgeSeries;
               <div key={s.def.id} className={s === state ? 'is-face' : ''}>
                 <BadgeMedal state={s} size={52} />
                 <small>{s.def.need !== null ? `${s.def.need}${s.def.unit}` : ''}</small>
+                <small className="bd-sheet__stepdate">{s.earnedAt !== null ? shortDate(s.earnedAt) : '—'}</small>
               </div>
             ))}
           </div>
