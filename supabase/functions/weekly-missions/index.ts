@@ -58,11 +58,14 @@ async function readVisits(db: Db, userId: string, fromIso: string, toIso: string
     const s = await db.from('shops').select('shop_id, name, genre_code, genre_name').in('shop_id', part)
     if (s.error) throw new Error('read')
     for (const r of (s.data ?? []) as { shop_id: string; name: string; genre_code: string | null; genre_name: string | null }[]) shops.set(r.shop_id, r)
-    // 前に行ったか（1軒につき一番古い1回で足りる。上限は軒数ぶん）
-    const o = await db.from('checkins').select('shop_id, checked_in_at, was_hint, far_from_home')
-      .eq('user_id', userId).in('shop_id', part).lt('checked_in_at', fromIso).order('checked_in_at').limit(PAGE)
-    if (o.error) throw new Error('read')
-    older.push(...((o.data ?? []) as C[]))
+    // 前に行ったか（出題より前の、その店への訪問。取りこぼすと「はじめて」を多く数えるので、全部ページで読む）
+    for (let from = 0; ; from += PAGE) {
+      const o = await db.from('checkins').select('shop_id, checked_in_at, was_hint, far_from_home')
+        .eq('user_id', userId).in('shop_id', part).lt('checked_in_at', fromIso).order('checked_in_at').range(from, from + PAGE - 1)
+      if (o.error) throw new Error('read')
+      older.push(...((o.data ?? []) as C[]))
+      if (!o.data || o.data.length < PAGE) break
+    }
   }
   return [...older, ...inWeek].map((c) => {
     const s = shops.get(c.shop_id)

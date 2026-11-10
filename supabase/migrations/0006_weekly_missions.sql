@@ -166,7 +166,9 @@ begin
       insert into public.coin_ledger (user_id, reason, amount, weekly_mission_id)
       values (p_user, 'weekly_mission', m.reward, m.mission_id)
       on conflict do nothing;
-      v_new := v_new || m.mission_id;
+      if found then
+        v_new := v_new || m.mission_id; -- コインを書けたときだけ「今回はじめて達成」
+      end if;
     else
       update public.weekly_missions w set progress = v_next where w.mission_id = m.mission_id;
     end if;

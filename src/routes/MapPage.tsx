@@ -155,9 +155,11 @@ export function MapPage() {
   const [missions, setMissions] = useState<MissionsState>({ status: 'loading' })
   const [missionNews, setMissionNews] = useState<Mission[]>([]) // 達成の帯の順番待ち
   const missionSeen = useRef(new Set<string>())
+  const missionOpen = useRef(new Set<string>()) // 見たときにまだ達成していなかったもの（チェックイン後の呼び出しが失敗しても、次に読んだときに帯を出す）
   const applyMissions = useCallback((w: MissionWeek) => {
     setMissions({ status: 'ready', week: w })
-    const fresh = w.missions.filter((m) => w.newly.includes(m.id) && !missionSeen.current.has(m.id))
+    const fresh = w.missions.filter((m) => m.completed && (w.newly.includes(m.id) || missionOpen.current.has(m.id)) && !missionSeen.current.has(m.id))
+    for (const m of w.missions) if (!m.completed) missionOpen.current.add(m.id)
     if (fresh.length === 0) return
     for (const m of fresh) missionSeen.current.add(m.id)
     setMissionNews((q) => [...q, ...fresh])
@@ -167,7 +169,7 @@ export function MapPage() {
     setMissions((cur) => (cur.status === 'ready' ? cur : { status: 'loading' }))
     // まわりのお店がそろうのを少しだけ待つ（そろわなければ、ジャンル指定なしで出題される）
     const handle = mapRef.current
-    if (handle) await Promise.race([handle.whenShopsReady(), new Promise((r) => setTimeout(r, 4000))])
+    if (handle) await Promise.race([handle.whenShopsReady().catch(() => {}), new Promise((r) => setTimeout(r, 4000))])
     const shops = mapRef.current?.hintInputs()?.shops ?? []
     const w = await syncMissions({ kinds: nearbyKinds(shops, home, me), hasHome: home !== null })
     if (!aliveRef.current) return
