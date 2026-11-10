@@ -341,7 +341,7 @@ export function MapPage() {
         />
       )}
       {pickedHintData && (
-        <HintSheet hint={pickedHintData} distanceM={distances.get(pickedHintData.id) ?? null} onClose={closeHint} />
+        <HintSheet hint={pickedHintData} distanceM={distances.get(pickedHintData.id) ?? null} direction={directions.get(pickedHintData.id) ?? null} onClose={closeHint} />
       )}
       {hints.newlyRevealed && (
         <RevealBanner key={hints.newlyRevealed.id} name={hints.newlyRevealed.shop.name} onDone={hints.clearNewly} />
