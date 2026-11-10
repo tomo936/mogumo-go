@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cellOf } from '../../fog/domain/grid.ts'
-import { viewOf, zoomFor } from './view.ts'
+import { fogBounds, isOuter, viewOf, zoomFor } from './view.ts'
 
 const home = { lat: 35.6505, lng: 139.6365 }
 
@@ -35,4 +35,16 @@ describe('zoomFor', () => {
     expect(zoomFor(100000, 360, 35)).toBe(13)
     expect(zoomFor(1, 360, 35)).toBe(17)
   })
+})
+
+it('fogBounds: 遠くの雲（3000m）の内側の四角', () => {
+  const [[w, south], [e, n]] = fogBounds({ lat: 35.65, lng: 139.63 })
+  expect(((n - south) / 2) * 111_320).toBeCloseTo(2940, 0)
+  expect(w).toBeLessThan(139.63)
+  expect(e).toBeGreaterThan(139.63)
+})
+
+it('isOuter: ふだんの範囲（1200m）の外側', () => {
+  expect(isOuter({ x: 1300, y: 0 })).toBe(true)
+  expect(isOuter({ x: 100, y: -1100 })).toBe(false)
 })

@@ -282,6 +282,7 @@
   color: #6b4a2b;
 }
 .zd__back {
+  padding: 0; /* 共通の button の余白で中身が潰れる（iPhone） */
   width: 38px;
   height: 38px;
   border: 0;

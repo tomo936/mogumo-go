@@ -1,6 +1,6 @@
 // 記録の地図: 本物の地図を真上から見て、その上にアプリの地図と同じ雲を重ねる。
 // スライダーの日付までに晴れたマスだけを「晴れた場所」にして、雲を作り直す。中心は自宅。
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Map as MapLibreMap, Marker } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import '../../map/infra/maplibreWorker.ts' // 地図の作業用プログラムの読み込み先（アプリ本体と同じ設定）
@@ -16,7 +16,7 @@ import { localFrame } from '../../map/domain/geo.ts'
 import { cellKey } from '../../fog/domain/grid.ts'
 import { createFogLayer } from '../../fog/infra/fogLayer.ts'
 import { clearedAt, type ClearedCell } from '../domain/timeline.ts'
-import { MAX_ZOOM, MIN_ZOOM, viewOf, zoomFor } from '../domain/view.ts'
+import { FAR_HALF_M, MAX_ZOOM, MIN_ZOOM, fogBounds, isOuter, viewOf, zoomFor } from '../domain/view.ts'
 import type { DayPin } from '../domain/dayPins.ts'
 import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
 
@@ -27,6 +27,7 @@ const mdLabel = (day: string) => `${Number(day.slice(5, 7))}/${Number(day.slice(
 export function RecordMap({ cells, t, home, pins }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
+  const [loaded, setLoaded] = useState(false) // 地図の準備ができてからピンを置く（前に置くと左上に出る）
   const apply = useRef<(t: number) => void>(() => {})
 
   // 地図は最初に1回だけ作る（日付は apply で変える）
@@ -45,6 +46,7 @@ export function RecordMap({ cells, t, home, pins }: Props) {
       bearing: 0,
       minZoom: MIN_ZOOM,
       maxZoom: MAX_ZOOM,
+      maxBounds: fogBounds(center), // 雲を置いた範囲（3km）の外は見せない
       dragRotate: false,
       touchPitch: false,
       pitchWithRotate: false,
@@ -64,6 +66,10 @@ export function RecordMap({ cells, t, home, pins }: Props) {
     }
     const fog = createFogLayer()
     const base = clearedFromHome(home)
+    // 遠くの雲（ふだんの範囲の外〜3km）は1回だけ作る。スライダーで晴れ方が変わるのは近くだけ
+    const allCleared = new Set(base)
+    for (const c of cells) allCleared.add(cellKey(c))
+    const outer = fogClumps(center, allCleared, FAR_HALF_M).filter(isOuter)
     let last: Clump[] = []
     let ready = false
     let pending: number | null = null
@@ -73,9 +79,9 @@ export function RecordMap({ cells, t, home, pins }: Props) {
       const next = fogClumps(center, cleared)
       if (last.length > 0 && next.length < last.length) {
         // 晴れるときは、中心から外へ向かって雲が縮んで消える
-        fog.setClumps(center, waveClumps(last, next, localFrame(center).to(center), performance.now() / 1000))
+        fog.setClumps(center, [...waveClumps(last, next, localFrame(center).to(center), performance.now() / 1000), ...outer])
       } else {
-        fog.setClumps(center, next)
+        fog.setClumps(center, [...next, ...outer])
       }
       last = next
       map.triggerRepaint()
@@ -92,6 +98,7 @@ export function RecordMap({ cells, t, home, pins }: Props) {
       map.addLayer(fog)
       ready = true
       draw(t)
+      setLoaded(true)
     })
     return () => {
       if (pending !== null) cancelAnimationFrame(pending)
@@ -114,7 +121,7 @@ export function RecordMap({ cells, t, home, pins }: Props) {
   const markersRef = useRef(new Map<string, { marker: Marker; el: HTMLButtonElement; num: HTMLElement; tag: HTMLElement; today: boolean }>())
   useEffect(() => {
     const map = mapRef.current
-    if (!map) return
+    if (!map || !loaded) return
     const markers = markersRef.current
     const keep = new Set(pins.map((p) => p.shopId))
     for (const [id, m] of markers) {
@@ -156,7 +163,7 @@ export function RecordMap({ cells, t, home, pins }: Props) {
       m.num.hidden = p.order === null
       m.tag.textContent = `${p.name} ・ ${mdLabel(p.lastDay)}`
     }
-  }, [pins])
+  }, [pins, loaded])
   useEffect(() => {
     const markers = markersRef.current
     return () => {
