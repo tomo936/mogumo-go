@@ -104,6 +104,7 @@
   pointer-events: none;
 }
 .checkin-effect__banner {
+  flex-wrap: wrap;
   position: absolute;
   left: 12px;
   right: 12px;
@@ -156,6 +157,34 @@
   border-radius: 50%;
   background: #ffd23f;
   box-shadow: inset 0 0 0 3px #ffb703;
+}
+/* コイン・経験値・レベルアップ（帯の2段目に横に並べる） */
+.checkin-effect__chips {
+  flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.checkin-effect__title { flex: 1; min-width: 0; }
+.checkin-effect__exp,
+.checkin-effect__levelup {
+  flex: none;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.checkin-effect__levelup {
+  background: #fff;
+  color: #c2652a;
+  animation: checkin-levelup 0.5s 1s cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+}
+@keyframes checkin-levelup {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 @keyframes checkin-banner-in {
   from { opacity: 0; transform: translateY(30px) scale(0.92); }

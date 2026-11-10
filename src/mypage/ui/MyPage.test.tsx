@@ -34,8 +34,8 @@ const show = (o: Partial<Parameters<typeof MyPage>[0]> = {}) => {
 test('Lv・数字のカード・コインを出す', async () => {
   show()
   expect(await screen.findByText('420')).toBeInTheDocument()
-  expect(screen.getByText('Lv 2')).toBeInTheDocument() // 3軒で Lv2
-  expect(screen.getByText('次の Lv まで あと 6軒')).toBeInTheDocument()
+  expect(screen.getByText('Lv 2')).toBeInTheDocument() // 3軒 = 30 EXP で Lv2
+  expect(screen.getByText('次の Lv まで あと 60 EXP')).toBeInTheDocument()
   expect(screen.getByText('0.50')).toBeInTheDocument()
 })
 

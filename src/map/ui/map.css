@@ -103,7 +103,13 @@
   background: #fffdf7;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
+@property --exp {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
 .hud-player {
+  transition: --exp 0.8s ease-out; /* 経験値が増えたら輪がのびる */
   /* 経験値のゲージ: キャラの丸のまわりの輪（次の Lv までの進み具合） */
   background: conic-gradient(#c2652a var(--exp, 0%), #efe6d2 0);
   padding: 4px;

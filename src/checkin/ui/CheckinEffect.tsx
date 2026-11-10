@@ -6,12 +6,12 @@ import { startConfetti } from './confetti.ts'
 export const EFFECT_MS = 3000
 
 // reveal は、店名を伏せたままチェックインした店の名前（正体を帯に出す）
-type Props = { coins: 0 | 30 | 40; reveal?: string | null; onDone: () => void }
+type Props = { coins: 0 | 30 | 40; exp?: number; levelUp?: number | null; reveal?: string | null; onDone: () => void }
 
 const prefersReducedMotion = () =>
   typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-export function CheckinEffect({ coins, reveal = null, onDone }: Props) {
+export function CheckinEffect({ coins, exp = 0, levelUp = null, reveal = null, onDone }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const doneRef = useRef(false)
   const onDoneRef = useRef(onDone)
@@ -46,10 +46,14 @@ export function CheckinEffect({ coins, reveal = null, onDone }: Props) {
           チェックイン完了
           {reveal && <span className="checkin-effect__reveal">{`『${reveal}』だった！`}</span>}
         </span>
-        <span className="checkin-effect__coin">
-          <span className="checkin-effect__coin-icon" aria-hidden="true" />
-          {coins === 0 ? '今日のコインは受け取り済み' : coins === 40 ? '+40 コイン（気配ボーナス +10）' : '+30 コイン'}
-        </span>
+        <div className="checkin-effect__chips">
+          <span className="checkin-effect__coin">
+            <span className="checkin-effect__coin-icon" aria-hidden="true" />
+            {coins === 0 ? '今日のコインは受け取り済み' : coins === 40 ? '+40 コイン（気配ボーナス +10）' : '+30 コイン'}
+          </span>
+          {exp > 0 && <span className="checkin-effect__exp">{`+${exp} EXP`}</span>}
+          {levelUp !== null && <span className="checkin-effect__levelup">{`Lv ${levelUp} になった！`}</span>}
+        </div>
       </div>
     </div>
   )
