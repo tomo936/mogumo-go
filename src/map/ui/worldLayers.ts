@@ -6,6 +6,9 @@ import type { Clump } from '../../fog/domain/clumps.ts'
 import { cellKey } from '../../fog/domain/grid.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
 import { thinAmount, waveClumps } from '../../fog/domain/wave.ts'
+import { TOWN_FILL_HALF_M } from '../../towns/config.ts'
+import { cellsInTown } from '../../towns/domain/shape.ts'
+import type { ClearedTown } from '../../towns/domain/shape.ts'
 import { createFogLayer } from '../../fog/infra/fogLayer.ts'
 import { BUILDING_MAX_SIZE_M, BUILDING_TOP_RATE, FACILITY_MIN_AREA_M2, FACILITY_NEAR_M, LAYER_UPDATE_MS, LOD_CAMERA_MIN_ZOOM, LOD_CAMERA_MOVE_M, LOD_MARGIN_M, LOD_MAX_DETAILED, LOD_NEAR_M, MAP_SHOPS_REEXTRACT_M, MAX_SHOP_MODELS, PLACE_BUDGET_MS, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
 import { doorPoint, dropSharedParts, enoughShops, facilityLabel, facilityParts, heightAt, mergeFacilities, ringsOverlap, stationIn } from '../../shops/domain/facility.ts'
@@ -42,6 +45,7 @@ type Deps = {
   loadProgress: () => Promise<{ cells: Cell[]; checkedShopIds: Set<string>; visitsByShop?: Map<string, Visits> }>
   onPinTap: (shopIds: string[]) => void // ビルの上のピンが押された（1軒ならその店、まとめたピンなら全員）
   onShopsReady?: () => void // ホットペッパー・地図のお店・進み具合の3つがそろった最初の1回
+  loadTowns?: () => Promise<ClearedTown[]> // クリアした町（形つき）。読めなければ町なしのまま
 }
 
 const THIN_EASE_PER_S = 3 // 薄さが目標に近づく速さ（1秒あたり）
@@ -83,6 +87,7 @@ type World = {
   pick(point: { x: number; y: number }): string[] | null // 押された建物の店の id（ビルなら全員）
   focus(shopIds: string[] | null): void // タップして選んだ店（その建物は必ず詳しい模型）。閉じたら null
   addCleared(cells: Cell[], from: LatLng): void
+  addTown(town: ClearedTown, from: LatLng | null): void // 今クリアした町。見えている範囲を波で晴らす（from が null なら現在地から）
   markChecked(shopId: string, mapId?: string | null): void
   titleOf(shopIds: string[]): string | null // 施設・駅の名前（ビルや名前の無い施設は null）
   checked(): ReadonlySet<string> // 済みの店 id（合体した店は、地図の点の id で済みでも含む）
@@ -115,6 +120,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   let shownBuildings: PinnedBuilding[] = [] // いま出しているビルと、その中の店
   let shownFacilities: PlacedFacility[] = [] // いま出している大型施設・駅
   let fogCenter: LatLng | null = null // 雲の塊を置いたときの現在地
+  const towns: ClearedTown[] = [] // クリアした町
   let lastClumps: Clump[] = [] // 層に最後に渡した雲の塊（波の「変わる前」）
   const checkedIds = new Set<string>() // サーバーが知っている id と、今回付けた id（hp: と osm: の両方がありうる）
   const visits = new Map<string, Visits>() // 店 id ごとの記録（回数・はじめて・この前、日本時間）
@@ -380,7 +386,14 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     buildingPins.update(shownBuildings, done)
   }
 
+  // クリアした町は全部晴れ。町の形から、雲を置く場所のまわり（TOWN_FILL_HALF_M）だけをセルにして足す。
+  // 町が何百km² あってもセルは見えている分だけ。サーバーにも保存しない
+  const fillTowns = (origin: LatLng) => {
+    for (const town of towns) for (const c of cellsInTown(town, origin, TOWN_FILL_HALF_M)) cleared.add(cellKey(c))
+  }
+
   const setFog = (origin: LatLng) => {
+    fillTowns(origin)
     lastClumps = fogClumps(origin, cleared)
     fogLayer.setClumps(origin, lastClumps)
     fogCenter = origin
@@ -510,6 +523,40 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     () => {},
   )
 
+  // クリアした町を足す（波なし）。失敗したら町なしのまま
+  deps.loadTowns?.().then(
+    (list) => {
+      if (disposed) return
+      for (const t of list) if (!towns.some((have) => have.id === t.id)) towns.push(t)
+      if (list.length === 0 || !fogCenter) return
+      const before = cleared.size
+      setFog(fogCenter)
+      if (cleared.size !== before && last) refreshShops(last)
+    },
+    () => {},
+  )
+
+  // 晴れたセルを足して、from から波で雲を消す
+  const addCleared = (cells: Cell[], from: LatLng) => {
+    if (disposed) return
+    let added = false
+    for (const c of cells) {
+      const k = cellKey(c)
+      if (!cleared.has(k)) {
+        cleared.add(k)
+        added = true
+      }
+    }
+    if (!added) return
+    if (fogCenter) {
+      const before = lastClumps
+      const after = fogClumps(fogCenter, cleared)
+      fogLayer.setClumps(fogCenter, waveClumps(before, after, localFrame(fogCenter).to(from), performance.now() / 1000))
+      lastClumps = after
+    }
+    if (last) refreshShops(last)
+  }
+
   return {
     onPosition(p) {
       if (disposed) return
@@ -538,24 +585,12 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       focusIds = new Set(shopIds ?? [])
       if (refreshedAt && !disposed) showShops(refreshedAt)
     },
-    addCleared(cells, from) {
-      if (disposed) return
-      let added = false
-      for (const c of cells) {
-        const k = cellKey(c)
-        if (!cleared.has(k)) {
-          cleared.add(k)
-          added = true
-        }
-      }
-      if (!added) return
-      if (fogCenter) {
-        const before = lastClumps
-        const after = fogClumps(fogCenter, cleared)
-        fogLayer.setClumps(fogCenter, waveClumps(before, after, localFrame(fogCenter).to(from), performance.now() / 1000))
-        lastClumps = after
-      }
-      if (last) refreshShops(last)
+    addCleared,
+    addTown(town, from) {
+      if (disposed || towns.some((have) => have.id === town.id)) return
+      towns.push(town)
+      // 雲がまだ無ければ、最初の setFog が町を足す
+      if (fogCenter) addCleared(cellsInTown(town, fogCenter, TOWN_FILL_HALF_M), from ?? last ?? fogCenter)
     },
     markChecked(shopId, mapId) {
       checkedIds.add(shopId)

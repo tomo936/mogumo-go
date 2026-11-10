@@ -31,6 +31,9 @@ import { RevealBanner } from '../hints/ui/RevealBanner.tsx'
 import { useDailyHints } from '../hints/ui/useDailyHints.ts'
 import { loadHome } from '../setup/infra/homeStore.ts'
 import { nextStatus } from '../map/domain/locationStatus.ts'
+import { syncUntilSettled } from '../towns/infra/townsApi.ts'
+import type { TownNews, TownSync } from '../towns/domain/progress.ts'
+import { TownBanner } from '../towns/ui/TownBanner.tsx'
 
 const SHOPS_ERROR_BANNER_MS = 6000
 const PINS_HIDDEN_KEY = 'mogumo.pinsHidden' // ピンを出さない設定（その端末だけ。読めなくても動く）
@@ -85,6 +88,25 @@ export function MapPage() {
     home,
     map: mapRef,
   })
+  // 町のクリア・コンプリート。新しく取れたものを帯の列に入れ（1つずつ出す）、クリアした町の霧を晴らす
+  const [townNews, setTownNews] = useState<TownNews[]>([])
+  const townSeen = useRef(new Set<string>())
+  const aliveRef = useRef(true)
+  useEffect(() => {
+    aliveRef.current = true
+    return () => {
+      aliveRef.current = false // 画面を離れたら、町の呼び直しを止める
+    }
+  }, [])
+  const onTownSync = useCallback((s: TownSync) => {
+    const fresh = s.newly.filter((n) => !townSeen.current.has(`${n.id}:${n.kind}`))
+    if (fresh.length === 0) return
+    for (const n of fresh) {
+      townSeen.current.add(`${n.id}:${n.kind}`)
+      if (n.kind === 'clear' && n.town) mapRef.current?.addTown(n.town)
+    }
+    setTownNews((q) => [...q, ...fresh])
+  }, [])
   const busyRef = useRef(false)
   const effectSeq = useRef(0)
   const selectedRef = useRef<Shop | null>(null)
@@ -194,6 +216,8 @@ export function MapPage() {
       setEffect({ coins: result.coins, reveal: maskedBefore ? posted.name : null, key: ++effectSeq.current })
       if (result.wasHint) hints.markCompleted(posted)
       mapRef.current?.checkin(posted, result.newCells)
+      // 町の進み具合をサーバーに確かめる（失敗しても、チェックインはそのまま）
+      void syncUntilSettled(onTownSync, { alive: () => aliveRef.current })
     } else {
       if (selectedRef.current?.id === posted.id) setCheckinError(result.reason)
     }
@@ -345,6 +369,9 @@ export function MapPage() {
       )}
       {hints.newlyRevealed && (
         <RevealBanner key={hints.newlyRevealed.id} name={hints.newlyRevealed.shop.name} onDone={hints.clearNewly} />
+      )}
+      {townNews.length > 0 && (
+        <TownBanner key={`${townNews[0].id}:${townNews[0].kind}`} news={townNews[0]} onDone={() => setTownNews((q) => q.slice(1))} />
       )}
       {effect && <CheckinEffect key={effect.key} coins={effect.coins} reveal={effect.reveal} onDone={() => {
             setEffect(null)

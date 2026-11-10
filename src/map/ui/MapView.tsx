@@ -17,6 +17,8 @@ import { watchLocation } from '../infra/location.ts'
 import type { LocationEvent } from '../domain/locationStatus.ts'
 import { fetchHotpepperShops, shopSourceEnabled } from '../../shops/infra/hotpepper.ts'
 import { loadProgress } from '../../checkin/infra/checkinApi.ts'
+import { loadClearedTowns } from '../../towns/infra/townsApi.ts'
+import type { ClearedTown } from '../../towns/domain/shape.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
 import { createAvatar } from '../infra/avatarMarker.ts'
@@ -32,6 +34,7 @@ import type { Fix } from '../domain/smoothing.ts'
 
 export type MapViewHandle = {
   checkin(shop: Shop, newCells: Cell[]): void
+  addTown(town: ClearedTown): void // 今クリアした町の霧を、今いる場所から波で晴らす
   unfocus(): void
   isCheckedToday(shop: Shop): boolean
   visitsFor(shop: Shop): Visits | null // わたしの記録（読み込み前・0回は null）
@@ -107,6 +110,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   if (!readyRef.current) newReady()
   useImperativeHandle(ref, () => ({
     unfocus: () => unfocusRef.current(),
+    addTown: (town) => worldRef.current?.addTown(town, null),
     isCheckedToday: (shop) => worldRef.current?.checkedToday(shop) ?? false,
     visitsFor: (shop) => worldRef.current?.visitsFor(shop) ?? null,
     progressReady: () => worldRef.current?.progressReady() ?? false,
@@ -191,6 +195,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         shopsEnabled: shopSourceEnabled(import.meta.env.DEV, window.location.hostname),
         onShopsError: () => onShopsErrorRef.current(),
         loadProgress,
+        loadTowns: () => loadClearedTowns(),
         onPinTap: (ids) => tapRef.current(ids),
         onShopsReady: () => {
           const r = readyRef.current!
