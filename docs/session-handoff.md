@@ -117,3 +117,12 @@
 - 町の設計メモ: docs/superpowers/specs/2026-11-10-towns-design.md。採用は「境目だけ全国分をファイルで置き、お店の数は初めての町だけ数えて覚える」。確認待ちの点はメモの §11（広い町も全体が晴れる／地図に無い店は分母と分子の両方に足す／町のセルをサーバーに保存しない）。
 - 実測の材料（消えてもよい）: スクラッチの estat/（東京・北海道・長野の境目）と tools/（mapshaper）。作り方は `mapshaper r2kaNN.shp encoding=sjis -filter 'HCODE==8101' -each 'town=…丁目を取る' -dissolve2 CITY,town copy-fields=PREF,CITY_NAME -simplify dp interval=10 keep-shapes -o precision=0.00001`。e-Stat の URL は `https://www.e-stat.go.jp/gis/statmap-search/data?dlserveyId=A002005212020&code=<県番号>&coordSys=1&format=shape&downloadType=5&datum=2011`。
 - 承認が出たら: superpowers:writing-plans で計画 → 実装。
+
+## 2026-11-10 深夜: 町の機能を実装（ここから再開）
+- **できたこと（cycle1-building。dev へは最後に1回だけ送る）**: `src/towns/`（domain・infra・ui）、関数 `supabase/functions/towns/`、SQL `0005_towns.sql`、記録の町の一覧、クリアの帯、町の霧、晴れた広さ・実績への足し込み、e-Stat の出典（スプラッシュ・設定）、作る台本 `scripts/towns/build.ts`。SPEC の S2・S15 に決定を書いた。設計メモの §12 に実装で決めたこと。
+- **全国の境目**: 作り終わり。`.towns-out/g/`（1,025 ファイル・58.9MB、リポジトリには入れない。作業用は `.towns-work/`）。作り直しは `node scripts/towns/build.ts --work .towns-work --out .towns-out`。
+- **本人待ち**: Supabase の開発用に置く作業（`docs/superpowers/plans/2026-11-10-towns-deploy.md`。SQL → バケット `towns` に `g` フォルダ → 関数 `towns`）。置くまでは、記録の町の所は「読み込めませんでした」。
+- **見た目の好み（今回分かったこと）**: 「可愛く」は幼い絵にすることではない。ほかの画面と同じ色で、仕上げの質を上げる。ゲージの形がよい。顔つきの絵・紙ふぶき・「〜よ」は不要。
+- **道具**: 本物の部品の見本は `.superpowers/preview/tw.html`（`vite.hints.config.mjs`、ポートは毎回新しい番号。`.env` の変化で再起動しないよう `envDir: false`）。撮るのは `wide.mjs <url> <出力> 390 844`。
+- **次**: 3. 週ミッション（3つ）→ 4. 地図の検索・飛べる機能。残り: お問い合わせの URL、実績の絵の依頼、記録のピンの札が端で切れる、スプラッシュの e-Stat の行の折り返し。
+
