@@ -54,6 +54,23 @@ test('霧はらい: マスの時刻の 1600 番目で 1km²', () => {
   expect(get(s, 'fog_5')).toMatchObject({ earnedAt: null, have: 1.06 })
 })
 
+test('霧はらい: クリアした町の広さも、時刻の順に足す', () => {
+  // マス 80 個 = 0.05km²（時刻 1〜80）＋ 町 1km²（時刻 500）
+  const cellTimes = Array.from({ length: 80 }, (_, i) => i + 1)
+  const s = evaluate(input([], { cellTimes, townAreas: [{ at: 500, km2: 1 }] }))
+  expect(get(s, 'fog_1')).toMatchObject({ earnedAt: 500, have: 1.05 })
+  expect(get(s, 'fog_01').earnedAt).toBe(500)
+  expect(get(s, 'fog_5')).toMatchObject({ earnedAt: null, have: 1.05 })
+})
+
+test('霧はらい: 町より前のマスだけで届いていれば、その時刻', () => {
+  const cellTimes = Array.from({ length: 200 }, (_, i) => i + 1) // 0.125km²
+  const s = evaluate(input([], { cellTimes, townAreas: [{ at: 500, km2: 3 }, { at: 100, km2: 0.01 }] }))
+  // 0.1km² = 町 0.01（時刻 100）＋ マス 144 個（時刻 144）
+  expect(get(s, 'fog_01').earnedAt).toBe(144)
+  expect(get(s, 'fog_1').earnedAt).toBe(500)
+})
+
 test('自宅が無ければ遠征は取れず have null', () => {
   const s = evaluate(input([v('ramen', '2026-11-01 12:00', { lat: 36, lng: 140 })]))
   expect(get(s, 'far_10')).toMatchObject({ earnedAt: null, have: null })

@@ -7,7 +7,9 @@ import { checkNickname, NICKNAME_MAX } from '../../setup/domain/nickname.ts'
 import { profileRepo, type StarterId } from '../../setup/infra/profileRepo.ts'
 import { levelFor, needFor } from '../../zukan/domain/level.ts'
 import { loadRecord } from '../../record/infra/recordApi.ts'
-import { areaKm2, type ClearedCell, type VisitEntry } from '../../record/domain/timeline.ts'
+import type { ClearedCell, VisitEntry } from '../../record/domain/timeline.ts'
+import { areaKm2At, areaTimeline } from '../../towns/domain/area.ts'
+import type { ClearedTown } from '../../towns/domain/shape.ts'
 import { evaluate, recentEarned } from '../../badges/domain/evaluate.ts'
 import { BadgeMedal } from '../../badges/ui/BadgeMedal.tsx'
 import type { LatLng } from '../../map/domain/geo.ts'
@@ -17,7 +19,7 @@ import { ChangeHome } from './ChangeHome.tsx'
 const CHARACTERS = import.meta.glob<string>('../../assets/characters/starter-*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>
 const characterUrl = (id: StarterId) => CHARACTERS[id === 102 ? '../../assets/characters/starter-girl.webp' : '../../assets/characters/starter-boy.webp']
 
-type Data = { cells: ClearedCell[]; visits: VisitEntry[]; coins: number | null }
+type Data = { cells: ClearedCell[]; visits: VisitEntry[]; towns: ClearedTown[]; coins: number | null }
 type Props = {
   userId: string
   nickname: string | null
@@ -41,7 +43,7 @@ export function MyPage(p: Props) {
   useEffect(() => {
     let alive = true
     Promise.all([loadRecord(), loadCoins().catch(() => null)])
-      .then(([r, coins]) => alive && setData({ cells: r.cells, visits: r.visits, coins }))
+      .then(([r, coins]) => alive && setData({ cells: r.cells, visits: r.visits, towns: r.towns, coins }))
       .catch(() => alive && setFailed(true))
     return () => {
       alive = false
@@ -52,7 +54,12 @@ export function MyPage(p: Props) {
   const lv = levelFor(visited)
   const span = needFor(lv.level + 1) - needFor(lv.level)
   const progress = span > 0 ? (visited - needFor(lv.level)) / span : 0
-  const badges = useMemo(() => (data ? evaluate({ visits: data.visits, cellTimes: data.cells.map((c) => c.at), home: p.home }) : []), [data, p.home])
+  // 晴れた広さ = マス ＋ クリアした町（二重に数えない）
+  const area = useMemo(() => (data ? areaTimeline(data.cells, data.towns) : null), [data])
+  const badges = useMemo(
+    () => (data && area ? evaluate({ visits: data.visits, cellTimes: area.cellTimes, townAreas: area.townAreas, home: p.home }) : []),
+    [data, area, p.home],
+  )
   const earnedCount = badges.filter((b) => b.earnedAt !== null).length
   const recent = recentEarned(badges, 3)
 
@@ -135,7 +142,7 @@ export function MyPage(p: Props) {
         <>
           <div className="mp__cards">
             <div><b>{visited}</b><span>行ったお店</span></div>
-            <div><b>{areaKm2(data.cells.length).toFixed(2)}</b><span>晴れた広さ（km²）</span></div>
+            <div><b>{(area ? areaKm2At(area, Infinity) : 0).toFixed(2)}</b><span>晴れた広さ（km²）</span></div>
             <div><b>{earnedCount}</b><span>実績</span></div>
             <div><b>{data.coins ?? '—'}</b><span>グルメコイン</span></div>
           </div>

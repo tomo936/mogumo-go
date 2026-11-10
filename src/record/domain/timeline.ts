@@ -22,13 +22,18 @@ export type VisitEntry = {
 
 export const DAY_MS = 86_400_000
 
-export function timeRange(cells: ClearedCell[]): { start: number; end: number } | null {
-  if (cells.length === 0) return null
+// スライダーの範囲。extra は、マスのほかに範囲へ入れる時刻（町をクリアした時刻）
+export function timeRange(cells: ClearedCell[], extra: readonly number[] = []): { start: number; end: number } | null {
+  if (cells.length === 0 && extra.length === 0) return null
   let start = Infinity
   let end = -Infinity
   for (const c of cells) {
     if (c.at < start) start = c.at
     if (c.at > end) end = c.at
+  }
+  for (const at of extra) {
+    if (at < start) start = at
+    if (at > end) end = at
   }
   return { start, end }
 }

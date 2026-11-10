@@ -340,7 +340,7 @@ export function MapPage() {
           onClose={() => setZukanOpen(false)}
         />
       )}
-      {recordTab && <Record home={home} initialTab={recordTab} onClose={() => setRecordTab(null)} />}
+      {recordTab && <Record home={home} initialTab={recordTab} onTownSync={onTownSync} onClose={() => setRecordTab(null)} />}
       {myPageOpen && userId && (
         <MyPage
           userId={userId}

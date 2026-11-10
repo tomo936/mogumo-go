@@ -82,3 +82,121 @@
   .town-banner,
   .town-banner__stamp { animation: none; }
 }
+
+/* 記録の、町の進み具合の一覧（手帳風） */
+.town-list__note {
+  margin: 6px 2px;
+  font-size: 13px;
+  color: #9a8570;
+}
+.town-list__rule {
+  margin: 0 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #8a6d4b;
+}
+.town-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.town-row {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fffaf0;
+  border: 2px solid #cbb896;
+}
+.town-row--clear { border-color: #8a6a48; }
+.town-row--complete { border-color: #d99a00; background: #fff8dc; }
+.town-row__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.town-row__name {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+.town-row__name b {
+  font-size: 16px;
+  color: #4a3b2c;
+  overflow-wrap: anywhere;
+}
+.town-row__name span {
+  font-size: 12px;
+  color: #9a8570;
+}
+.town-row__stamp {
+  flex: none;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 2px solid #e2574c;
+  color: #e2574c;
+  font-size: 12px;
+  font-weight: 900;
+  transform: rotate(-4deg);
+}
+.town-row--complete .town-row__stamp {
+  border-color: #d99a00;
+  color: #b07a00;
+  background: #fff3c4;
+}
+.town-row__counting {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #9a8570;
+}
+.town-row__progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.town-row__bar {
+  position: relative;
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: #eadfc8;
+  overflow: hidden;
+}
+.town-row__bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #6fb7e9;
+}
+.town-row--clear .town-row__bar i { background: #f08a5d; }
+.town-row--complete .town-row__bar i { background: #e6b422; }
+/* 半分（クリアの線） */
+.town-row__half {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #8a6a48;
+  opacity: 0.55;
+}
+.town-row__count {
+  flex: none;
+  min-width: 62px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 800;
+  color: #4a3b2c;
+}
+.town-row__pct {
+  flex: none;
+  min-width: 38px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 800;
+  color: #8a6d4b;
+}

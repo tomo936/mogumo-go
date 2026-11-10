@@ -20,7 +20,7 @@ const visits = [visit('A', 'ramen', '2026-11-01T03:00:00Z'), visit('B', 'cafe', 
 const cells: ClearedCell[] = Array.from({ length: 800 }, (_, i) => ({ x: i, y: 0, at: 1 }))
 
 beforeEach(() => {
-  record.load.mockResolvedValue({ cells, visits })
+  record.load.mockResolvedValue({ cells, visits, towns: [] })
   coins.load.mockResolvedValue(420)
   repo.updateNickname.mockReset()
 })
@@ -37,6 +37,19 @@ test('Lv・数字のカード・コインを出す', async () => {
   expect(screen.getByText('Lv 2')).toBeInTheDocument() // 3軒で Lv2
   expect(screen.getByText('次の Lv まで あと 6軒')).toBeInTheDocument()
   expect(screen.getByText('0.50')).toBeInTheDocument()
+})
+
+test('晴れた広さに、クリアした町の広さが入る（実績にも）', async () => {
+  record.load.mockResolvedValue({
+    cells, visits,
+    towns: [{
+      id: '13112-経堂', name: '経堂', city: '世田谷区', areaM2: 1_000_000, at: Date.parse('2026-11-03T04:00:00Z'),
+      geom: { type: 'Polygon', coordinates: [[[1, 1], [1.01, 1], [1.01, 1.01], [1, 1.01], [1, 1]]] }, bbox: [1, 1, 1.01, 1.01],
+    }],
+  })
+  show()
+  expect(await screen.findByText('1.50')).toBeInTheDocument() // マス 0.5km² ＋ 町 1km²
+  expect(screen.getByRole('img', { name: '霧はらい' })).toBeInTheDocument() // 1km² の実績
 })
 
 test('最近とった実績を新しい順に3つ、すべて見るで onOpenBadges', async () => {

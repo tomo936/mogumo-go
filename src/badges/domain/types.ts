@@ -33,12 +33,13 @@ export type BadgeVisit = {
 export type BadgeInput = {
   visits: BadgeVisit[]
   cellTimes: number[] // 晴れたマスの時刻（ms）
+  townAreas?: { at: number; km2: number }[] // クリアした町の時刻と広さ（マスと二重にならない分。towns/domain/area.ts）
   home: { lat: number; lng: number } | null
 }
 
 // 計算用に、日本時間の日・時刻などを付けた訪問
 export type PreparedVisit = BadgeVisit & { day: string; month: string; md: string; hour: number; minute: number; dow: number }
-export type Prepared = { visits: PreparedVisit[]; cellTimes: number[]; home: BadgeInput['home'] }
+export type Prepared = { visits: PreparedVisit[]; cellTimes: number[]; townAreas: { at: number; km2: number }[]; home: BadgeInput['home'] }
 
 // have = 今の数（表示の単位で）、at = 取れた時刻
 export type Measure = { have: number | null; at: number | null }

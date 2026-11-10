@@ -1,5 +1,6 @@
 // 記録の地図: 本物の地図を真上から見て、その上にアプリの地図と同じ雲を重ねる。
 // スライダーの日付までに晴れたマスだけを「晴れた場所」にして、雲を作り直す。中心は自宅。
+// クリアした町は、クリアした日から町の形の中がぜんぶ晴れる（マスは雲を置く範囲の分だけ、その場で計算する）。
 import { useEffect, useRef, useState } from 'react'
 import { Map as MapLibreMap, Marker } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -21,16 +22,19 @@ import { distanceMeters } from '../../map/domain/geo.ts'
 import { cellCenter } from '../../fog/domain/grid.ts'
 import type { DayPin } from '../domain/dayPins.ts'
 import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
+import { cellsInTown } from '../../towns/domain/shape.ts'
+import type { ClearedTown } from '../../towns/domain/shape.ts'
 
-type Props = { cells: ClearedCell[]; t: number; home: LatLng | null; pins: DayPin[] }
+type Props = { cells: ClearedCell[]; towns: ClearedTown[]; t: number; home: LatLng | null; pins: DayPin[] }
 
 const mdLabel = (day: string) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`
 
-export function RecordMap({ cells, t, home, pins }: Props) {
+export function RecordMap({ cells, towns, t, home, pins }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const [loaded, setLoaded] = useState(false) // 地図の準備ができてからピンを置く（前に置くと左上に出る）
   const apply = useRef<(t: number) => void>(() => {})
+  const applyTowns = useRef<(towns: ClearedTown[]) => void>(() => {})
 
   // 地図は最初に1回だけ作る（日付は apply で変える）
   useEffect(() => {
@@ -74,9 +78,13 @@ export function RecordMap({ cells, t, home, pins }: Props) {
     let origin = center
     let plain: Clump[] = []
     let box: ReturnType<typeof clearedBox> = null
+    let townList = towns
+    let townCells: { at: number; keys: string[] }[] = [] // 町ごとの、雲を置く範囲に入るマス（クリアの時刻つき）
     const rebuildBase = () => {
       plain = fogClumps(origin, new Set(), FAR_HALF_M)
-      box = clearedBox(points, origin, FAR_HALF_M)
+      const inTowns = townList.map((town) => ({ at: town.at, cells: cellsInTown(town, origin, FAR_HALF_M) }))
+      townCells = inTowns.map((c) => ({ at: c.at, keys: c.cells.map(cellKey) }))
+      box = clearedBox([...points, ...inTowns.flatMap((c) => c.cells.map(cellCenter))], origin, FAR_HALF_M)
     }
     rebuildBase()
     let last: Clump[] = []
@@ -87,6 +95,7 @@ export function RecordMap({ cells, t, home, pins }: Props) {
       shown = time
       const cleared = new Set(base)
       for (const c of clearedAt(cells, time)) cleared.add(cellKey(c))
+      for (const town of townCells) if (town.at <= time) for (const k of town.keys) cleared.add(k)
       const b = box
       const next = b ? fogClumps(origin, cleared, FAR_HALF_M, b) : []
       const rest = b ? plain.filter((c) => !inBox(c, b)) : plain
@@ -117,6 +126,13 @@ export function RecordMap({ cells, t, home, pins }: Props) {
         draw(time)
       })
     }
+    // 開いているあいだに町をクリアしたとき: 町のマスを作り直して描き直す
+    applyTowns.current = (list) => {
+      if (list === townList) return
+      townList = list
+      rebuildBase()
+      if (ready) draw(shown)
+    }
     map.on('load', () => {
       map.addLayer(fog)
       ready = true
@@ -126,6 +142,7 @@ export function RecordMap({ cells, t, home, pins }: Props) {
     return () => {
       if (pending !== null) cancelAnimationFrame(pending)
       apply.current = () => {}
+      applyTowns.current = () => {}
       homeMarker?.remove()
       mapRef.current = null
       map.remove()
@@ -137,6 +154,9 @@ export function RecordMap({ cells, t, home, pins }: Props) {
   useEffect(() => {
     apply.current(t)
   }, [t])
+  useEffect(() => {
+    applyTowns.current(towns)
+  }, [towns])
 
   // 行ったお店のピン（スライダーの日のお店は大きく番号つき）。押すと店名と日付の札。
   // ピンは作り直さない（作り直すと、置き直すまでの一瞬だけ地図の左上に出て、ピンが跳ねて見える）。
