@@ -204,20 +204,18 @@
   user-select: none;
 }
 .bldg-pin__mark {
-  /* 済みの ✓（右上の小さな丸） */
+  /* 済みの印。1つのお店のピン（checkBadge.ts）と同じ: 絵の幅の 34% の丸を、右上の角の内側（2%）に */
   position: absolute;
-  top: -4px;
-  right: -4px;
-  display: grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #3ecf8e;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 900;
-  box-shadow: 0 1px 2px rgba(31, 42, 55, 0.3);
+  top: 2%;
+  right: 2%;
+  width: 34%;
+  height: 34%;
+  pointer-events: none;
+}
+.bldg-pin__mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .bldg-pin__head {

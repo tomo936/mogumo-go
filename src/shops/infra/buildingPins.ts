@@ -54,9 +54,14 @@ function pin(icon: string | null, label: string, onClick: () => void): HTMLButto
     img.draggable = false
     b.appendChild(img)
     if (label) {
+      // 1つのお店のピン（checkBadge.ts の canvas の絵）と同じ印: 右上に白いふちの緑の丸と、線で描いた ✓。
+      // 文字の ✓ は iPhone で四角っぽい形になるので使わない
       const mark = document.createElement('span')
       mark.className = 'bldg-pin__mark'
-      mark.textContent = label
+      mark.setAttribute('aria-label', '済み')
+      mark.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#fff"/><circle cx="12" cy="12" r="10.1" fill="#3ecf8e"/>' +
+        '<path d="M7.4 12.2l3.6 3.6 6-6.5" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
       b.appendChild(mark)
     }
   } else {
