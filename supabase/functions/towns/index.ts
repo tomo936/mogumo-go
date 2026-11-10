@@ -196,10 +196,12 @@ Deno.serve(async (req: Request) => {
     const need = townRows
       .filter((t) => t.count_state !== null || needsCount(t.counted_at, nowDate))
       .sort((a, b) => Number(a.shops !== null) - Number(b.shops !== null))
-    if (need.length > 0) {
+    // 1回に数えるのは1町。タイルが読めない町は飛ばして次の町を試す（1つの町が詰まっても、ほかの町が数えられるように）
+    for (let n = 0; n < need.length && n < 3; n++) {
       try {
-        const finished = await countTown(db, need[0], now)
-        if (!finished || need.length > 1) more = true
+        const finished = await countTown(db, need[n], now)
+        if (!finished || need.length > n + 1) more = true
+        break
       } catch (e) {
         if (!(e instanceof UpstreamError)) throw e
         console.error('towns: tiles unavailable') // 途中の結果は残っている。次の機会に続きから

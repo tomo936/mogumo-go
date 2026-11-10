@@ -1,7 +1,7 @@
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import { FOG_REBUILD_M, THIN_START_M } from '../../fog/config.ts'
 import { clearedFromHome, isClearedAt } from '../../fog/domain/clearing.ts'
-import { fogClumps } from '../../fog/domain/clumps.ts'
+import { farClumps, fogClumps } from '../../fog/domain/clumps.ts'
 import type { Clump } from '../../fog/domain/clumps.ts'
 import { cellKey } from '../../fog/domain/grid.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
@@ -95,6 +95,7 @@ type World = {
   visitsFor(shop: { id: string; mapId: string | null }): Visits | null // わたしの記録（読み込み前・0回は null）
   progressReady(): boolean // 保存済みの記録を読み終えたか
   hintInputs(): { shops: Shop[]; near: Shop[]; cleared: ReadonlySet<string>; checked: ReadonlySet<string> } // 気配の候補集めの材料
+  setHintedShops(ids: ReadonlySet<string>): void // 気配の店（正体がまだ分からない店）。その店の1軒ピンは出さない（気配のピンと重なるため）
   setPinsVisible(visible: boolean): void // 店のピン（1軒・ビル・施設）と名前の札を出す・出さない（気配のピンは別）
   shopsReady(): boolean // お店の読み込み（3つ）がそろったか
   dispose(): void
@@ -114,6 +115,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     buildingPins.setMoving(moving)
   })
   const debugOverlay = debugOn(window.location.search) ? createDebugOverlay(map, buildingPins.debugRows) : null // ?debug のときだけ
+  let hintedIds: ReadonlySet<string> = new Set() // 気配の店の id（1軒ピンを隠す）
   let shownPlaced: PlacedShop[] = [] // いま層に渡している置き方（1軒の店だけ。ピン用）
   let shownInFog: ReadonlySet<string> = new Set() // そのうち霧の中の近い店（ピンを雲の上に描く）
   let shownFrom: LatLng | null = null // 距離順（ピンの優先）の基準にした現在地
@@ -382,7 +384,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   // 1軒の店のピン（✓ は絵の右上）とビルのピンを、済みの一覧に合わせて出し直す
   const updateMarks = () => {
     const done = checkedNow()
-    if (shownFrom) shopPins.update(shownPlaced, shownInFog, shownFrom, done) // 1軒の店の ✓ はピンの絵の右上
+    if (shownFrom) shopPins.update(hintedIds.size === 0 ? shownPlaced : shownPlaced.filter((s) => !s.shopIds.some((id) => hintedIds.has(id))), shownInFog, shownFrom, done) // 1軒の店の ✓ はピンの絵の右上
     buildingPins.update(shownBuildings, done)
   }
 
@@ -395,7 +397,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const setFog = (origin: LatLng) => {
     fillTowns(origin)
     lastClumps = fogClumps(origin, cleared)
-    fogLayer.setClumps(origin, lastClumps)
+    fogLayer.setClumps(origin, [...lastClumps, ...farClumps(origin)])
     fogCenter = origin
     thinSent = null // 原点が変わったので薄さも送り直す
   }
@@ -551,7 +553,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     if (fogCenter) {
       const before = lastClumps
       const after = fogClumps(fogCenter, cleared)
-      fogLayer.setClumps(fogCenter, waveClumps(before, after, localFrame(fogCenter).to(from), performance.now() / 1000))
+      fogLayer.setClumps(fogCenter, [...waveClumps(before, after, localFrame(fogCenter).to(from), performance.now() / 1000), ...farClumps(fogCenter)])
       lastClumps = after
     }
     if (last) refreshShops(last)
@@ -601,6 +603,10 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     },
     checked: checkedNow,
     hintInputs: () => ({ shops, near, cleared, checked: checkedNow() }),
+    setHintedShops(ids) {
+      hintedIds = ids
+      updateMarks()
+    },
     setPinsVisible(visible) {
       shopPins.setVisible(visible)
       buildingPins.setHidden(!visible)

@@ -1,5 +1,5 @@
 // 霧の雲の塊をどこに・どの大きさで置くか（§12）。描き方は infra/fogLayer.ts
-import { CELL_M, CLUMP_EDGE_M, CLUMP_JITTER, CLUMP_MAX_M, CLUMP_MIN_M, CLUMP_STEP_M, FOG_HALF_M, REF_LAT_DEG } from '../config.ts'
+import { CELL_M, CLUMP_EDGE_M, CLUMP_JITTER, CLUMP_MAX_M, CLUMP_MIN_M, CLUMP_STEP_M, FOG_FAR_HALF_M, FOG_FAR_STEP_M, FOG_HALF_M, REF_LAT_DEG } from '../config.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
 import type { Cleared } from './clearing.ts'
 import { M_PER_DEG_LAT, cellCenter, cellKey, cellOf } from './grid.ts'
@@ -72,6 +72,33 @@ export function fogClumps(origin: LatLng, cleared: Cleared, half: number = FOG_H
       if (d !== Infinity) w = Math.min(w, (d - CLUMP_EDGE_M) / SPREAD)
       if (w < CLUMP_MIN_M * 0.45) continue
       out.push({ x, y, w, seed: hash01(i, j, 4) * 100 })
+    }
+  }
+  return out
+}
+
+// 近くの雲（fogClumps）の外側を埋める、遠くの大きな雲。晴れたセルは見えない遠さなので考えない。
+// 格子は緯度経度の絶対値で決めるので、origin が変わっても同じ場所に同じ塊が出る。
+// 近くの範囲（half）の内側には置かない（少し重ねて、つなぎ目を隠す）
+export function farClumps(origin: LatLng, half: number = FOG_HALF_M): Clump[] {
+  const step = FOG_FAR_STEP_M
+  const row = step * 0.866
+  const mLng = M_PER_DEG_LAT * Math.cos((origin.lat * Math.PI) / 180)
+  const j0 = Math.floor((origin.lat * M_PER_DEG_LAT - FOG_FAR_HALF_M) / row)
+  const j1 = Math.ceil((origin.lat * M_PER_DEG_LAT + FOG_FAR_HALF_M) / row)
+  const i0 = Math.floor((origin.lng * GRID_M_LNG - FOG_FAR_HALF_M * (GRID_M_LNG / mLng)) / step) - 1
+  const i1 = Math.ceil((origin.lng * GRID_M_LNG + FOG_FAR_HALF_M * (GRID_M_LNG / mLng)) / step) + 1
+  const out: Clump[] = []
+  for (let j = j0; j <= j1; j++) {
+    const shift = (j & 1) * 0.5
+    for (let i = i0; i <= i1; i++) {
+      const lat = (j * row + (hash01(i, j, 12) - 0.5) * CLUMP_JITTER * step) / M_PER_DEG_LAT
+      const lng = ((i + shift) * step + (hash01(i, j, 11) - 0.5) * CLUMP_JITTER * step) / GRID_M_LNG
+      const x = (lng - origin.lng) * mLng
+      const y = (lat - origin.lat) * M_PER_DEG_LAT
+      if (Math.abs(x) > FOG_FAR_HALF_M || Math.abs(y) > FOG_FAR_HALF_M) continue
+      if (Math.abs(x) < half - 60 && Math.abs(y) < half - 60) continue
+      out.push({ x, y, w: step * (0.6 + hash01(i, j, 13) * 0.4), seed: hash01(i, j, 14) * 100 })
     }
   }
   return out

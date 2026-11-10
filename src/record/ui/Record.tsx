@@ -32,6 +32,8 @@ const dayLabel = (ms: number) => {
   const d = jstDate(ms)
   return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`
 }
+// スライダーは1時間ずつ動くため、いちばん右でも最後の1時間ぶんに届かない。選んだ日の終わり（いちばん新しい日は最後の記録）まで進めて、その日の晴れをぜんぶ見せる
+const endOfDayIn = (ms: number, end: number) => Math.min(end, Date.parse(`${jstDay(new Date(ms))}T23:59:59.999+09:00`))
 const dayWithWeek = (ms: number) => `${dayLabel(ms)}（${WEEK[jstDate(ms).getUTCDay()]}）`
 const timeLabel = (ms: number) => {
   const d = jstDate(ms)
@@ -147,7 +149,7 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync }: Pro
                 max={range.end}
                 step={3600_000}
                 value={now}
-                onChange={(e) => setT(Number(e.target.value))}
+                onChange={(e) => setT(endOfDayIn(Number(e.target.value), range.end))}
               />
               <div className="rc__slider-ends"><span>{dayLabel(range.start)}</span><span>{dayLabel(range.end)}</span></div>
             </div>

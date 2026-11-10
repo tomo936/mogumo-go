@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CLUMP_EDGE_M, CLUMP_MAX_M, FOG_HALF_M } from '../config.ts'
 import { clearedFromHome } from './clearing.ts'
-import { drawOrder, fogClumps } from './clumps.ts'
+import { drawOrder, farClumps, fogClumps } from './clumps.ts'
 import type { Clump } from './clumps.ts'
 import { cellKey, cellOf, cellsInCircle, M_PER_DEG_LAT } from './grid.ts'
 
@@ -71,5 +71,24 @@ describe('drawOrder', () => {
   it('南が上（180度）なら南から、東が上（90度）なら東から描く', () => {
     expect(drawOrder([n, s], 180)[0]).toBe(s)
     expect(drawOrder([n, s, e], 90)[0]).toBe(e)
+  })
+})
+
+describe('farClumps', () => {
+  const o = { lat: 35.65, lng: 139.63 }
+  it('近くの範囲の内側には置かず、遠くの範囲いっぱいまで置く', () => {
+    const far = farClumps(o)
+    expect(far.length).toBeGreaterThan(1000)
+    expect(far.length).toBeLessThan(5000)
+    expect(far.every((c) => Math.abs(c.x) >= 1100 || Math.abs(c.y) >= 1100)).toBe(true)
+    expect(far.some((c) => Math.abs(c.y) > 3000)).toBe(true)
+  })
+  it('原点が少し動いても、同じ場所に同じ塊が出る', () => {
+    const a = farClumps(o)
+    const b = farClumps({ lat: o.lat + 0.0003, lng: o.lng })
+    const abs = (c: { y: number }, p: typeof o) => c.y + p.lat * M_PER_DEG_LAT
+    const keyA = new Set(a.map((c) => abs(c, o).toFixed(0)))
+    const hit = b.filter((c) => keyA.has(abs(c, { lat: o.lat + 0.0003, lng: o.lng }).toFixed(0))).length
+    expect(hit).toBeGreaterThan(b.length * 0.9)
   })
 })

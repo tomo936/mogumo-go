@@ -47,6 +47,9 @@ export type MapViewHandle = {
   bounceHint(hintId: string): void
 }
 
+const hintedShopIds = (hints: readonly DailyHint[], positions: ReadonlyMap<string, LatLng>): Set<string> =>
+  new Set(hints.filter((h) => !h.completed && positions.has(h.id)).map((h) => h.shopId))
+
 type Props = {
   onStatus: (event: LocationEvent) => void
   home: LatLng | null
@@ -120,6 +123,8 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     setHints: (hints, positions, revealed) => {
       lastHintsRef.current = [hints, positions, revealed]
       hintPinsRef.current?.update(hints, positions, revealed)
+      // 気配のピンが立つ店（まだ達成してない）は、店の1軒ピンを隠す（上に重なって見えるため）
+      worldRef.current?.setHintedShops(hintedShopIds(hints, positions))
     },
     focusAt: (p) => focusAtRef.current(p),
     bounceHint: (id) => hintPinsRef.current?.bounce(id),
@@ -204,6 +209,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         },
       })
       worldRef.current = s.world
+      if (lastHintsRef.current) s.world.setHintedShops(hintedShopIds(lastHintsRef.current[0], lastHintsRef.current[1]))
       s.world.setPinsVisible(!pinsHiddenRef.current)
       if (s.current) s.world.onPosition(s.current)
       s.loaded = true
