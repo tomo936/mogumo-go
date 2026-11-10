@@ -5,6 +5,7 @@ import { distanceLabel, genreLabel, hintLines, roundDistance } from '../domain/h
 import type { DailyHint, HintSet } from '../domain/hint.ts'
 import type { ExploreStatus } from './useDailyHints.ts'
 import './hints.css'
+import { DoneMark } from '../../ui/DoneMark.tsx'
 
 type Props = {
   placement?: 'bottom' | 'top' // 上の気配ボタンから降りる（2026-11-10）
@@ -38,7 +39,7 @@ function Row({ h, revealed, distanceM, onPick }: { h: DailyHint; revealed: boole
     <li>
       <button type="button" className={`hint-row${h.completed ? ' hint-row--done' : ''}`} onClick={onPick}>
         <span className={`hint-badge${h.isMystery ? ' hint-badge--mystery' : ''}${open ? ' hint-badge--open' : ''}`} aria-hidden="true">
-          {h.completed ? '✓' : open ? '!' : '?'}
+          {h.completed ? <DoneMark size={26} /> : open ? '!' : '?'}
         </span>
         <span className="hint-row__body">
           {open ? (

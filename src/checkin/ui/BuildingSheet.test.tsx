@@ -22,8 +22,8 @@ test('名前の順（日本語の並び）に並ぶ', () => {
 test('済みの店の行に ✓', () => {
   render(<BuildingSheet shops={shops} checkedIds={new Set(['b'])} onPick={vi.fn()} onClose={vi.fn()} />)
   const row = screen.getByRole('button', { name: /カフェ花/ })
-  expect(within(row).getByText('✓')).toBeInTheDocument()
-  expect(within(screen.getByRole('button', { name: /らーめん太郎/ })).queryByText('✓')).toBeNull()
+  expect(within(row).getByRole('img', { name: '済み' })).toBeInTheDocument()
+  expect(within(screen.getByRole('button', { name: /らーめん太郎/ })).queryByRole('img', { name: '済み' })).toBeNull()
 })
 
 test('行を押すと onPick(その店)、閉じるで onClose', async () => {
