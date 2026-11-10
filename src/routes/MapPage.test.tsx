@@ -22,6 +22,9 @@ vi.mock('../hints/infra/hintsApi.ts', () => ({
   readTodayHints: (...a: unknown[]) => readTodayHints(...a),
   postDailyHints: (...a: unknown[]) => postDailyHints(...a),
 }))
+const syncUntilSettled = vi.fn()
+vi.mock('../towns/infra/townsApi.ts', () => ({ syncUntilSettled: (...a: unknown[]) => syncUntilSettled(...a) }))
+const addTownCalls: string[] = []
 const hintTaps: ((id: string) => void)[] = []
 const focusAtCalls: LatLng[] = []
 let mapShopsNow: Shop[] = []
@@ -33,6 +36,9 @@ beforeEach(() => {
   postDailyHints.mockReset()
   mapShopsNow = []
   focusAtCalls.length = 0
+  syncUntilSettled.mockReset()
+  syncUntilSettled.mockResolvedValue(undefined)
+  addTownCalls.length = 0
 })
 vi.mock('../map/ui/MapView.tsx', async () => {
   const { useEffect, useImperativeHandle } = await import('react')
@@ -41,13 +47,13 @@ vi.mock('../map/ui/MapView.tsx', async () => {
       onStatus: (e: LocationEvent) => void; onShopsError: () => void
       onSelectShop: (s: Shop | null) => void; onSelectBuilding: (s: Shop[] | null) => void; onPosition: (p: LatLng) => void
       onHintTap: (id: string) => void; pinsHidden?: boolean
-      ref?: React.Ref<{ checkin(shop: Shop, cells: unknown[]): void }>
+      ref?: React.Ref<{ checkin(shop: Shop, cells: unknown[]): void; addTown(town: { id: string }): void }>
     }) => {
       useEffect(() => { mounts.push(onStatus) }, [onStatus])
       useEffect(() => { shopErrors.push(onShopsError) }, [onShopsError])
       useEffect(() => { hintTaps.push(onHintTap) }, [onHintTap])
       useEffect(() => { handlers.push({ select: onSelectShop, building: onSelectBuilding, position: onPosition }) }, [onSelectShop, onSelectBuilding, onPosition])
-      useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false, visitsFor: () => null, progressReady: () => true, checked: () => new Set<string>(),
+      useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, addTown: (town: { id: string }) => { addTownCalls.push(town.id) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false, visitsFor: () => null, progressReady: () => true, checked: () => new Set<string>(),
         hintInputs: () => ({ shops: mapShopsNow, near: mapShopsNow, cleared: new Set<string>(), checked: new Set<string>() }),
         whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
       }), [])
@@ -334,4 +340,63 @@ test('ピンのボタンで出す・出さないが切りかわり、その端�
   expect(screen.getByTestId('map-view')).toHaveAttribute('data-pins-hidden', 'true')
   await userEvent.click(screen.getByRole('button', { name: 'ピンを出す' }))
   expect(localStorage.getItem('mogumo.pinsHidden')).toBe('0')
+})
+
+// ---- 町のクリア・コンプリート ----
+const townShape = { id: '13112-経堂', name: '経堂', city: '世田谷区', areaM2: 500000, at: 1, geom: { type: 'Polygon' as const, coordinates: [[[139, 35], [139.01, 35], [139.01, 35.01], [139, 35]]] }, bbox: [139, 35, 139.01, 35.01] as [number, number, number, number] }
+
+test('チェックインのあと町の進み具合を確かめ、クリアが返ると帯が出て町の霧を晴らす。続けてコンプリートの帯', async () => {
+  postCheckin.mockResolvedValue({ ok: true, checkinId: 'c1', coins: 30, newCells: [] })
+  let update!: (s: unknown) => void
+  syncUntilSettled.mockImplementation(async (onUpdate: (s: unknown) => void) => { update = onUpdate })
+  renderPage()
+  act(() => last().position(here))
+  act(() => last().select(shop))
+  await userEvent.click(screen.getByRole('button', { name: 'チェックイン' }))
+  expect(syncUntilSettled).toHaveBeenCalledTimes(1)
+  expect(screen.queryByText('経堂 クリア！')).not.toBeInTheDocument()
+  const newly = [
+    { id: '13112-経堂', name: '経堂', kind: 'clear', coins: 100, town: townShape },
+    { id: '13112-経堂', name: '経堂', kind: 'complete', coins: 0, town: null },
+  ]
+  act(() => update({ towns: [], newly, more: true }))
+  expect(screen.getByText('経堂 クリア！')).toBeInTheDocument()
+  expect(screen.getByText('+100')).toBeInTheDocument()
+  expect(addTownCalls).toEqual(['13112-経堂'])
+  // 同じ知らせがもう一度来ても、二重に出さない
+  act(() => update({ towns: [], newly, more: false }))
+  expect(addTownCalls).toEqual(['13112-経堂'])
+  // 帯を閉じると次（コンプリート）、その次は無い
+  fireEvent.click(screen.getByText('経堂 クリア！'))
+  expect(screen.getByText('経堂 コンプリート！')).toBeInTheDocument()
+  fireEvent.click(screen.getByText('経堂 コンプリート！'))
+  expect(screen.queryByText('経堂 コンプリート！')).not.toBeInTheDocument()
+  expect(screen.queryByText('経堂 クリア！')).not.toBeInTheDocument()
+})
+
+test('町の確かめが何も返さなくても、チェックインの演出は出る。失敗したチェックインでは確かめない', async () => {
+  postCheckin.mockResolvedValue({ ok: true, checkinId: 'c1', coins: 30, newCells: [] })
+  renderPage()
+  act(() => last().position(here))
+  act(() => last().select(shop))
+  await userEvent.click(screen.getByRole('button', { name: 'チェックイン' }))
+  expect(screen.getByText('チェックイン完了')).toBeInTheDocument()
+  expect(syncUntilSettled).toHaveBeenCalledTimes(1)
+  syncUntilSettled.mockClear()
+  postCheckin.mockResolvedValue({ ok: false, reason: 'too_far' })
+  act(() => last().select({ ...shop, id: 'hp:J2' }))
+  await userEvent.click(screen.getByRole('button', { name: 'チェックイン' }))
+  expect(syncUntilSettled).not.toHaveBeenCalled()
+})
+
+test('画面を離れたら、町の呼び直しは止まる（alive が false）', async () => {
+  postCheckin.mockResolvedValue({ ok: true, checkinId: 'c1', coins: 30, newCells: [] })
+  const { unmount } = renderPage()
+  act(() => last().position(here))
+  act(() => last().select(shop))
+  await userEvent.click(screen.getByRole('button', { name: 'チェックイン' }))
+  const opts = syncUntilSettled.mock.calls[0][1] as { alive: () => boolean }
+  expect(opts.alive()).toBe(true)
+  unmount()
+  expect(opts.alive()).toBe(false)
 })

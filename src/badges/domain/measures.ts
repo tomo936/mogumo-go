@@ -69,11 +69,28 @@ export const shopsReaching = (each: number) => (p: Prepared, need: number): Meas
   return nth(times, need)
 }
 
-// 晴れた広さ（km²）。1マス = 25m × 25m
+// 晴れた広さ（km²）。1マス = 25m × 25m。クリアした町の広さも、時刻の順に足す
 const CELL_KM2 = 0.000625
 export const fogArea = (p: Prepared, needKm2: number): Measure => {
-  const cells = Math.ceil(needKm2 / CELL_KM2 - 1e-9)
-  return { have: Math.round(p.cellTimes.length * CELL_KM2 * 100) / 100, at: p.cellTimes[cells - 1] ?? null }
+  const total = p.cellTimes.length * CELL_KM2 + p.townAreas.reduce((s, a) => s + a.km2, 0)
+  // マスと町を時刻の順にたどり、広さが届いた時刻を探す（マスは個数で数えて、小数の誤差をためない）
+  let cells = 0
+  let town = 0
+  let ti = 0
+  let at: number | null = null
+  const reached = () => cells * CELL_KM2 + town >= needKm2 - 1e-9
+  while (at === null && (cells < p.cellTimes.length || ti < p.townAreas.length)) {
+    const nextTown = p.townAreas[ti]
+    if (cells < p.cellTimes.length && (!nextTown || p.cellTimes[cells] <= nextTown.at)) {
+      const t = p.cellTimes[cells++]
+      if (reached()) at = t
+    } else {
+      town += nextTown.km2
+      ti++
+      if (reached()) at = nextTown.at
+    }
+  }
+  return { have: Math.round(total * 100) / 100, at }
 }
 
 // 自宅からの距離（km）。have はいちばん遠いお店（小数1けた）

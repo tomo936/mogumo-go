@@ -17,6 +17,8 @@ import { watchLocation } from '../infra/location.ts'
 import type { LocationEvent } from '../domain/locationStatus.ts'
 import { fetchHotpepperShops, shopSourceEnabled } from '../../shops/infra/hotpepper.ts'
 import { loadProgress } from '../../checkin/infra/checkinApi.ts'
+import { loadClearedTowns } from '../../towns/infra/townsApi.ts'
+import type { ClearedTown } from '../../towns/domain/shape.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
 import { createAvatar } from '../infra/avatarMarker.ts'
@@ -32,6 +34,7 @@ import type { Fix } from '../domain/smoothing.ts'
 
 export type MapViewHandle = {
   checkin(shop: Shop, newCells: Cell[]): void
+  addTown(town: ClearedTown): void // 今クリアした町の霧を、今いる場所から波で晴らす
   unfocus(): void
   isCheckedToday(shop: Shop): boolean
   visitsFor(shop: Shop): Visits | null // わたしの記録（読み込み前・0回は null）
@@ -43,6 +46,9 @@ export type MapViewHandle = {
   focusAt(p: LatLng): void // お店をタップしたときと同じカメラの寄せ。戻すのは unfocus
   bounceHint(hintId: string): void
 }
+
+const hintedShopIds = (hints: readonly DailyHint[], positions: ReadonlyMap<string, LatLng>): Set<string> =>
+  new Set(hints.filter((h) => !h.completed && positions.has(h.id)).map((h) => h.shopId))
 
 type Props = {
   onStatus: (event: LocationEvent) => void
@@ -107,6 +113,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   if (!readyRef.current) newReady()
   useImperativeHandle(ref, () => ({
     unfocus: () => unfocusRef.current(),
+    addTown: (town) => worldRef.current?.addTown(town, null),
     isCheckedToday: (shop) => worldRef.current?.checkedToday(shop) ?? false,
     visitsFor: (shop) => worldRef.current?.visitsFor(shop) ?? null,
     progressReady: () => worldRef.current?.progressReady() ?? false,
@@ -116,6 +123,8 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     setHints: (hints, positions, revealed) => {
       lastHintsRef.current = [hints, positions, revealed]
       hintPinsRef.current?.update(hints, positions, revealed)
+      // 気配のピンが立つ店（まだ達成してない）は、店の1軒ピンを隠す（上に重なって見えるため）
+      worldRef.current?.setHintedShops(hintedShopIds(hints, positions))
     },
     focusAt: (p) => focusAtRef.current(p),
     bounceHint: (id) => hintPinsRef.current?.bounce(id),
@@ -191,6 +200,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         shopsEnabled: shopSourceEnabled(import.meta.env.DEV, window.location.hostname),
         onShopsError: () => onShopsErrorRef.current(),
         loadProgress,
+        loadTowns: () => loadClearedTowns(),
         onPinTap: (ids) => tapRef.current(ids),
         onShopsReady: () => {
           const r = readyRef.current!
@@ -199,6 +209,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         },
       })
       worldRef.current = s.world
+      if (lastHintsRef.current) s.world.setHintedShops(hintedShopIds(lastHintsRef.current[0], lastHintsRef.current[1]))
       s.world.setPinsVisible(!pinsHiddenRef.current)
       if (s.current) s.world.onPosition(s.current)
       s.loaded = true

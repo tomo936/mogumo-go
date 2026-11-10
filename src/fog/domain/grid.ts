@@ -7,6 +7,8 @@ export type Cell = { x: number; y: number }
 export const M_PER_DEG_LAT = 111195
 const D_LAT = CELL_M / M_PER_DEG_LAT
 const D_LNG = CELL_M / (M_PER_DEG_LAT * Math.cos((REF_LAT_DEG * Math.PI) / 180))
+// 1マスの大きさ（度）。町の形をマスに直す計算（src/towns/domain/shape.ts）が使う
+export const CELL_DEG = { lat: D_LAT, lng: D_LNG }
 
 export function cellOf(p: LatLng): Cell {
   return { x: Math.floor(p.lng / D_LNG), y: Math.floor(p.lat / D_LAT) }

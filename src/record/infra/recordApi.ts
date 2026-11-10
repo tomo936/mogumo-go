@@ -1,9 +1,11 @@
-// 記録のデータ: 晴れた場所（fog_cells。いつ晴れたか付き）と、行ったお店の履歴（checkins ＋ shops の名前・位置 ＋ 気配）。
-// 記録の地図のピンと実績の計算にも使う。
-// 自分の行だけが返る（RLS）。失敗したら throw して、画面が「読み込めませんでした」を出す。
+// 記録のデータ: 晴れた場所（fog_cells。いつ晴れたか付き）と、行ったお店の履歴（checkins ＋ shops の名前・位置 ＋ 気配）、
+// クリアした町（形つき。町の霧と晴れた広さに使う）。記録の地図のピンと実績の計算にも使う。
+// 自分の行だけが返る（RLS）。失敗したら throw して、画面が「読み込めませんでした」を出す。町だけ読めないときは、町なしで続ける。
 import { kindFromHotpepper } from '../../shops/domain/kind.ts'
 import { jstDay } from '../../checkin/domain/day.ts'
 import type { ClearedCell, VisitEntry } from '../domain/timeline.ts'
+import { loadClearedTowns } from '../../towns/infra/townsApi.ts'
+import type { ClearedTown } from '../../towns/domain/shape.ts'
 
 type Rows = PromiseLike<{ data: unknown; error: unknown }>
 type Query = { order(c: string): Query; range(from: number, to: number): Rows }
@@ -30,11 +32,13 @@ async function readAll(c: Client, table: string, columns: string, order: string[
 const str = (v: unknown): string | null => (typeof v === 'string' && v !== '' ? v : null)
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 
-export async function loadRecord(client?: Client): Promise<{ cells: ClearedCell[]; visits: VisitEntry[] }> {
+export async function loadRecord(client?: Client): Promise<{ cells: ClearedCell[]; visits: VisitEntry[]; towns: ClearedTown[] }> {
   const c = client ?? ((await import('../../lib/supabase.ts')).supabase as unknown as Client)
-  const [cellRows, checkinRows] = await Promise.all([
+  const [cellRows, checkinRows, towns] = await Promise.all([
     readAll(c, 'fog_cells', 'cell_x, cell_y, cleared_at', ['cell_x', 'cell_y']),
     readAll(c, 'checkins', 'checkin_id, shop_id, checked_in_at, was_hint', ['checked_in_at', 'shop_id']),
+    // 町は読めなくても記録は出す（町の霧と広さが入らないだけ）
+    loadClearedTowns(c).catch((): ClearedTown[] => []),
   ])
   // 謎の気配として行ったチェックイン。実績のおまけなので、読めなくても記録は出す
   const mysteryIds = new Set<string>()
@@ -76,5 +80,5 @@ export async function loadRecord(client?: Client): Promise<{ cells: ClearedCell[
       at: at.getTime(), lat: info.lat, lng: info.lng, wasHint: r.was_hint === true, mysteryHint: cid !== null && mysteryIds.has(cid),
     })
   }
-  return { cells, visits }
+  return { cells, visits, towns }
 }

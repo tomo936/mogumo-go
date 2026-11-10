@@ -28,3 +28,7 @@ dist-ssr
 
 # superpowers の作業用フォルダ
 .superpowers/
+
+# 町の境目を作るときの作業用・出力（リポジトリには入れない。Supabase Storage に置く）
+.towns-out/
+.towns-work/

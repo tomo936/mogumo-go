@@ -1,4 +1,4 @@
-// 実績の計算。チェックインの列・晴れたマス・自宅から、各バッジの取れた時刻と進み具合を出す。
+// 実績の計算。チェックインの列・晴れたマス・クリアした町の広さ・自宅から、各バッジの取れた時刻と進み具合を出す。
 // サーバーには保存しない（表示のたびに手元で計算する。2026-11-10 設計）。
 import { CATALOG } from './catalog.ts'
 import type { BadgeDef, BadgeInput, BadgeState, Prepared, PreparedVisit } from './types.ts'
@@ -12,7 +12,12 @@ export function prepare(input: BadgeInput): Prepared {
       const iso = d.toISOString()
       return { ...v, day: iso.slice(0, 10), month: iso.slice(0, 7), md: iso.slice(5, 10), hour: d.getUTCHours(), minute: d.getUTCMinutes(), dow: d.getUTCDay() }
     })
-  return { visits, cellTimes: [...input.cellTimes].sort((a, b) => a - b), home: input.home }
+  return {
+    visits,
+    cellTimes: [...input.cellTimes].sort((a, b) => a - b),
+    townAreas: [...(input.townAreas ?? [])].sort((a, b) => a.at - b.at),
+    home: input.home,
+  }
 }
 
 const run = (d: BadgeDef, p: Prepared): BadgeState => {

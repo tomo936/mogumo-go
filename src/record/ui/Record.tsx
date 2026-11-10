@@ -1,22 +1,30 @@
-// 記録（全画面）。天からの地図＋日付スライダー、数字、行ったお店の履歴、町のクリア・コンプリート（準備中）。
+// 記録（全画面）。天からの地図＋日付スライダー、数字、行ったお店の履歴、町のクリア・コンプリート。
 // 仕様: S6 / S7（歩いた道は記録しない）。名前: 町は「クリア」「コンプリート」（2026-11-10 オーナー決定）。
-import { useEffect, useMemo, useState } from 'react'
+// 町: 一覧は今の進み具合（サーバーの関数 towns）。晴れた広さ・地図・実績には、クリアした町の広さを足す
+// （設計 docs/superpowers/specs/2026-11-10-towns-design.md §7）。
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './record.css'
 import { Icon } from '../../ui/Icon.tsx'
 import { levelFor } from '../../zukan/domain/level.ts'
 import { loadRecord } from '../infra/recordApi.ts'
 import { RecordMap } from './RecordMap.tsx'
 import type { LatLng } from '../../map/domain/geo.ts'
-import { areaKm2, clearedAt, groupByMonth, timeRange, type ClearedCell, type VisitEntry } from '../domain/timeline.ts'
+import { groupByMonth, timeRange, type ClearedCell, type VisitEntry } from '../domain/timeline.ts'
 import { pinsAt, stepVisitDay, visitsOnDay } from '../domain/dayPins.ts'
 import { jstDay } from '../../checkin/domain/day.ts'
 import { evaluate } from '../../badges/domain/evaluate.ts'
 import { BadgeList } from '../../badges/ui/BadgeList.tsx'
+import { areaKm2At, areaTimeline } from '../../towns/domain/area.ts'
+import type { ClearedTown } from '../../towns/domain/shape.ts'
+import type { TownSync } from '../../towns/domain/progress.ts'
+import { syncUntilSettled } from '../../towns/infra/townsApi.ts'
+import { TownList, type TownListState } from '../../towns/ui/TownList.tsx'
 
-type State = { status: 'loading' } | { status: 'error' } | { status: 'ready'; cells: ClearedCell[]; visits: VisitEntry[] }
+type State = { status: 'loading' } | { status: 'error' } | { status: 'ready'; cells: ClearedCell[]; visits: VisitEntry[]; towns: ClearedTown[] }
 
 const NO_CELLS: ClearedCell[] = []
 const NO_VISITS: VisitEntry[] = []
+const NO_TOWNS: ClearedTown[] = []
 
 const WEEK = ['日', '月', '火', '水', '木', '金', '土']
 const jstDate = (ms: number) => new Date(ms + 9 * 3600_000) // 日本時間（UTC の読み出しで使う）
@@ -24,6 +32,8 @@ const dayLabel = (ms: number) => {
   const d = jstDate(ms)
   return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`
 }
+// スライダーは1時間ずつ動くため、いちばん右でも最後の1時間ぶんに届かない。選んだ日の終わり（いちばん新しい日は最後の記録）まで進めて、その日の晴れをぜんぶ見せる
+const endOfDayIn = (ms: number, end: number) => Math.min(end, Date.parse(`${jstDay(new Date(ms))}T23:59:59.999+09:00`))
 const dayWithWeek = (ms: number) => `${dayLabel(ms)}（${WEEK[jstDate(ms).getUTCDay()]}）`
 const timeLabel = (ms: number) => {
   const d = jstDate(ms)
@@ -32,26 +42,64 @@ const timeLabel = (ms: number) => {
 
 export type RecordTab = 'record' | 'badges'
 
-export function Record({ home, onClose, initialTab = 'record' }: { home: LatLng | null; onClose: () => void; initialTab?: RecordTab }) {
+type Props = {
+  home: LatLng | null
+  onClose: () => void
+  initialTab?: RecordTab
+  onTownSync?: (s: TownSync) => void // 開いているあいだに町をクリア・コンプリートしたとき（地図の画面が帯と霧に使う）
+}
+
+export function Record({ home, onClose, initialTab = 'record', onTownSync }: Props) {
   const [state, setState] = useState<State>({ status: 'loading' })
+  const [townState, setTownState] = useState<TownListState>({ status: 'loading' })
+  const [gained, setGained] = useState<ClearedTown[]>(NO_TOWNS) // 開いているあいだに新しくクリアした町
   const [tab, setTab] = useState<RecordTab>(initialTab)
   const [t, setT] = useState<number | null>(null) // スライダーの日付（null = いちばん新しい）
 
   useEffect(() => {
     let alive = true
     loadRecord()
-      .then((r) => alive && setState({ status: 'ready', cells: r.cells, visits: r.visits }))
+      .then((r) => alive && setState({ status: 'ready', cells: r.cells, visits: r.visits, towns: r.towns }))
       .catch(() => alive && setState({ status: 'error' }))
     return () => {
       alive = false
     }
   }, [])
 
+  // 町の進み具合。サーバーが数えている途中なら、間をあけて聞き直す（返事のたびに一覧を更新）
+  const onTownSyncRef = useRef(onTownSync)
+  useEffect(() => {
+    onTownSyncRef.current = onTownSync
+  })
+  useEffect(() => {
+    const closed = new AbortController() // 閉じたら聞き直しを止める
+    const alive = () => !closed.signal.aborted
+    let got = false
+    void syncUntilSettled(
+      (s) => {
+        got = true
+        setTownState({ status: 'ready', towns: s.towns, more: s.more })
+        const fresh = s.newly.flatMap((n) => (n.kind === 'clear' && n.town ? [n.town] : []))
+        if (fresh.length > 0) setGained((g) => [...g, ...fresh.filter((t) => !g.some((x) => x.id === t.id))])
+        if (s.newly.length > 0) onTownSyncRef.current?.(s)
+      },
+      { alive },
+    ).then(() => {
+      if (alive() && !got) setTownState({ status: 'error' })
+    })
+    return () => closed.abort()
+  }, [])
+
   const cells = state.status === 'ready' ? state.cells : NO_CELLS
   const visits = state.status === 'ready' ? state.visits : NO_VISITS
-  const range = useMemo(() => timeRange(cells), [cells])
+  const loadedTowns = state.status === 'ready' ? state.towns : NO_TOWNS
+  const towns = useMemo(
+    () => (gained.length === 0 ? loadedTowns : [...loadedTowns, ...gained.filter((g) => !loadedTowns.some((t) => t.id === g.id))]),
+    [loadedTowns, gained],
+  )
+  const area = useMemo(() => areaTimeline(cells, towns), [cells, towns])
+  const range = useMemo(() => timeRange(cells, towns.map((x) => x.at)), [cells, towns])
   const now = t ?? range?.end ?? 0
-  const shown = useMemo(() => clearedAt(cells, now), [cells, now])
   const history = useMemo(() => groupByMonth(visits, now), [visits, now])
   // ピンとその日の一覧は、日付（日本時間）が変わったときだけ計算し直す（スライダーは1時間ずつ動くため）
   const dayKey = jstDay(new Date(now))
@@ -60,7 +108,7 @@ export function Record({ home, onClose, initialTab = 'record' }: { home: LatLng 
   const today = useMemo(() => visitsOnDay(visits, dayAt), [visits, dayAt])
   const visitedShops = new Set(history.flatMap((g) => g.items.map((i) => i.shopId))).size
   const lv = levelFor(new Set(visits.map((v) => v.shopId)).size)
-  const badges = useMemo(() => (tab === 'badges' ? evaluate({ visits, cellTimes: cells.map((c) => c.at), home }) : []), [tab, visits, cells, home])
+  const badges = useMemo(() => (tab === 'badges' ? evaluate({ visits, cellTimes: area.cellTimes, townAreas: area.townAreas, home }) : []), [tab, visits, area, home])
 
   return (
     <section className="rc" aria-label="記録">
@@ -83,7 +131,7 @@ export function Record({ home, onClose, initialTab = 'record' }: { home: LatLng 
       {state.status === 'ready' && tab === 'record' && (
         <>
           <div className="rc__mapcard">
-            <RecordMap cells={cells} t={now} home={home} pins={pins} />
+            <RecordMap cells={cells} towns={towns} t={now} home={home} pins={pins} />
             {range === null && <p className="rc__empty">まだ晴れた場所がありません。お店に行くと、ここに光が広がります</p>}
           </div>
 
@@ -101,7 +149,7 @@ export function Record({ home, onClose, initialTab = 'record' }: { home: LatLng 
                 max={range.end}
                 step={3600_000}
                 value={now}
-                onChange={(e) => setT(Number(e.target.value))}
+                onChange={(e) => setT(endOfDayIn(Number(e.target.value), range.end))}
               />
               <div className="rc__slider-ends"><span>{dayLabel(range.start)}</span><span>{dayLabel(range.end)}</span></div>
             </div>
@@ -121,15 +169,13 @@ export function Record({ home, onClose, initialTab = 'record' }: { home: LatLng 
           )}
 
           <div className="rc__stats">
-            <div><b>{areaKm2(shown.length).toFixed(2)}</b><span>晴れた広さ(km²)</span></div>
+            <div><b>{areaKm2At(area, now).toFixed(2)}</b><span>晴れた広さ(km²)</span></div>
             <div><b>{visitedShops}</b><span>行ったお店</span></div>
             <div><b>{`Lv ${lv.level}`}</b><span>いまのレベル</span></div>
           </div>
 
-          <div className="rc__box rc__box--dashed">
-            <div className="rc__box-title">町のクリア・コンプリート</div>
-            <p>準備中です（町のデータを入れたあとに出ます）</p>
-          </div>
+          <h3 className="rc__h">町のクリア・コンプリート</h3>
+          <TownList state={townState} />
 
           <h3 className="rc__h">行ったお店</h3>
           {history.length === 0 ? (

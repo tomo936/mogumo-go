@@ -867,3 +867,70 @@ test('setPinsVisible は1軒のピンとビル・施設のピンの両方に伝�
   expect(pinsApi.setVisible).toHaveBeenLastCalledWith(false)
   expect(buildingApi.setHidden).toHaveBeenLastCalledWith(true)
 })
+
+// ---- クリアした町 ----
+import { bboxOf } from '../../towns/domain/shape.ts'
+import type { ClearedTown, Geometry } from '../../towns/domain/shape.ts'
+import { cellKey } from '../../fog/domain/grid.ts'
+
+// 自宅から東 x0..x1 m・北 y0..y1 m の四角の町
+function townBox(id: string, x0: number, y0: number, x1: number, y1: number): ClearedTown {
+  const geom: Geometry = { type: 'Polygon', coordinates: [[ll(x0, y0), ll(x1, y0), ll(x1, y1), ll(x0, y1), ll(x0, y0)]] }
+  return { id, name: id, city: null, areaM2: (x1 - x0) * (y1 - y0), at: 1, geom, bbox: bboxOf(geom) }
+}
+const clearedHas = (world: ReturnType<typeof attachWorld>, p: LatLng) => world.hintInputs().cleared.has(cellKey(cellOf(p)))
+
+test('クリアした町を読み込むと、その町の中は晴れになる（波なしで雲を置き直す）', async () => {
+  const town = townBox('t', -100, 400, 100, 600)
+  const { world } = setup({ loadTowns: () => Promise.resolve([town]) })
+  world.onPosition(home)
+  expect(clearedHas(world, north(500))).toBe(false)
+  const before = fogLayer.setClumps.mock.calls.length
+  await flush()
+  expect(clearedHas(world, north(500))).toBe(true)
+  expect(clearedHas(world, north(700))).toBe(false)
+  expect(fogLayer.setClumps.mock.calls.length).toBeGreaterThan(before)
+})
+
+test('町の読み込みが位置より先に終わっても、最初の雲で晴れている', async () => {
+  const { world } = setup({ loadTowns: () => Promise.resolve([townBox('t', -100, 400, 100, 600)]) })
+  await flush()
+  world.onPosition(home)
+  expect(clearedHas(world, north(500))).toBe(true)
+})
+
+test('町の読み込みに失敗しても、地図は動く', async () => {
+  const { world } = setup({ loadTowns: () => Promise.reject(new Error('x')) })
+  world.onPosition(home)
+  await flush()
+  expect(clearedHas(world, north(500))).toBe(false)
+  expect(fogLayer.setClumps).toHaveBeenCalled()
+})
+
+test('addTown は今クリアした町を波つきで晴らす。同じ町を2回足しても1回だけ', () => {
+  const { world } = setup()
+  world.onPosition(home)
+  const before = fogLayer.setClumps.mock.calls.length
+  const town = townBox('t', -100, 400, 100, 600)
+  world.addTown(town, null)
+  expect(clearedHas(world, north(500))).toBe(true)
+  expect(fogLayer.setClumps.mock.calls.length).toBe(before + 1)
+  world.addTown(town, null)
+  expect(fogLayer.setClumps.mock.calls.length).toBe(before + 1)
+})
+
+test('広い町は見えている範囲だけセルにし、動いた先でも晴れている', () => {
+  // 東西 60km・南北 60km の町（全部セルにすると 576 万）
+  const { world } = setup()
+  world.onPosition(home)
+  const size0 = world.hintInputs().cleared.size
+  world.addTown(townBox('big', -30000, -30000, 30000, 30000), null)
+  const size1 = world.hintInputs().cleared.size
+  // 半径 2,000m の四角 = 160×160 = 25,600 マスほど
+  expect(size1 - size0).toBeGreaterThan(20000)
+  expect(size1 - size0).toBeLessThan(27000)
+  expect(clearedHas(world, north(5000))).toBe(false) // まだ見えていない所はセルにしない
+  world.onPosition(north(5000)) // 雲を置き直す所まで動く
+  expect(clearedHas(world, north(5000))).toBe(true)
+  expect(clearedHas(world, north(6500))).toBe(true)
+})

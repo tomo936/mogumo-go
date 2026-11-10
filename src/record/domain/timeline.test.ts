@@ -9,6 +9,12 @@ describe('timeRange / clearedAt', () => {
     expect(timeRange([])).toBeNull()
     expect(timeRange([cell(5), cell(1), cell(9)])).toEqual({ start: 1, end: 9 })
   })
+  it('ほかの時刻（町をクリアした時刻）も範囲に入れる', () => {
+    expect(timeRange([cell(5), cell(9)], [20])).toEqual({ start: 5, end: 20 })
+    expect(timeRange([cell(5), cell(9)], [2, 7])).toEqual({ start: 2, end: 9 })
+    expect(timeRange([], [7])).toEqual({ start: 7, end: 7 })
+    expect(timeRange([], [])).toBeNull()
+  })
   it('日付より前に晴れたマスだけ残る', () => {
     expect(clearedAt([cell(1), cell(5), cell(9)], 5).map((c) => c.at)).toEqual([1, 5])
   })
