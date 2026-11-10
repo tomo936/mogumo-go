@@ -10,7 +10,7 @@ import { routes } from './router.tsx'
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }))
 // 地図（WebGL）はテスト環境で描けないので、器だけの偽物にする
 // 初回設定は済んでいる人として扱う
-vi.mock('../setup/infra/profileRepo.ts', () => ({ profileRepo: { exists: async () => true, load: async () => null, create: async () => {} } }))
+vi.mock('../setup/infra/profileRepo.ts', () => ({ profileRepo: { exists: async () => true, load: async () => null, create: async () => {}, updateNickname: async () => {} } }))
 vi.mock('../setup/infra/homeStore.ts', () => ({ loadHome: () => ({ lat: 35, lng: 139 }), saveHome: () => {} }))
 vi.mock('../map/ui/MapView.tsx', () => ({ MapView: () => <div data-testid="map-view" /> }))
 

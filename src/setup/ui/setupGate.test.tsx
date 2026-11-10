@@ -6,7 +6,7 @@ import { beforeEach, expect, test, vi } from 'vitest'
 import { AuthContext } from '../../auth/AuthContext.ts'
 import { routes } from '../../routes/router.tsx'
 
-const repo = vi.hoisted(() => ({ exists: vi.fn(), load: vi.fn().mockResolvedValue(null), create: vi.fn() }))
+const repo = vi.hoisted(() => ({ exists: vi.fn(), load: vi.fn().mockResolvedValue(null), create: vi.fn(), updateNickname: vi.fn() }))
 const home = vi.hoisted(() => ({ value: null as { lat: number; lng: number } | null }))
 vi.mock('../../lib/supabase.ts', () => ({ supabase: {} }))
 vi.mock('../infra/profileRepo.ts', () => ({ profileRepo: repo }))

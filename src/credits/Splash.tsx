@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import './credits.css'
 
 // 起動時のスプラッシュ。地図の出典はここで示す（OSMF Attribution Guidelines：起動時のスプラッシュで可）。
-// 3秒で消え、タップでも消せる。あとから見られる場所は CreditsButton
+// 3秒で消え、タップでも消せる。あとから見られる場所は設定の「出典・クレジット」
 export function Splash() {
   const [open, setOpen] = useState(true)
   useEffect(() => {

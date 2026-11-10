@@ -230,48 +230,6 @@
   font-weight: 800;
   line-height: 1;
 }
-.hud-settings {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 120px;
-  z-index: 40;
-  padding: 14px;
-  border-radius: 18px;
-  background: #fffdf7;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
-  color: #4a3b2c;
-}
-.hud-settings__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.hud-settings__head button {
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-}
-.hud-settings__list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.hud-settings__item {
-  padding: 10px;
-  border: 0;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  font-size: 14px;
-  font-weight: 700;
-  color: #4a3b2c;
-  text-align: left;
-}
 .hud-soon {
   position: absolute;
   left: 50%;
@@ -309,40 +267,6 @@
   background: #efe9dc;
 }
 
-/* 設定の全画面（2026-11-10） */
-.hud-screen {
-  position: fixed;
-  inset: 0;
-  z-index: 35;
-  overflow-y: auto;
-  padding: calc(10px + env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom));
-  background: #fffaf2;
-  color: #4a3b2c;
-}
-.hud-screen__bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-.hud-screen__bar h2 {
-  margin: 0;
-  font-size: 18px;
-}
-.hud-screen__back {
-  width: 38px;
-  height: 38px;
-  border: 0;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-  font-size: 18px;
-}
-.hud-screen__body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
 
 .hud-toggle__art {
   width: 46px;

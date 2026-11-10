@@ -1,0 +1,210 @@
+/* マイページ（全画面）。記録・図鑑と同じ「明るい昼の手帳」 */
+.mp {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow-y: auto;
+  padding: calc(10px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom));
+  background-color: #f3e9d6;
+  background-image: radial-gradient(rgba(120, 90, 50, 0.07) 1px, transparent 1px);
+  background-size: 14px 14px;
+  color: #4a3b2c;
+}
+.mp__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.mp__bar h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #6b4a2b;
+}
+.mp__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fffdf7;
+  box-shadow: 0 2px 6px rgba(90, 60, 30, 0.18);
+  color: #6b4a2b;
+}
+.mp__hero {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 20px;
+  background: #fffdf7;
+  box-shadow: 0 2px 8px rgba(107, 74, 43, 0.1);
+}
+.mp__hero > img {
+  flex: none;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 18%;
+  background: #eef6ff;
+}
+.mp__who {
+  flex: 1;
+  min-width: 0;
+}
+.mp__name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mp__name b {
+  font-size: 21px;
+  overflow-wrap: anywhere;
+}
+.mp__name button {
+  display: flex;
+  padding: 6px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: #8a6a48;
+}
+.mp__edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.mp__edit input {
+  flex: 1 1 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 2px solid #e8dcc4;
+  border-radius: 10px;
+  font-size: 16px;
+}
+.mp__edit button {
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #c2652a;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+.mp__edit .mp__cancel {
+  background: #efe3cc;
+  color: #6b4a2b;
+}
+.mp__error {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #c2452a;
+}
+.mp__lv {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #c2652a;
+}
+.mp__lvbar {
+  height: 8px;
+  margin: 5px 0 3px;
+  border-radius: 4px;
+  background: #efe3cc;
+  overflow: hidden;
+}
+.mp__lvbar i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: #6cbf93;
+}
+.mp__who small {
+  font-size: 12px;
+  color: #7a6450;
+}
+.mp__note {
+  margin: 14px 0;
+  text-align: center;
+  font-size: 13px;
+  color: #7a6450;
+}
+.mp__cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0;
+}
+.mp__cards div {
+  padding: 10px;
+  border-radius: 14px;
+  background: #fffdf7;
+  text-align: center;
+}
+.mp__cards b {
+  display: block;
+  font-size: 24px;
+  color: #c2652a;
+}
+.mp__cards span {
+  font-size: 12px;
+  color: #7a6450;
+}
+.mp__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 6px 2px;
+}
+.mp__head h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.mp__head button {
+  padding: 4px 6px;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: #8a6a48;
+}
+.mp__badges {
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 4px;
+  border-radius: 18px;
+  background: #fffdf7;
+}
+.mp__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px;
+  border: 0;
+  border-radius: 14px;
+  background: #fffdf7;
+  box-shadow: 0 2px 6px rgba(107, 74, 43, 0.08);
+  font-size: 15px;
+  font-weight: 800;
+  color: #4a3b2c;
+}
+.mp__row span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* 自宅の変更は地図の上に全画面で */
+.mp-home {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  overflow-y: auto;
+}
