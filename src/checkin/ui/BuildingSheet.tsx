@@ -4,6 +4,7 @@ import '../../hints/ui/hints.css'
 import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
 import mysteryPin from '../../assets/pins/mystery.png'
 import { Icon } from '../../ui/Icon.tsx'
+import { DoneMark } from '../../ui/DoneMark.tsx'
 import type { Shop } from '../../shops/domain/shop.ts'
 
 type Props = {
@@ -39,7 +40,11 @@ export function BuildingSheet({ shops, checkedIds, maskedIds, hintIds, title, on
               <img className="bldg-sheet__pin" src={isMasked(s.id) ? mysteryPin : PIN_ICON[s.kind]} alt="" />
               <span className="bldg-sheet__name">{isMasked(s.id) ? '？？？' : s.name}</span>
               {hintIds?.has(s.id) && !checkedIds.has(s.id) && <span className="hint-tag">気配の店 +10</span>}
-              {checkedIds.has(s.id) && <span className="bldg-sheet__check">✓</span>}
+              {checkedIds.has(s.id) && (
+                <span className="bldg-sheet__check">
+                  <DoneMark size={24} />
+                </span>
+              )}
             </button>
           </li>
         ))}
