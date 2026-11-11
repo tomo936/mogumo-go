@@ -5,8 +5,11 @@
 - 再開: 新しい担当（またはこのエージェントの続き）は、まずこのファイルと依頼書を読み、「次にやること」から始める。試作の画像・数字・ファイルの場所も、ここに書いておく。
 
 ## いまの段
-**3 枚入力版（Hunyuan3D-2mv）で形を作り直す準備ができた。オーナーの生成待ち。**（オーナー承認 2026-11-11「いいよ、入れて実装してもらお」。ダウンロードと生成は Windows 側なので、オーナーが PowerShell で行う。手順は設計メモ §A.11）
-- 生成のあと: できた `boy_mv123_shape_*.glb`・`…_textured_*.glb`（`/mnt/d/mogumo-3d/ComfyUI/output/mogumo/`）を、`blender-paint.py`・`blender-finish.py` に通す（切る位置・骨の位置・色の区分けの高さを合わせ直す）→ 参考画像／1 枚版／3 枚版の並べ画像。
+**3 枚入力版（Hunyuan3D-2mv）の生成は成功した（リーダー記入 2026-11-11 夜）。形の作り直しの作業中（上限で止まったので、続きから）。**
+- 生成: `run_ref_mv.py 123 mv123 right`、DONE 243 秒、形の工程の VRAM は Max allocated 4.416GB／reserved 4.469GB。モデル（`hunyuan3d-dit-v2-mv-fp16.safetensors`、4928151562 バイト、SHA256 は公式と一致）は `D:\mogumo-3d\ComfyUI\models\diffusion_models\` に入れ済み。ComfyUI 本体の機能への切り替えは不要だった。
+- できた物: `/mnt/d/mogumo-3d/ComfyUI/output/mogumo/boy_mv123_shape_00001_.glb`（形・900KB）、`boy_mv123_textured_00001_.glb`（AI の色付き・比較用）、`boy_mv123_views_00001〜00006_.png`（後ろの髪の毛束とリュックのふた・ポケットの形が 1 枚版より出ている）。
+- 続き（まだ保存されていない）: ①形の評価 ②`blender-paint.py`・`blender-finish.py` に通す（リュックを切る位置・骨の位置・色の区分けの高さを新しい形に合わせ直す。リュックは形が良ければ AI の形を使ってよい）③参考画像の色（正面・横・後ろ）を貼る ④骨組み・歩き・走り・ふつう／うれしいの顔 ⑤参考画像／round2-4 の最終／今回の並べ画像と実測。段ごとにコミット。
+- seed 違い（`7 mv7 right`、`123 mv123L left`）は、形の評価を見て必要ならオーナーに頼む。ComfyUI（窓A）は動いたままのはず。止まっていたら `cd D:\mogumo-3d\ComfyUI` → `..\venv\Scripts\python.exe main.py --disable-pinned-memory`（`Tee-Object -FilePath D:\mogumo-3d\work\comfy-mv.log` を付けるなら FilePath を忘れない）。8188 番を古いプロセスが使っていたら止める（`Get-NetTCPConnection -LocalPort 8188`）。
 
 ## やったこと（新しい順）
 - 2026-11-11 夜: 3 枚入力の準備。入力の絵 4 枚（`art/prototypes/avatar/input/`。横は床の影を消した。`prep-ref.py` に shadow・mirror を足した）、台本 `hunyuan-run-mv.py`（3 枚入力。形＋色）・`hunyuan-run-mv-native.py`（代替。本体の機能で形だけ。未実行）。向きは公式の見本画像で確認（left＝左向きの横顔。参考画像の横は right）。手順は設計メモ §A.11。モデルの SHA256 は `d36f5881…8e9c`、4,928,151,562 バイト。
