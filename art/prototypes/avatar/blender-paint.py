@@ -9,7 +9,7 @@ from mathutils.bvhtree import BVHTree
 
 a = sys.argv[sys.argv.index('--') + 1:]
 shape_glb, ai_glb, front_png, out_blend, out_png, ref_dir = a[:6]
-TARGET = int(a[6]) if len(a) > 6 else 14000
+TARGET = int(a[6]) if len(a) > 6 else (12800 if os.environ.get('AVATAR_MV') == '1' else 14000)
 TEX = int(a[7]) if len(a) > 7 else 1024
 # AVATAR_MV=1: 3 枚入力版（Hunyuan3D-2mv）で作った形。リュックは AI の形をそのまま使う（切り取らない）。色の区分けは、体も横・後ろの参考画像から読む
 MV = os.environ.get('AVATAR_MV') == '1'
@@ -283,8 +283,10 @@ lab = np.where(ext & (fcls == 3), 3 + zone, lab)
 hand = (np.abs(Pn[:, 0]) > (0.152 if MV else 0.176)) & (z > (0.165 if MV else 0.185)) & (z < 0.262)
 knee = (z > 0.08) & (z < 0.122)
 if MV:
-    lab = np.where(hand, np.where(fcls == 1, 1, np.where(fcls == 3, 3, np.where(z < 0.243, 1, 3))), lab)
-    wf = np.where(hand & (fcls != 1) & (fcls != 3), 0.0, wf)  # 手のふちで背景などを拾った点は使わない
+    # 袖口の線（高さ 0.238〜0.258）の間だけ正面の絵で決め、その下は必ず肌、その上は必ずそで（手の中の青い点・ぎざぎざ対策）
+    hl = np.where(z < 0.238, 1, np.where(z > 0.258, 3, np.where(fcls == 1, 1, np.where(fcls == 3, 3, np.where(z < 0.247, 1, 3)))))
+    lab = np.where(hand, hl, lab)
+    wf = np.where(hand & (fcls != hl), 0.0, wf)  # 決めた区分けと合わない色（背景・となりの色）は貼らない
     lab = np.where(knee & (wf < 0.5), 1, lab)
 else:
     lab = np.where(hand | (knee & (wf < 0.5)), 1, lab)
