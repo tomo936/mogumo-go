@@ -172,7 +172,7 @@ for i in front:
     p = Vector(Pn[i]) + Vector(Nn[i]) * 0.004
     if bvh.ray_cast(p, dirv)[0] is None:
         vis[i] = True
-wf = np.clip((facing - 0.3) / 0.3, 0, 1) * vis * (samp[:, 3] > 0.98)
+wf = np.clip((facing - 0.3) / 0.3, 0, 1) * vis * (samp[:, 3] > 0.98) * ~((samp[:, :3].min(1) > 0.9) & ((samp[:, :3].max(1) - samp[:, :3].min(1)) < 0.07))
 print('front-painted texels', int((wf > 0).sum()))
 
 # ---- 見えない所: AI の色で「髪・肌・ピンク・青」に区分けして、参考画像から取った代表の色を入れる ----

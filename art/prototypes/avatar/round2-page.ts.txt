@@ -1,0 +1,330 @@
+// 本物の骨組み（重みつき）の 3D を、計算で歩かせる試作。
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+
+const BASE = '/.superpowers/preview/avatar/'
+const DPR = 2
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
+const scene = new THREE.Scene()
+scene.add(new THREE.HemisphereLight('#ffffff', '#e6dccf', 2.2))
+const sun = new THREE.DirectionalLight('#fff2e4', 2.4)
+sun.position.set(-0.6, 0.8, 0.55)
+scene.add(sun)
+const holder = new THREE.Group()
+scene.add(holder)
+const cam = new THREE.OrthographicCamera()
+const ELEV = (35 * Math.PI) / 180
+
+type Rig = { root: THREE.Group; inner: THREE.Object3D; bones: Record<string, THREE.Bone>; rest: Record<string, THREE.Quaternion>; parentRest: Record<string, THREE.Quaternion>; tris: number; faceMap: THREE.Texture | null; shadow: THREE.Mesh; cells: number }
+export type Mode = 'idle' | 'walk' | 'run' | 'joy'
+const X = new THREE.Vector3(1, 0, 0)
+const Z = new THREE.Vector3(0, 0, 1)
+const q1 = new THREE.Quaternion()
+const q2 = new THREE.Quaternion()
+
+// 関節の角度（ラジアン）。前に振る＝プラス
+export function poseFor(mode: Mode, ph: number) {
+  const s = Math.sin(ph * Math.PI * 2)
+  const c = Math.cos(ph * Math.PI * 2)
+  const p = { thighL: 0, thighR: 0, kneeL: 0, kneeR: 0, armL: 0, armR: 0, elbow: 0.15, elbowOut: 0, armOut: 0, y: 0, lean: 0, sway: 0, head: 0 }
+  if (mode === 'walk' || mode === 'run') {
+    const run = mode === 'run'
+    const a = run ? 0.72 : 0.5
+    p.thighL = a * s + (run ? 0.15 : 0)
+    p.thighR = -a * s + (run ? 0.15 : 0)
+    p.kneeL = (run ? 1.3 : 0.7) * Math.max(0, c) + (run ? 0.25 : 0.05)
+    p.kneeR = (run ? 1.3 : 0.7) * Math.max(0, -c) + (run ? 0.25 : 0.05)
+    p.armL = -a * 0.9 * s
+    p.armR = a * 0.9 * s
+    p.elbow = run ? 1.2 : 0.35
+    p.y = (run ? 0.05 : 0.018) * Math.abs(c)
+    p.lean = run ? 0.2 : 0.04
+    p.sway = 0.04 * s
+    p.head = run ? -0.12 : 0
+  } else if (mode === 'joy') {
+    // うれしい: 顔の差し替え ＋ 小さな弾みだけ（うでは上げない）
+    p.y = 0.05 * Math.abs(s)
+    p.armOut = 0.08 * Math.abs(s)
+    p.head = -0.04
+  }
+  return p
+}
+
+function setBone(r: Rig, name: string, ...rots: [THREE.Vector3, number][]) {
+  const b = r.bones[name]
+  if (!b) return
+  q1.identity()
+  for (const [axis, ang] of rots) q1.multiply(q2.setFromAxisAngle(axis, ang))
+  // 親の「もとの向き」の中で、世界の軸まわりに回す
+  b.quaternion.copy(r.parentRest[name]!).invert().multiply(q1).multiply(r.rest[name]!)
+}
+
+export function applyPose(r: Rig, p: ReturnType<typeof poseFor>) {
+  setBone(r, 'thighL', [X, -p.thighL])
+  setBone(r, 'thighR', [X, -p.thighR])
+  setBone(r, 'shinL', [X, p.kneeL])
+  setBone(r, 'shinR', [X, p.kneeR])
+  setBone(r, 'upperarmL', [Z, p.armOut], [X, -p.armL])
+  setBone(r, 'upperarmR', [Z, -p.armOut], [X, -p.armR])
+  setBone(r, 'forearmL', [Z, p.elbowOut], [X, -p.elbow])
+  setBone(r, 'forearmR', [Z, -p.elbowOut], [X, -p.elbow])
+  setBone(r, 'chest', [X, p.lean], [Z, p.sway])
+  setBone(r, 'head', [X, p.head - p.lean * 0.6], [Z, -p.sway])
+  r.inner.position.y = p.y
+}
+
+type Look = { cells: number; emissive: number; gray: string; packGray?: string }
+const LOOK_PREV: Look = { cells: 5, emissive: 0.62, gray: '#5e5e5e' }
+const LOOK_NOW: Look = { cells: Number(new URLSearchParams(location.search).get('cells') ?? 2), emissive: Number(new URLSearchParams(location.search).get('em') ?? 0.62), gray: '#' + (new URLSearchParams(location.search).get('gray') ?? '5e5e5e') }
+
+async function load(url: string, look: Look | null): Promise<Rig> {
+  const gltf = await new GLTFLoader().loadAsync(url)
+  const root = new THREE.Group()
+  root.add(gltf.scene)
+  gltf.scene.updateMatrixWorld(true)
+  const bones: Rig['bones'] = {}
+  const rest: Rig['rest'] = {}
+  const parentRest: Rig['parentRest'] = {}
+  let tris = 0
+  let faceMap: THREE.Texture | null = null
+  gltf.scene.traverse((o) => {
+    const m = o as THREE.SkinnedMesh
+    if (m.isMesh) {
+      const old = m.material as THREE.MeshStandardMaterial
+      const map = old.map ?? null
+      if (map) map.anisotropy = 8
+      const isFace = old.name === 'face' || m.name.startsWith('face')
+      if (isFace) faceMap = map
+      if (map && look) {
+        // 色の絵には参考画像の陰影がもう入っているので、絵の色をそのまま出す分（emissive）と、明かりで立体感を出す分を混ぜる
+        m.material = new THREE.MeshStandardMaterial({ map, roughness: 0.9, metalness: 0, emissive: '#ffffff', emissiveMap: map, emissiveIntensity: look.emissive, color: look.gray, ...(isFace ? { transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 } : {}) })
+        if (isFace) m.renderOrder = 2
+      } else {
+        m.material = new THREE.MeshStandardMaterial({ vertexColors: !!m.geometry.attributes.color, map, roughness: look ? 0.9 : 0.85, metalness: 0, color: look?.packGray ?? '#ffffff' })
+      }
+      m.frustumCulled = false
+      tris += (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position!.count) / 3
+    }
+    if ((o as THREE.Bone).isBone) {
+      bones[o.name] = o as THREE.Bone
+      rest[o.name] = o.getWorldQuaternion(new THREE.Quaternion())
+      parentRest[o.name] = o.parent!.getWorldQuaternion(new THREE.Quaternion())
+    }
+  })
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(0.2, 24), new THREE.MeshBasicMaterial({ color: '#82481f', transparent: true, opacity: 0.18, depthWrite: false }))
+  sh.rotation.x = -Math.PI / 2
+  sh.position.y = 0.003
+  root.add(sh)
+  return { root, inner: gltf.scene, bones, rest, parentRest, tris, faceMap, shadow: sh, cells: look?.cells ?? 1 }
+}
+// 表情: 0 = ふつう、1 = うれしい
+function setExpr(r: Rig, i: number) {
+  if (r.faceMap) r.faceMap.offset.x = i / r.cells
+}
+
+function shot(r: Rig, w: number, h: number, heightPx: number, yawDeg: number, elev = ELEV, bg = '#fbf1d6', foot = 0.13) {
+  holder.clear()
+  holder.add(r.root)
+  r.root.rotation.y = (yawDeg * Math.PI) / 180
+  const up = new THREE.Vector3(0, Math.cos(elev), -Math.sin(elev))
+  const upp = Math.cos(elev) / heightPx
+  cam.left = (-w / 2) * upp
+  cam.right = (w / 2) * upp
+  cam.top = (h / 2) * upp
+  cam.bottom = (-h / 2) * upp
+  cam.near = -10
+  cam.far = 10
+  const target = up.clone().multiplyScalar((h / 2 - h * foot) * upp)
+  cam.position.copy(target).add(new THREE.Vector3(0, Math.sin(elev), Math.cos(elev)))
+  cam.up.set(0, 1, 0)
+  cam.lookAt(target)
+  cam.updateProjectionMatrix()
+  renderer.setPixelRatio(1)
+  renderer.setSize(w * DPR, h * DPR, false)
+  renderer.setClearColor(bg, 1)
+  renderer.render(scene, cam)
+  const cv = document.createElement('canvas')
+  cv.width = w * DPR
+  cv.height = h * DPR
+  cv.style.width = `${w}px`
+  cv.style.height = `${h}px`
+  cv.getContext('2d')!.drawImage(renderer.domElement, 0, 0)
+  return cv
+}
+
+const app = document.getElementById('app')!
+function sheet(id: string, title: string, note: string) {
+  const d = document.createElement('div')
+  d.className = 'sheet'
+  d.id = id
+  d.innerHTML = `<h2>${title}</h2><p class="note">${note}</p>`
+  app.append(d, document.createElement('br'))
+  return d
+}
+function row(parent: HTMLElement, label: string) {
+  const r = document.createElement('div')
+  r.className = 'row'
+  r.innerHTML = `<div class="lab">${label}</div>`
+  parent.append(r)
+  return r
+}
+function tile(parent: HTMLElement, cv: HTMLCanvasElement, label = '') {
+  const t = document.createElement('div')
+  t.className = 'tile'
+  t.append(cv, label)
+  parent.append(t)
+}
+
+function refTile(parent: HTMLElement, name: string, w: number, h: number, label: string, crop?: [number, number, number, number]) {
+  const cv = document.createElement('canvas')
+  cv.width = w * DPR
+  cv.height = h * DPR
+  cv.style.width = `${w}px`
+  cv.style.height = `${h}px`
+  const g = cv.getContext('2d')!
+  g.fillStyle = '#ffffff'
+  g.fillRect(0, 0, cv.width, cv.height)
+  const img = REFS[name]!
+  const [sx, sy, sw, sh] = crop ?? [300, 40, 1000, 1520]
+  const k = Math.min(cv.width / sw, cv.height / sh)
+  g.imageSmoothingQuality = 'high'
+  g.drawImage(img, sx, sy, sw, sh, (cv.width - sw * k) / 2, (cv.height - sh * k) / 2, sw * k, sh * k)
+  tile(parent, cv, label)
+}
+const REFS: Record<string, HTMLImageElement> = {}
+const W = '#ffffff'
+const E0 = 0.1 // 参考画像と同じ、ほぼ真横からの見え方
+const PH = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875]
+
+async function main() {
+  await document.fonts.load('12px MP')
+  for (const n of ['front-stand', 'side-stand', 'back', 'run-side', 'cheer-happy']) {
+    const im = new Image()
+    im.src = `/art/reference/avatar/boy/${n}.webp`
+    await im.decode()
+    REFS[n] = im
+  }
+  const cur = await load(BASE + 'boy-faithful.glb', LOOK_NOW)
+  const prev = await load(BASE + 'boy-prev.glb', LOOK_PREV)
+  const old = await load('/src/assets/characters/avatar3d.glb', null)
+  const box = new THREE.Box3().setFromObject(old.inner)
+  old.inner.scale.setScalar(1 / (box.max.y - box.min.y))
+  old.inner.position.y = -box.min.y / (box.max.y - box.min.y)
+  const idle = poseFor('idle', 0)
+  const stand = (r: Rig, e = 0) => {
+    applyPose(r, idle)
+    setExpr(r, e)
+  }
+  const both: [string, Rig][] = [['前回', prev], ['今回', cur]]
+  let rr: HTMLElement
+
+  // ===== 段1: 表情（ふつう・うれしい）と、歩き・走り =====
+  const s1 = sheet('s1', '段1: 表情（ふつう・うれしい）と、歩き・走り', '表情は 2 つだけ。うれしい は顔の差し替え＋小さな弾み（バンザイは無し）')
+  rr = row(s1, '参考画像')
+  refTile(rr, 'front-stand', 260, 260, 'ふつう（front-stand）', [540, 340, 520, 520])
+  refTile(rr, 'cheer-happy', 260, 260, 'うれしい（cheer-happy）', [506, 346, 520, 520])
+  for (const [name, r] of both) {
+    rr = row(s1, name)
+    for (const [e, l] of [[0, 'ふつう'], [1, 'うれしい']] as const) {
+      stand(r, e)
+      tile(rr, shot(r, 260, 260, 640, 0, E0, W, -1.2), l)
+    }
+    for (const [e, l] of [[0, 'ふつう・ななめ'], [1, 'うれしい・ななめ']] as const) {
+      stand(r, e)
+      tile(rr, shot(r, 260, 260, 640, 30, E0, W, -1.2), l)
+    }
+  }
+  rr = row(s1, '今回<br>全身')
+  for (const [e, l, m] of [[0, 'ふつう', 'idle'], [1, 'うれしい（弾み）', 'joy']] as const) {
+    setExpr(cur, e)
+    applyPose(cur, poseFor(m, 0.25))
+    tile(rr, shot(cur, 200, 300, 230, 0, E0, W, 0.1), l)
+    tile(rr, shot(cur, 120, 128, 80, 0), '80px')
+    tile(rr, shot(cur, 120, 64, 40, 0), '40px')
+  }
+  stand(cur)
+  rr = row(s1, '走り<br>（真横）')
+  refTile(rr, 'run-side', 230, 300, '参考画像', [120, 60, 1180, 1500])
+  for (const [name, r] of both) {
+    for (const ph of [0.2, 0.7]) {
+      applyPose(r, poseFor('run', ph))
+      tile(rr, shot(r, 230, 300, 250, 90, E0, W, 0.1), name)
+    }
+  }
+  for (const [name, r] of both) {
+    for (const [label, mode, yaw, elev] of [['歩き（真横）', 'walk', 90, E0], ['走り（真横）', 'run', 90, E0], ['走り（ななめ後ろ）', 'run', 150, ELEV]] as const) {
+      rr = row(s1, `${name}<br>${label}`)
+      for (const ph of PH) {
+        applyPose(r, poseFor(mode, ph))
+        tile(rr, shot(r, 150, 215, 165, yaw, elev))
+      }
+    }
+  }
+  rr = row(s1, '今回<br>歩き（正面・地図の角度）')
+  for (const ph of PH) {
+    applyPose(cur, poseFor('walk', ph))
+    tile(rr, shot(cur, 150, 215, 165, 0, ELEV))
+  }
+  for (const px of [80, 40]) {
+    rr = row(s1, `今回 実寸 ${px}px<br>歩き`)
+    for (const ph of PH) {
+      applyPose(cur, poseFor('walk', ph))
+      tile(rr, shot(cur, 150, px * 1.6, px, 35))
+    }
+  }
+  stand(cur)
+  stand(prev)
+
+  // ===== 段2〜4: 全身のくらべ（色・リュック・粘土感・髪）=====
+  const s2 = sheet('s2', '全身のくらべ', '上から: 参考画像 ／ 前回 ／ 今回 ／ いまアプリに入っている 3D')
+  rr = row(s2, '参考画像')
+  for (const [n, l] of [['front-stand', '正面'], ['side-stand', '真横'], ['back', '後ろ'], ['run-side', '走り']] as const) refTile(rr, n, 250, 380, l)
+  for (const [name, r] of both) {
+    rr = row(s2, name)
+    stand(r)
+    for (const yaw of [0, 90, 180]) tile(rr, shot(r, 250, 380, 330, yaw, E0, W, 0.08), ['正面', '真横', '後ろ'][yaw / 90]!)
+    applyPose(r, poseFor('run', 0.2))
+    tile(rr, shot(r, 250, 380, 330, 90, E0, W, 0.08), '走り')
+    stand(r)
+  }
+  rr = row(s2, 'いまアプリの 3D')
+  for (const yaw of [0, 90, 180]) tile(rr, shot(old, 250, 380, 330, yaw, E0, W, 0.08), ['正面', '真横', '後ろ'][yaw / 90]!)
+  for (const [name, r] of both) {
+    rr = row(s2, `${name}<br>地図の角度`)
+    for (const yaw of [20, 110, 200, 290]) tile(rr, shot(r, 250, 300, 240, yaw), `${yaw}°`)
+  }
+  for (const px of [80, 40]) {
+    rr = row(s2, `実寸 ${px}px`)
+    for (const [name, r] of both) for (const yaw of [20, 200]) tile(rr, shot(r, 200, px * 1.4, px, yaw), name)
+    tile(rr, shot(old, 200, px * 1.4, px, 20), 'いまアプリの 3D')
+  }
+
+  const s3 = sheet('s3', 'リュックと服の質感（大きく）', '上: 参考画像 ／ 中: 前回 ／ 下: 今回')
+  rr = row(s3, '参考画像')
+  refTile(rr, 'back', 300, 300, '後ろ', [520, 560, 560, 560])
+  refTile(rr, 'side-stand', 300, 300, '真横', [440, 560, 560, 560])
+  refTile(rr, 'front-stand', 300, 300, '正面', [520, 560, 560, 560])
+  refTile(rr, 'run-side', 300, 300, '走り', [150, 480, 620, 620])
+  for (const [name, r] of both) {
+    rr = row(s3, name)
+    stand(r)
+    tile(rr, shot(r, 300, 300, 760, 180, E0, W, -0.42), '後ろ')
+    tile(rr, shot(r, 300, 300, 760, 90, E0, W, -0.42), '真横')
+    tile(rr, shot(r, 300, 300, 760, 0, E0, W, -0.42), '正面')
+    tile(rr, shot(r, 300, 300, 760, 140, 0.3, W, -0.42), 'ななめ後ろ')
+  }
+
+  // 重さ
+  shot(cur, 200, 200, 150, 20)
+  renderer.info.reset()
+  renderer.render(scene, cam)
+  const calls = renderer.info.render.calls
+  const t0 = performance.now()
+  for (let i = 0; i < 20000; i++) applyPose(cur, poseFor('walk', i / 30))
+  ;(window as unknown as { __stats: unknown }).__stats = { tris: cur.tris, bones: Object.keys(cur.bones).length, drawCalls: calls, poseMicroSec: Number((((performance.now() - t0) / 20000) * 1000).toFixed(2)) }
+  document.body.dataset.ready = '1'
+}
+main().catch((e) => {
+  document.body.append(String(e))
+  console.error(e)
+})

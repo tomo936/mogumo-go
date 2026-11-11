@@ -152,24 +152,23 @@ ys, xs = np.nonzero(ink)
 TOP, BOT = ys.min(), ys.max()
 CX = (xs.min() + xs.max()) / 2
 PXU = BOT - TOP  # 高さ 1 が何 px か
-FX0, FX1, FZ0, FZ1 = -0.15, 0.15, 0.555, 0.745  # 顔の枠（形の座標）
+FX0, FX1, FZ0, FZ1 = -0.17, 0.17, 0.548, 0.752  # 顔の枠（形の座標）
 x0, x1 = int(round(CX + FX0 * PXU)), int(round(CX + FX1 * PXU))
 y0, y1 = int(round(BOT - FZ1 * PXU)), int(round(BOT - FZ0 * PXU))
 CW, CH = x1 - x0, y1 - y0
 print('face cell', CW, CH, 'at', x0, y0)
 base = front[y0:y1, x0:x1].copy()
+yy, xx = np.mgrid[0:CH, 0:CW].astype(np.float32)
 
-# 髪（暗い茶色で、枠のふちからつながっている所）は透明にする → 下の髪がそのまま見える
-dark = (base[:, :, 0] < 0.74) & (base[:, :, 0] - base[:, :, 2] > 0.08)
-hair = np.zeros_like(dark)
-hair[0, :] = dark[0, :]; hair[:, 0] = dark[:, 0]; hair[:, -1] = dark[:, -1]
-while True:
-    g = hair.copy()
-    g[1:, :] |= hair[:-1, :]; g[:-1, :] |= hair[1:, :]; g[:, 1:] |= hair[:, :-1]; g[:, :-1] |= hair[:, 1:]
-    g &= dark
-    if (g == hair).all():
-        break
-    hair = g
+
+def grow(m, n):
+    for _ in range(n):
+        m = m | np.roll(m, 1, 0) | np.roll(m, -1, 0) | np.roll(m, 1, 1) | np.roll(m, -1, 1)
+    return m
+
+
+def shrink(m, n):
+    return ~grow(~m, n)
 
 
 def blur(m, n):
@@ -179,45 +178,98 @@ def blur(m, n):
     return m
 
 
-yy, xx = np.mgrid[0:CH, 0:CW].astype(np.float32)
-edge = np.clip(np.minimum(np.minimum(xx, CW - 1 - xx) / 16, np.minimum(yy / 10, (CH - 1 - yy) / 30)), 0, 1)
+def hair_of(img):
+    """髪（太い暗い茶色で、枠の上・左右のふちからつながっている所）。細いまゆは髪に入れない。"""
+    dark = (img[:, :, 0] < 0.74) & (img[:, :, 0] - img[:, :, 2] > 0.08)
+    thick = shrink(dark, 6)  # まゆ（細い）はここで消える
+    h = np.zeros_like(thick)
+    h[0, :] = thick[0, :]; h[:, 0] = thick[:, 0]; h[:, -1] = thick[:, -1]
+    while True:
+        g = grow(h, 1) & thick
+        if (g == h).all():
+            break
+        h = g
+    return grow(h, 9) & dark
+
+
+def skin_of(img):
+    return (img[:, :, 0] > 0.8) & (img[:, :, 0] > img[:, :, 2] + 0.08) & (img[:, :, 1] > 0.55)
+
+
+hair = hair_of(base)
+edge = np.clip(np.minimum(np.minimum(xx, CW - 1 - xx) / 22, np.minimum(yy / 10, (CH - 1 - yy) / 26)), 0, 1)
 alpha = np.clip(1 - blur(hair, 3) * 1.6, 0, 1) * edge
-skin = np.median(base[(~dark) & (base[:, :, 0] > 0.85)].reshape(-1, 3), axis=0)
+skin = np.median(base[skin_of(base)].reshape(-1, 3), axis=0)
 print('skin', np.round(skin, 3))
+# 顔の内側（肌の所。目・口の穴はうめる）。別の表情は、この内側だけを入れ替え、輪郭の近くは ふつうの顔 のままにする
+# 肌でない所のうち、枠のふちからつながっている所が「顔の外」。残り（目・口の穴もふくむ）が顔の内側
+sk = grow(skin_of(base) & ~hair, 2)
+outside = np.zeros_like(sk)
+outside[0, :] = ~sk[0, :]; outside[-1, :] = ~sk[-1, :]; outside[:, 0] = ~sk[:, 0]; outside[:, -1] = ~sk[:, -1]
+while True:
+    g = grow(outside, 1) & ~sk
+    if (g == outside).all():
+        break
+    outside = g
+facem = ~outside & ~hair
+inner = blur(shrink(facem, 12), 10)
+inner = np.clip(inner * 1.15, 0, 1)
 
 
-def ell(cx, cy, rx, ry, soft=16.0):  # やわらかいふちの楕円（1 = 中）
+def ell(cx, cy, rx, ry, soft=14.0):  # やわらかいふちの楕円（1 = 中）
     d = np.sqrt(((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2)
     return np.clip((1 - d) * min(rx, ry) / soft + 0.5, 0, 1)
 
 
-# 目・口の場所（1600x1600 の参考画像の px。並べた絵から読み取った値）
-N_EYES = ((680, 572), (912, 572))
+def eye_center(img, guess, r=46):
+    """目の場所: 見当の近くにある、暗い所の重心。"""
+    gx, gy = guess
+    ys_, xs_ = np.mgrid[gy - r:gy + r, gx - r:gx + r]
+    win = img[gy - r:gy + r, gx - r:gx + r]
+    lum = win.mean(2)
+    m = (lum < 0.45) & (((xs_ - gx) ** 2 + (ys_ - gy) ** 2) < r * r)
+    if m.sum() < 30:
+        return float(gx), float(gy)
+    return float(xs_[m].mean()), float(ys_[m].mean())
+
+
+N_EYES = [eye_center(front, g) for g in ((680, 572), (912, 572))]
 N_MOUTH = (797, 664)
+print('neutral eyes', np.round(N_EYES, 1))
 ne = [(ex - x0, ey - y0) for ex, ey in N_EYES]
 nm = (N_MOUTH[0] - x0, N_MOUTH[1] - y0)
-EYE_R = (78, 92)  # 目とまゆを入れ替える範囲
-MOUTH_R = (70, 46)
-eye_mask = np.maximum(ell(ne[0][0] - 6, ne[0][1] - 24, *EYE_R), ell(ne[1][0] + 6, ne[1][1] - 24, *EYE_R))
-mouth_mask = ell(nm[0], nm[1] + 6, *MOUTH_R, 12)
 
 
-def warp(name, eyes, mouth_from=None):
-    """別の表情の参考画像を、目の位置と間隔が ふつうの顔 に重なるように写す。"""
+def warp(name, guesses):
+    """別の表情の参考画像を、両目の位置（大きさ・かたむきも）が ふつうの顔 に重なるように写す。"""
     img = load_px(name)
-    s = math.dist(*eyes) / math.dist(*N_EYES)
-    mx, my = (eyes[0][0] + eyes[1][0]) / 2, (eyes[0][1] + eyes[1][1]) / 2
-    nx, ny = (N_EYES[0][0] + N_EYES[1][0]) / 2, (N_EYES[0][1] + N_EYES[1][1]) / 2
-    sx = (xx + x0 - nx) * s + mx
-    sy = (yy + y0 - ny) * s + my
+    eyes = [eye_center(img, g) for g in guesses]
+    print(name, 'eyes', np.round(eyes, 1))
+    (ax, ay), (bx, by) = eyes
+    (cx_, cy_), (dx_, dy_) = N_EYES
+    s = math.hypot(bx - ax, by - ay) / math.hypot(dx_ - cx_, dy_ - cy_)
+    rot = math.atan2(by - ay, bx - ax) - math.atan2(dy_ - cy_, dx_ - cx_)
+    mx, my = (ax + bx) / 2, (ay + by) / 2
+    nx, ny = (cx_ + dx_) / 2, (cy_ + dy_) / 2
+    px_, py_ = xx + x0 - nx, yy + y0 - ny
+    sx = (px_ * math.cos(rot) - py_ * math.sin(rot)) * s + mx
+    sy = (px_ * math.sin(rot) + py_ * math.cos(rot)) * s + my
     ix = np.clip(sx.astype(int), 0, img.shape[1] - 2)
     iy = np.clip(sy.astype(int), 0, img.shape[0] - 2)
     fx = (sx - ix)[:, :, None]
     fy = (sy - iy)[:, :, None]
     out = img[iy, ix] * (1 - fx) * (1 - fy) + img[iy, ix + 1] * fx * (1 - fy) + img[iy + 1, ix] * (1 - fx) * fy + img[iy + 1, ix + 1] * fx * fy
-    # 肌の明るさを ふつうの顔 にそろえる
-    sk = np.median(out[(out[:, :, 0] > 0.85) & (out[:, :, 0] - out[:, :, 2] < 0.35)].reshape(-1, 3), axis=0)
-    return np.clip(out * (skin / sk), 0, 1)
+    # 肌の明るさと色みを ふつうの顔 にそろえる（顔の内側の肌どうしでくらべる）
+    sel = skin_of(out) & facem & ~hair_of(out)
+    gain = np.median(base[skin_of(base) & facem].reshape(-1, 3), axis=0) / np.median(out[sel].reshape(-1, 3), axis=0)
+    out = np.clip(out * gain, 0, 1)
+    # その表情の絵の前髪がかかっている所は使わない（ふつうの顔 のままにする）
+    # その表情の絵で、顔でない物（上げたうでの青いそで・白い背景）が写っている所も使わない
+    other = (out[:, :, 2] > out[:, :, 0] + 0.04) | (out.min(2) > 0.93)
+    use = inner * np.clip(1 - blur(grow(hair_of(out), 3), 4) * 1.5, 0, 1) * np.clip(1 - blur(grow(other, 6), 5) * 1.6, 0, 1)
+    use = np.minimum(use, blur(use, 8))  # 境目をさらにやわらかく（内側へだけ広げる）
+    use = blur(use, 4)
+    return base * (1 - use[:, :, None]) + out * use[:, :, None], out
 
 
 def mix(dst_img, src_img, m):
@@ -225,31 +277,12 @@ def mix(dst_img, src_img, m):
 
 
 cells = {'normal': base}
-happy_src = warp('cheer-happy', ((636, 586), (896, 586)))
-cells['happy'] = mix(mix(base, happy_src, eye_mask), happy_src, mouth_mask)
-sur_src = warp('surprised', ((676, 580), (900, 580)))
-cells['surprised'] = mix(mix(base, sur_src, eye_mask), sur_src, mouth_mask)
-# おいしい: うれしい の閉じた目 ＋ ふつうの口 ＋ 小さな舌
-y_img = mix(base, happy_src, eye_mask)
-tongue = ell(nm[0] + 20, nm[1] + 16, 13, 12, 3)
-y_img = mix(y_img, np.broadcast_to(np.array([0.96, 0.52, 0.55], np.float32), y_img.shape), tongue)
-cells['yummy'] = y_img
-# ねむい: ふつうの目の上半分を、肌の色のまぶたでかくし、まぶたの線を引く
-s_img = base.copy()
-for ex, ey in ne:
-    # まぶたの色は、その目のすぐ上の肌の色（顔の場所で明るさがちがうので、目ごとに取る）
-    ring = (ell(ex, ey - 4, 70, 74, 2) > 0.5) & (ell(ex, ey - 4, 54, 58, 2) < 0.5) & (yy < ey - 20) & (base[:, :, 0] > 0.85)
-    lidc = np.median(base[ring].reshape(-1, 3), axis=0) if ring.sum() > 20 else skin
-    lid = ell(ex, ey - 4, 54, 58, 5) * np.clip((ey + 6 - yy) / 4, 0, 1)
-    s_img = mix(s_img, np.broadcast_to(lidc.astype(np.float32), s_img.shape), lid)
-    line = ell(ex, ey + 8, 42, 5.5, 2.5)
-    s_img = mix(s_img, np.broadcast_to(np.array([0.3, 0.17, 0.12], np.float32), s_img.shape), line)
-cells['sleepy'] = s_img
-ORDER = ['normal', 'happy', 'surprised', 'yummy', 'sleepy']
+cells['happy'], happy_raw = warp('cheer-happy', ((636, 586), (896, 586)))
+ORDER = ['normal', 'happy']
 atlas = np.zeros((CH, CW * len(ORDER), 4), np.float32)
 for i, n in enumerate(ORDER):
     atlas[:, i * CW:(i + 1) * CW, :3] = cells[n]
-    atlas[:, i * CW:(i + 1) * CW, 3] = alpha if n in ('normal', 'sleepy') else np.maximum(alpha, np.clip(eye_mask * 1.6, 0, 1) * edge)
+    atlas[:, i * CW:(i + 1) * CW, 3] = alpha
 aimg = bpy.data.images.new('faces', CW * len(ORDER), CH, alpha=True)
 aimg.pixels = atlas[::-1].ravel()
 aimg.filepath_raw = atlas_png
@@ -300,8 +333,8 @@ bones = {
     'head': ((0, TY, NECK), (0, TY, 0.95), 'chest'),
 }
 for sg, n in ((1, 'L'), (-1, 'R')):
-    bones['upperarm' + n] = ((sg * 0.15, TY + 0.01, 0.495), (sg * 0.19, TY + 0.01, 0.385), 'chest')
-    bones['forearm' + n] = ((sg * 0.19, TY + 0.01, 0.385), (sg * 0.215, TY, 0.255), 'upperarm' + n)
+    bones['upperarm' + n] = ((sg * 0.135, TY + 0.01, 0.49), (sg * 0.185, TY + 0.01, 0.375), 'chest')
+    bones['forearm' + n] = ((sg * 0.185, TY + 0.01, 0.375), (sg * 0.215, TY, 0.255), 'upperarm' + n)
     bones['thigh' + n] = ((sg * 0.068, TY + 0.01, HIP), (sg * 0.068, TY + 0.01, 0.145), 'hips')
     bones['shin' + n] = ((sg * 0.068, TY + 0.01, 0.145), (sg * 0.068, TY + 0.01, 0.03), 'thigh' + n)
 arm = bpy.data.armatures.new('rig')
@@ -375,6 +408,28 @@ active(ao)
 bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 
 
+ARM_X, ARM_Z1 = 0.142, 0.405
+
+
+def sstep(t):
+    t = max(0.0, min(1.0, t))
+    return t * t * (3 - 2 * t)
+
+
+def arm_amount(co):
+    """うでの骨にどれだけ付くか。わきの溝（左右 0.142）をはさんで、なめらかに 0 → 1。"""
+    ax = abs(co.x)
+    if co.z < 0.15 or co.z > 0.545:
+        return 0.0
+    if co.z < 0.27:
+        xs_ = 0.158  # 手は体から離れている（すき間のまん中で分ける）
+    elif co.z < ARM_Z1:
+        xs_ = ARM_X
+    else:
+        xs_ = ARM_X + (co.z - ARM_Z1) / (0.53 - ARM_Z1) * (0.10 - ARM_X)  # わきから肩のてっぺんへ、ななめの境目
+    return sstep((ax - xs_) / 0.03 + 0.5)
+
+
 def skin_to(ob, fixed=None):
     for n in gnames:
         ob.vertex_groups.new(name=n)
@@ -389,17 +444,29 @@ def skin_to(ob, fixed=None):
         w = np.zeros(len(gnames), np.float32)
         for _, j, d in near:
             w += PW[j] / (d + 1e-4)
-        # あごの下〜首は、頭と胸だけで分ける（顔がうでに引っぱられないように）
-        ax = abs(v.co.x)
-        fade = min(1.0, max(0.0, (ax - 0.14) / 0.03))  # 体のまん中寄りは、うでの骨の影響を 0 に
         for gi, n in enumerate(gnames):
             if 'arm' in n:
-                w[gi] *= fade
-            if ('thigh' in n or 'shin' in n) and v.co.z > 0.27:
                 w[gi] = 0
-        if w.sum() <= 0:
-            w[gnames.index('chest')] = 1
+        if w.sum() <= 1e-6:
+            w[gnames.index('chest' if v.co.z > WAIST else 'hips')] = 1
         w /= w.sum()
+        # あし: 反対側のあしの骨は使わない。短パンは腰に付け、すそへ向かって少しずつ あし に付ける。取った分は腰へ
+        moved = 0.0
+        for gi, n in enumerate(gnames):
+            if 'thigh' in n or 'shin' in n:
+                keep = sstep((0.215 - v.co.z) / 0.08)
+                if (v.co.x > 0) != n.endswith('L') or (abs(v.co.x) < 0.018 and v.co.z > 0.135):
+                    keep = 0.0
+                moved += w[gi] * (1 - keep)
+                w[gi] *= keep
+        w[gnames.index('hips')] += moved
+        a_ = arm_amount(v.co)
+        if a_ > 0:
+            side = 'L' if v.co.x > 0 else 'R'
+            fore = sstep((0.40 - v.co.z) / 0.05)
+            w *= (1 - a_)
+            w[gnames.index('upperarm' + side)] += a_ * (1 - fore)
+            w[gnames.index('forearm' + side)] += a_ * fore
         for gi, x in enumerate(w):
             if x > 0.02:
                 ob.vertex_groups[gnames[gi]].add([v.index], float(x), 'REPLACE')
