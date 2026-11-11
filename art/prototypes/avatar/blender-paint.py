@@ -225,6 +225,10 @@ fcls = np.where(samp[:, 3] > 0.98, fcls, -1)
 ext = (z < 0.53) & ~on_cut & ((fcls == 1) | (fcls == 3))
 lab = np.where(ext & (fcls == 1), 1, lab)
 lab = np.where(ext & (fcls == 3), 3 + zone, lab)
+hand = (np.abs(Pn[:, 0]) > 0.176) & (z > 0.185) & (z < 0.262)
+knee = (z > 0.08) & (z < 0.122)
+lab = np.where(hand | (knee & (wf < 0.5)), 1, lab)
+wf = np.where(hand & (fcls != 1), 0.0, wf)  # 手のふちで、正面の絵のそでの青を拾った点は使わない
 names = ['hair', 'skin', 'pink', 'hoodie', 'shorts', 'shoes']
 strong = wf > 0.9
 rep = np.zeros((6, 3), np.float32)
@@ -233,7 +237,7 @@ for k in range(6):
     if sel.sum() > 100:
         cc = samp[sel][:, :3]
         lum = cc.mean(1)
-        lo_, hi_ = np.percentile(lum, [55, 88])
+        lo_, hi_ = np.percentile(lum, [45, 80])
         rep[k] = np.median(cc[(lum >= lo_) & (lum <= hi_)], axis=0)
     else:
         rep[k] = (0.5, 0.5, 0.5)
@@ -293,6 +297,7 @@ def island_blur(img, n):  # 絵の中の「形がある所」だけで平均す�
 
 
 base = rep[lab]
+base = np.where(((lab == 5) & (z < 0.017))[:, None], np.array([0.84, 0.89, 0.96], np.float32), base)  # くつの底
 broad = np.where(lab >= 3, 3, lab)
 
 
