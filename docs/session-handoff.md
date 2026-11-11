@@ -39,7 +39,7 @@
 - シロ: 連携は `handoff/`。作成中＝お店のピンのアイコン 13種（届いたらビルのピンの仮の丸を差し替える。色は `src/shops/domain/badgeColor.ts`）、女の子の歩行の絵。未対応＝チェックイン演出の素材4種（`handoff/to-shiro/2026-11-06-checkin-effect-art.md`）、ビルのオーナー確認（`handoff/to-shiro/2026-11-07-building-owner-check.md`）
 
 ## 道具の置き場所（この会話の作業用フォルダ。再起動で消えることがある）
-- Blender 4.2: `/tmp/claude-1000/-home-otosa-mogumo-go/f1bcb96d-7f7a-4651-a9c3-a1f83beeb930/scratchpad/blender/blender-4.2.3-linux-x64/blender`（無ければ `download.blender.org/release/Blender4.2/blender-4.2.3-linux-x64.tar.xz` を作業用フォルダに展開）
+- Blender 4.2: `/home/otosa/tools/blender/blender-4.2.3-linux-x64/blender`（無ければ `download.blender.org/release/Blender4.2/blender-4.2.3-linux-x64.tar.xz` を作業用フォルダに展開）
   - 丸い字体: 同じ `blender/fonts/MPLUSRounded1c-ExtraBold.ttf`（無ければ google/fonts の OFL から取る）
 - 画面を撮る道具（Playwright）: 同じ作業用フォルダの `pw/`（`PLAYWRIGHT_BROWSERS_PATH=$D/browsers NODE_USE_ENV_PROXY=1 node shot.mjs <url> <out> <待つms>`）
 - 模型: ビルは `art/prototypes/blender-shops.py` の `KIND=building`（アプリ用は `LIGHT=1 TARGET=9000`）
