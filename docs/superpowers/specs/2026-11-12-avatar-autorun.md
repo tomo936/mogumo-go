@@ -18,7 +18,7 @@
 |---|---|---|---|---|
 | S1 | **方針の点検**: 今のやり方（AI の形＋自動の骨の重み＋式で動かす動き＋板の顔）が誤っていないか、Opus が独立に点検し、直し方の計画を書く | Opus | done（2026-11-12 04:30） | `docs/superpowers/specs/2026-11-12-avatar-review-opus.md`（台本 `review-probe.py`・`review-arm.py`、絵 `review-arm.png`） |
 | S2 | **S1 の計画で作り直しを試す**（動きのカクつき・腕の裏・走り・顔の差し替え・まばたき）。動画を作り直す | Opus | done（2026-11-12 04:47） | `art/prototypes/avatar/boy-b-v2.glb`（1.82MB・三角形 30,795・骨 14・動き walk/run/idle/joy）、`walk-preview-v2.mp4`（30fps・H.264 yuv420p・0.46MB）/`.gif`（15fps・1.5MB）、`walk-actual-v2.gif`（34px）、`v2-compare.png`。台本 `blender-v2.py`・`anim2-page.ts.txt`・`cap2.mjs.txt`。前の版の 30fps 撮り直し `walk-preview-old-30fps.mp4`。下の「S2 の結果」 |
-| S3 | **オーナーに結果を知らせる**（動画・画像・数字・直らなかった点） | リーダー | pending | メッセージ |
+| S3 | **オーナーに結果を知らせる**（動画・画像・数字・直らなかった点） | リーダー | done（2026-11-12 動画・画像をオーナーへ送付。定期の起動は停止済み） | メッセージ |
 
 - 段が `running` のまま 90 分以上たっていて、担当（サブエージェント）が動いていないときは、`pending` に戻して再開してよい（`ListAgents` で確認。続きは前の担当へ `SendMessage` で再開）。
 - 各段のあと、状態を `done` にして、コミット（push しない）。S3 が終わったら、定期の起動（CronList で、この文書に触れる起動を探して CronDelete）を止める。
