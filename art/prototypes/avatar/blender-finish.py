@@ -6,7 +6,10 @@ from mathutils import Vector, Matrix, kdtree
 
 a = sys.argv[sys.argv.index('--') + 1:]
 src_blend, ref_dir, dst, atlas_png = a[:4]
-MV = os.environ.get('AVATAR_MV') == '1'  # 3 枚入力版の形: リュックは AI の形のまま（体の一部）。作ったリュックと肩ひもは足さない
+MV = os.environ.get('AVATAR_MV') == '1'
+# AVATAR_B=1: 版 B（blender-b-repaint.py の出力）。リュックは作らない。顔は B の絵のままで、膜は うれしい のときだけ出す（ふつう は透明）。
+# B_JSON に blender-b-repaint.py が書いた顔の肌の色（.json）を渡す
+BMODE = os.environ.get('AVATAR_B') == '1'  # 3 枚入力版の形: リュックは AI の形のまま（体の一部）。作ったリュックと肩ひもは足さない
 bpy.ops.wm.open_mainfile(filepath=src_blend)
 av = bpy.data.objects['avatar']
 me = av.data
@@ -25,183 +28,186 @@ def load_px(name):
 
 
 # ===================== ① リュック =====================
-back = load_px('back')
-pink = np.median(back[900:1060, 730:870].reshape(-1, 3), axis=0)  # 後ろの参考画像の、リュックのまん中あたり
-print('backpack pink', np.round(pink, 3))
+if BMODE:  # 版 B（AI の色を塗り直した形）: リュックは形の一部なので作らない
+    pack = None
+else:
+    back = load_px('back')
+    pink = np.median(back[900:1060, 730:870].reshape(-1, 3), axis=0)  # 後ろの参考画像の、リュックのまん中あたり
+    print('backpack pink', np.round(pink, 3))
 
 
-def lin(c):
-    return [x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4 for x in c] + [1.0]
+    def lin(c):
+        return [x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** 2.4 for x in c] + [1.0]
 
 
-pmat = bpy.data.materials.new('backpack')
-pmat.use_nodes = True
-pb = pmat.node_tree.nodes['Principled BSDF']
-pb.inputs['Roughness'].default_value = 0.9
-vc = pmat.node_tree.nodes.new('ShaderNodeVertexColor')
-vc.layer_name = 'Col'
-pmat.node_tree.links.new(vc.outputs['Color'], pb.inputs['Base Color'])
+    pmat = bpy.data.materials.new('backpack')
+    pmat.use_nodes = True
+    pb = pmat.node_tree.nodes['Principled BSDF']
+    pb.inputs['Roughness'].default_value = 0.9
+    vc = pmat.node_tree.nodes.new('ShaderNodeVertexColor')
+    vc.layer_name = 'Col'
+    pmat.node_tree.links.new(vc.outputs['Color'], pb.inputs['Base Color'])
 
 
-def paint(o, k):
-    ca = o.data.color_attributes.new('Col', 'FLOAT_COLOR', 'CORNER')
-    c = lin([min(1.0, x * k * s_) for x, s_ in zip(pink, (0.98, 0.93, 0.96) if MV else (0.97, 0.86, 0.94))])  # 3 枚版: 参考画像のピンクにほぼそのまま合わせる
-    for d in ca.data:
-        d.color = c
-    o.data.materials.append(pmat)
-    while o.data.uv_layers:
-        o.data.uv_layers.remove(o.data.uv_layers[0])
-    for p in o.data.polygons:
-        p.use_smooth = True
-    return o
+    def paint(o, k):
+        ca = o.data.color_attributes.new('Col', 'FLOAT_COLOR', 'CORNER')
+        c = lin([min(1.0, x * k * s_) for x, s_ in zip(pink, (0.98, 0.93, 0.96) if MV else (0.97, 0.86, 0.94))])  # 3 枚版: 参考画像のピンクにほぼそのまま合わせる
+        for d in ca.data:
+            d.color = c
+        o.data.materials.append(pmat)
+        while o.data.uv_layers:
+            o.data.uv_layers.remove(o.data.uv_layers[0])
+        for p in o.data.polygons:
+            p.use_smooth = True
+        return o
 
 
-def rbox(loc, size, bevel, k, seg=3):
-    bpy.ops.mesh.primitive_cube_add(size=1, location=loc)
-    o = bpy.context.object
-    o.scale = size
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    m = o.modifiers.new('b', 'BEVEL')
-    m.width = bevel
-    m.segments = seg
-    m.limit_method = 'NONE'
-    bpy.ops.object.modifier_apply(modifier='b')
-    return paint(o, k)
+    def rbox(loc, size, bevel, k, seg=3):
+        bpy.ops.mesh.primitive_cube_add(size=1, location=loc)
+        o = bpy.context.object
+        o.scale = size
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+        m = o.modifiers.new('b', 'BEVEL')
+        m.width = bevel
+        m.segments = seg
+        m.limit_method = 'NONE'
+        bpy.ops.object.modifier_apply(modifier='b')
+        return paint(o, k)
 
 
-# リュックの中だけの座標: x 左右、y 後ろ向き（0 が背中に当たる面）、z 上下（0 がまん中）
-W, D, H = (0.238, 0.108, 0.25) if MV else (0.25, 0.12, 0.25)
+    # リュックの中だけの座標: x 左右、y 後ろ向き（0 が背中に当たる面）、z 上下（0 がまん中）
+    W, D, H = (0.238, 0.108, 0.25) if MV else (0.25, 0.12, 0.25)
 
 
-def arch(w, h, d, y0, k, bevel, top=0.42, corner=0.035):
-    """後ろから見て「上が丸いアーチ・下は角の丸い四角」の形を、奥行き d で作る。"""
-    pts = []
-    zt = h / 2 - h * top  # ここから上がアーチ
-    n = 14
-    for i in range(n + 1):  # 上のアーチ（右 → 左）
-        t = math.pi * i / n
-        pts.append((w / 2 * math.cos(t), zt + h * top * math.sin(t) ** 0.8))
-    for cx, sgn in ((-w / 2 + corner, 1), (w / 2 - corner, -1)):  # 下の角（左下 → 右下）
-        for i in range(5):
-            t = math.pi / 2 * i / 4
-            if sgn == 1:
-                pts.append((cx - corner * math.cos(t), -h / 2 + corner - corner * math.sin(t)))
-            else:
-                pts.append((cx + corner * math.sin(t), -h / 2 + corner - corner * math.cos(t)))
-    bm_ = bmesh.new()
-    vs = [bm_.verts.new((x, y0, z_)) for x, z_ in pts]
-    f_ = bm_.faces.new(vs)
-    ext = bmesh.ops.extrude_face_region(bm_, geom=[f_])
-    bmesh.ops.translate(bm_, verts=[e for e in ext['geom'] if isinstance(e, bmesh.types.BMVert)], vec=(0, d, 0))
-    bmesh.ops.recalc_face_normals(bm_, faces=bm_.faces)
-    m_ = bpy.data.meshes.new('arch')
-    bm_.to_mesh(m_)
-    bm_.free()
-    o_ = bpy.data.objects.new('arch', m_)
-    bpy.context.collection.objects.link(o_)
-    active(o_)
-    md = o_.modifiers.new('b', 'BEVEL')
-    md.width = bevel
-    md.segments = 4
-    md.limit_method = 'ANGLE'
-    md.angle_limit = math.radians(50)
-    bpy.ops.object.modifier_apply(modifier='b')
-    md = o_.modifiers.new('t', 'TRIANGULATE')
-    bpy.ops.object.modifier_apply(modifier='t')
-    md = o_.modifiers.new('n', 'WEIGHTED_NORMAL')
-    md.keep_sharp = False
-    bpy.ops.object.modifier_apply(modifier='n')
-    return paint(o_, k)
+    def arch(w, h, d, y0, k, bevel, top=0.42, corner=0.035):
+        """後ろから見て「上が丸いアーチ・下は角の丸い四角」の形を、奥行き d で作る。"""
+        pts = []
+        zt = h / 2 - h * top  # ここから上がアーチ
+        n = 14
+        for i in range(n + 1):  # 上のアーチ（右 → 左）
+            t = math.pi * i / n
+            pts.append((w / 2 * math.cos(t), zt + h * top * math.sin(t) ** 0.8))
+        for cx, sgn in ((-w / 2 + corner, 1), (w / 2 - corner, -1)):  # 下の角（左下 → 右下）
+            for i in range(5):
+                t = math.pi / 2 * i / 4
+                if sgn == 1:
+                    pts.append((cx - corner * math.cos(t), -h / 2 + corner - corner * math.sin(t)))
+                else:
+                    pts.append((cx + corner * math.sin(t), -h / 2 + corner - corner * math.cos(t)))
+        bm_ = bmesh.new()
+        vs = [bm_.verts.new((x, y0, z_)) for x, z_ in pts]
+        f_ = bm_.faces.new(vs)
+        ext = bmesh.ops.extrude_face_region(bm_, geom=[f_])
+        bmesh.ops.translate(bm_, verts=[e for e in ext['geom'] if isinstance(e, bmesh.types.BMVert)], vec=(0, d, 0))
+        bmesh.ops.recalc_face_normals(bm_, faces=bm_.faces)
+        m_ = bpy.data.meshes.new('arch')
+        bm_.to_mesh(m_)
+        bm_.free()
+        o_ = bpy.data.objects.new('arch', m_)
+        bpy.context.collection.objects.link(o_)
+        active(o_)
+        md = o_.modifiers.new('b', 'BEVEL')
+        md.width = bevel
+        md.segments = 4
+        md.limit_method = 'ANGLE'
+        md.angle_limit = math.radians(50)
+        bpy.ops.object.modifier_apply(modifier='b')
+        md = o_.modifiers.new('t', 'TRIANGULATE')
+        bpy.ops.object.modifier_apply(modifier='t')
+        md = o_.modifiers.new('n', 'WEIGHTED_NORMAL')
+        md.keep_sharp = False
+        bpy.ops.object.modifier_apply(modifier='n')
+        return paint(o_, k)
 
 
-parts = [arch(W, H, D, 0, 1.0, 0.03)]
-parts.append(arch(W + 0.008, H + 0.008, 0.012, D * 0.5, 0.9, 0.005))  # ファスナーの線（ぐるっと 1 周の細い帯）
-parts.append(rbox((0, D + 0.013, -0.062), (0.168, 0.034, 0.092), 0.016, 0.985))  # 前のポケット
-parts.append(rbox((0, D + 0.03, -0.032), (0.178, 0.018, 0.046), 0.008, 0.93))  # ポケットのふた
-for sx in (-1, 1):
-    parts.append(rbox((sx * 0.045, D + 0.039, -0.05), (0.02, 0.01, 0.05), 0.004, 0.86, 2))  # ベルト
-    parts.append(rbox((sx * 0.045, D + 0.044, -0.068), (0.026, 0.008, 0.013), 0.003, 0.76, 2))  # 留め具
-    parts.append(rbox((sx * (W / 2 + 0.006), D * 0.5, -0.068), (0.03, 0.068, 0.08), 0.013, 0.95))  # 横のポケット
-bpy.ops.mesh.primitive_torus_add(major_radius=0.03, minor_radius=0.0085, major_segments=16, minor_segments=8, location=(0, D * 0.42, H / 2 - 0.006), rotation=(math.pi / 2, 0, 0))
-parts.append(paint(bpy.context.object, 0.9))  # 持ち手
-bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-active(parts[0])
-for p in parts:
-    p.select_set(True)
-bpy.ops.object.join()
-pack = bpy.context.object
-pack.name = 'backpack'
-# 背中の面（blender-paint.py の切り口）に合わせて置く
-CUT_CO = Vector((0, 0.078, 0.20))
-SLOPE = 0.115
-zc = 0.37 if MV else 0.375
-pack.matrix_world = Matrix.Translation((0, CUT_CO.y + SLOPE * (zc - CUT_CO.z) - 0.012, zc)) @ Matrix.Rotation(-math.atan(SLOPE), 4, 'X')
-active(pack)
-bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    parts = [arch(W, H, D, 0, 1.0, 0.03)]
+    parts.append(arch(W + 0.008, H + 0.008, 0.012, D * 0.5, 0.9, 0.005))  # ファスナーの線（ぐるっと 1 周の細い帯）
+    parts.append(rbox((0, D + 0.013, -0.062), (0.168, 0.034, 0.092), 0.016, 0.985))  # 前のポケット
+    parts.append(rbox((0, D + 0.03, -0.032), (0.178, 0.018, 0.046), 0.008, 0.93))  # ポケットのふた
+    for sx in (-1, 1):
+        parts.append(rbox((sx * 0.045, D + 0.039, -0.05), (0.02, 0.01, 0.05), 0.004, 0.86, 2))  # ベルト
+        parts.append(rbox((sx * 0.045, D + 0.044, -0.068), (0.026, 0.008, 0.013), 0.003, 0.76, 2))  # 留め具
+        parts.append(rbox((sx * (W / 2 + 0.006), D * 0.5, -0.068), (0.03, 0.068, 0.08), 0.013, 0.95))  # 横のポケット
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.03, minor_radius=0.0085, major_segments=16, minor_segments=8, location=(0, D * 0.42, H / 2 - 0.006), rotation=(math.pi / 2, 0, 0))
+    parts.append(paint(bpy.context.object, 0.9))  # 持ち手
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+    active(parts[0])
+    for p in parts:
+        p.select_set(True)
+    bpy.ops.object.join()
+    pack = bpy.context.object
+    pack.name = 'backpack'
+    # 背中の面（blender-paint.py の切り口）に合わせて置く
+    CUT_CO = Vector((0, 0.078, 0.20))
+    SLOPE = 0.115
+    zc = 0.37 if MV else 0.375
+    pack.matrix_world = Matrix.Translation((0, CUT_CO.y + SLOPE * (zc - CUT_CO.z) - 0.012, zc)) @ Matrix.Rotation(-math.atan(SLOPE), 4, 'X')
+    active(pack)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 
-from mathutils.bvhtree import BVHTree
-body_bvh = BVHTree.FromObject(av, bpy.context.evaluated_depsgraph_get())
-def back_point(x, z_):
-    """後ろから前へ光線を打って、背中側の表面の点を返す（肩ひもを背中・フードの上にはわせるため）。"""
-    hit = body_bvh.ray_cast(Vector((x, 0.6, z_)), Vector((0, -1, 0)))
-    return Vector((x, (hit[0].y if hit[0] is not None else 0.1) + 0.002, z_))
+    from mathutils.bvhtree import BVHTree
+    body_bvh = BVHTree.FromObject(av, bpy.context.evaluated_depsgraph_get())
+    def back_point(x, z_):
+        """後ろから前へ光線を打って、背中側の表面の点を返す（肩ひもを背中・フードの上にはわせるため）。"""
+        hit = body_bvh.ray_cast(Vector((x, 0.6, z_)), Vector((0, -1, 0)))
+        return Vector((x, (hit[0].y if hit[0] is not None else 0.1) + 0.002, z_))
 
 
-def band(xz, width=0.027, thick=0.01, k=0.93):
-    """(左右, 高さ) の点をなめらかにつないだ道を、背中の表面にはり付けて、平たい帯（肩ひも）にする。"""
-    P_ = [Vector((x, 0, z_)) for x, z_ in xz]
-    P_ = [P_[0]] + P_ + [P_[-1]]
-    path = []
-    for i in range(1, len(P_) - 2):
-        for j in range(5):
-            t = j / 5
-            a_, b_, c_, d_ = P_[i - 1], P_[i], P_[i + 1], P_[i + 2]
-            path.append(0.5 * ((2 * b_) + (-a_ + c_) * t + (2 * a_ - 5 * b_ + 4 * c_ - d_) * t * t + (-a_ + 3 * b_ - 3 * c_ + d_) * t ** 3))
-    path.append(P_[-2])
-    path = [back_point(p.x, p.z) for p in path]
-    # 表面のでこぼこで帯ががたつかないよう、前後の位置だけ少しならす
-    for _ in range(3):
-        ys_ = [p.y for p in path]
-        for i in range(1, len(path) - 1):
-            path[i].y = (ys_[i - 1] + ys_[i] * 2 + ys_[i + 1]) / 4
-    bm_ = bmesh.new()
-    rings = []
-    out = Vector((0, 1, 0))
-    for i, p in enumerate(path):
-        tan = (path[min(i + 1, len(path) - 1)] - path[max(i - 1, 0)]).normalized()
-        o2 = (out - tan * out.dot(tan)).normalized()
-        side = tan.cross(o2).normalized()
-        rings.append([bm_.verts.new(p + side * sx * width / 2 + o2 * oz) for sx, oz in ((-1, -0.006), (1, -0.006), (1, thick), (-1, thick))])
-    for r0, r1 in zip(rings, rings[1:]):
-        for q in range(4):
-            bm_.faces.new((r0[q], r0[(q + 1) % 4], r1[(q + 1) % 4], r1[q]))
-    bm_.faces.new(rings[0][::-1])
-    bm_.faces.new(rings[-1])
-    bmesh.ops.recalc_face_normals(bm_, faces=bm_.faces)
-    m_ = bpy.data.meshes.new('strap')
-    bm_.to_mesh(m_)
-    bm_.free()
-    o_ = bpy.data.objects.new('strap', m_)
-    bpy.context.collection.objects.link(o_)
-    active(o_)
-    md = o_.modifiers.new('n', 'WEIGHTED_NORMAL')
-    bpy.ops.object.modifier_apply(modifier='n')
-    return paint(o_, k)
+    def band(xz, width=0.027, thick=0.01, k=0.93):
+        """(左右, 高さ) の点をなめらかにつないだ道を、背中の表面にはり付けて、平たい帯（肩ひも）にする。"""
+        P_ = [Vector((x, 0, z_)) for x, z_ in xz]
+        P_ = [P_[0]] + P_ + [P_[-1]]
+        path = []
+        for i in range(1, len(P_) - 2):
+            for j in range(5):
+                t = j / 5
+                a_, b_, c_, d_ = P_[i - 1], P_[i], P_[i + 1], P_[i + 2]
+                path.append(0.5 * ((2 * b_) + (-a_ + c_) * t + (2 * a_ - 5 * b_ + 4 * c_ - d_) * t * t + (-a_ + 3 * b_ - 3 * c_ + d_) * t ** 3))
+        path.append(P_[-2])
+        path = [back_point(p.x, p.z) for p in path]
+        # 表面のでこぼこで帯ががたつかないよう、前後の位置だけ少しならす
+        for _ in range(3):
+            ys_ = [p.y for p in path]
+            for i in range(1, len(path) - 1):
+                path[i].y = (ys_[i - 1] + ys_[i] * 2 + ys_[i + 1]) / 4
+        bm_ = bmesh.new()
+        rings = []
+        out = Vector((0, 1, 0))
+        for i, p in enumerate(path):
+            tan = (path[min(i + 1, len(path) - 1)] - path[max(i - 1, 0)]).normalized()
+            o2 = (out - tan * out.dot(tan)).normalized()
+            side = tan.cross(o2).normalized()
+            rings.append([bm_.verts.new(p + side * sx * width / 2 + o2 * oz) for sx, oz in ((-1, -0.006), (1, -0.006), (1, thick), (-1, thick))])
+        for r0, r1 in zip(rings, rings[1:]):
+            for q in range(4):
+                bm_.faces.new((r0[q], r0[(q + 1) % 4], r1[(q + 1) % 4], r1[q]))
+        bm_.faces.new(rings[0][::-1])
+        bm_.faces.new(rings[-1])
+        bmesh.ops.recalc_face_normals(bm_, faces=bm_.faces)
+        m_ = bpy.data.meshes.new('strap')
+        bm_.to_mesh(m_)
+        bm_.free()
+        o_ = bpy.data.objects.new('strap', m_)
+        bpy.context.collection.objects.link(o_)
+        active(o_)
+        md = o_.modifiers.new('n', 'WEIGHTED_NORMAL')
+        bpy.ops.object.modifier_apply(modifier='n')
+        return paint(o_, k)
 
 
-straps = []
-for sx in (-1, 1):
-    # 上: リュックの上のふち → 背中・フードの上 → 肩（髪の下へ入って終わる。参考画像の後ろ姿の V 字）
-    straps.append(band([(sx * 0.055, 0.455), (sx * 0.075, 0.495), (sx * 0.098, 0.53), (sx * 0.112, 0.552)]))
-    # 下: リュックの下の横 → わきの下へ（うでの付け根で終わる）
-    straps.append(band([(sx * 0.095, 0.30), (sx * 0.125, 0.312), (sx * 0.152, 0.328), (sx * 0.168, 0.34)]))
-active(pack)
-for o_ in straps:
-    o_.select_set(True)
-bpy.ops.object.join()
-pack = bpy.context.object
-print('backpack tris', sum(len(p.vertices) - 2 for p in pack.data.polygons))
+    straps = []
+    for sx in (-1, 1):
+        # 上: リュックの上のふち → 背中・フードの上 → 肩（髪の下へ入って終わる。参考画像の後ろ姿の V 字）
+        straps.append(band([(sx * 0.055, 0.455), (sx * 0.075, 0.495), (sx * 0.098, 0.53), (sx * 0.112, 0.552)]))
+        # 下: リュックの下の横 → わきの下へ（うでの付け根で終わる）
+        straps.append(band([(sx * 0.095, 0.30), (sx * 0.125, 0.312), (sx * 0.152, 0.328), (sx * 0.168, 0.34)]))
+    active(pack)
+    for o_ in straps:
+        o_.select_set(True)
+    bpy.ops.object.join()
+    pack = bpy.context.object
+    print('backpack tris', sum(len(p.vertices) - 2 for p in pack.data.polygons))
 
 # ===================== ② 顔の膜と、表情の並べ絵 =====================
 # 正面の参考画像（1600x1600）での、キャラの枠（上・下・まん中）。blender-paint.py と同じ合わせ方
@@ -299,6 +305,9 @@ ne = [(ex - x0, ey - y0) for ex, ey in N_EYES]
 nm = (N_MOUTH[0] - x0, N_MOUTH[1] - y0)
 
 
+USE = {}
+
+
 def warp(name, guesses):
     """別の表情の参考画像を、両目の位置（大きさ・かたむきも）が ふつうの顔 に重なるように写す。"""
     img = load_px(name)
@@ -328,6 +337,7 @@ def warp(name, guesses):
     use = inner * np.clip(1 - blur(grow(hair_of(out), 3), 4) * 1.5, 0, 1) * np.clip(1 - blur(grow(other, 6), 5) * 1.6, 0, 1)
     use = np.minimum(use, blur(use, 8))  # 境目をさらにやわらかく（内側へだけ広げる）
     use = blur(use, 4)
+    USE[name] = use
     return base * (1 - use[:, :, None]) + out * use[:, :, None], out
 
 
@@ -342,6 +352,15 @@ atlas = np.zeros((CH, CW * len(ORDER), 4), np.float32)
 for i, n in enumerate(ORDER):
     atlas[:, i * CW:(i + 1) * CW, :3] = cells[n]
     atlas[:, i * CW:(i + 1) * CW, 3] = alpha
+if BMODE:
+    import json
+    bskin = np.array(json.load(open(os.environ['B_JSON']))['face_skin'], np.float32)
+    sel = skin_of(happy_raw) & facem & ~hair_of(happy_raw)
+    hk = np.clip(happy_raw * (bskin / np.median(happy_raw[sel].reshape(-1, 3), axis=0)), 0, 1)
+    print('B face skin', np.round(bskin, 3))
+    atlas[:, :CW, 3] = 0  # ふつう: B の顔のまま
+    atlas[:, CW:, :3] = hk
+    atlas[:, CW:, 3] = np.clip(USE['cheer-happy'] * 1.1, 0, 1)
 aimg = bpy.data.images.new('faces', CW * len(ORDER), CH, alpha=True)
 aimg.pixels = atlas[::-1].ravel()
 aimg.filepath_raw = atlas_png

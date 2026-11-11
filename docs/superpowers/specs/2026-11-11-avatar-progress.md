@@ -10,6 +10,9 @@
 - 結果のまとめは設計メモ §A.12。模型は `art/prototypes/avatar/boy-faithful-mv.glb`（874,512 バイト・14,655 三角形・描く回数 3）。
 
 ## やったこと（新しい順）
+- 2026-11-12（版 B を塗って直した・骨つき）: `blender-b-repaint.py`（新規）で B の色の絵を場所で塗り直し（髪＝参考の茶色＋B の明るさ、リュック＝背中の面より後ろをピンク、肩・袖・背中のしみ＝まわりの青で埋める、手の先＝肌、耳のうしろ＝耳の肌で埋める）、3 万三角形に軽くし、うでは「わきの平面で切ってふさぐ」で切りはなし（B の形は閉じていないので箱の引き算は失敗した）。`blender-finish.py` に `AVATAR_B=1`（リュックを作らない・ふつうの顔は B のまま、うれしいだけ膜で出す・肌の色は B の顔に合わせる。`B_JSON` に塗り直しの .json）。
+  - 模型 `art/prototypes/avatar/boy-b-repaint.glb` 1,693,988 バイト・32,182 三角形（膜 1,417 込み）・骨 11・絵 2048 の WEBP。画像 `b-repaint.png`、ページ `.superpowers/preview/avatar/bcheck.html`。作業用は `.superpowers/bwork/`（`shot.sh`、Blender は `/home/otosa/tools/blender/`）。
+  - 残り（各 2 回で止めた）: 背中・肩にうすいピンクのしみが少し、おでこの髪の生えぎわと耳のふちがぎざぎざ。
 - 2026-11-12（AI の色そのままの確認・作り直しはしていない）: AI が付けた色の版 B（`boy_mv123_textured`、5万三角形・骨なし）を、今の版 A と同じ明かり・同じ角度で並べた。画像 `art/prototypes/avatar/ai-texture-check.png`（参考／A／B、正面・真横・後ろ・地図の角度、80px・40px）。B は顔・服・くつの色がやわらかく、参考に近いが、髪が暗い茶で青い粒が散り、リュックが青、肩・袖に赤いしみ、耳のうしろに黒いまだら。
   - 容量の見込み（試算）: B は絵が 2048×2048 の PNG で約 3.0MB、形が約 1.3MB。絵を JPEG にし三角形を減らせば、1MB＝約 1.6 万三角形＋絵 1024（骨の重み込み）、2MB＝約 3 万三角形＋絵 2048、3MB＝約 5 万三角形（そのまま）＋絵 2048 の JPEG。骨は B に無いので重み付けが別に要る。
   - 試作の場所（git 管理外）: `.superpowers/preview/avatar/check.html`・`check.ts`、B の写し `boy-ai-tex.glb`。
