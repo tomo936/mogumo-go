@@ -76,14 +76,23 @@ for k, pts in kd_src.items():
 for k, depth in ((1, -0.0045), (2, 0.004)):
     for side in (1, -1):
         faces = [f for f in bm.faces if f[capk] == k and f.verts[0].co.x * side > 0]
+        cv = {v for f in faces for v in f.verts}
+        lo = Vector((min(v.co.x for v in cv), min(v.co.y for v in cv), min(v.co.z for v in cv)))
+        hi = Vector((max(v.co.x for v in cv), max(v.co.y for v in cv), max(v.co.z for v in cv)))
         for _ in range(3):
-            r = bmesh.ops.inset_region(bm, faces=faces, thickness=0.007, depth=depth, use_even_offset=True)
+            r = bmesh.ops.inset_region(bm, faces=faces, thickness=0.007, depth=depth, use_even_offset=False)
             for nf in r['faces']:
                 nf[capk] = k
-for f in bm.faces:
+        # 細い角で点が飛び出さないように、元の切り口の箱（x は ±2cm）の中へ戻す
+        for f in faces:
+            for v in f.verts:
+                v.co.x = min(max(v.co.x, lo.x - 0.02), hi.x + 0.02)
+                v.co.y = min(max(v.co.y, lo.y), hi.y)
+                v.co.z = min(max(v.co.z, lo.z), hi.z)
+for f in bm.faces:  # 面ごとに 1 色（点ごとに違う絵の島を指すと、絵をまたいだ筋が出るため）
     if f[capk]:
+        _, i, _ = kds[f[capk]].find(f.calc_center_median())
         for l in f.loops:
-            _, i, _ = kds[f[capk]].find(l.vert.co)
             l[uvl].uv = kd_src[f[capk]][i][1]
 nw = sum(1 for v in bm.verts if not v[dl])
 print('verts without weight after inset', nw)
@@ -107,6 +116,8 @@ for v in bm.verts:
     for g in list(d.keys()):
         d[g] = d[g] * (1 - s)
     d[tgt] = d.get(tgt, 0.0) + s
+co_ = np.array([v.co[:] for v in bm.verts])
+print('bbox after caps', co_.min(0).round(3), co_.max(0).round(3))
 bm.to_mesh(me)
 bm.free()
 me.update()
