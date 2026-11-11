@@ -150,31 +150,39 @@ skinlike = (r > 0.62) & (g > 0.42) & (r > b + 0.12) & (r - g < 0.3)
 FX0, FX1, FZ0, FZ1 = -0.17, 0.17, 0.548, 0.752  # 顔の枠（blender-finish.py と同じ）
 in_face = (x > FX0) & (x < FX1) & (z > FZ0) & (z < FZ1) & (N[:, :, 1] < -0.3)
 
-# ---- 耳: 頭の横で肌の色の所。そのまわり（うしろ側）の暗い所を耳の肌で埋める ----
+# ---- 髪と肌の分け方（2026-11-12 作り直し）: B の元の絵は髪が暗い茶色で、生えぎわがきれい。元の絵の暗さで分ける ----
+# （前は「肌色でない所＝髪」＋顔の枠の四角＋耳のまわりを肌で埋める、だったので、おでこ・耳のまわりに継ぎ目のパッチが出ていた）
 head = M & (z > 0.57)
-ear_skin = head & skinlike & (np.abs(x) > 0.15) & (y > -0.09) & (z < 0.72)
-ez = z[ear_skin]
-print('ear skin texels', int(ear_skin.sum()), 'z', np.round([ez.min(), ez.max()], 3) if len(ez) else '-',
-      'x', np.round(np.abs(x[ear_skin]).min(), 3) if len(ez) else '-')
-ear_dark = np.zeros_like(M)
+ear_zone = head & (np.abs(x) > 0.168) & (y > -0.035) & (y < 0.045) & (z > 0.585) & (z < 0.72)  # 耳そのもの
+eyes = in_face & (np.abs(x) < 0.13) & (z > 0.615) & (z < 0.695)
+# まゆ: 枠の中の暗い所のうち、上の前髪からつながっていない所（前髪の先は髪にする）
+brect = in_face & (np.abs(x) > 0.04) & (np.abs(x) < 0.14) & (z >= 0.695) & (z < 0.75) & (L < 0.36)
+bang = M & (z >= 0.745) & (L < 0.36)
+for _ in range(80):
+    g_ = bang | (brect & (np.roll(bang, 1, 0) | np.roll(bang, -1, 0) | np.roll(bang, 1, 1) | np.roll(bang, -1, 1)))
+    if (g_ == bang).all():
+        break
+    bang = g_
+brows = brect & ~bang
+print('brow texels', int(brows.sum()))
+mouth = in_face & (z <= 0.615)
+darkT0 = (L < 0.36) | (~skinlike & (L < 0.5))
+ear_skin = ear_zone & skinlike
+ear_dark = np.zeros_like(M)  # 耳の肌のすぐ近く（6mm）の暗い所＝耳の中の影・耳のうしろの黒ずみ。耳の肌で埋める
 if ear_skin.sum() > 50:
     kd = kdtree.KDTree(int(ear_skin.sum()))
     for i, p in enumerate(P[ear_skin]):
         kd.insert(Vector(p), i)
     kd.balance()
-    cand = head & ~skinlike & (np.abs(x) > 0.14) & (z > ez.min() - 0.01) & (z < ez.max() + 0.01) & (L < 0.45)
-    cy, cx = np.nonzero(cand)
+    cy, cx = np.nonzero(ear_zone & ~skinlike)
     for yy_, xx_ in zip(cy, cx):
-        if kd.find(Vector(P[yy_, xx_]))[2] < 0.008:
+        if kd.find(Vector(P[yy_, xx_]))[2] < 0.006:
             ear_dark[yy_, xx_] = True
-print('ear dark texels', int(ear_dark.sum()))
-
-# ---- 髪 ----
-keep_face = in_face & (z < EYE_Z + 0.04)  # 目・口・ほおは B のまま
-hair = head & (~skinlike | ((z > 0.75) & ~in_face) | (z > FZ1)) & ~keep_face & ~ear_dark & ~ear_skin
-# 頭の後ろ（耳より後ろ・上）の肌色は髪にする。区分けのふちは、まわりの多数決でならす（ぎざぎざを消す）
-hair = hair | (head & (y > 0.02) & (z > 0.6) & ~ear_skin & ~ear_dark)
-hair = (masked_blur(hair.astype(np.float32), head, 4) > 0.5) & head & ~keep_face
+ear_zone = ear_skin | ear_dark
+hair = head & (darkT0 | ((y > 0.02) & (z > 0.6))) & ~ear_zone & ~eyes & ~brows & ~mouth
+allowed = head & ~ear_zone & ~eyes & ~brows & ~mouth
+hair = (masked_blur(hair.astype(np.float32), allowed, 2) > 0.5) & allowed  # まわりの多数決で、小さな粒をならす
+print('ear skin texels', int(ear_skin.sum()), 'ear dark texels', int(ear_dark.sum()))
 speck = hair & (blue | (r > 0.45))  # 青い粒・赤い粒
 print('hair texels', int(hair.sum()), 'specks', int(speck.sum()))
 Lh = masked_blur(L, hair & ~speck, 6)
@@ -203,6 +211,16 @@ print('stain texels', int(stain.sum()))
 T, _ = fill_from(T, body & blue & ~stain, stain)
 T = np.where(stain[:, :, None], masked_blur(T, stain | (body & blue), 3), T)
 
+# ---- 肩・背中・袖のうすいピンク（青と混ざって紫に見える所）→ まわりの青で埋める。リュックとひも（青でない）はのぞく ----
+cloth = M & (z > 0.2) & (z < 0.6) & ~pack & ~hair & ~skinlike
+rg_cloth = np.median((r - g)[cloth & blue])
+pinkish = cloth & blue & (r - g > rg_cloth + 0.13) & ~((T.min(2) > 0.7) & (T.max(2) - T.min(2) < 0.12))
+for _ in range(2):
+    pinkish = pinkish | (cloth & blue & (r - g > rg_cloth + 0.07) & (np.roll(pinkish, 1, 0) | np.roll(pinkish, -1, 0) | np.roll(pinkish, 1, 1) | np.roll(pinkish, -1, 1)))
+print('pink stain texels', int(pinkish.sum()), 'cloth r-g', round(float(rg_cloth), 3))
+T, _ = fill_from(T, cloth & blue & ~pinkish, pinkish)
+T = np.where(pinkish[:, :, None], masked_blur(T, pinkish | (cloth & blue), 3), T)
+
 # ---- 手の先: 袖口より下で青でない所は肌の色に ----
 hand = M & (np.abs(x) > 0.152) & (z > 0.165) & (z < 0.262) & ~blue
 hs = hand & skinlike & (L > np.median(L[hand & skinlike]) * 0.9)
@@ -216,9 +234,41 @@ print('hand texels', int(hand.sum()), 'skin', np.round(SKIN, 3))
 T, _ = fill_from(T, head & skinlike & ~ear_dark & (np.abs(x) > 0.13), ear_dark)
 T = np.where(ear_dark[:, :, None], masked_blur(T, ear_dark | ear_skin, 3), T)
 
-# 顔の肌の色（顔の膜の色合わせに使う）
-fs = in_face & skinlike & (z < EYE_Z) & (np.abs(x) > 0.06)
-FACE_SKIN = np.median(T0[fs], axis=0)
+# ---- 肌の色を参考画像にそろえる（顔・耳・首・手・脚）。明るさの変化は B から、色合いは参考画像。ほおの赤みは B の赤みを残す ----
+fr = front[TOP:TOP + int(0.42 * PXU)]
+fsk = (fr[:, :, 0] > 0.8) & (fr[:, :, 0] > fr[:, :, 2] + 0.08) & (fr[:, :, 1] > 0.55)
+REF_SKIN = np.median(fr[fsk], axis=0)
+REF_TEX = REF_SKIN * np.array((0.985, 0.955, 0.95))  # 明かりで少し明るく・うすく出る分を先に引いておく（撮った色が参考の肌に近くなるように）
+Tr, Tg = T[:, :, 0], T[:, :, 1]
+skin_all = M & ~hair & ~pack & ~blue & (Tr > 0.5) & (Tr > T[:, :, 2] + 0.1) & (Tg > 0.33) & (Tr - Tg < 0.4)
+skin_all &= ~(in_face & (L < 0.42))  # 目・まゆ・口の暗い所はそのまま
+skin_all |= ear_zone  # 耳は中の影もまとめて肌の色に
+skin_all |= M & (z > 0.49) & (z < 0.575) & (np.abs(x) < 0.08) & (y < 0) & ~blue & ~pack & (Tr > T[:, :, 2] - 0.02) & (T.mean(2) < 0.6)  # あごの下（首）の茶色いしみ
+rg = Tg / np.maximum(Tr, 1e-3)
+rg_med = np.median(rg[skin_all])
+red = np.clip((rg_med - rg - 0.03) / 0.1, 0, 1) * (in_face & (z < EYE_Z))  # ほおの赤み（顔の前だけ）
+LT = T.mean(2)
+lum = masked_blur(LT, skin_all, 3)
+ratio = np.clip(lum / np.median(LT[skin_all & (z > 0.57)]), 0.8, 1.06)
+# 顔の前は平らに（うれしい の膜は平らな絵なので、下の肌も平らにして、ふちを見えなくする）
+wf = np.clip((-N[:, :, 1] - 0.45) / 0.35, 0, 1) * ((np.abs(x) < 0.19) & (z > 0.55) & (z < 0.76))
+ratio = ratio * (1 - wf) + wf
+gain = REF_TEX / np.median(T[skin_all & ~(red > 0)], axis=0)
+newc = REF_TEX[None, None, :] * ratio[:, :, None] * (1 - red[:, :, None]) + np.clip(T * gain, 0, 1) * red[:, :, None]
+T = np.where(skin_all[:, :, None], newc, T)
+print('skin texels', int(skin_all.sum()), 'ref skin', np.round(REF_SKIN, 3), 'gain', np.round(gain, 3))
+
+# 顔の肌の色（顔の膜の色合わせに使う）= 塗った後の顔の肌
+fs = in_face & skin_all & (red == 0) & (z < EYE_Z) & (np.abs(x) > 0.06)
+FACE_SKIN = np.median(T[fs], axis=0)
+# 顔の枠を正面から見たときの、B の髪の場所（うれしい の膜を、前髪の上に出さないため。blender-finish.py が読む）
+HG = np.zeros((120, 200), np.float32); HD = np.full((120, 200), 9.0, np.float32)
+fsel = M & (N[:, :, 1] < -0.1) & (x > FX0) & (x < FX1) & (z > FZ0) & (z < FZ1)
+gu = ((x[fsel] - FX0) / (FX1 - FX0) * 199.999).astype(int); gv = ((FZ1 - z[fsel]) / (FZ1 - FZ0) * 119.999).astype(int)
+gd = y[fsel]; gh = hair[fsel].astype(np.float32)
+o_ = np.argsort(-gd)
+HG[gv[o_], gu[o_]] = gh[o_]
+np.save(out_png + '.hair.npy', HG)
 json.dump({'face_skin': FACE_SKIN.tolist(), 'eye_z': float(EYE_Z)}, open(out_png + '.json', 'w'))
 
 # 島のふちの外へ色を広げる（小さく表示したときに、すき間から元の色がにじまないように）

@@ -359,8 +359,14 @@ if BMODE:
     hk = np.clip(happy_raw * (bskin / np.median(happy_raw[sel].reshape(-1, 3), axis=0)), 0, 1)
     print('B face skin', np.round(bskin, 3))
     atlas[:, :CW, 3] = 0  # ふつう: B の顔のまま
-    atlas[:, CW:, :3] = hk
-    atlas[:, CW:, 3] = np.clip(USE['cheer-happy'] * 1.1, 0, 1)
+    # うれしい: 膜のふちの色は下の肌の色にそろえる（透明な所の色が白いと、ふちに うすい線が出ていた。2026-11-12）
+    u_ = np.clip(USE['cheer-happy'] * 3, 0, 1)[:, :, None]
+    atlas[:, :CW, :3] = bskin
+    atlas[:, CW:, :3] = hk * u_ + bskin * (1 - u_)
+    hg = np.load(os.environ['B_JSON'].replace('.json', '.hair.npy'))  # 上が 0 行目・200x120
+    hgc = hg[(yy * hg.shape[0] / CH).astype(int).clip(0, hg.shape[0] - 1), (xx * hg.shape[1] / CW).astype(int).clip(0, hg.shape[1] - 1)] > 0.5
+    keep_b = np.clip(1 - blur(hgc, 2) * 1.3, 0, 1)  # B の前髪がある所は膜を出さない
+    atlas[:, CW:, 3] = np.clip(USE['cheer-happy'] * 1.1, 0, 1) * keep_b
 aimg = bpy.data.images.new('faces', CW * len(ORDER), CH, alpha=True)
 aimg.pixels = atlas[::-1].ravel()
 aimg.filepath_raw = atlas_png
