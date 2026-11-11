@@ -74,7 +74,11 @@ export function applyPose(r: Rig, p: ReturnType<typeof poseFor>) {
 }
 
 type Look = { cells: number; emissive: number; gray: string; packGray?: string }
-const LOOK_PREV: Look = { cells: 5, emissive: 0.62, gray: '#5e5e5e' }
+const QS = new URLSearchParams(location.search)
+const LOOK_PREV: Look = { cells: Number(QS.get('pcells') ?? 5), emissive: Number(QS.get('pem') ?? 0.62), gray: '#' + (QS.get('pgray') ?? '5e5e5e') }
+const PREV_FILE = QS.get('prev') ?? 'boy-prev.glb'
+const PREV_LABEL = QS.get('plabel') ?? '前回'
+const NOW_LABEL = QS.get('label') ?? '今回'
 const LOOK_NOW: Look = { cells: Number(new URLSearchParams(location.search).get('cells') ?? 2), emissive: Number(new URLSearchParams(location.search).get('em') ?? 0.55), gray: '#' + (new URLSearchParams(location.search).get('gray') ?? 'a2a2a2') }
 
 async function load(url: string, look: Look | null): Promise<Rig> {
@@ -205,7 +209,7 @@ async function main() {
     REFS[n] = im
   }
   const cur = await load(BASE + 'boy-faithful.glb', LOOK_NOW)
-  const prev = await load(BASE + 'boy-prev.glb', LOOK_PREV)
+  const prev = await load(BASE + PREV_FILE, LOOK_PREV)
   const old = await load('/src/assets/characters/avatar3d.glb', null)
   const box = new THREE.Box3().setFromObject(old.inner)
   old.inner.scale.setScalar(1 / (box.max.y - box.min.y))
@@ -215,7 +219,7 @@ async function main() {
     applyPose(r, idle)
     setExpr(r, e)
   }
-  const both: [string, Rig][] = [['前回', prev], ['今回', cur]]
+  const both: [string, Rig][] = [[PREV_LABEL, prev], [NOW_LABEL, cur]]
   let rr: HTMLElement
 
   // ===== 段1: 表情（ふつう・うれしい）と、歩き・走り =====
@@ -234,7 +238,7 @@ async function main() {
       tile(rr, shot(r, 260, 260, 640, 30, E0, W, -1.2), l)
     }
   }
-  rr = row(s1, '今回<br>全身')
+  rr = row(s1, `${NOW_LABEL}<br>全身`)
   for (const [e, l, m] of [[0, 'ふつう', 'idle'], [1, 'うれしい（弾み）', 'joy']] as const) {
     setExpr(cur, e)
     applyPose(cur, poseFor(m, 0.25))
@@ -260,13 +264,13 @@ async function main() {
       }
     }
   }
-  rr = row(s1, '今回<br>歩き（正面・地図の角度）')
+  rr = row(s1, `${NOW_LABEL}<br>歩き（正面・地図の角度）`)
   for (const ph of PH) {
     applyPose(cur, poseFor('walk', ph))
     tile(rr, shot(cur, 150, 215, 165, 0, ELEV))
   }
   for (const px of [80, 40]) {
-    rr = row(s1, `今回 実寸 ${px}px<br>歩き`)
+    rr = row(s1, `${NOW_LABEL} 実寸 ${px}px<br>歩き`)
     for (const ph of PH) {
       applyPose(cur, poseFor('walk', ph))
       tile(rr, shot(cur, 150, px * 1.6, px, 35))
@@ -276,7 +280,7 @@ async function main() {
   stand(prev)
 
   // ===== 段2〜4: 全身のくらべ（色・リュック・粘土感・髪）=====
-  const s2 = sheet('s2', '全身のくらべ', '上から: 参考画像 ／ 前回 ／ 今回 ／ いまアプリに入っている 3D')
+  const s2 = sheet('s2', '全身のくらべ', `上から: 参考画像 ／ ${PREV_LABEL} ／ ${NOW_LABEL} ／ いまアプリに入っている 3D`)
   rr = row(s2, '参考画像')
   for (const [n, l] of [['front-stand', '正面'], ['side-stand', '真横'], ['back', '後ろ'], ['run-side', '走り']] as const) refTile(rr, n, 250, 380, l)
   for (const [name, r] of both) {
@@ -299,7 +303,7 @@ async function main() {
     tile(rr, shot(old, 200, px * 1.4, px, 20), 'いまアプリの 3D')
   }
 
-  const s3 = sheet('s3', 'リュックと服の質感（大きく）', '上: 参考画像 ／ 中: 前回 ／ 下: 今回')
+  const s3 = sheet('s3', 'リュックと服の質感（大きく）', `上: 参考画像 ／ 中: ${PREV_LABEL} ／ 下: ${NOW_LABEL}`)
   rr = row(s3, '参考画像')
   refTile(rr, 'back', 300, 300, '後ろ', [520, 560, 560, 560])
   refTile(rr, 'side-stand', 300, 300, '真横', [440, 560, 560, 560])

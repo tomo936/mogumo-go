@@ -1,11 +1,12 @@
 # 色を貼った形（blender-paint.py の出力）に、①きれいなリュック（別の部品）②顔の膜（表情の差し替え用）③骨組みと重み を足して GLB にする。
 # 使い方: blender -b -P blender-finish.py -- 入力.blend 参考画像のフォルダ(front-stand.png など) 出力.glb 顔の並べ絵.png
-import bpy, sys, bmesh, math
+import bpy, sys, bmesh, math, os
 import numpy as np
 from mathutils import Vector, Matrix, kdtree
 
 a = sys.argv[sys.argv.index('--') + 1:]
 src_blend, ref_dir, dst, atlas_png = a[:4]
+MV = os.environ.get('AVATAR_MV') == '1'  # 3 枚入力版の形: リュックは AI の形のまま（体の一部）。作ったリュックと肩ひもは足さない
 bpy.ops.wm.open_mainfile(filepath=src_blend)
 av = bpy.data.objects['avatar']
 me = av.data
@@ -201,6 +202,10 @@ for o_ in straps:
 bpy.ops.object.join()
 pack = bpy.context.object
 print('backpack tris', sum(len(p.vertices) - 2 for p in pack.data.polygons))
+
+if MV:
+    bpy.data.objects.remove(pack)
+    pack = None
 
 # ===================== ② 顔の膜と、表情の並べ絵 =====================
 # 正面の参考画像（1600x1600）での、キャラの枠（上・下・まん中）。blender-paint.py と同じ合わせ方
@@ -498,6 +503,9 @@ def skin_to(ob, fixed=None):
         if v.co.z > HEAD_ONLY:
             ob.vertex_groups['head'].add([v.index], 1.0, 'REPLACE')
             continue
+        if MV and (v.co - CUT_CO).dot(Vector((0, 1, -SLOPE)).normalized()) > 0.012 and 0.215 < v.co.z < 0.50 and abs(v.co.x) < 0.135:
+            ob.vertex_groups['chest'].add([v.index], 1.0, 'REPLACE')  # リュック
+            continue
         near = kd.find_n(v.co, 4)
         w = np.zeros(len(gnames), np.float32)
         for _, j, d in near:
@@ -534,7 +542,8 @@ def skin_to(ob, fixed=None):
 
 
 skin_to(av)
-skin_to(pack, 'chest')
+if pack is not None:
+    skin_to(pack, 'chest')
 skin_to(face, 'head')
 for n in gnames:
     print('weights', n, sum(1 for v in me.vertices if any(av.vertex_groups[g.group].name == n and g.weight > 0.5 for g in v.groups)))

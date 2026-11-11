@@ -2,7 +2,7 @@
 # 使い方: blender -b -P blender-paint.py -- 形.glb AIの色付き.glb 正面の透明PNG(1024) 出力.blend 出力の絵.png 参考画像のフォルダ(side-stand.png・back.png) [三角形の目安] [絵の一辺]
 # - 正面から見える所: 参考画像の色をそのまま（顔・パーカーのひも・ポケットなど）
 # - 正面から見えない所: AI の色で「髪・肌・青・ピンク…」の区分けだけを借り、色そのものは参考画像から取った代表の色にする
-import bpy, sys, bmesh, math
+import bpy, sys, bmesh, math, os
 import numpy as np
 from mathutils import Vector, kdtree
 from mathutils.bvhtree import BVHTree
@@ -11,6 +11,8 @@ a = sys.argv[sys.argv.index('--') + 1:]
 shape_glb, ai_glb, front_png, out_blend, out_png, ref_dir = a[:6]
 TARGET = int(a[6]) if len(a) > 6 else 14000
 TEX = int(a[7]) if len(a) > 7 else 1024
+# AVATAR_MV=1: 3 枚入力版（Hunyuan3D-2mv）で作った形。リュックは AI の形をそのまま使う（切り取らない）。色の区分けは、体も横・後ろの参考画像から読む
+MV = os.environ.get('AVATAR_MV') == '1'
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
@@ -86,18 +88,19 @@ bmesh.ops.delete(bm, geom=[v for isl in islands[1:] for v in isl], context='VERT
 CUT_CO = Vector((0, 0.078, 0.20))
 CUT_NO = Vector((0, 1, -0.115)).normalized()
 Z0, Z1 = 0.185, 0.545
-bm.faces.ensure_lookup_table()
-sub_f = [f for f in bm.faces if all(Z0 < v.co.z < Z1 for v in f.verts)]
-geom = list({v for f in sub_f for v in f.verts}) + list({e for f in sub_f for e in f.edges}) + sub_f
-bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-5, plane_co=CUT_CO, plane_no=CUT_NO, clear_outer=True, clear_inner=False)
-# 取り残し（切る範囲の上下にはみ出ていたリュックの面）も消す
-left = [v for v in bm.verts if 0.15 < v.co.z < 0.58 and (v.co - CUT_CO).dot(CUT_NO) > 0.012 and abs(v.co.x) < 0.2 and v.co.z < 0.56]
-bmesh.ops.delete(bm, geom=left, context='VERTS')
-edges = [e for e in bm.edges if e.is_boundary]
-print('cut: open edges', len(edges))
-bmesh.ops.holes_fill(bm, edges=edges, sides=0)
-bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 3])
-print('after fill: open edges', sum(1 for e in bm.edges if e.is_boundary))
+if not MV:
+    bm.faces.ensure_lookup_table()
+    sub_f = [f for f in bm.faces if all(Z0 < v.co.z < Z1 for v in f.verts)]
+    geom = list({v for f in sub_f for v in f.verts}) + list({e for f in sub_f for e in f.edges}) + sub_f
+    bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-5, plane_co=CUT_CO, plane_no=CUT_NO, clear_outer=True, clear_inner=False)
+    # 取り残し（切る範囲の上下にはみ出ていたリュックの面）も消す
+    left = [v for v in bm.verts if 0.15 < v.co.z < 0.58 and (v.co - CUT_CO).dot(CUT_NO) > 0.012 and abs(v.co.x) < 0.2 and v.co.z < 0.56]
+    bmesh.ops.delete(bm, geom=left, context='VERTS')
+    edges = [e for e in bm.edges if e.is_boundary]
+    print('cut: open edges', len(edges))
+    bmesh.ops.holes_fill(bm, edges=edges, sides=0)
+    bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 3])
+    print('after fill: open edges', sum(1 for e in bm.edges if e.is_boundary))
 bmesh.ops.smooth_vert(bm, verts=bm.verts, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
 bm.to_mesh(me)
 bm.free()
@@ -203,9 +206,12 @@ lab = np.where((lab == 0) & (z < 0.53), 3, lab)
 lab = np.where(((lab == 3) | (lab == 2)) & (z > 0.62), 0, lab)
 lab = np.where((lab == 2) & ((z < 0.13) | ((np.abs(Pn[:, 0]) > 0.17) & (z < 0.3))), 1, lab)  # ひざ下と手の赤みは肌
 on_cut = (np.abs((Pn - np.array(CUT_CO)) @ np.array(CUT_NO)) < 0.004) & (z > Z0) & (z < Z1) & (Nn @ np.array(CUT_NO) > 0.7)
+if MV:
+    on_cut = np.zeros(len(Pn), bool)
 lab = np.where(on_cut, 3, lab)
 # 背中側に残った AI のリュックのピンクは服の色にする（新しいリュックは別の部品）
-lab = np.where((lab == 2) & (Pn[:, 1] > -0.02) & (z > 0.15) & (z < 0.57), 3, lab)
+if not MV:
+    lab = np.where((lab == 2) & (Pn[:, 1] > -0.02) & (z > 0.15) & (z < 0.57), 3, lab)
 # 青は高さで 3 つに分ける（パーカー・短パン・くつ）。くつは高さで決め、ひざ下の暗い所は肌にする
 zone = np.where(z > 0.25, 0, np.where(z > 0.075, 1, 2))
 lab = np.where(lab == 3, 3 + zone, lab)
@@ -282,6 +288,20 @@ lab = np.where(side_face, np.where(rs == 0, 0, 1), lab)
 back_face = head & (Nn[:, 1] > 0.55) & (wf < 0.5) & (rb >= 0) & (rb <= 2) & ~side_face
 lab = np.where(back_face, np.where(rb == 0, 0, 1), lab)
 print('head class from side', int(side_face.sum()), 'from back', int(back_face.sum()))
+if MV:
+    # 体（首より下）の横・後ろ: 参考画像の色から 肌・ピンク（リュック・肩ひも）・青 を読む。形が参考画像に合っているので信じてよい
+    zone_ = np.where(z > 0.25, 0, np.where(z > 0.075, 1, 2))
+    def to_lab(rc):
+        return np.where(rc == 1, 1, np.where(rc == 2, 2, 3 + zone_))
+    # 後ろ向きの面: 後ろの参考画像から読む（左右のまん中と高さで合わせるので、位置が信用できる）
+    body_back = ~head & (z > 0.07) & (Nn[:, 1] > 0.45) & (wf < 0.5) & (rb >= 1) & (rb <= 3)
+    lab = np.where(body_back, to_lab(rb), lab)
+    # リュック: 背中の面より後ろに出ている所は、向きに関係なくピンク（横の参考画像は、体の前後の位置が合わないので使わない）
+    pack = ((Pn - np.array(CUT_CO)) @ np.array(CUT_NO) > 0.012) & (z > 0.215) & (z < 0.50) & (np.abs(Pn[:, 0]) < 0.135)
+    lab = np.where(pack, 2, lab)
+    lab = np.where(hand, 1, lab)
+    body_side = pack
+    print('body class: backpack', int(pack.sum()), 'from back', int(body_back.sum()))
 def island_blur(img, n):  # 絵の中の「形がある所」だけで平均する
     A = M.astype(np.float32)
     B = img.copy()
@@ -309,7 +329,7 @@ def project(px, u, v, facing, direction, lo=0.25, span=0.35):
     c = (px[iv, iu] + px[iv + 1, iu] + px[iv, iu + 1] + px[iv + 1, iu + 1]) / 4
     rc = ref_class(c)
     # 首より下は、色の区分けが合う所だけ。頭は「髪か肌」ならその色を信じる（耳・ほお・えりあしの境目は、参考画像のほうが正しい）
-    ok = ink_of(px)[iv, iu] & (z > 0.585) & (rc == 0) & (broad == 0) & (wf < 0.99)
+    ok = ink_of(px)[iv, iu] & (((z > 0.585) & (rc == 0) & (broad == 0)) | (MV & (rc == 2) & (broad == 2))) & (wf < 0.99)
     w = np.zeros(len(u), np.float32)
     d = Vector(direction)
     for i in np.nonzero(ok & (facing > lo))[0]:
@@ -390,30 +410,38 @@ wf = np.clip(wf + wb + ws1 + ws2, 0, 1)  # ここから下の wf は「参考画
 Tb = np.zeros((TEX, TEX, 3), np.float32)
 Tb[ys, xs] = base
 Tb = island_blur(Tb, 8)
-hairm = np.zeros((TEX, TEX), bool)
-hairm[ys, xs] = lab == 0
-known = np.zeros((TEX, TEX), bool)
-known[ys, xs] = (lab == 0) & (wf > 0.6)
-Kc = np.zeros((TEX, TEX, 3), np.float32)
-Kc[ys, xs] = np.where(((lab == 0) & (wf > 0.6))[:, None], (col - base * (1 - wf)[:, None]) / np.maximum(wf, 1e-4)[:, None], 0)
-grown = known.copy()
-for _ in range(120):
-    s_ = np.zeros_like(Kc)
-    c_ = np.zeros((TEX, TEX), np.float32)
-    for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
-        s_ += np.roll(Kc * grown[:, :, None], (dy, dx), (0, 1))
-        c_ += np.roll(grown.astype(np.float32), (dy, dx), (0, 1))
-    new_ = hairm & ~grown & (c_ > 0)
-    if not new_.any():
-        break
-    Kc[new_] = s_[new_] / c_[new_][:, None]
-    grown |= new_
-filled_hair = grown & ~known
-print('hair filled from neighbours', int(filled_hair.sum()), 'left flat', int((hairm & ~grown).sum()))
-Ks = Kc.copy()
-for _ in range(6):  # 広げた所だけ、ならす
-    Ks = np.where(filled_hair[:, :, None], (Ks + np.roll(Ks, 1, 0) + np.roll(Ks, -1, 0) + np.roll(Ks, 1, 1) + np.roll(Ks, -1, 1)) / 5, Kc)
-Tb = np.where(filled_hair[:, :, None], Ks, Tb)
+def grow_fill(cls):
+    """区分け cls のうち、参考画像から貼れなかった所を、まわりの貼れた色を広げて埋める（1 色で埋めるより、まだらにならない）。"""
+    global Tb
+    hairm = np.zeros((TEX, TEX), bool)
+    hairm[ys, xs] = lab == cls
+    known = np.zeros((TEX, TEX), bool)
+    known[ys, xs] = (lab == cls) & (wf > 0.6)
+    Kc = np.zeros((TEX, TEX, 3), np.float32)
+    Kc[ys, xs] = np.where(((lab == cls) & (wf > 0.6))[:, None], (col - base * (1 - wf)[:, None]) / np.maximum(wf, 1e-4)[:, None], 0)
+    grown = known.copy()
+    for _ in range(120):
+        s_ = np.zeros_like(Kc)
+        c_ = np.zeros((TEX, TEX), np.float32)
+        for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            s_ += np.roll(Kc * grown[:, :, None], (dy, dx), (0, 1))
+            c_ += np.roll(grown.astype(np.float32), (dy, dx), (0, 1))
+        new_ = hairm & ~grown & (c_ > 0)
+        if not new_.any():
+            break
+        Kc[new_] = s_[new_] / c_[new_][:, None]
+        grown |= new_
+    filled = grown & ~known
+    print('class', cls, 'filled from neighbours', int(filled.sum()), 'left flat', int((hairm & ~grown).sum()))
+    Ks = Kc.copy()
+    for _ in range(6):  # 広げた所だけ、ならす
+        Ks = np.where(filled[:, :, None], (Ks + np.roll(Ks, 1, 0) + np.roll(Ks, -1, 0) + np.roll(Ks, 1, 1) + np.roll(Ks, -1, 1)) / 5, Kc)
+    Tb = np.where(filled[:, :, None], Ks, Tb)
+
+
+grow_fill(0)
+if MV:
+    grow_fill(2)
 Tp = np.zeros((TEX, TEX, 3), np.float32)
 Tp[ys, xs] = (col - base * (1 - wf)[:, None]) / np.maximum(wf, 1e-4)[:, None]
 Wm = np.zeros((TEX, TEX), np.float32)
