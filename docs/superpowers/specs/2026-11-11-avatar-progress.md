@@ -5,13 +5,12 @@
 - 再開: 新しい担当（またはこのエージェントの続き）は、まずこのファイルと依頼書を読み、「次にやること」から始める。試作の画像・数字・ファイルの場所も、ここに書いておく。
 
 ## いまの段
-**3 枚入力版（Hunyuan3D-2mv）の生成は成功した（リーダー記入 2026-11-11 夜）。形の作り直しの作業中（上限で止まったので、続きから）。**
-- 生成: `run_ref_mv.py 123 mv123 right`、DONE 243 秒、形の工程の VRAM は Max allocated 4.416GB／reserved 4.469GB。モデル（`hunyuan3d-dit-v2-mv-fp16.safetensors`、4928151562 バイト、SHA256 は公式と一致）は `D:\mogumo-3d\ComfyUI\models\diffusion_models\` に入れ済み。ComfyUI 本体の機能への切り替えは不要だった。
-- できた物: `/mnt/d/mogumo-3d/ComfyUI/output/mogumo/boy_mv123_shape_00001_.glb`（形・900KB）、`boy_mv123_textured_00001_.glb`（AI の色付き・比較用）、`boy_mv123_views_00001〜00006_.png`（後ろの髪の毛束とリュックのふた・ポケットの形が 1 枚版より出ている）。
-- 続き（まだ保存されていない）: ①形の評価 ②`blender-paint.py`・`blender-finish.py` に通す（リュックを切る位置・骨の位置・色の区分けの高さを新しい形に合わせ直す。リュックは形が良ければ AI の形を使ってよい）③参考画像の色（正面・横・後ろ）を貼る ④骨組み・歩き・走り・ふつう／うれしいの顔 ⑤参考画像／round2-4 の最終／今回の並べ画像と実測。段ごとにコミット。
-- seed 違い（`7 mv7 right`、`123 mv123L left`）は、形の評価を見て必要ならオーナーに頼む。ComfyUI（窓A）は動いたままのはず。止まっていたら `cd D:\mogumo-3d\ComfyUI` → `..\venv\Scripts\python.exe main.py --disable-pinned-memory`（`Tee-Object -FilePath D:\mogumo-3d\work\comfy-mv.log` を付けるなら FilePath を忘れない）。8188 番を古いプロセスが使っていたら止める（`Get-NetTCPConnection -LocalPort 8188`）。
+**3 枚入力版の形で作り直した試作（男の子）ができた。オーナーの確認待ち。** 仕事2（アプリへの実装）にはまだ進まない。
+- 生成: `run_ref_mv.py 123 mv123 right`、243 秒、形の工程の VRAM 最大 4.4GB。形と色付きは `/mnt/d/mogumo-3d/ComfyUI/output/mogumo/boy_mv123_shape_00001_.glb`・`…_textured_00001_.glb`。
+- 結果のまとめは設計メモ §A.12。模型は `art/prototypes/avatar/boy-faithful-mv.glb`（874,512 バイト・14,655 三角形・描く回数 3）。
 
 ## やったこと（新しい順）
+- 2026-11-11 夜（3 枚版・段2 済み・ここまでで一区切り）: 色の直し（そでの赤いしみ・首より上の服の色・ほおと耳に横の絵・手足）。最終の画像 `mv-2-final-body.png`・`mv-2-final-faces-walk.png`・`mv-2-final-clay-backpack.png`。設計メモ §A.12（結果・実測・残り・次に聞くこと）。作り直しは `AVATAR_MV=1` を付けて `blender-paint.py`（形・色付き・正面の透明 PNG・出力・参考 PNG のフォルダ）→ `blender-finish.py`。作業用フォルダが残っていれば `av/build_mv.sh`。
 - 2026-11-11 夜（3 枚版・段1 済み）: **形の評価＝使える**。リュックが参考画像に近い小ぶりな形（ふた付きポケット・持ち手）で正しい位置に出た。後ろの髪の毛束・フード・体の厚みも 1 枚版より近い。→ **リュックは AI の形をそのまま使う**（切り取らない・作ったリュックは足さない）。`blender-paint.py`・`blender-finish.py` に `AVATAR_MV=1` の分かれ道を足して通し、骨つきの試作ができた: `art/prototypes/avatar/boy-faithful-mv.glb`（857KB・14,655 三角形・描く回数 3）。並べ画像 `mv-1-body.png`（参考／1 枚版の最終／3 枚版）。残り: そで・うでの横にピンクのしみ（後ろの絵の読みちがい）、あご・耳のまわりの暗い線、手の指先の青み。作り直しは作業用フォルダの `av/build_mv.sh`（`AVATAR_MV=1 SRC=boy_mv123`、1 枚版の最終は `.superpowers/preview/avatar/boy-r2.glb`）。
 - 2026-11-11 夜: 3 枚入力の準備。入力の絵 4 枚（`art/prototypes/avatar/input/`。横は床の影を消した。`prep-ref.py` に shadow・mirror を足した）、台本 `hunyuan-run-mv.py`（3 枚入力。形＋色）・`hunyuan-run-mv-native.py`（代替。本体の機能で形だけ。未実行）。向きは公式の見本画像で確認（left＝左向きの横顔。参考画像の横は right）。手順は設計メモ §A.11。モデルの SHA256 は `d36f5881…8e9c`、4,928,151,562 バイト。
 - 2026-11-11 夜: 3 枚入力版（Hunyuan3D-2mv）を入れる案を**調べただけ**（何も入れていない）。結果は設計メモ §A.10。結論は「入れることを推奨（形の工程だけ）。足すのはモデルのファイル 1 つ 4.93GB、ノードの追加なし、ライセンスは今と同じ」。入れるにはオーナーの確認が要る。未確認: 3 枚入力版の必要 VRAM の公式の数字、横の絵を left・right のどちらに入れるか、公式のファイルが今のノードでそのまま読めるか。
@@ -42,8 +41,8 @@
 - 注意: Windows 側（ComfyUI）は、この担当の Sandbox からは動かせない（Sandbox の外での実行は権限の判定で不許可だった）。生成はオーナーかリーダーが行う。
 
 ## 次にやること
-1. オーナーの返事を待つ（設計メモ §A.8 の「次に聞くこと」3 つ）。
-2. OK なら: 女の子（参考画像が要る。同じ台本で作れるが、切る位置・骨の位置・色の区分けの数字は女の子用に合わせ直す）→ 仕事2（アプリへの実装。明かりの当て方 0.55＋`#a2a2a2` をアプリ側に入れる、表情は `offset.x = 番号 / 2`、動きは `round2-page.ts.txt` の `poseFor`・`applyPose`）。
+1. オーナーの返事を待つ（設計メモ §A.12 の「次に聞くこと」3 つ）。
+2. OK なら: 女の子（参考画像 4 枚が要る。`prep-ref.py` → `hunyuan-run-mv.py`（絵の名前を女の子用に）→ `AVATAR_MV=1` で `blender-paint.py`・`blender-finish.py`。切る・分ける高さ、骨の位置、顔の枠と目の位置の数字は女の子用に合わせ直す）→ 仕事2（アプリへの実装。明かりの当て方 0.55＋`#a2a2a2`、表情は `offset.x = 番号 / 2`、動きは `round2-page.ts.txt` の `poseFor`・`applyPose`）。
 
 ## 止めて聞きたいこと
-- 設計メモ §A.8 の「次に聞くこと」。
+- 設計メモ §A.12 の「次に聞くこと」。

@@ -231,7 +231,7 @@ fcls = np.where(samp[:, 3] > 0.98, fcls, -1)
 ext = (z < 0.53) & ~on_cut & ((fcls == 1) | (fcls == 3))
 lab = np.where(ext & (fcls == 1), 1, lab)
 lab = np.where(ext & (fcls == 3), 3 + zone, lab)
-hand = (np.abs(Pn[:, 0]) > 0.176) & (z > 0.185) & (z < 0.262)
+hand = (np.abs(Pn[:, 0]) > (0.152 if MV else 0.176)) & (z > (0.165 if MV else 0.185)) & (z < 0.262)
 knee = (z > 0.08) & (z < 0.122)
 lab = np.where(hand | (knee & (wf < 0.5)), 1, lab)
 wf = np.where(hand & (fcls != 1), 0.0, wf)  # 手のふちで、正面の絵のそでの青を拾った点は使わない
@@ -284,7 +284,7 @@ head = z > 0.6
 rs = read_class(sd, su, sv)
 rb = read_class(bk, bu, bv)
 side_face = head & (np.abs(Nn[:, 0]) > 0.55) & (wf < 0.5) & (rs >= 0) & (rs <= 2)
-lab = np.where(side_face, np.where(rs == 0, 0, 1), lab)
+lab = np.where(side_face & ~((rs == 0) & (z < 0.69) & (Pn[:, 1] < 0.02)), np.where(rs == 0, 0, 1), lab)
 back_face = head & (Nn[:, 1] > 0.55) & (wf < 0.5) & (rb >= 0) & (rb <= 2) & ~side_face
 lab = np.where(back_face, np.where(rb == 0, 0, 1), lab)
 print('head class from side', int(side_face.sum()), 'from back', int(back_face.sum()))
@@ -294,12 +294,21 @@ if MV:
     def to_lab(rc):
         return np.where(rc == 1, 1, np.where(rc == 2, 2, 3 + zone_))
     # 後ろ向きの面: 後ろの参考画像から読む（左右のまん中と高さで合わせるので、位置が信用できる）
-    body_back = ~head & (z > 0.07) & (Nn[:, 1] > 0.45) & (wf < 0.5) & (rb >= 1) & (rb <= 3)
+    body_back = ~head & (z > 0.07) & (Nn[:, 1] > 0.45) & (wf < 0.5) & (rb >= 1) & (rb <= 3) & ~((rb == 2) & ((np.abs(Pn[:, 0]) > 0.15) | (z < 0.2)))  # うで・あしにピンクは無い
     lab = np.where(body_back, to_lab(rb), lab)
     # リュック: 背中の面より後ろに出ている所は、向きに関係なくピンク（横の参考画像は、体の前後の位置が合わないので使わない）
     pack = ((Pn - np.array(CUT_CO)) @ np.array(CUT_NO) > 0.012) & (z > 0.215) & (z < 0.50) & (np.abs(Pn[:, 0]) < 0.135)
     lab = np.where(pack, 2, lab)
     lab = np.where(hand, 1, lab)
+    # AI の色にあった赤いしみ（そで・肩）をピンクと読まない: ピンクは、リュック・後ろの絵で読めた肩ひも・体の前側の肩ひもだけ
+    stray = (lab == 2) & ~pack & ~(wf > 0.5) & ~(body_back & (rb == 2) & (z > 0.44) & (np.abs(Pn[:, 0]) < 0.13))
+    lab = np.where(stray, 3 + zone_, lab)
+    # あご・ほおの横（耳より前・耳たぶより下）は必ず肌（AI の色の影を髪と読んだ帯が出るのを防ぐ）
+    jaw = (z > 0.585) & (z < 0.665) & (Pn[:, 1] < 0.0) & (np.abs(Nn[:, 0]) > 0.4) & (wf < 0.6)
+    lab = np.where(jaw, 1, lab)
+    # 首より上に服の色は無い: 顔の側（前半分）は肌、後ろ半分は髪
+    lab = np.where((lab >= 2) & (z > 0.58) & (Pn[:, 1] < 0.03) & (wf < 0.6), 1, lab)
+    lab = np.where((lab >= 2) & (z > 0.62) & (Pn[:, 1] >= 0.03) & ~pack, 0, lab)
     body_side = pack
     print('body class: backpack', int(pack.sum()), 'from back', int(body_back.sum()))
 def island_blur(img, n):  # 絵の中の「形がある所」だけで平均する
@@ -329,7 +338,7 @@ def project(px, u, v, facing, direction, lo=0.25, span=0.35):
     c = (px[iv, iu] + px[iv + 1, iu] + px[iv, iu + 1] + px[iv + 1, iu + 1]) / 4
     rc = ref_class(c)
     # 首より下は、色の区分けが合う所だけ。頭は「髪か肌」ならその色を信じる（耳・ほお・えりあしの境目は、参考画像のほうが正しい）
-    ok = ink_of(px)[iv, iu] & (((z > 0.585) & (rc == 0) & (broad == 0)) | (MV & (rc == 2) & (broad == 2))) & (wf < 0.99)
+    ok = ink_of(px)[iv, iu] & (((z > 0.585) & (rc == 0) & (broad == 0)) | (MV & (rc == 2) & (broad == 2)) | (MV & (z > 0.585) & (rc == 1) & (broad == 1))) & (wf < 0.99)
     w = np.zeros(len(u), np.float32)
     d = Vector(direction)
     for i in np.nonzero(ok & (facing > lo))[0]:
@@ -410,15 +419,15 @@ wf = np.clip(wf + wb + ws1 + ws2, 0, 1)  # ここから下の wf は「参考画
 Tb = np.zeros((TEX, TEX, 3), np.float32)
 Tb[ys, xs] = base
 Tb = island_blur(Tb, 8)
-def grow_fill(cls):
+def grow_fill(cls, zmin=-1.0):
     """区分け cls のうち、参考画像から貼れなかった所を、まわりの貼れた色を広げて埋める（1 色で埋めるより、まだらにならない）。"""
     global Tb
     hairm = np.zeros((TEX, TEX), bool)
-    hairm[ys, xs] = lab == cls
+    hairm[ys, xs] = (lab == cls) & (z > zmin)
     known = np.zeros((TEX, TEX), bool)
-    known[ys, xs] = (lab == cls) & (wf > 0.6)
+    known[ys, xs] = (lab == cls) & (wf > 0.6) & (z > zmin)
     Kc = np.zeros((TEX, TEX, 3), np.float32)
-    Kc[ys, xs] = np.where(((lab == cls) & (wf > 0.6))[:, None], (col - base * (1 - wf)[:, None]) / np.maximum(wf, 1e-4)[:, None], 0)
+    Kc[ys, xs] = np.where(((lab == cls) & (wf > 0.6) & (z > zmin))[:, None], (col - base * (1 - wf)[:, None]) / np.maximum(wf, 1e-4)[:, None], 0)
     grown = known.copy()
     for _ in range(120):
         s_ = np.zeros_like(Kc)
@@ -442,6 +451,7 @@ def grow_fill(cls):
 grow_fill(0)
 if MV:
     grow_fill(2)
+    grow_fill(1, 0.585)  # 肌は頭（ほお・耳）だけ。手足は 1 色＋陰影のまま
 Tp = np.zeros((TEX, TEX, 3), np.float32)
 Tp[ys, xs] = (col - base * (1 - wf)[:, None]) / np.maximum(wf, 1e-4)[:, None]
 Wm = np.zeros((TEX, TEX), np.float32)
