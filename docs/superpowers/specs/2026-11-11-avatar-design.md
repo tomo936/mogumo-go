@@ -230,6 +230,61 @@
 
 **調べた先**: https://huggingface.co/tencent/Hunyuan3D-2mv ／ https://huggingface.co/tencent/Hunyuan3D-2mv/tree/main/hunyuan3d-dit-v2-mv ／ https://github.com/Tencent/Hunyuan3D-2 （LICENSE も）／ https://docs.comfy.org/tutorials/3d/hunyuan3D-2 ／ https://huggingface.co/Kijai/Hunyuan3D-2_safetensors/tree/main ／ https://github.com/kijai/ComfyUI-Hunyuan3DWrapper ／ PC の `D:\mogumo-3d\ComfyUI\custom_nodes\ComfyUI-Hunyuan3DWrapper`（読んだだけ）
 
+### A.11 3 枚入力版を入れて形を作る手順（2026-11-11 オーナー承認「いいよ、入れて実装してもらお」。**そのまま貼れる形**）
+
+用意した物（リポジトリの中。まだ何も実行していない）:
+- 入力の絵 4 枚（背景を消した 1024×1024）: `art/prototypes/avatar/input/boy-ref-front-rgba.png`（正面）・`boy-ref-side-rgba.png`（横。床の影を消した）・`boy-ref-side-mirror-rgba.png`（横の左右を返した物。予備）・`boy-ref-back-rgba.png`（後ろ）
+- 台本: `art/prototypes/avatar/hunyuan-run-mv.py`（3 枚入力。形＋色）、`hunyuan-run-mv-native.py`（代替。ComfyUI 本体の機能で形だけ）
+- 向きの決まりは確認済み: Tencent 公式の見本画像（`assets/example_mv_images/1/left.png`）は、**left ＝ キャラが画面の左を向いた横顔**。参考画像の横の絵は右を向いているので、**right に入れる**（台本の既定）。
+- 台本が使うノード（`LoadImage`・`ImageScale`・`JoinImageWithAlpha`・`Hy3DGenerateMeshMultiView` ほか）は、どれも今の環境に入っていることを、保存済みのノード一覧（`D:\mogumo-3d\work\object_info.json`）で確かめた。3 枚入力のノードは、作り終わるとモデルをメモリから外すので、色の工程は今までと同じ条件で動く。
+
+**手順 1（WSL。Claude Code の入力欄に `!` を付けて 1 行ずつ）: 絵と台本を Windows 側へ置く**
+```
+! cp /home/otosa/mogumo-go/art/prototypes/avatar/input/boy-ref-front-rgba.png /home/otosa/mogumo-go/art/prototypes/avatar/input/boy-ref-side-rgba.png /home/otosa/mogumo-go/art/prototypes/avatar/input/boy-ref-side-mirror-rgba.png /home/otosa/mogumo-go/art/prototypes/avatar/input/boy-ref-back-rgba.png /mnt/d/mogumo-3d/ComfyUI/input/
+! cp /home/otosa/mogumo-go/art/prototypes/avatar/hunyuan-run-mv.py /mnt/d/mogumo-3d/tools/run_ref_mv.py
+! cp /home/otosa/mogumo-go/art/prototypes/avatar/hunyuan-run-mv-native.py /mnt/d/mogumo-3d/tools/run_ref_mv_native.py
+```
+
+**手順 2（PowerShell）: モデルのファイルを入れて、本物か確かめる**（4.93GB。100Mbps で 7 分ほど）
+```powershell
+curl.exe -L -o "D:\mogumo-3d\ComfyUI\models\diffusion_models\hunyuan3d-dit-v2-mv-fp16.safetensors" "https://huggingface.co/tencent/Hunyuan3D-2mv/resolve/main/hunyuan3d-dit-v2-mv/model.fp16.safetensors"
+(Get-Item "D:\mogumo-3d\ComfyUI\models\diffusion_models\hunyuan3d-dit-v2-mv-fp16.safetensors").Length
+(Get-FileHash "D:\mogumo-3d\ComfyUI\models\diffusion_models\hunyuan3d-dit-v2-mv-fp16.safetensors" -Algorithm SHA256).Hash.ToLower()
+```
+- 合っていれば、大きさは `4928151562`、SHA256 は `d36f5881bcdc56726b73e517cd444c13c60732431622da7268145355c8d38e9c`（リーダーが公式の配布元から取った値）。**ちがっていたら使わずに消して、知らせる。**
+
+**手順 3（PowerShell の窓 A）: ComfyUI を起動**（前回と同じ起動のしかたでよい。下は記録を残す形）
+```powershell
+cd D:\mogumo-3d\ComfyUI
+..\venv\Scripts\python.exe main.py --disable-pinned-memory 2>&1 | Tee-Object D:\mogumo-3d\work\comfy-mv.log
+```
+- 「To see the GUI go to: http://127.0.0.1:8188」が出たら、次へ。
+
+**手順 4（PowerShell の窓 B）: 生成**（1 回 3〜5 分の見込み）
+```powershell
+D:\mogumo-3d\venv\Scripts\python.exe D:\mogumo-3d\tools\run_ref_mv.py 123 mv123 right
+```
+- 「DONE success ◯◯s」が出れば成功。できる物: `D:\mogumo-3d\ComfyUI\output\mogumo\boy_mv123_shape_00001_.glb`（形）・`boy_mv123_textured_00001_.glb`（色付き）・`boy_mv123_views_*.png`。
+- 余裕があれば、くらべ用にもう 2 回（どちらも数分）:
+```powershell
+D:\mogumo-3d\venv\Scripts\python.exe D:\mogumo-3d\tools\run_ref_mv.py 7 mv7 right
+D:\mogumo-3d\venv\Scripts\python.exe D:\mogumo-3d\tools\run_ref_mv.py 123 mv123L left
+```
+- 伝えてほしいこと: ①「DONE … ◯◯s」の秒数 ②窓 A に出る `Max allocated memory: max_memory=◯◯ GB`（形の工程で使った VRAM。`comfy-mv.log` にも残る）③失敗したら、窓 B の「REJECTED …」または「FAILED …」の行と、窓 A の最後の 20 行ほど。
+
+**うまくいかなかったとき（上から順に）**
+1. 窓 B に「REJECTED」で `model` の名前が無いと出る → ファイルの名前・置き場所（手順 2）を確かめて、ComfyUI を起動し直す。
+2. 色の工程でメモリ不足（out of memory）になった → 形のファイル（`…_shape_…glb`）ができていれば、それだけで先へ進める（色の区分けは、参考画像から読むように台本を直す）。できていなければ知らせる。
+3. **モデルが読めない**（窓 A に読み込みのエラー。公式のファイルの形式が今のノードに合わない場合）→ **同じファイルを写して、ComfyUI 本体の機能で形だけ作る**（新しいダウンロードは要らない）:
+```powershell
+Copy-Item "D:\mogumo-3d\ComfyUI\models\diffusion_models\hunyuan3d-dit-v2-mv-fp16.safetensors" "D:\mogumo-3d\ComfyUI\models\checkpoints\hunyuan3d-dit-v2-mv.safetensors"
+D:\mogumo-3d\venv\Scripts\python.exe D:\mogumo-3d\tools\run_ref_mv_native.py 123 mvn123 right
+```
+   できる物: `D:\mogumo-3d\ComfyUI\output\mogumo\boy_mvn123_native_00001_.glb`（形だけ・色なし）。この台本は ComfyUI 公式の説明と同じつなぎ方だが、**まだ 1 度も動かしていない**（入力名だけ確かめた）。
+4. 3 も読めない → `.ckpt` 版（同じフォルダの `model.fp16.ckpt`、4.93GB）を入れる手があるが、今のノードは safetensors 前提の読み方なので、通る見込みは低い。その前に知らせてほしい（SHA256 もリーダーが取り直す）。
+
+**生成のあと（アバター担当）**: できた形と色付きを、今の台本（`blender-paint.py`・`blender-finish.py`）に通す。リュックの切る位置・骨の位置・色の区分けの高さの数字は、新しい形に合わせ直す。参考画像／1 枚版（今回の最終）／3 枚版を並べた画像を作って報告する。
+
 ## 0. 先に結論
 
 1. **オーナー決定（2026-11-11）でアバターは 3D。** 2D のコマ絵・Live2D・板に貼る絵は対象外（くらべていない）。
