@@ -230,7 +230,13 @@ strong = wf > 0.9
 rep = np.zeros((6, 3), np.float32)
 for k in range(6):
     sel = strong & (lab == k)
-    rep[k] = np.median(samp[sel][:, :3], axis=0) if sel.sum() > 100 else (0.5, 0.5, 0.5)
+    if sel.sum() > 100:
+        cc = samp[sel][:, :3]
+        lum = cc.mean(1)
+        lo_, hi_ = np.percentile(lum, [55, 88])
+        rep[k] = np.median(cc[(lum >= lo_) & (lum <= hi_)], axis=0)
+    else:
+        rep[k] = (0.5, 0.5, 0.5)
     print('class', names[k], 'ref', np.round(rep[k], 2), 'n', int((lab == k).sum()), 'front n', int(sel.sum()))
 def load_top(name):
     im = bpy.data.images.load(f'{ref_dir}/{name}.png')
@@ -272,6 +278,20 @@ lab = np.where(side_face, np.where(rs == 0, 0, 1), lab)
 back_face = head & (Nn[:, 1] > 0.55) & (wf < 0.5) & (rb >= 0) & (rb <= 2) & ~side_face
 lab = np.where(back_face, np.where(rb == 0, 0, 1), lab)
 print('head class from side', int(side_face.sum()), 'from back', int(back_face.sum()))
+def island_blur(img, n):  # 絵の中の「形がある所」だけで平均する
+    A = M.astype(np.float32)
+    B = img.copy()
+    for _ in range(n):
+        s_ = np.zeros_like(B)
+        c_ = np.zeros_like(A)
+        for dy, dx in ((0, 0), (0, 1), (0, -1), (1, 0), (-1, 0)):
+            s_ += np.roll(B * (A[:, :, None] if B.ndim == 3 else A), (dy, dx), (0, 1))
+            c_ += np.roll(A, (dy, dx), (0, 1))
+        cc = c_[:, :, None] if B.ndim == 3 else c_
+        B = np.where(cc > 0, s_ / np.maximum(cc, 1e-6), B)
+    return B
+
+
 base = rep[lab]
 broad = np.where(lab >= 3, 3, lab)
 
@@ -298,26 +318,69 @@ cs1, ws1 = project(sd, su, sv, -Nn[:, 0], (-1, 0, 0))
 cs2, ws2 = project(sd, su, sv, Nn[:, 0], (1, 0, 0))
 print('back-painted', int((wb > 0).sum()), 'side-painted', int((ws1 > 0).sum()), int((ws2 > 0).sum()))
 wf_front = wf.copy()
+# ---- 粘土らしさ（正面から貼れない所の、1 色の塗りに足す）----
+body = z < 0.585
+
+
+def shade_from(px, u, v, facing, direction, lo=0.2, span=0.4):
+    """参考画像の「明るさの変化」だけを読む。色の区分けが同じ所だけ。返すのは、区分けごとのふつうの明るさに対する比と、重み。"""
+    H_, W_ = px.shape[:2]
+    iu = np.clip(u.astype(int), 1, W_ - 3)
+    iv = np.clip(v.astype(int), 1, H_ - 3)
+    c = sum(px[iv + dy, iu + dx] for dy in (-1, 0, 1, 2) for dx in (-1, 0, 1, 2)) / 16  # 4x4 の平均（ざらつきを拾わない）
+    ok = ink_of(px)[iv, iu] & (ref_class(c) == broad) & body & (wf_front < 0.9) & (facing > lo)
+    ratio = np.ones(len(u), np.float32)
+    w = np.zeros(len(u), np.float32)
+    d = Vector(direction)
+    idx = np.nonzero(ok)[0]
+    seen = np.zeros(len(u), bool)
+    for i in idx:
+        if bvh.ray_cast(Vector(Pn[i]) + Vector(Nn[i]) * 0.004, d)[0] is None:
+            seen[i] = True
+    lum = c.mean(1)
+    for k in range(6):
+        m = seen & (lab == k)
+        if m.sum() > 200:
+            ratio[m] = lum[m] / np.median(lum[m])
+            w[m] = np.clip((facing[m] - lo) / span, 0, 1)
+    return np.clip(ratio, 0.8, 1.12), w
+
+
+rb_, wb_ = shade_from(bk, bu, bv, Nn[:, 1], (0, 1, 0))
+r1_, w1_ = shade_from(sd, su, sv, -Nn[:, 0], (-1, 0, 0))
+r2_, w2_ = shade_from(sd, su, sv, Nn[:, 0], (1, 0, 0))
+wt_ = wb_ + w1_ + w2_
+kk = np.where(wt_ > 1, 1 / np.maximum(wt_, 1e-6), 1.0)
+shade = 1 + ((rb_ - 1) * wb_ + (r1_ - 1) * w1_ + (r2_ - 1) * w2_) * kk
+print('clay: shaded from reference', int((wt_ > 0).sum()), 'range', round(float(shade.min()), 2), round(float(shade.max()), 2))
+# くぼみの影: 点のまわり（面の外向き）へ光線を何本か打ち、近くで何かに当たるほど暗くする
+rng = np.random.default_rng(5)
+dirs = rng.normal(size=(10, 3))
+dirs /= np.linalg.norm(dirs, axis=1, keepdims=True)
+ao = np.ones(len(Pn), np.float32)
+todo = np.nonzero(wf_front < 0.9)[0]
+for i in todo:
+    n_ = Nn[i]
+    p_ = Vector(Pn[i]) + Vector(n_) * 0.004
+    hit = 0.0
+    for d_ in dirs:
+        dd = d_ if d_ @ n_ > 0 else -d_
+        dd = dd + n_ * 0.4
+        h = bvh.ray_cast(p_, Vector(dd), 0.07)
+        if h[0] is not None:
+            hit += 1 - h[3] / 0.07
+    ao[i] = 1 - 0.3 * hit / len(dirs)
+print('clay: crease shadow range', round(float(ao.min()), 2), round(float(ao.max()), 2))
+SH = np.ones((TEX, TEX), np.float32)
+SH[ys, xs] = shade * ao
+SH = island_blur(SH, 5)  # やわらかく（まだら・ざらつきにしない）
+base = base * SH[ys, xs][:, None]
 rest = 1 - wf
 wsum = wb + ws1 + ws2
 k = np.where(wsum > 1, 1 / np.maximum(wsum, 1e-6), 1.0)
 wb, ws1, ws2 = wb * k * rest, ws1 * k * rest, ws2 * k * rest
 col = samp[:, :3] * wf[:, None] + cb * wb[:, None] + cs1 * ws1[:, None] + cs2 * ws2[:, None] + base * (rest - wb - ws1 - ws2)[:, None]
 wf = np.clip(wf + wb + ws1 + ws2, 0, 1)  # ここから下の wf は「参考画像から貼れた割合」
-
-def island_blur(img, n):  # 絵の中の「形がある所」だけで平均する
-    A = M.astype(np.float32)
-    B = img.copy()
-    for _ in range(n):
-        s_ = np.zeros_like(B)
-        c_ = np.zeros_like(A)
-        for dy, dx in ((0, 0), (0, 1), (0, -1), (1, 0), (-1, 0)):
-            s_ += np.roll(B * (A[:, :, None] if B.ndim == 3 else A), (dy, dx), (0, 1))
-            c_ += np.roll(A, (dy, dx), (0, 1))
-        cc = c_[:, :, None] if B.ndim == 3 else c_
-        B = np.where(cc > 0, s_ / np.maximum(cc, 1e-6), B)
-    return B
-
 
 Tb = np.zeros((TEX, TEX, 3), np.float32)
 Tb[ys, xs] = base
