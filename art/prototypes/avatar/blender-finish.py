@@ -44,7 +44,7 @@ pmat.node_tree.links.new(vc.outputs['Color'], pb.inputs['Base Color'])
 
 def paint(o, k):
     ca = o.data.color_attributes.new('Col', 'FLOAT_COLOR', 'CORNER')
-    c = lin([min(1.0, x * k * s_) for x, s_ in zip(pink, (0.97, 0.9, 0.93))])
+    c = lin([min(1.0, x * k * s_) for x, s_ in zip(pink, (0.97, 0.86, 0.94))])
     for d in ca.data:
         d.color = c
     o.data.materials.append(pmat)
@@ -121,11 +121,6 @@ for sx in (-1, 1):
     parts.append(rbox((sx * 0.045, D + 0.039, -0.05), (0.02, 0.01, 0.05), 0.004, 0.86, 2))  # ベルト
     parts.append(rbox((sx * 0.045, D + 0.044, -0.068), (0.026, 0.008, 0.013), 0.003, 0.76, 2))  # 留め具
     parts.append(rbox((sx * (W / 2 + 0.006), D * 0.5, -0.068), (0.03, 0.068, 0.08), 0.013, 0.95))  # 横のポケット
-    st = rbox((0, 0, 0), (0.03, 0.012, 0.085), 0.005, 0.93, 2)  # 肩ひも（リュックの上から肩へ。上のはしはフードの中へ）
-    st.matrix_world = Matrix.Translation((sx * 0.082, -0.004, H / 2 - 0.012)) @ Matrix.Rotation(-sx * 0.5, 4, 'Y') @ Matrix.Rotation(0.5, 4, 'X')
-    active(st)
-    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-    parts.append(st)
 bpy.ops.mesh.primitive_torus_add(major_radius=0.03, minor_radius=0.0085, major_segments=16, minor_segments=8, location=(0, D * 0.42, H / 2 - 0.006), rotation=(math.pi / 2, 0, 0))
 parts.append(paint(bpy.context.object, 0.9))  # 持ち手
 bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
@@ -142,6 +137,69 @@ zc = 0.375
 pack.matrix_world = Matrix.Translation((0, CUT_CO.y + SLOPE * (zc - CUT_CO.z) - 0.012, zc)) @ Matrix.Rotation(-math.atan(SLOPE), 4, 'X')
 active(pack)
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+
+from mathutils.bvhtree import BVHTree
+body_bvh = BVHTree.FromObject(av, bpy.context.evaluated_depsgraph_get())
+def back_point(x, z_):
+    """後ろから前へ光線を打って、背中側の表面の点を返す（肩ひもを背中・フードの上にはわせるため）。"""
+    hit = body_bvh.ray_cast(Vector((x, 0.6, z_)), Vector((0, -1, 0)))
+    return Vector((x, (hit[0].y if hit[0] is not None else 0.1) + 0.002, z_))
+
+
+def band(xz, width=0.027, thick=0.01, k=0.93):
+    """(左右, 高さ) の点をなめらかにつないだ道を、背中の表面にはり付けて、平たい帯（肩ひも）にする。"""
+    P_ = [Vector((x, 0, z_)) for x, z_ in xz]
+    P_ = [P_[0]] + P_ + [P_[-1]]
+    path = []
+    for i in range(1, len(P_) - 2):
+        for j in range(5):
+            t = j / 5
+            a_, b_, c_, d_ = P_[i - 1], P_[i], P_[i + 1], P_[i + 2]
+            path.append(0.5 * ((2 * b_) + (-a_ + c_) * t + (2 * a_ - 5 * b_ + 4 * c_ - d_) * t * t + (-a_ + 3 * b_ - 3 * c_ + d_) * t ** 3))
+    path.append(P_[-2])
+    path = [back_point(p.x, p.z) for p in path]
+    # 表面のでこぼこで帯ががたつかないよう、前後の位置だけ少しならす
+    for _ in range(3):
+        ys_ = [p.y for p in path]
+        for i in range(1, len(path) - 1):
+            path[i].y = (ys_[i - 1] + ys_[i] * 2 + ys_[i + 1]) / 4
+    bm_ = bmesh.new()
+    rings = []
+    out = Vector((0, 1, 0))
+    for i, p in enumerate(path):
+        tan = (path[min(i + 1, len(path) - 1)] - path[max(i - 1, 0)]).normalized()
+        o2 = (out - tan * out.dot(tan)).normalized()
+        side = tan.cross(o2).normalized()
+        rings.append([bm_.verts.new(p + side * sx * width / 2 + o2 * oz) for sx, oz in ((-1, -0.006), (1, -0.006), (1, thick), (-1, thick))])
+    for r0, r1 in zip(rings, rings[1:]):
+        for q in range(4):
+            bm_.faces.new((r0[q], r0[(q + 1) % 4], r1[(q + 1) % 4], r1[q]))
+    bm_.faces.new(rings[0][::-1])
+    bm_.faces.new(rings[-1])
+    bmesh.ops.recalc_face_normals(bm_, faces=bm_.faces)
+    m_ = bpy.data.meshes.new('strap')
+    bm_.to_mesh(m_)
+    bm_.free()
+    o_ = bpy.data.objects.new('strap', m_)
+    bpy.context.collection.objects.link(o_)
+    active(o_)
+    md = o_.modifiers.new('n', 'WEIGHTED_NORMAL')
+    bpy.ops.object.modifier_apply(modifier='n')
+    return paint(o_, k)
+
+
+straps = []
+for sx in (-1, 1):
+    # 上: リュックの上のふち → 背中・フードの上 → 肩（髪の下へ入って終わる。参考画像の後ろ姿の V 字）
+    straps.append(band([(sx * 0.055, 0.455), (sx * 0.075, 0.495), (sx * 0.098, 0.53), (sx * 0.112, 0.552)]))
+    # 下: リュックの下の横 → わきの下へ（うでの付け根で終わる）
+    straps.append(band([(sx * 0.095, 0.30), (sx * 0.125, 0.312), (sx * 0.152, 0.328), (sx * 0.168, 0.34)]))
+active(pack)
+for o_ in straps:
+    o_.select_set(True)
+bpy.ops.object.join()
+pack = bpy.context.object
 print('backpack tris', sum(len(p.vertices) - 2 for p in pack.data.polygons))
 
 # ===================== ② 顔の膜と、表情の並べ絵 =====================

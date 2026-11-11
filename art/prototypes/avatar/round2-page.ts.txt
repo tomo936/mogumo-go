@@ -75,7 +75,7 @@ export function applyPose(r: Rig, p: ReturnType<typeof poseFor>) {
 
 type Look = { cells: number; emissive: number; gray: string; packGray?: string }
 const LOOK_PREV: Look = { cells: 5, emissive: 0.62, gray: '#5e5e5e' }
-const LOOK_NOW: Look = { cells: Number(new URLSearchParams(location.search).get('cells') ?? 2), emissive: Number(new URLSearchParams(location.search).get('em') ?? 0.62), gray: '#' + (new URLSearchParams(location.search).get('gray') ?? '5e5e5e') }
+const LOOK_NOW: Look = { cells: Number(new URLSearchParams(location.search).get('cells') ?? 2), emissive: Number(new URLSearchParams(location.search).get('em') ?? 0.55), gray: '#' + (new URLSearchParams(location.search).get('gray') ?? 'a2a2a2') }
 
 async function load(url: string, look: Look | null): Promise<Rig> {
   const gltf = await new GLTFLoader().loadAsync(url)
