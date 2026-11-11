@@ -88,7 +88,7 @@ bmesh.ops.delete(bm, geom=[v for isl in islands[1:] for v in isl], context='VERT
 CUT_CO = Vector((0, 0.078, 0.20))
 CUT_NO = Vector((0, 1, -0.115)).normalized()
 Z0, Z1 = 0.185, 0.545
-if not MV:
+if True:
     bm.faces.ensure_lookup_table()
     sub_f = [f for f in bm.faces if all(Z0 < v.co.z < Z1 for v in f.verts)]
     geom = list({v for f in sub_f for v in f.verts}) + list({e for f in sub_f for e in f.edges}) + sub_f
@@ -104,6 +104,58 @@ if not MV:
 bmesh.ops.smooth_vert(bm, verts=bm.verts, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
 bm.to_mesh(me)
 bm.free()
+ARM_X = 0.142
+ARM_OK = False
+if MV:
+    # うでは、わきから そで口 まで体にくっついた 1 枚の皮なので、動かすと境目の面がのびて色がにじむ。
+    # わきの溝（左右 0.142）より外側を箱で切り取り、うで（切り口つき）と体（切り口つき）の 2 つの閉じた形にする
+    def cutter(sgn):
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(sgn * (ARM_X + 0.3), 0, 0.33))
+        c_ = bpy.context.object
+        c_.scale = (0.6, 1.4, 0.46)  # x: 0.142〜0.742、z: 0.10〜0.56
+        return c_
+    def boolean(obj, cut, op):
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        m_ = obj.modifiers.new('b', 'BOOLEAN')
+        m_.operation = op
+        m_.object = cut
+        m_.solver = 'EXACT'
+        bpy.ops.object.modifier_apply(modifier='b')
+    try:
+        n0 = len(me.polygons)
+        arms = []
+        for sgn, name in ((1, 'armL'), (-1, 'armR')):
+            cut = cutter(sgn)
+            bpy.ops.object.select_all(action='DESELECT')
+            o.select_set(True)
+            bpy.context.view_layer.objects.active = o
+            bpy.ops.object.duplicate()
+            arm_o = bpy.context.object
+            boolean(arm_o, cut, 'INTERSECT')
+            boolean(o, cut, 'DIFFERENCE')
+            bpy.data.objects.remove(cut)
+            g_ = arm_o.vertex_groups.new(name=name)
+            g_.add([v.index for v in arm_o.data.vertices], 1.0, 'REPLACE')
+            arms.append(arm_o)
+            print('arm cut', name, 'arm faces', len(arm_o.data.polygons), 'body faces', len(o.data.polygons))
+        ok_ = all(len(a_.data.polygons) > 300 for a_ in arms) and len(o.data.polygons) > n0 * 0.5
+        bpy.ops.object.select_all(action='DESELECT')
+        for a_ in arms:
+            a_.select_set(True)
+        o.select_set(True)
+        bpy.context.view_layer.objects.active = o
+        bpy.ops.object.join()
+        me = o.data
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.mesh.quads_convert_to_tris()
+        bpy.ops.object.mode_set(mode='OBJECT')
+        ARM_OK = ok_
+        print('arm cut joined: faces', len(me.polygons), 'ok', ARM_OK)
+    except Exception as e:
+        print('arm cut FAILED', e)
 bpy.context.view_layer.objects.active = o
 m = o.modifiers.new('d', 'DECIMATE')
 m.ratio = min(1.0, TARGET / len(me.polygons))
@@ -206,12 +258,9 @@ lab = np.where((lab == 0) & (z < 0.53), 3, lab)
 lab = np.where(((lab == 3) | (lab == 2)) & (z > 0.62), 0, lab)
 lab = np.where((lab == 2) & ((z < 0.13) | ((np.abs(Pn[:, 0]) > 0.17) & (z < 0.3))), 1, lab)  # ひざ下と手の赤みは肌
 on_cut = (np.abs((Pn - np.array(CUT_CO)) @ np.array(CUT_NO)) < 0.004) & (z > Z0) & (z < Z1) & (Nn @ np.array(CUT_NO) > 0.7)
-if MV:
-    on_cut = np.zeros(len(Pn), bool)
 lab = np.where(on_cut, 3, lab)
 # 背中側に残った AI のリュックのピンクは服の色にする（新しいリュックは別の部品）
-if not MV:
-    lab = np.where((lab == 2) & (Pn[:, 1] > -0.02) & (z > 0.15) & (z < 0.57), 3, lab)
+lab = np.where((lab == 2) & (Pn[:, 1] > -0.02) & (z > 0.15) & (z < 0.57), 3, lab)
 # 青は高さで 3 つに分ける（パーカー・短パン・くつ）。くつは高さで決め、ひざ下の暗い所は肌にする
 zone = np.where(z > 0.25, 0, np.where(z > 0.075, 1, 2))
 lab = np.where(lab == 3, 3 + zone, lab)
@@ -233,8 +282,14 @@ lab = np.where(ext & (fcls == 1), 1, lab)
 lab = np.where(ext & (fcls == 3), 3 + zone, lab)
 hand = (np.abs(Pn[:, 0]) > (0.152 if MV else 0.176)) & (z > (0.165 if MV else 0.185)) & (z < 0.262)
 knee = (z > 0.08) & (z < 0.122)
-lab = np.where(hand | (knee & (wf < 0.5)), 1, lab)
-wf = np.where(hand & (fcls != 1), 0.0, wf)  # 手のふちで、正面の絵のそでの青を拾った点は使わない
+if MV:
+    lab = np.where(hand, np.where(fcls == 1, 1, np.where(fcls == 3, 3, np.where(z < 0.243, 1, 3))), lab)
+    wf = np.where(hand & (fcls != 1) & (fcls != 3), 0.0, wf)  # 手のふちで背景などを拾った点は使わない
+    lab = np.where(knee & (wf < 0.5), 1, lab)
+else:
+    lab = np.where(hand | (knee & (wf < 0.5)), 1, lab)
+    wf = np.where(hand & (fcls != 1), 0.0, wf)  # 手のふちで、正面の絵のそでの青を拾った点は使わない
+lab = np.where(lab == 3, 3 + zone, lab)
 names = ['hair', 'skin', 'pink', 'hoodie', 'shorts', 'shoes']
 strong = wf > 0.9
 rep = np.zeros((6, 3), np.float32)
@@ -294,32 +349,35 @@ if MV:
     def to_lab(rc):
         return np.where(rc == 1, 1, np.where(rc == 2, 2, 3 + zone_))
     # 後ろ向きの面: 後ろの参考画像から読む（左右のまん中と高さで合わせるので、位置が信用できる）
-    body_back = ~head & (z > 0.07) & (Nn[:, 1] > 0.45) & (wf < 0.5) & (rb >= 1) & (rb <= 3) & ~((rb == 2) & ((np.abs(Pn[:, 0]) > 0.15) | (z < 0.2)))  # うで・あしにピンクは無い
+    # 後ろ向きの面: 後ろの参考画像から、肌か服かだけ読む。ピンク（リュック・肩ひも）は別部品にしたので、体には出さない
+    body_back = ~head & (z > 0.07) & (Nn[:, 1] > 0.45) & (wf < 0.5) & ((rb == 1) | (rb == 3)) & ~on_cut & ~hand
     lab = np.where(body_back, to_lab(rb), lab)
-    # リュック: 背中の面より後ろに出ている所は、向きに関係なくピンク（横の参考画像は、体の前後の位置が合わないので使わない）
-    pack = ((Pn - np.array(CUT_CO)) @ np.array(CUT_NO) > 0.012) & (z > 0.215) & (z < 0.50) & (np.abs(Pn[:, 0]) < 0.135)
-    lab = np.where(pack, 2, lab)
-    lab = np.where(hand, 1, lab)
-    # AI の色にあった赤いしみ（そで・肩）をピンクと読まない: ピンクは、リュック・後ろの絵で読めた肩ひも・体の前側の肩ひもだけ
-    stray = (lab == 2) & ~pack & ~(wf > 0.5) & ~(body_back & (rb == 2) & (z > 0.44) & (np.abs(Pn[:, 0]) < 0.13))
-    lab = np.where(stray, 3 + zone_, lab)
+    lab = np.where((lab == 2) & ~(wf > 0.5), 3 + zone_, lab)  # 正面の参考画像から貼れた肩ひも以外のピンクは、服の色に
+    capf = (np.abs(np.abs(Pn[:, 0]) - ARM_X) < 0.004) & (np.abs(Nn[:, 0]) > 0.8) & (z > 0.1) & (z < 0.56)
+    lab = np.where(capf & (lab != 1), 3 + zone_, lab)  # うでと体の切り口
+    pack = np.zeros(len(Pn), bool)
+    body_side = pack
     # あご・ほおの横（耳より前・耳たぶより下）は必ず肌（AI の色の影を髪と読んだ帯が出るのを防ぐ）
     jaw = (z > 0.585) & (z < 0.665) & (Pn[:, 1] < 0.0) & (np.abs(Nn[:, 0]) > 0.4) & (wf < 0.6)
     lab = np.where(jaw, 1, lab)
     # 首より上に服の色は無い: 顔の側（前半分）は肌、後ろ半分は髪
     lab = np.where((lab >= 2) & (z > 0.58) & (Pn[:, 1] < 0.03) & (wf < 0.6), 1, lab)
-    lab = np.where((lab >= 2) & (z > 0.62) & (Pn[:, 1] >= 0.03) & ~pack, 0, lab)
+    lab = np.where((lab >= 2) & (z > 0.62) & (Pn[:, 1] >= 0.03), 0, lab)
     body_side = pack
-    print('body class: backpack', int(pack.sum()), 'from back', int(body_back.sum()))
-def island_blur(img, n):  # 絵の中の「形がある所」だけで平均する
-    A = M.astype(np.float32)
+    print('body class from back', int(body_back.sum()))
+def island_blur(img, n, same=None):
+    """絵の中の「形がある所」だけで平均する。same（区分けの番号の絵）を渡すと、同じ区分けどうしだけで平均する（肌と服の色を混ぜない）。"""
     B = img.copy()
+    A = M.astype(np.float32)
     for _ in range(n):
         s_ = np.zeros_like(B)
         c_ = np.zeros_like(A)
         for dy, dx in ((0, 0), (0, 1), (0, -1), (1, 0), (-1, 0)):
-            s_ += np.roll(B * (A[:, :, None] if B.ndim == 3 else A), (dy, dx), (0, 1))
-            c_ += np.roll(A, (dy, dx), (0, 1))
+            w_ = np.roll(A, (dy, dx), (0, 1))
+            if same is not None:
+                w_ = w_ * (np.roll(same, (dy, dx), (0, 1)) == same)
+            s_ += np.roll(B, (dy, dx), (0, 1)) * (w_[:, :, None] if B.ndim == 3 else w_)
+            c_ += w_
         cc = c_[:, :, None] if B.ndim == 3 else c_
         B = np.where(cc > 0, s_ / np.maximum(cc, 1e-6), B)
     return B
@@ -416,9 +474,11 @@ wb, ws1, ws2 = wb * k * rest, ws1 * k * rest, ws2 * k * rest
 col = samp[:, :3] * wf[:, None] + cb * wb[:, None] + cs1 * ws1[:, None] + cs2 * ws2[:, None] + base * (rest - wb - ws1 - ws2)[:, None]
 wf = np.clip(wf + wb + ws1 + ws2, 0, 1)  # ここから下の wf は「参考画像から貼れた割合」
 
+LAB = np.full((TEX, TEX), -1)
+LAB[ys, xs] = lab
 Tb = np.zeros((TEX, TEX, 3), np.float32)
 Tb[ys, xs] = base
-Tb = island_blur(Tb, 8)
+Tb = island_blur(Tb, 8, LAB)
 def grow_fill(cls, zmin=-1.0):
     """区分け cls のうち、参考画像から貼れなかった所を、まわりの貼れた色を広げて埋める（1 色で埋めるより、まだらにならない）。"""
     global Tb
@@ -462,10 +522,10 @@ T[:, :, :3] = np.where(M[:, :, None], Tp * Ws[:, :, None] + Tb * (1 - Ws[:, :, N
 # 正面から貼った所（顔・服の細部）以外は、最後に少しだけならす（髪の細かい黒い点・境目のがたつきを消す）
 Fw = np.zeros((TEX, TEX), np.float32)
 Fw[ys, xs] = wf_front
-T[:, :, :3] = np.where((Fw > 0.8)[:, :, None], T[:, :, :3], island_blur(T[:, :, :3], 2))
+T[:, :, :3] = np.where((Fw > 0.8)[:, :, None], T[:, :, :3], island_blur(T[:, :, :3], 2, LAB))
 # 島のふちの外へ色を広げる（小さく表示したときに、すき間から黒や白がにじまないように）
 filled = M.copy()
-for _ in range(12):
+for _ in range(20):
     s = np.zeros((TEX, TEX, 3), np.float32)
     c = np.zeros((TEX, TEX), np.float32)
     for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)):

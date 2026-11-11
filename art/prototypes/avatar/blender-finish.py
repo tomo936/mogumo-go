@@ -45,7 +45,7 @@ pmat.node_tree.links.new(vc.outputs['Color'], pb.inputs['Base Color'])
 
 def paint(o, k):
     ca = o.data.color_attributes.new('Col', 'FLOAT_COLOR', 'CORNER')
-    c = lin([min(1.0, x * k * s_) for x, s_ in zip(pink, (0.97, 0.86, 0.94))])
+    c = lin([min(1.0, x * k * s_) for x, s_ in zip(pink, (0.98, 0.93, 0.96) if MV else (0.97, 0.86, 0.94))])  # 3 枚版: 参考画像のピンクにほぼそのまま合わせる
     for d in ca.data:
         d.color = c
     o.data.materials.append(pmat)
@@ -70,7 +70,7 @@ def rbox(loc, size, bevel, k, seg=3):
 
 
 # リュックの中だけの座標: x 左右、y 後ろ向き（0 が背中に当たる面）、z 上下（0 がまん中）
-W, D, H = 0.25, 0.12, 0.25
+W, D, H = (0.238, 0.108, 0.25) if MV else (0.25, 0.12, 0.25)
 
 
 def arch(w, h, d, y0, k, bevel, top=0.42, corner=0.035):
@@ -134,7 +134,7 @@ pack.name = 'backpack'
 # 背中の面（blender-paint.py の切り口）に合わせて置く
 CUT_CO = Vector((0, 0.078, 0.20))
 SLOPE = 0.115
-zc = 0.375
+zc = 0.37 if MV else 0.375
 pack.matrix_world = Matrix.Translation((0, CUT_CO.y + SLOPE * (zc - CUT_CO.z) - 0.012, zc)) @ Matrix.Rotation(-math.atan(SLOPE), 4, 'X')
 active(pack)
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
@@ -202,10 +202,6 @@ for o_ in straps:
 bpy.ops.object.join()
 pack = bpy.context.object
 print('backpack tris', sum(len(p.vertices) - 2 for p in pack.data.polygons))
-
-if MV:
-    bpy.data.objects.remove(pack)
-    pack = None
 
 # ===================== ② 顔の膜と、表情の並べ絵 =====================
 # 正面の参考画像（1600x1600）での、キャラの枠（上・下・まん中）。blender-paint.py と同じ合わせ方
@@ -416,6 +412,8 @@ bpy.ops.object.mode_set(mode='OBJECT')
 active(av)
 bpy.ops.object.duplicate()
 proxy = bpy.context.object
+for g_ in [g for g in proxy.vertex_groups if g.name in ('armL', 'armR')]:
+    proxy.vertex_groups.remove(g_)
 m = proxy.modifiers.new('r', 'REMESH')
 m.mode = 'VOXEL'
 m.voxel_size = 0.009
@@ -472,6 +470,7 @@ bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 
 
 ARM_X, ARM_Z1 = 0.142, 0.405
+ARM_GROUPS = None
 
 
 def sstep(t):
@@ -494,6 +493,15 @@ def arm_amount(co):
 
 
 def skin_to(ob, fixed=None):
+    global ARM_GROUPS
+    ARM_GROUPS = None
+    marks = [g for g in ob.vertex_groups if g.name in ('armL', 'armR')]
+    if marks and not fixed:
+        idx = {g.index for g in marks}
+        ARM_GROUPS = {v.index for v in ob.data.vertices if any(g.group in idx and g.weight > 0.5 for g in v.groups)}
+        print('arm verts (separated)', len(ARM_GROUPS))
+    for g in marks:
+        ob.vertex_groups.remove(g)
     for n in gnames:
         ob.vertex_groups.new(name=n)
     for v in ob.data.vertices:
@@ -502,9 +510,6 @@ def skin_to(ob, fixed=None):
             continue
         if v.co.z > HEAD_ONLY:
             ob.vertex_groups['head'].add([v.index], 1.0, 'REPLACE')
-            continue
-        if MV and (v.co - CUT_CO).dot(Vector((0, 1, -SLOPE)).normalized()) > 0.012 and 0.215 < v.co.z < 0.50 and abs(v.co.x) < 0.135:
-            ob.vertex_groups['chest'].add([v.index], 1.0, 'REPLACE')  # リュック
             continue
         near = kd.find_n(v.co, 4)
         w = np.zeros(len(gnames), np.float32)
@@ -527,6 +532,8 @@ def skin_to(ob, fixed=None):
                 w[gi] *= keep
         w[gnames.index('hips')] += moved
         a_ = arm_amount(v.co)
+        if ARM_GROUPS is not None:
+            a_ = 1.0 if v.index in ARM_GROUPS else 0.0
         if a_ > 0:
             side = 'L' if v.co.x > 0 else 'R'
             fore = sstep((0.40 - v.co.z) / 0.05)

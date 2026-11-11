@@ -126,7 +126,7 @@ function setExpr(r: Rig, i: number) {
   if (r.faceMap) r.faceMap.offset.x = i / r.cells
 }
 
-function shot(r: Rig, w: number, h: number, heightPx: number, yawDeg: number, elev = ELEV, bg = '#fbf1d6', foot = 0.13) {
+function shot(r: Rig, w: number, h: number, heightPx: number, yawDeg: number, elev = ELEV, bg = '#fbf1d6', foot = 0.13, sx = 0) {
   holder.clear()
   holder.add(r.root)
   r.root.rotation.y = (yawDeg * Math.PI) / 180
@@ -139,6 +139,7 @@ function shot(r: Rig, w: number, h: number, heightPx: number, yawDeg: number, el
   cam.near = -10
   cam.far = 10
   const target = up.clone().multiplyScalar((h / 2 - h * foot) * upp)
+  target.x += sx
   cam.position.copy(target).add(new THREE.Vector3(0, Math.sin(elev), Math.cos(elev)))
   cam.up.set(0, 1, 0)
   cam.lookAt(target)
@@ -316,6 +317,33 @@ async function main() {
     tile(rr, shot(r, 300, 300, 760, 90, E0, W, -0.42), '真横')
     tile(rr, shot(r, 300, 300, 760, 0, E0, W, -0.42), '正面')
     tile(rr, shot(r, 300, 300, 760, 140, 0.3, W, -0.42), 'ななめ後ろ')
+  }
+
+  // ===== 大写しのくらべ（1 枚にまとめる）=====
+  const s5 = sheet('s5', 'にじみ・リュックの直し（大写し）', `上: 参考画像 ／ 中: ${PREV_LABEL} ／ 下: ${NOW_LABEL}。右の 2 つは動いているとき（走り）`)
+  rr = row(s5, '参考画像')
+  refTile(rr, 'front-stand', 250, 330, '正面', [420, 560, 760, 1000])
+  refTile(rr, 'side-stand', 250, 330, '真横', [380, 560, 760, 1000])
+  refTile(rr, 'back', 250, 330, '後ろ', [420, 560, 760, 1000])
+  refTile(rr, 'run-side', 250, 330, 'ななめ（走りの絵）', [100, 520, 760, 1000])
+  refTile(rr, 'front-stand', 250, 330, '手のアップ', [940, 1040, 300, 396])
+  refTile(rr, 'run-side', 250, 330, '走り', [120, 60, 1180, 1500])
+  for (const [name, r] of both) {
+    rr = row(s5, name)
+    stand(r)
+    tile(rr, shot(r, 250, 330, 620, 0, E0, W, -0.28), '正面')
+    tile(rr, shot(r, 250, 330, 620, 90, E0, W, -0.28), '真横')
+    tile(rr, shot(r, 250, 330, 620, 180, E0, W, -0.28), '後ろ')
+    tile(rr, shot(r, 250, 330, 620, 140, 0.3, W, -0.28), 'ななめ後ろ')
+    tile(rr, shot(r, 250, 330, 1500, 0, E0, W, -0.72, 0.2), '手のアップ')
+    applyPose(r, poseFor('run', 0.2))
+    tile(rr, shot(r, 250, 330, 280, 90, E0, W, 0.1), '走り')
+    tile(rr, shot(r, 250, 330, 620, 60, E0, W, -0.28), '走り・うでのアップ')
+    stand(r)
+  }
+  for (const px of [80, 40]) {
+    rr = row(s5, `実寸 ${px}px`)
+    for (const [name, r] of both) for (const yaw of [20, 110, 200]) tile(rr, shot(r, 150, px * 1.4, px, yaw), name)
   }
 
   // 重さ
