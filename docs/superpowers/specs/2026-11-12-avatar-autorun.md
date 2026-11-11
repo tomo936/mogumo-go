@@ -16,7 +16,7 @@
 ## 段の状態（pending / running / done / blocked）
 | 段 | 内容 | 担当 | 状態 | 成果物 |
 |---|---|---|---|---|
-| S1 | **方針の点検**: 今のやり方（AI の形＋自動の骨の重み＋式で動かす動き＋板の顔）が誤っていないか、Opus が独立に点検し、直し方の計画を書く | Opus | running（開始 2026-11-12 01:30） | `docs/superpowers/specs/2026-11-12-avatar-review-opus.md` |
+| S1 | **方針の点検**: 今のやり方（AI の形＋自動の骨の重み＋式で動かす動き＋板の顔）が誤っていないか、Opus が独立に点検し、直し方の計画を書く | Opus | done（2026-11-12 04:30） | `docs/superpowers/specs/2026-11-12-avatar-review-opus.md`（台本 `review-probe.py`・`review-arm.py`、絵 `review-arm.png`） |
 | S2 | **S1 の計画で作り直しを試す**（動きのカクつき・腕の裏・走り・顔の差し替え・まばたき）。動画を作り直す | Opus | pending | `boy-b-v2.glb`、`walk-preview-v2.mp4`/`.gif`、比べ画像 |
 | S3 | **オーナーに結果を知らせる**（動画・画像・数字・直らなかった点） | リーダー | pending | メッセージ |
 
