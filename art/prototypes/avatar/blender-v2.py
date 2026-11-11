@@ -57,6 +57,19 @@ for f in bm.faces:
             body_caps_L.append((c.y, c.z, f.calc_area()))
 print('caps body', sum(1 for f in bm.faces if f[capk] == 1), 'arm', sum(1 for f in bm.faces if f[capk] == 2))
 # 切り口の色: 平らな「そでの青 1 点」をやめ、近くの胴（体側）／そで（うで側）の絵の場所を写す
+# うでの陰（わきの前後）に描かれていた手・肌の色を、近くの胴の色に塗りかえる（うでを振ると見えるため）
+_img = next(n.image for n in me.materials[0].node_tree.nodes if n.type == 'TEX_IMAGE')
+_W, _H = _img.size
+_px = np.empty(_W * _H * 4, np.float32)
+_img.pixels.foreach_get(_px)
+_px = _px.reshape(_H, _W, 4)
+
+
+def skinlike(uv):
+    c = _px[int(uv[1] * _H) % _H, int(uv[0] * _W) % _W]
+    return c[0] > 0.6 and c[0] > c[2] + 0.15
+
+
 kd_src = {1: [], 2: []}
 for f in bm.faces:
     if f[capk]:
@@ -64,6 +77,10 @@ for f in bm.faces:
     for l in f.loops:
         v = l.vert
         if abs(v.co.x) > 0.09 and 0.2 < v.co.z < 0.56:
+            if armw(v) > 0.5 and (v.co.z < 0.31 or f.normal.x * v.co.x < 0.3 * abs(v.co.x)):  # うで側は外向きのそでの面だけ（手・内側の肌色は使わない）
+                continue
+            if skinlike(l[uvl].uv):  # 肌・ひもの色は切り口に使わない
+                continue
             kd_src[2 if armw(v) > 0.5 else 1].append((v.co.copy(), l[uvl].uv.copy()))
 kds = {}
 for k, pts in kd_src.items():
@@ -94,6 +111,42 @@ for f in bm.faces:  # 面ごとに 1 色（点ごとに違う絵の島を指す�
         _, i, _ = kds[f[capk]].find(f.calc_center_median())
         for l in f.loops:
             l[uvl].uv = kd_src[f[capk]][i][1]
+def in_zone(co):
+    return 0.125 < abs(co.x) and 0.25 < co.z < 0.50
+
+
+src = []
+for f in bm.faces:
+    if f[capk] or armw(f.verts[0]) > 0.5:
+        continue
+    c = f.calc_center_median()
+    if 0.07 < abs(c.x) and 0.2 < c.z < 0.56 and not skinlike(f.loops[0][uvl].uv):
+        src.append((c, f.loops[0][uvl].uv.copy()))
+kd_t = kdtree.KDTree(len(src))
+for i, (c, _) in enumerate(src):
+    kd_t.insert(c, i)
+kd_t.balance()
+nrep = 0
+for f in bm.faces:
+    if f[capk] or armw(f.verts[0]) > 0.5:
+        continue
+    c = f.calc_center_median()
+    if in_zone(c) and skinlike(f.loops[0][uvl].uv):
+        _, i, _ = kd_t.find(c)
+        for l in f.loops:
+            l[uvl].uv = src[i][1]
+        nrep += 1
+# うでの内側（体の方を向いた面）に描かれていた肌の色も、外側のそでの色に（うでを開くと見えるため）
+for f in bm.faces:
+    if f[capk] or armw(f.verts[0]) < 0.5:
+        continue
+    c = f.calc_center_median()
+    if c.z > 0.31 and skinlike(f.loops[0][uvl].uv):
+        _, i, _ = kds[2].find(c)
+        for l in f.loops:
+            l[uvl].uv = kd_src[2][i][1]
+        nrep += 1
+print('armpit skin faces repainted', nrep)
 nw = sum(1 for v in bm.verts if not v[dl])
 print('verts without weight after inset', nw)
 # 肩の重み: うでの上のはし（z 0.45〜0.53）は胸にも少し付け、体側の肩のはしは うで に少し付ける（0/1 の切り替えをやめる）
@@ -498,15 +551,8 @@ if STEP >= 4:
         for _ in range(n):
             m = m & np.roll(m, 1, 0) & np.roll(m, -1, 0) & np.roll(m, 1, 1) & np.roll(m, -1, 1)
         return m
-    core = np.zeros((CHh, CW), bool)
-    for f in sel:  # 顔の面の内側（ふちから 14px 以上内）だけ表情を変える。ふちは ふつう と同じ画素
-        pass
     cov0 = depth < 9.0
-    keep = blur(erode(cov0, 14), 6)
-    # うれしい: 前の膜の絵（ふつうの上に重ねる）
-    ha = np.clip(happy[:, :, 3], 0, 1) * keep
-    happyc = normal * (1 - ha[:, :, None]) + happy[:, :, :3] * ha[:, :, None]
-    # まばたき: 目（暗い所）を探して、まぶた（肌）でかくす
+    # まばたき・うれしい: 目（暗い所）を探す
     lum = normal @ np.array([0.3, 0.55, 0.15], np.float32)
     dark = (lum < 0.33) & cov0 & (yy > CHh * 0.25) & (yy < CHh * 0.85)
     # つながった暗い所を 2 つ（左右の目）取る
@@ -530,19 +576,29 @@ if STEP >= 4:
         blobs.append(np.array(pts))
     blobs.sort(key=len, reverse=True)
     eyes = sorted(blobs[:2], key=lambda b: b[:, 1].mean())
-    print('eye blobs', [len(b) for b in blobs[:4]], [(int(b[:, 1].min()), int(b[:, 0].min()), int(b[:, 1].max()), int(b[:, 0].max())) for b in eyes])
+    EB = [(int(b[:, 0].min()), int(b[:, 1].min()), int(b[:, 0].max()), int(b[:, 1].max())) for b in eyes]  # (上, 左, 下, 右)
+    print('eye boxes', EB)
     ink = np.median(normal[dark], axis=0) * 0.8
 
-    def lidskin(img, b, pad):
-        """目の箱を、上下の肌の色で縦に補ってぬる。返り値: ぬった絵・目の楕円の重み"""
-        r0, c0, r1, c1 = b[:, 0].min() - pad, b[:, 1].min() - pad, b[:, 0].max() + pad, b[:, 1].max() + pad
-        out = img.copy()
-        top, bot = img[r0 - 1, c0:c1 + 1], img[r1 + 1, c0:c1 + 1]
-        t = ((np.arange(r0, r1 + 1) - (r0 - 1)) / (r1 - r0 + 2))[:, None, None]
-        fill = top[None] * (1 - t) + bot[None] * t
-        cy, cx, ry, rx = (r0 + r1) / 2, (c0 + c1) / 2, (r1 - r0) / 2 + 1, (c1 - c0) / 2 + 1
-        e = np.clip((1.0 - np.sqrt(((yy - 0.5 - cy) / ry) ** 2 + ((xx - 0.5 - cx) / rx) ** 2)) * 4, 0, 1)
-        return fill, e, (r0, c0, r1, c1)
+    def hsm(a, k=11):  # 横にならす
+        pad = np.pad(a, ((k // 2, k // 2), (0, 0)), mode='edge')
+        c = np.cumsum(np.vstack([np.zeros((1, a.shape[1])), pad]), 0)
+        return (c[k:] - c[:-k]) / k
+
+    def erase(img, box, pad, below=None):
+        """箱（楕円）の中を、上と下の肌の色で縦に補ってぬる。below: この行より上だけぬる（半分のまぶた）"""
+        r0, c0, r1, c1 = box[0] - pad, box[1] - pad, box[2] + pad, box[3] + pad
+        top = hsm(img[r0 - 4:r0, c0:c1 + 1].mean(0))
+        bot = hsm(img[r1 + 1:r1 + 5, c0:c1 + 1].mean(0))
+        t = ((np.arange(r0, r1 + 1) - r0 + 0.5) / (r1 - r0 + 1))[:, None, None]
+        full = img.copy()
+        full[r0:r1 + 1, c0:c1 + 1] = top[None] * (1 - t) + bot[None] * t
+        cy, cx, ry, rx = (r0 + r1) / 2, (c0 + c1) / 2, (r1 - r0) / 2 + 0.5, (c1 - c0) / 2 + 0.5
+        nd = np.sqrt(((yy - 0.5 - cy) / ry) ** 2 + ((xx - 0.5 - cx) / rx) ** 2)
+        m = np.clip((1.0 - nd) * min(rx, ry) / 4, 0, 1)
+        if below is not None:
+            m = m * np.clip(below - (yy - 0.5) + 0.5, 0, 1)
+        return img * (1 - m[:, :, None]) + full * m[:, :, None]
 
     def stroke(img, pts, wid, col):
         """やわらかい線（点の列）を描く"""
@@ -557,30 +613,58 @@ if STEP >= 4:
             out = out * (1 - a) + col * a
         return out
 
+    PAD = 7
+
     def eyes_closed(img, frac):
         """frac = まぶたが下りた割合（0.5 半分・1 閉じ）"""
-        out = img.copy()
-        for b in eyes:
-            fill, e, (r0, c0, r1, c1) = lidskin(img, b, 3)
-            cut = r0 + (r1 - r0) * frac  # この行より上をまぶたで隠す
-            reg = np.zeros((CHh, CW), np.float32)
-            reg[r0:r1 + 1, c0:c1 + 1] = 1
-            m = e * reg * np.clip(cut - (yy - 0.5) + 0.5, 0, 1)
-            full = np.zeros_like(img)
-            full[r0:r1 + 1, c0:c1 + 1] = fill
-            out = out * (1 - m[:, :, None]) + full * m[:, :, None]
-            w = c1 - c0
-            hgt = r1 - r0
-            lw = max(3.0, hgt * 0.13)
-            xs_ = np.linspace(c0 + w * 0.08, c1 - w * 0.08, 12)
+        out = img
+        for (r0, c0, r1, c1) in EB:
+            hgt, w = r1 - r0, c1 - c0
+            cut = r0 + hgt * frac
+            out = erase(out, (r0, c0, r1, c1), PAD, None if frac >= 0.99 else cut)
+            lw = max(3.0, hgt * 0.11)
+            xs_ = np.linspace(c0 + w * 0.06, c1 - w * 0.06, 14)
+            sn = [math.sin(math.pi * (x_ - xs_[0]) / (xs_[-1] - xs_[0])) for x_ in xs_]
             if frac >= 0.99:  # 閉じ: 少し下へふくらむ線（目の下の方）
-                ys_ = [r0 + hgt * 0.62 + hgt * 0.16 * math.sin(math.pi * (x_ - xs_[0]) / (xs_[-1] - xs_[0])) for x_ in xs_]
+                ys_ = [r0 + hgt * 0.58 + hgt * 0.14 * s_ for s_ in sn]
             else:  # 半分: まぶたのふち（少し上へふくらむ）
-                ys_ = [cut - hgt * 0.06 * math.sin(math.pi * (x_ - xs_[0]) / (xs_[-1] - xs_[0])) for x_ in xs_]
+                ys_ = [cut - hgt * 0.08 * s_ for s_ in sn]
             out = stroke(out, list(zip(ys_, xs_)), lw, ink)
         return out
     half = eyes_closed(normal, 0.5)
     closed = eyes_closed(normal, 1.0)
+    # うれしい: ふつうの目と口を肌でぬってから、前の うれしい の絵から「目の線・口」だけを写す（肌・髪・ふちは ふつう のまま）
+    hrgb, hal = happy[:, :, :3], np.clip(happy[:, :, 3], 0, 1)
+    eb_ = max(b[2] for b in EB)
+    mr0, mr1, mc0, mc1 = eb_ + 4, int(CHh * 0.97), EB[0][3], EB[1][1]
+
+    def feat(img, alpha, lo=0.12):
+        sk = np.median(img[(alpha > 0.95) & cov0], axis=0)
+        return np.clip((np.linalg.norm(img - sk, axis=2) - lo) / 0.12, 0, 1) * alpha
+
+    def bbox(m, r0, r1, c0, c1):
+        sub = np.zeros_like(m)
+        sub[r0:r1, c0:c1] = m[r0:r1, c0:c1]
+        ys, xs = np.nonzero(sub)
+        return (int(ys.min()), int(xs.min()), int(ys.max()), int(xs.max()))
+    fn_ = feat(normal, cov0.astype(np.float32))
+    fh_ = feat(hrgb, hal, 0.2)  # 口のまわりの明るい肌は写さない
+    nmouth = bbox(fn_ > 0.5, mr0, mr1, mc0, mc1)
+    hmouth = bbox(fh_ > 0.5, mr0, mr1, mc0, mc1)
+    print('mouth normal', nmouth, 'happy', hmouth)
+    base = normal
+    for b in EB:
+        base = erase(base, b, PAD)
+    base = erase(base, nmouth, 5)
+
+    def ell(box, pad):
+        r0, c0, r1, c1 = box[0] - pad, box[1] - pad, box[2] + pad, box[3] + pad
+        cy, cx, ry, rx = (r0 + r1) / 2, (c0 + c1) / 2, (r1 - r0) / 2 + 0.5, (c1 - c0) / 2 + 0.5
+        nd = np.sqrt(((yy - 0.5 - cy) / ry) ** 2 + ((xx - 0.5 - cx) / rx) ** 2)
+        return np.clip((1.0 - nd) * min(rx, ry) / 4, 0, 1)
+    R = np.maximum.reduce([ell(EB[0], 16), ell(EB[1], 16), ell(hmouth, 3)])
+    ha = fh_ * R
+    happyc = base * (1 - ha[:, :, None]) + hrgb * ha[:, :, None]
     atlas = np.ones((CHh, CW * 4, 4), np.float32)
     for i, c in enumerate((normal, half, closed, happyc)):
         atlas[:, i * CW:(i + 1) * CW, :3] = np.clip(c, 0, 1)
@@ -607,7 +691,11 @@ if STEP >= 4:
             l[uvl].uv = (((l.vert.co.x - FX0) / (FX1 - FX0)) / 4, (l.vert.co.z - FZ0) / (FZ1 - FZ0))
     bm.to_mesh(me)
     bm.free()
+    pm = plate.data.materials[0]
     bpy.data.objects.remove(plate)
+    bpy.data.materials.remove(pm)
+    fmat.name = 'face'  # 板の材質の名前と重なって face.001 になっていた
+    print('face material', fmat.name)
 
 # ===================== 書き出し =====================
 if 'capk' in me.attributes:

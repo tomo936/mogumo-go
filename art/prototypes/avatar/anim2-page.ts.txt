@@ -114,7 +114,7 @@ async function actual(r: Rig) {
 }
 function img(src: string) { return new Promise<HTMLImageElement>((ok, ng) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ng; i.src = src }) }
 async function compare(nw: Rig, old: Rig) {
-  const W = 1240, H = 1270
+  const W = 1240, H = 1370
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d')!
   g.fillStyle = '#fffaf0'; g.fillRect(0, 0, W, H)
   label(g, 'もぐもGO アバター v2（S2）: 参考画像／前の版 boy-b-skin／今回 boy-b-v2', 16, 30, 20)
@@ -148,15 +148,15 @@ async function compare(nw: Rig, old: Rig) {
   g.drawImage(shot(old, 200, 200, 330, 20, 0.15, '#fbf1d6', -0.55), x, y); label(g, '前の版 うれしい（板）', x, y + 218); setFace(old, 0)
   // 4 段目: 実寸
   y += 240; x = 16
-  label(g, '実寸（左: そのまま／右: 3 倍に拡大）  80px・40px', 16, y + 18, 16); y += 28
+  label(g, '実寸（左: そのまま／右: 2 倍に拡大）  80px・40px', 16, y + 18, 16); y += 28
   for (const hp of [80, 40]) {
     for (const [mode, ph, f] of [['idle', 0, 0], ['walk', 0.2, 0], ['run', 0.2, 0], ['joy', 0.3, 3]] as const) {
       poseAt(nw, mode, ph * PERIOD[mode]); setFace(nw, f)
       const s = shot(nw, Math.round(hp * 1.1), Math.round(hp * 1.25), hp, 40, ELEV, '#fbf1d6', 0.1)
-      g.drawImage(s, x, y); g.imageSmoothingEnabled = false; g.drawImage(s, x + s.width + 4, y, s.width * 3, s.height * 3); g.imageSmoothingEnabled = true
-      x += s.width * 4 + 14
+      g.drawImage(s, x, y); g.imageSmoothingEnabled = false; g.drawImage(s, x + s.width + 4, y, s.width * 2, s.height * 2); g.imageSmoothingEnabled = true
+      x += s.width * 3 + 24
     }
-    x = 16; y += Math.round(hp * 1.25) * 3 + 10
+    x = 16; y += Math.round(hp * 1.25) * 2 + 10
   }
   await save('compare', cv.toDataURL('image/png'))
   // 動きの計算の時間（骨を動かして形を更新するまで。描画は除く）
@@ -169,7 +169,15 @@ async function main() {
   const m = Q.get('m') ?? 'v2', what = Q.get('what') ?? 'video'
   const r = m === 'old' ? await load('/art/prototypes/avatar/boy-b-skin.glb', false) : await load('/art/prototypes/avatar/boy-b-v2.glb', true)
   console.log('loaded', m, 'tris', r.tris, 'bones', Object.keys(r.bones).length)
-  if (what === 'video') await video(r)
+  if (what === 'dbg') {
+    r.root.traverse((o) => console.log('obj', o.type, o.name, (o as THREE.Mesh).isMesh ? (o as THREE.Mesh).geometry.attributes.position!.count : ''))
+    poseAt(r, 'walk', 0.2); r.inner.updateMatrixWorld(true)
+    r.inner.traverse((o) => { const m = o as THREE.SkinnedMesh; if (!m.isSkinnedMesh) return
+      const pos = m.geometry.attributes.position!, sw = m.geometry.attributes.skinWeight!, si = m.geometry.attributes.skinIndex!, v = new THREE.Vector3(); let bad = 0
+      for (let i = 0; i < pos.count; i++) { m.getVertexPosition(i, v); if (v.distanceTo(new THREE.Vector3(0, 0.45, 0)) > 0.62) { if (bad++ < 4) console.log('bad', m.name, i, v.toArray().map((x) => x.toFixed(2)).join(','), 'w', sw.getX(i), sw.getY(i), sw.getZ(i), sw.getW(i), 'j', si.getX(i), si.getY(i), si.getZ(i), si.getW(i)) } }
+      console.log('mesh', m.name, 'verts', pos.count, 'bad', bad, 'bones', m.skeleton.bones.map((b) => b.name).join(','))
+    })
+  } else if (what === 'video') await video(r)
   else if (what === 'actual') await actual(r)
   else await compare(r, await load('/art/prototypes/avatar/boy-b-skin.glb', false))
   document.body.dataset.ready = '1'
