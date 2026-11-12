@@ -27,7 +27,7 @@ g = {
   'jB': ('JoinImageWithAlpha', {'image': ['sB', 0], 'alpha': ['imgB', 1]}),
   'gen': ('Hy3DGenerateMeshMultiView', {'pipeline': ['model', 0], 'guidance_scale': 5.5, 'steps': steps, 'seed': seed, 'front': ['jF', 0], 'back': ['jB', 0]}),
   'vae': ('Hy3DVAEDecode', {'vae': ['model', 1], 'latents': ['gen', 0], 'box_v': 1.01, 'octree_resolution': 384, 'num_chunks': 32000, 'mc_level': 0.0, 'mc_algo': 'mc', 'force_offload': True}),
-  'post': ('Hy3DPostprocessMesh', {'trimesh': ['vae', 0], 'remove_floaters': True, 'remove_degenerate_faces': True, 'reduce_faces': True, 'max_facenum': 50000, 'smooth_normals': False}),
+  'post': ('Hy3DPostprocessMesh', {'trimesh': ['vae', 0], 'remove_floaters': True, 'remove_degenerate_faces': True, 'reduce_faces': True, 'max_facenum': 30000, 'smooth_normals': False}),
   'shape_out': ('Hy3DExportMesh', {'trimesh': ['post', 0], 'filename_prefix': f'mogumo/boyS_{tag}_shape', 'file_format': 'glb', 'save_file': True}),
   'uv': ('Hy3DMeshUVWrap', {'trimesh': ['post', 0]}),
   'cam': ('Hy3DCameraConfig', dict(zip(['camera_azimuths', 'camera_elevations', 'view_weights', 'camera_distance', 'ortho_scale'], CAM))),
