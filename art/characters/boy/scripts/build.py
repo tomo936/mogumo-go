@@ -403,6 +403,11 @@ def apply_pose(rig, p, armDown):
         # 腕: まず A ポーズから下ろし（Y 軸）、それから前後に振る（X 軸）
         rot(rig, 'upperarm' + s, ('X', -g('arm' + s)), ('Y', sg * (armDown - g('armOut') - g('armOut' + s))))
         rot(rig, 'forearm' + s, ('X', -g('elbow' + s)))
+        from mathutils import Quaternion
+        for bn, q in (('hand' + s, Quaternion((0, 1, 0), sg * g('handTwist' + s))), ('fingers' + s, Quaternion((1, 0, 0), g('fingers' + s)))):
+            pb_ = rig.pose.bones.get(bn)
+            if pb_ is not None: pb_.rotation_quaternion = q
+        bpy.context.view_layer.update()
         # 2 回目: 足の開きの土台 LEG_STAND（元の立ち絵のくるぶしの幅に合わせる。立ち・歩き・走り・喜び すべてに足す）。靴の裏は水平に戻す
         rot(rig, 'thigh' + s, ('Y', -sg * (LEG_STAND + g('legOut'))), ('X', -g('thigh' + s)))
         rot(rig, 'shin' + s, ('X', g('knee' + s)))
@@ -457,6 +462,28 @@ if STAGE == 3:
         LM['ankle' + s] = Vector((lx, ly, L['ankle']))
         LM['knee' + s] = Vector((lx, ly, L['ankle'] + (crotch + L['hipj_up'] - L['ankle']) * 0.58))
         LM['toe' + s] = Vector((lx, float(V[shoe, 1].min()) + 0.01, 0.02))
+    # 3 回目: 手（手首 hand・指のかたまり fingers）。手の肌の点から、手首・指の付け根・手のひらの向き・親指を決める
+    HC = CFG['hand']; HAND = {}
+    for s, sg in (('L', 1), ('R', -1)):
+        sh = np.array(LM['shoulder' + s]); a = np.array(LM['handtip' + s]) - sh; a /= np.linalg.norm(a)
+        hm = arm_v[s] & (vs == 2); P = V[hm]; t = (P - sh) @ a
+        tw, tt = float(np.percentile(t, 3)), float(t.max())
+        Q = P - P.mean(0); Q = Q - np.outer(Q @ a, a); _, _, vt = np.linalg.svd(Q)
+        n = vt[2] if vt[2][0] * sg < 0 else -vt[2]          # 手のひらの向き（体の方）
+        n = n - (n @ a) * a; n /= np.linalg.norm(n); w = np.cross(a, n)
+        wd = P @ w; tip_sl = t > tw + 0.85 * (tt - tw)
+        w0, w1 = float(wd[tip_sl].min()), float(wd[tip_sl].max())
+        tk = tw + HC['knuckle_frac'] * (tt - tw)
+        def cen(tc):
+            k = np.abs(t - tc) < 0.005; return P[k].mean(0) if k.sum() > 3 else sh + a * tc
+        Wc, Kc = cen(tw + 0.004), cen(tk)
+        kk = np.abs(t - tk) < 0.005; th_ = float(np.ptp(P[kk] @ n))      # 付け根の厚み
+        Kc = Kc + n * (HC['pivot_palm'] * th_)                            # 曲げの中心を手のひら側へ（内側の折れを減らす）
+        mid = (t > tw + 0.25 * (tt - tw)) & (t < tk + 0.01)
+        tside = -1 if (wd[mid] < w0 - HC['thumb_gap']).sum() >= (wd[mid] > w1 + HC['thumb_gap']).sum() else 1   # 親指のある側だけ
+        HAND[s] = dict(a=a, n=n, w=w, sh=sh, tw=tw, tt=tt, tk=tk, w0=w0, w1=w1, W=Wc, K=Kc, T=Kc + a * (tt - tk), tside=tside, th=th_)
+        LOG['hand' + s] = dict(th=round(th_, 4), tside=tside, tw=round(tw, 4), tk=round(tk, 4), tt=round(tt, 4), n=n.round(3).tolist(), w=[round(w0, 4), round(w1, 4)],
+                               verts=int(hm.sum()))
     tor = (np.abs(V[:, 0]) < 0.1) & (V[:, 2] > 0.28) & (V[:, 2] < 0.34) & (vs != 3)
     ty = float((V[tor, 1].min() + V[tor, 1].max()) / 2)
     hd = (V[:, 2] > neck + 0.05)
@@ -482,7 +509,9 @@ if STAGE == 3:
     bone('head', (0, hy, neck), (0, hy, 1.0), 'chest')
     for s in 'LR':
         bone('upperarm' + s, LM['shoulder' + s], LM['elbow' + s], 'chest')
-        bone('forearm' + s, LM['elbow' + s], LM['wrist' + s], 'upperarm' + s)
+        bone('forearm' + s, LM['elbow' + s], HAND[s]['W'], 'upperarm' + s)
+        bh = bone('hand' + s, HAND[s]['W'], HAND[s]['K'], 'forearm' + s); bh.align_roll(Vector(HAND[s]['n']))
+        bf = bone('fingers' + s, HAND[s]['K'], HAND[s]['T'], 'hand' + s); bf.align_roll(Vector(HAND[s]['n']))
         bone('thigh' + s, LM['hipj' + s], LM['knee' + s], 'hips')
         bone('shin' + s, LM['knee' + s], LM['ankle' + s], 'thigh' + s)
         bone('foot' + s, LM['ankle' + s], LM['toe' + s], 'shin' + s)
@@ -518,6 +547,19 @@ if STAGE == 3:
         fb = np.zeros_like(w); fb[np.arange(len(P)), D.argmin(1)] = 1
         w = np.where(tot[:, None] > 0.05, w / np.maximum(tot[:, None], 1e-9), fb)
         Wt[m] = 0; Wt[np.ix_(np.nonzero(m)[0], armb[s])] = w
+    # 3 回目: 手首より先は hand 100%（手首の帯 ±wrist_band だけ前腕と混ぜる）。指のかたまり（親指を除く）は fingers 100%（付け根の帯 ±finger_band）
+    hb = {s: [B['hand' + s], B['fingers' + s]] for s in 'LR'}
+    for s in 'LR': Wt[:, hb[s]] = 0
+    for s in 'LR':
+        H_ = HAND[s]; m = np.nonzero(arm_v[s])[0]; P = V[m]
+        t = (P - H_['sh']) @ H_['a']; wd = P @ H_['w']
+        h = np.array([sstep((x - (H_['tw'] - HC['wrist_band'])) / (2 * HC['wrist_band'])) for x in t])
+        out_ = (H_['w0'] - wd) if H_['tside'] < 0 else (wd - H_['w1'])    # 親指の側へ、指のかたまりのふちから外へ出た量
+        keep = np.array([1 - sstep((o - HC['thumb_gap']) / 0.008) for o in out_])   # 親指は hand のまま（なめらかに）
+        f = np.array([sstep((x - (H_['tk'] - HC['finger_band'])) / (2 * HC['finger_band'])) for x in t]) * keep
+        Wt[m] *= (1 - h)[:, None]
+        Wt[m, B['hand' + s]] = h * (1 - f); Wt[m, B['fingers' + s]] = h * f
+        tot = Wt[m].sum(1); Wt[m] /= np.maximum(tot, 1e-9)[:, None]
     # 肩のまわり（わきより上）: 肩の関節を通り腕の軸に垂直な面で分け、面の前後 ±band の帯だけ腕と胸を混ぜる。
     # 帯より胴側の点（フード・ひも・首など）には腕の重みを付けない（大きく振ったとき遠くの点が引っぱられて、とげになる）
     band = L['shoulder_band']
@@ -540,7 +582,7 @@ if STAGE == 3:
         f = 0.0 if (vs[i] == 3 or (V[i, 1] > ty + 0.06 and V[i, 2] > pz0 - 0.02)) else sstep((lt - V[i, 2]) / 0.04)
         Wt[i, legb] *= f; Wt[i, B['hips']] += mv * (1 - f)
     torso_below = below & (comp == main)
-    for s in 'LR': Wt[np.ix_(np.nonzero(torso_below)[0], armb[s])] = 0
+    for s in 'LR': Wt[np.ix_(np.nonzero(torso_below)[0], armb[s] + hb[s])] = 0
     # 頭（髪・耳・顔）: head 100%。首の肌は首の帯（上下 0.03）で胸と混ぜる。フード（体）は胸
     headish = np.isin(vs, [1, 5]) | ((vs == 2) & (V[:, 2] > neck - 0.03))
     k = np.array([1.0 if vs[i] in (1, 5) else sstep((V[i, 2] - (neck - 0.03)) / 0.06) for i in range(len(V))])
@@ -614,16 +656,24 @@ if STAGE == 31:
     ]
     if os.environ.get('POSESET') == 'legs':
         POSES = [(f'左股 前{a}＋ひざ{k}', {'thighL': D(a), 'kneeL': D(k)}, AD) for a, k in ((30, 60), (40, 80), (50, 95), (60, 0), (0, 110), (45, 0))]
+    if os.environ.get('POSESET') == 'hands':   # 3 回目: 手の骨・ひじ・腕を閉じた立ち姿の上限
+        POSES = [('立ち 指0', {}, AD)] + [(f'指{a}', {'fingersL': D(a), 'fingersR': D(a)}, AD) for a in (70, 90, 110)] + [
+            ('ひじ110＋指90', {'elbowL': D(110), 'elbowR': D(110), 'fingersL': D(90), 'fingersR': D(90)}, AD),
+            ('腕 前50 ひじ100 指90・後40', {'armL': D(50), 'elbowL': D(100), 'armR': -D(40), 'elbowR': D(60), 'fingersL': D(90), 'fingersR': D(90)}, AD),
+            ('手首ひねり ±20', {'handTwistL': D(20), 'handTwistR': -D(20), 'fingersL': D(90), 'fingersR': D(90)}, AD)]
     bpy.context.scene.render.fps = 30
+    HP = []
     rig.animation_data_create(); act = bpy.data.actions.new('gate3'); rig.animation_data.action = act
     for i, (n, p, ad) in enumerate(POSES):
         apply_pose(rig, p, ad); key_all(rig, i)
+        HP.append({k: [round(v_, 4) for v_ in (lambda q: (q.x, q.z, -q.y))(rig.matrix_world @ rig.pose.bones['hand' + k].tail)] for k in 'LR' if 'hand' + k in rig.pose.bones})
     apply_pose(rig, POSES[-1][1], POSES[-1][2]); key_all(rig, len(POSES))  # 最後の姿勢をもう 1 コマ（再生の折り返し対策）
     for fc_ in act.fcurves:
         for kp in fc_.keyframe_points: kp.interpolation = 'CONSTANT'
     bpy.context.scene.frame_start, bpy.context.scene.frame_end = 0, len(POSES)
     export(os.path.join(WORK, 'gate3.glb'))
     json.dump([n for n, _, _ in POSES], open(os.path.join(WORK, 'gate3-poses.json'), 'w'), ensure_ascii=False)
+    json.dump(HP, open(os.path.join(WORK, 'gate3-hands.json'), 'w'))
     print('GATE3 exported', len(POSES))
 
 
@@ -760,17 +810,29 @@ if STAGE == 4:
     print('STAGE4', json.dumps(LOG, ensure_ascii=False))
 
 
+# ===================================================================== 段 45（3 回目）: 塗り直し。区分けごとの色＋形の陰（repaint.py）
+if STAGE == 45:
+    from mathutils import Matrix
+    Mx = Matrix
+    exec(open(os.path.join(HERE, 'repaint.py')).read())
+
+
 # ===================================================================== 段 5: 動き（この体の寸法と、関門 3 の上限の 8 割で決め直す）
 if STAGE == 5:
     from mathutils import Matrix
     Mx = Matrix
-    bpy.ops.wm.open_mainfile(filepath=os.path.join(WORK, 'stage4.blend'))
-    rig = bpy.data.objects['rig']; MO = CFG['motion']; AD = MO['armDown']
+    bpy.ops.wm.open_mainfile(filepath=os.path.join(WORK, 'stage4r.blend'))   # 3 回目: 塗り直した物から
+    rig = bpy.data.objects['rig']; MO = CFG['motion']; AD = float(os.environ.get('ARMDOWN', MO['armDown']))
     src = open('/home/otosa/mogumo-go/art/prototypes/avatar/blender-v2.py').read().split('\n')
     block = '\n'.join(src[333:441])   # spline・WALK・RUN・gait・joy・idle・lift（blender-v2.py の動きの節。決め方の実績）
     block = block.replace("A = RUNA if run else 0.28", "A = MO['runSwing'] if run else MO['walkSwing']")
     block = block.replace("(1.45 + 0.12 * -ce) if run else (0.32 + 0.12 * -ce)", "(MO['runElbow'] + 0.12 * -ce) if run else (0.32 + 0.12 * -ce)")
-    ns = dict(globals()); ns.update(MO=MO)
+    # 3 回目: わきを閉じる（腕の開きの足し分を設定から）。手は軽く握る（指のかたまりを曲げる）。うれしいは前の版と同じ開き・手は開いたまま
+    block = block.replace("p['armOut'] = 0.12 if run else 0.04", "p['armOut'] = MO['runOut'] if run else MO['walkOut']\n    for s_ in 'LR': p['fingers' + s_] = MO['fist']")
+    block = block.replace("p = {'armOut': 0.55 + 0.15 * math.sin(TAU * ph)", "p = {'armOut': 0.55 + (AD - 0.60) + 0.15 * math.sin(TAU * ph)")
+    block = block.replace("'armOut': 0.03 + 0.02 * b, 'pack': 0.01 * b}", "'armOut': MO['idleOut'] + 0.02 * b, 'pack': 0.01 * b, 'fingersL': MO['fist'], 'fingersR': MO['fist']}")
+    assert block.count("MO['fist']") == 3 and "(AD - 0.60)" in block
+    ns = dict(globals()); ns.update(MO=MO, AD=AD)
     exec(block, ns)
     # 走り: 股の前は上限の 8 割まで、ひざは上限の 8 割まで（体のはずみで走りを見せる）
     RUN = ns['RUN']
@@ -814,10 +876,46 @@ if STAGE == 5:
         rig.animation_data.action = None
         LOG[f'{name}_y'] = [round(float(ys.min()), 4), round(float(ys.max()), 4)]
     LOG['peak_angles'] = {k: round(v, 3) for k, v in peak.items()}
+    # 3 回目: わきのすき間（腕・手と、胴・持ち物・足の面との、符号つきの距離の最小。負ならめりこみ）を全コマで測る
+    from mathutils.bvhtree import BVHTree
+    from mathutils import Vector
+    av = bpy.data.objects['avatar']; mm = av.data; nv_ = len(mm.vertices)
+    gidx = {g.index: g.name for g in av.vertex_groups}
+    armw = np.zeros(nv_); headw = np.zeros(nv_); side = np.zeros(nv_, int); part = np.zeros(nv_, int)
+    for v in mm.vertices:
+        for g in v.groups:
+            nm_ = gidx[g.group]
+            if nm_[:-1] in ('upperarm', 'forearm', 'hand', 'fingers'):
+                armw[v.index] += g.weight; side[v.index] = 1 if nm_[-1] == 'L' else -1
+                part[v.index] = max(part[v.index], ('upperarm', 'forearm', 'hand', 'fingers').index(nm_[:-1]) + 1 if g.weight > 0.5 else 0)
+            if nm_ == 'head': headw[v.index] += g.weight
+    R0 = np.array([v.co for v in mm.vertices]); shj = {1: np.array(rig.data.bones['upperarmL'].head_local), -1: np.array(rig.data.bones['upperarmR'].head_local)}
+    dsh = np.array([np.linalg.norm(R0[i] - shj[side[i]]) if side[i] else 0 for i in range(nv_)])
+    # 腕の点のうち、わきより下（腕の島）で、肩の関節から 0.05 より先（肩のつなぎ目の点は、胴と重みを分け合うので数えない）
+    armv = np.nonzero((armw > 0.99) & (R0[:, 2] < CFG['landmarks']['armpit'] - 0.012) & (dsh > 0.05))[0]; torv = (armw < 1e-4) & (headw < 0.5)
+    TRI_ = np.array([p_.vertices[:] for p_ in mm.polygons]); tf = TRI_[torv[TRI_].all(1)]
+    GAP = {}
+    for name, (N, fn, lift) in ACTS.items():
+        rig.animation_data.action = bpy.data.actions[name]; best = (9.0, 0, ''); far = (9.0, 0, '')
+        for i in range(1, N + 1):
+            bpy.context.scene.frame_set(i); dg = bpy.context.evaluated_depsgraph_get(); em = av.evaluated_get(dg).to_mesh()
+            P_ = np.empty(nv_ * 3, np.float32); em.vertices.foreach_get('co', P_); P_ = P_.reshape(-1, 3); av.evaluated_get(dg).to_mesh_clear()
+            bvh = BVHTree.FromPolygons(P_.tolist(), tf.tolist())
+            for vi in armv:
+                r_ = bvh.find_nearest(Vector(P_[vi]))
+                if r_[0] is None: continue
+                sd = (Vector(P_[vi]) - r_[0]).dot(r_[1])
+                if dsh[vi] > 0.09 and sd < far[0]: far = (sd, i, ('上腕', '前腕', '手', '指')[part[vi] - 1] + ('L' if side[vi] > 0 else 'R'))
+                if sd < best[0]: best = (sd, i, ('上腕', '前腕', '手', '指')[part[vi] - 1] + ('L' if side[vi] > 0 else 'R'), [round(float(x), 3) for x in R0[vi]], int(r_[2]), [round(float(x), 3) for x in R0[tf[r_[2]][0]]])
+        GAP[name] = dict(min=round(float(best[0]), 4), frame=best[1], part=best[2], rest=best[3] if len(best) > 3 else None, face_rest=best[5] if len(best) > 3 else None, beyond009=dict(min=round(float(far[0]), 4), frame=far[1], part=far[2]))
+        rig.animation_data.action = None
+    LOG['arm_gap'] = GAP
+    print('GAP', json.dumps(GAP, ensure_ascii=False))
+    if os.environ.get('NOEXPORT'): raise SystemExit
     reset(rig)
     bpy.context.scene.frame_start = 1; bpy.context.scene.frame_set(1)
     save('stage5.blend')
-    out = os.path.join(BOY, 'avatar.glb')
+    out = os.environ.get('OUT', os.path.join(BOY, 'avatar.glb'))
     export(out, 'ACTIONS')
     tris = sum(len(p.vertices) - 2 for p in bpy.data.objects['avatar'].data.polygons)
     LOG['export'] = dict(bytes=os.path.getsize(out), tris=tris, bones=len(rig.data.bones), actions=[a.name for a in bpy.data.actions])

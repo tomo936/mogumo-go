@@ -1,0 +1,164 @@
+{
+ "id": 101,
+ "name": "boy",
+ "type": "humanoid",
+ "sheet": "art/reference/avatar/boy-apose2/",
+ "generate": {
+  "seed": 123,
+  "steps": 50,
+  "side": "right",
+  "max_facenum": 30000,
+  "file": "boyT_t123_textured_00001_.glb",
+  "gate1": "boyT_t123.json"
+ },
+ "colors": {
+  "skin": {
+   "h": [
+    0.015,
+    0.11
+   ],
+   "s": [
+    0.12,
+    0.75
+   ],
+   "v": [
+    0.55,
+    1
+   ]
+  },
+  "top": {
+   "h": [
+    0.5,
+    0.72
+   ],
+   "s": [
+    0.2,
+    1
+   ]
+  },
+  "pack": {
+   "h": [
+    0.9,
+    0.04
+   ],
+   "s": [
+    0.3,
+    1
+   ],
+   "v": [
+    0.25,
+    1
+   ]
+  },
+  "shoes": {
+   "h": [
+    0.5,
+    0.72
+   ],
+   "s": [
+    0.2,
+    1
+   ]
+  },
+  "hair_ref": {
+   "h": [
+    0.95,
+    0.1
+   ],
+   "s": [
+    0.3,
+    1
+   ],
+   "v": [
+    0,
+    0.7
+   ]
+  },
+  "pack_ref": {
+   "h": [
+    0.9,
+    0.03
+   ],
+   "s": [
+    0.2,
+    1
+   ],
+   "v": [
+    0.6,
+    1
+   ]
+  }
+ },
+ "landmarks": {
+  "crotch": 0.135,
+  "armpit": 0.375,
+  "neck": 0.545,
+  "belt": [
+   0.232,
+   0.262
+  ],
+  "shoe_top": 0.065,
+  "eye_band": [
+   0.615,
+   0.715,
+   0.15
+  ],
+  "chin": 0.56,
+  "shoulder_x": 0.118,
+  "elbow_frac": 0.45,
+  "wrist_frac": 0.92,
+  "hipj_up": 0.02,
+  "ankle": 0.045,
+  "pack_dy": 0.09,
+  "shoulder_band": 0.03,
+  "leg_top": 0.25,
+  "pack_zone": [
+   0.085,
+   0.235,
+   0.49,
+   0.125
+  ],
+  "shoe_line": 0.062
+ },
+ "face": {
+  "box": [
+   -0.155,
+   0.155,
+   0.555,
+   0.765
+  ],
+  "cell": [
+   512,
+   347
+  ],
+  "erase_pad": 15
+ },
+ "motion": {
+  "armDown": 0.6,
+  "walkSwing": 0.28,
+  "runSwing": 0.45,
+  "runElbow": 1.05,
+  "runThighScale": 0.8,
+  "runKneeScale": 0.74,
+  "stride_note": "足の長さ（股の関節〜地面）0.195。歩きの股 +0.42/−0.32 は上限の 8 割（前 0.84・後 0.42）の中",
+  "legStand": 0.06,
+  "note_round2": "armDown: 腕の開き 55.5° の形で、元の立ち絵の手の幅（身長の 0.43）になるよう 0.60。legStand: 元の立ち絵のくるぶしの左右の中心の間（身長の 0.119）に合わせて 0.06"
+ },
+ "budget": {
+  "tris": 30000,
+  "mb": 2.0
+ },
+ "limits": {
+  "note": "関門 3 で破れなかった角度（ラジアン）。動きはこの 8 割まで",
+  "armFront": 1.047,
+  "armBack": 0.698,
+  "armSide": 1.571,
+  "elbow": 1.571,
+  "thighFront": 1.047,
+  "thighBack": 0.524,
+  "knee": 1.92
+ },
+ "ref_prefix": "art/prototypes/avatar/input/apose2-",
+ "stand_ref": "art/reference/avatar/boy/",
+ "note_round2": "2 回目（2026-11-12 午後）: 新しい形 boyT_t123。目印は gate1/boyT_t123.json と色の帯の測り（股 0.135・すそ 0.13・靴の上 0.065・ベルト 0.235〜0.26）から"
+}
