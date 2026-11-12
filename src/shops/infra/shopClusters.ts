@@ -4,7 +4,9 @@
 import type { GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl'
 import '@fontsource/m-plus-rounded-1c/800.css'
 import baseUrl from '../../assets/pins/cluster-base.png'
-import { BADGE_TEXT_FIT, BADGE_WIDEST_TEXT, badgeText, CLUSTER_RADIUS_PX, CLUSTER_UNTIL_ZOOM, clusterScale } from '../domain/cluster.ts'
+import { BADGE_TEXT_FIT, BADGE_WIDEST_TEXT, badgeText, BUILDING_CLUSTER_UNTIL_ZOOM, CLUSTER_MIN_POINTS, CLUSTER_RADIUS_PX, CLUSTER_UNTIL_ZOOM, clusterScale } from '../domain/cluster.ts'
+import { LIFT_TIERS } from '../domain/pinLift.ts'
+import { ICON_OFFSET, LIFT_PX_PER_M_AT_17_5, LIFT_ZOOMS } from './shopPins.ts'
 import type { ClusterFeature } from '../domain/cluster.ts'
 
 export const CLUSTER_SOURCE = 'shop-clusters'
@@ -14,6 +16,19 @@ const TAP_PAD_PX = 8
 const FONT = '"M PLUS Rounded 1c"'
 const INK = '#4a2f18'
 const TIER = ['step', ['coalesce', ['get', 'total'], ['get', 'n']], clusterScale(2), 10, clusterScale(10), 30, clusterScale(30)] as const
+// まとめのピンの大きさ（ズームごと。段の倍率 TIER を掛ける前）と、屋根の上へ持ち上げる量。
+// icon-offset は icon-size 倍されるので、見せたい px ÷ そのズームの大きさ（shopPins と同じ考え方。2026-11-13 ピンが下すぎた直し）
+const manySize = (z: number) => 0.42 + 0.08 * Math.min(1, Math.max(0, (z - 14) / 3.5))
+const liftFor = (z: number, repM: number): [number, number] => [0, -Math.round(((LIFT_PX_PER_M_AT_17_5 * repM * 2 ** (z - 17.5)) / manySize(z)) * 10) / 10]
+const MANY_OFFSET = [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  ...LIFT_ZOOMS.flatMap((z) => [
+    z,
+    ['match', ['get', 'lt'], 0, ['literal', liftFor(z, LIFT_TIERS.low.repM)], 2, ['literal', liftFor(z, LIFT_TIERS.high.repM)], ['literal', liftFor(z, LIFT_TIERS.mid.repM)]],
+  ]),
+] as const
 const ICON_SIZE = ['interpolate', ['linear'], ['zoom'], 14, 0.2, 16, 0.22, 18, 0.29] as const // 1 軒のピン（shopPins と同じ大きさ）
 
 // まとめのピンの絵（256px の台＋右上の丸い札）。pixelRatio 2 で使う。
@@ -69,7 +84,17 @@ export function createShopClusters(map: MapLibreMap) {
   let disposed = false
   let hidden = false
   let moving = false
-  let data: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
+  let all: readonly ClusterFeature[] = []
+  // 複合施設（bld=1）をまとめに入れるのは、いちばん引いたときだけ（それ以外は今までのビルのピン）
+  let farBuildings = map.getZoom() < BUILDING_CLUSTER_UNTIL_ZOOM
+  const dataNow = (): GeoJSON.FeatureCollection => ({ type: 'FeatureCollection', features: all.filter((f) => f.properties.bld === 0 || farBuildings) as unknown as GeoJSON.Feature[] })
+  const push = () => (map.getSource(CLUSTER_SOURCE) as GeoJSONSource | undefined)?.setData(dataNow())
+  const onZoom = () => {
+    const far = map.getZoom() < BUILDING_CLUSTER_UNTIL_ZOOM
+    if (far === farBuildings) return
+    farBuildings = far
+    if (attached) push()
+  }
   let base: HTMLImageElement | null = null
   const pending = new Set<number>()
 
@@ -99,7 +124,7 @@ export function createShopClusters(map: MapLibreMap) {
     for (const n of pending) addClusterImage(n)
     pending.clear()
     // 絵が無いまま並べた分は、データを渡し直して並べ直させる（絵を足しただけでは並べ直さない）
-    if (attached) (map.getSource(CLUSTER_SOURCE) as GeoJSONSource | undefined)?.setData(data)
+    if (attached) push()
   }).catch(() => {})
   void ready
 
@@ -120,18 +145,21 @@ export function createShopClusters(map: MapLibreMap) {
       if (attached || disposed) return
       attached = true
       map.on('styleimagemissing', onMissing)
+      map.on('zoom', onZoom)
       map.addSource(CLUSTER_SOURCE, {
         type: 'geojson',
-        data,
+        data: dataNow(),
         cluster: true,
         clusterRadius: CLUSTER_RADIUS_PX,
+        clusterMinPoints: CLUSTER_MIN_POINTS, // 3 軒以上でまとめる。2 軒以下は 1 軒ずつ
         clusterMaxZoom: Math.floor(CLUSTER_UNTIL_ZOOM),
-        clusterProperties: { total: ['+', ['get', 'n']], doneTotal: ['+', ['get', 'done']] } as never,
+        // total: まとめた店の数／doneTotal: そのうち済み／lt: ピンを持ち上げる高さの段のいちばん高いもの
+        clusterProperties: { total: ['+', ['get', 'n']], doneTotal: ['+', ['get', 'done']], lt: ['max', ['get', 'lt']] } as never,
       })
       map.addLayer({
         id: ONE_LAYER, type: 'symbol', source: CLUSTER_SOURCE, maxzoom: CLUSTER_UNTIL_ZOOM,
         filter: ['all', ['!', ['has', 'point_count']], ['==', ['get', 'n'], 1]] as never,
-        layout: { ...common, 'icon-image': ['concat', 'pin-', ['get', 'kind'], ['case', ['>', ['get', 'done'], 0], '-done', '']] as never, 'icon-size': ICON_SIZE as never, visibility: visibility() },
+        layout: { ...common, 'icon-image': ['concat', 'pin-', ['get', 'kind'], ['case', ['>', ['get', 'done'], 0], '-done', '']] as never, 'icon-size': ICON_SIZE as never, 'icon-offset': ICON_OFFSET as never, visibility: visibility() },
       }, before)
       map.addLayer({
         id: MANY_LAYER, type: 'symbol', source: CLUSTER_SOURCE, maxzoom: CLUSTER_UNTIL_ZOOM,
@@ -142,13 +170,14 @@ export function createShopClusters(map: MapLibreMap) {
           // まとめた数で 3 段（domain の clusterScale と同じ段）
           // ズームの式はいちばん外に置く決まり（MapLibre）。中で数の段を掛ける
           'icon-size': ['interpolate', ['linear'], ['zoom'], 14, ['*', 0.42, TIER], 17.5, ['*', 0.5, TIER]] as never,
+          'icon-offset': MANY_OFFSET as never, // 屋根の上へ持ち上げる（1 軒のピンと同じ。まとめは中でいちばん高い段）
           visibility: visibility(),
         },
       }, before)
     },
     update(features: readonly ClusterFeature[]) {
-      data = { type: 'FeatureCollection', features: features as unknown as GeoJSON.Feature[] }
-      if (attached) (map.getSource(CLUSTER_SOURCE) as GeoJSONSource | undefined)?.setData(data)
+      all = features
+      if (attached) push()
     },
     setVisible(visible: boolean) {
       hidden = !visible
@@ -176,6 +205,7 @@ export function createShopClusters(map: MapLibreMap) {
     dispose() {
       disposed = true
       map.off('styleimagemissing', onMissing)
+      map.off('zoom', onZoom)
       for (const id of [ONE_LAYER, MANY_LAYER]) if (map.getLayer(id)) map.removeLayer(id)
       if (map.getSource(CLUSTER_SOURCE)) map.removeSource(CLUSTER_SOURCE)
       for (const id of map.listImages?.() ?? []) if (id.startsWith('cl-')) map.removeImage(id)

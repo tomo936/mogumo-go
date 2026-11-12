@@ -392,7 +392,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     buildingPins.update(shownBuildings, done)
     shopClusters.update(clusterFeatures(
       shownPlaced,
-      shownBuildings.map((b) => ({ id: b.placed.id, lat: b.placed.lat, lng: b.placed.lng, shopIds: b.shops.map((s) => s.id) })),
+      shownBuildings.map((b) => ({ id: b.placed.id, lat: b.placed.lat, lng: b.placed.lng, shopIds: b.shops.map((s) => s.id), topM: b.topM })),
       shownInFog,
       hintedIds,
       done,
@@ -583,7 +583,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         map.addLayer(fogShopLayer, below)
         // お店のピン: 晴れた所の店は雲の下、霧の中の近い店は雲の上。どちらも自分の印より下
         shopPins.attach(fogLayer.id, below)
-        shopClusters.attach(fogLayer.id)
+        shopClusters.attach(below) // 雲より上に描く（晴れた所の店だけが入るので、霧の中は見えない。雲の際で隠れない。2026-11-13 オーナー）
         setFog(p)
       } else if (distanceMeters(fogCenter, p) >= FOG_REBUILD_M) {
         setFog(p)
