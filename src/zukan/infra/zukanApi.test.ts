@@ -14,15 +14,17 @@ vi.mock('../../checkin/infra/checkinApi.ts', () => ({
 
 import { loadZukan } from './zukanApi.ts'
 
-const fakeClient = (rows: Record<string, unknown>[] | null, error: unknown = null) => ({
-  from: () => ({
-    select: () => ({
-      order: () => ({
-        range: (from: number, to: number) => Promise.resolve({ data: rows ? rows.slice(from, to + 1) : null, error }),
-      }),
-    }),
-  }),
-})
+// 絞り込み（or・in）は記録だけして、行はそのまま返す
+const filters: string[] = []
+const fakeClient = (rows: Record<string, unknown>[] | null, error: unknown = null) => {
+  const q = {
+    or: (f: string) => { filters.push(`or:${f}`); return q },
+    in: (c: string, ids: string[]) => { filters.push(`in:${c}:${ids.join(',')}`); return q },
+    order: () => q,
+    range: (from: number, to: number) => Promise.resolve({ data: rows ? rows.slice(from, to + 1) : null, error }),
+  }
+  return { from: () => ({ select: () => q }) }
+}
 
 describe('loadZukan', () => {
   it('shops の行を図鑑の店に直し、自分の記録と晴れているかを付ける', async () => {
@@ -55,5 +57,11 @@ describe('loadZukan', () => {
     const shops = await loadZukan(fakeClient([]), { mapShops: [extra], cleared: new Set([cellKey(cellOf(extra))]) })
     expect(shops).toEqual([expect.objectContaining({ id: 'osm:5', name: 'たこ焼き ころ', kind: 'takoyaki', cleared: true, visits: null })])
   })
+  it('読むのは晴れたマスのまわりの四角と、行ったお店の id だけ（表を全部は読まない）', async () => {
+    filters.length = 0
+    await loadZukan(fakeClient([]))
+    expect(filters.some((f) => f.startsWith('or:and(lat.gte.') && f.includes('lng.gte.'))).toBe(true)
+    expect(filters).toContain('in:shop_id:hp:A')
+    expect(filters.every((f) => f.startsWith('or:') || f.startsWith('in:'))).toBe(true)
+  })
 })
-
