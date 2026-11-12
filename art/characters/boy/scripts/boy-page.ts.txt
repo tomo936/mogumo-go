@@ -45,7 +45,8 @@ function pose(anim: string, t: number) {
   if (!mixer || !clips[anim]) return
   const a = mixer.clipAction(clips[anim]!)
   if (cur !== a) { mixer.stopAllAction(); a.play(); cur = a }
-  mixer.setTime(t)
+  mixer.setTime(t + 1e-4) // 動きを替えた直後の 0 秒ちょうどは、前の動きの姿勢が残ることがある（撮影ページの都合）
+  mixer.update(0)
   root.updateMatrixWorld(true)
 }
 function setFace(i: number) { if (faceMap) faceMap.offset.x = i / 4 }
@@ -112,12 +113,26 @@ async function video() {
   }
 }
 function blink(t: number) { const d = (t % 3) - 1.5; return d < 0 || d >= 0.15 ? 0 : d < 0.04 ? 1 : d < 0.11 ? 2 : 1 }
+// 決めた姿勢の並べ画像: 行 = 姿勢（動き anim の i コマ目）、列 = 6 方向
+async function posegrid() {
+  const anim = Q.get('anim')!, n = Number(Q.get('n')), T = Number(Q.get('t') ?? 260), rows = (Q.get('rows') ?? '').split(',').filter(Boolean).map(Number)
+  const R = rows.length ? rows : [...Array(n).keys()]
+  const cv = document.createElement('canvas'); cv.width = T * 6 + 30; cv.height = T * R.length; const g = cv.getContext('2d')!
+  g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height)
+  R.forEach((i, r) => {
+    pose(anim, i / 30 + 0.001); setFace(0)
+    label(g, String(i), 4, r * T + 20, 16)
+    DIRS.forEach(([, yaw, elev], c) => g.drawImage(shot(T, T, yaw, elev, 1.12, MID, c % 2 ? '#fbf0d9' : '#ffffff'), 30 + c * T, r * T))
+  })
+  await save(`pose-${anim}`, cv.toDataURL('image/png'))
+}
 async function main() {
   await load(Q.get('glb')!)
   const what = Q.get('what') ?? 'shots'
   if (what === 'shots') await shots()
   else if (what === 'grid') await grid()
   else if (what === 'video') await video()
+  else if (what === 'posegrid') await posegrid()
   document.body.dataset.ready = '1'
 }
 main().catch((e) => { document.body.dataset.ready = '1'; console.error(String(e?.stack ?? e)) })
