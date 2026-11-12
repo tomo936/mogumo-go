@@ -1,7 +1,7 @@
 // ビル（同じ建物に複数のお店）をタップしたときの、お店の一覧のシート。行を押すとそのお店のシートへ。
 import './checkin.css'
 import '../../hints/ui/hints.css'
-import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
+import { kindIcon } from '../../shops/infra/kindIcons.ts'
 import mysteryPin from '../../assets/pins/mystery.png'
 import { Icon } from '../../ui/Icon.tsx'
 import { DoneMark } from '../../ui/DoneMark.tsx'
@@ -37,7 +37,7 @@ export function BuildingSheet({ shops, checkedIds, maskedIds, hintIds, title, on
           <li key={s.id}>
             <button type="button" className="bldg-sheet__row" onClick={() => onPick(s)}>
               {/* 地図のピンと同じジャンルの絵（気配で伏せている店は「？」のピン） */}
-              <img className="bldg-sheet__pin" src={isMasked(s.id) ? mysteryPin : PIN_ICON[s.kind]} alt="" />
+              <img className="bldg-sheet__pin" src={isMasked(s.id) ? mysteryPin : kindIcon(s.kind)} alt="" />
               <span className="bldg-sheet__name">{isMasked(s.id) ? '？？？' : s.name}</span>
               {hintIds?.has(s.id) && !checkedIds.has(s.id) && <span className="hint-tag">気配の店 +10</span>}
               {checkedIds.has(s.id) && (

@@ -283,3 +283,8 @@ test('行っていない・伏せた気配・onReview が無いときは出さ�
   render(<ShopSheet shop={hp} distanceM={32} busy={false} error={null} onCheckin={vi.fn()} onClose={vi.fn()} visits={twice} />)
   expect(screen.queryByRole('button', { name: '感想を書く' })).not.toBeInTheDocument()
 })
+
+test('写真の無いお店の小さい枠は、ピンではなく食べ物の絵（2026-11-13）', () => {
+  render(<ShopSheet shop={hp} distanceM={32} busy={false} error={null} onCheckin={vi.fn()} onClose={vi.fn()} />)
+  expect(screen.getByRole('img', { name: '麺屋もぐも の絵' }).getAttribute('src')).toContain('kinds/ramen')
+})

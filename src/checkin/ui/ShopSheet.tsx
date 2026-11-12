@@ -7,7 +7,7 @@ import './checkin.css'
 import '../../hints/ui/hints.css'
 import type { Shop, ShopKind } from '../../shops/domain/shop.ts'
 import { hotpepperPageUrl } from '../../shops/domain/hotpepperLink.ts'
-import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
+import { kindIcon } from '../../shops/infra/kindIcons.ts'
 import { CHECKIN_M } from '../../shops/config.ts'
 import { formatOpen } from '../domain/openHours.ts'
 import { openNow } from '../domain/openNow.ts'
@@ -216,7 +216,7 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
         ) : (
           <img
             className="shop-sticker__model"
-            src={masked ? cardUrl('mystery') : big ? cardUrl(shop.kind) : PIN_ICON[shop.kind]}
+            src={masked ? cardUrl('mystery') : big ? cardUrl(shop.kind) : kindIcon(shop.kind)}
             alt={masked ? '？' : `${shop.name} の絵`}
           />
         )}
