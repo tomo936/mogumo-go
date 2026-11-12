@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { chainLikeByCount, isChainName, normalizeShopName } from './chain.ts'
+import { isChainName, normalizeShopName } from './chain.ts'
 import { CHAIN_NAMES } from './chainNames.ts'
 
 describe('normalizeShopName', () => {
@@ -49,18 +49,6 @@ describe('isChainName（本物の一覧で）', () => {
     expect(CHAIN_NAMES.every((n) => n === normalizeShopName(n))).toBe(true)
     expect(new Set(CHAIN_NAMES).size).toBe(CHAIN_NAMES.length)
     expect([...CHAIN_NAMES].sort()).toEqual([...CHAIN_NAMES])
-  })
-})
-
-describe('chainLikeByCount', () => {
-  it('同じ正規化名が3軒以上の名前だけ', () => {
-    const shops = [{ name: '麺や 太郎' }, { name: '麺や太郎' }, { name: '麺や　太郎' }, { name: 'ほか' }, { name: 'ほか' }]
-    expect([...chainLikeByCount(shops)]).toEqual(['麺や太郎'])
-    expect(chainLikeByCount(shops, 2).size).toBe(2)
-  })
-  it('支店名（最後の〇〇店）は除いて数える', () => {
-    const shops = [{ name: 'らーめん大将 中野店' }, { name: 'らーめん大将 新宿店' }, { name: 'らーめん大将 高円寺店' }]
-    expect([...chainLikeByCount(shops)]).toEqual(['らーめん大将'])
   })
 })
 

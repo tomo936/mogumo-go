@@ -47,7 +47,7 @@ describe('collectCandidates', () => {
     ]
     expect(collectCandidates({ ...base, shops }).hp).toEqual(['hp:matsuya2', 'hp:ok'])
   })
-  it('同じ店名が3軒以上（範囲の外のぶんも数える）なら外れる。2軒なら残る', () => {
+  it('同じ店名が何軒あっても、チェーン名の一覧に無ければ外さない（同名の条件は 2026-11-12 オーナーの判断でやめた）', () => {
     const shops = [
       shop('hp:a1', 500, { name: '麺や太郎' }),
       shop('hp:a2', 510, { name: '麺や 太郎' }),
@@ -55,7 +55,7 @@ describe('collectCandidates', () => {
       shop('hp:b1', 520, { name: 'ひまわり亭' }),
       shop('hp:b2', 530, { name: 'ひまわり亭' }),
     ]
-    expect(collectCandidates({ ...base, shops }).hp).toEqual(['hp:b1', 'hp:b2'])
+    expect(collectCandidates({ ...base, shops }).hp).toEqual(['hp:a1', 'hp:a2', 'hp:b1', 'hp:b2'])
   })
   it('hp は id だけ、osm で details なしは id と位置、osm で details ありは入らない', () => {
     const d = { genreCode: null, genreName: null, catch: null, budgetName: null, photoUrl: null, open: null }

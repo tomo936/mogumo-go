@@ -5,7 +5,7 @@
 ## 決まり
 1. 次の店は、気配（デイリーの3件）の候補にしない。
    - チェーン名の一覧に当たる店。
-   - 同じ店名（正規化して比べる）が、端末が持っているお店の中に 3 軒以上ある店（地域チェーン用）。
+   - ~~同じ店名が 3 軒以上ある店~~ → やめた（2026-11-12 オーナー「近くの同じ名前の条件は外していい」）。
 2. チェーン名の一覧は、次の 2 つを合わせたもの。
    - OSM の name-suggestion-index（NSI、BSD-3-Clause）の `brands/amenity/{fast_food,restaurant,cafe,ice_cream,bar,pub}` のうち、`locationSet.include` に `jp` を含むもの。使うのは `tags.name`・`tags["name:ja"]`・`matchNames`。
    - 手で足す一覧（NSI に無いチェーン。初めは空でよい。オーナーから「出た」と言われたら足す）。
@@ -23,7 +23,6 @@
 
    例: 「とんかつやまだ」「ガストロパブ」「松屋食堂」「さとう食堂」は当たらない。
 
-   同じ名前が 3 軒以上かを数えるときは、最後の語の「〇〇店」を除いて数える。
 4. 外す場所は端末とサーバーの両方。
    - 端末: `src/hints/domain/candidates.ts` の `collectCandidates`。
    - サーバー: `supabase/functions/daily-hints/`。名前が分かった後で、抽選の前に外す。前の日の気配や、すでに出した気配は対象外。
