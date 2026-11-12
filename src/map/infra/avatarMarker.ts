@@ -66,6 +66,7 @@ export function createAvatar(map: MapLibreMap) {
     },
     // 進んでいる向き（北0・時計回りの度）。まだ進んでいなければ 0
     heading: () => travel ?? 0,
+    speed: () => speed, // ならした速さ（m/秒）。3D の男の子の動きの切り替えに使う
     // 3D の男の子が出ているときは、2D の絵を隠す
     setHidden(hidden: boolean) {
       el.style.display = hidden ? 'none' : ''

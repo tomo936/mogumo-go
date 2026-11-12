@@ -13,6 +13,7 @@ const mounts: ((e: LocationEvent) => void)[] = []
 const shopErrors: (() => void)[] = []
 const handlers: { select: (s: Shop | null) => void; building: (s: Shop[] | null) => void; position: (p: LatLng) => void }[] = []
 const checkinCalls: { id: string; cells: unknown[] }[] = []
+const expressCalls: string[] = []
 const unfocusCalls: number[] = []
 const postCheckin = vi.fn()
 vi.mock('../checkin/infra/checkinApi.ts', () => ({ postCheckin: (...a: unknown[]) => postCheckin(...a), loadProgress: () => Promise.resolve({ visitsByShop: new Map() }) }))
@@ -44,6 +45,7 @@ beforeEach(() => {
   syncMissions.mockReset()
   syncMissions.mockResolvedValue(null)
   addTownCalls.length = 0
+  expressCalls.length = 0
 })
 vi.mock('../map/ui/MapView.tsx', async () => {
   const { useEffect, useImperativeHandle } = await import('react')
@@ -60,7 +62,7 @@ vi.mock('../map/ui/MapView.tsx', async () => {
       useEffect(() => { handlers.push({ select: onSelectShop, building: onSelectBuilding, position: onPosition }) }, [onSelectShop, onSelectBuilding, onPosition])
       useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, addTown: (town: { id: string }) => { addTownCalls.push(town.id) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false, visitsFor: () => null, progressReady: () => true, checked: () => new Set<string>(),
         hintInputs: () => ({ shops: mapShopsNow, near: mapShopsNow, cleared: new Set<string>(), checked: new Set<string>() }),
-        whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
+        whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, express: (k: string) => { expressCalls.push(k) }, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
       }), [])
       return <div data-testid="map-view" data-pins-hidden={String(pinsHidden)} />
     },
@@ -112,6 +114,7 @@ test('お店をタップするとシートが出て、チェックインが成�
   expect(postCheckin).toHaveBeenCalledWith({ shopId: 'hp:J1', me: here, farFromHome: false })
   expect(screen.queryByText('麺屋もぐも')).not.toBeInTheDocument()
   expect(checkinCalls).toEqual([{ id: 'hp:J1', cells: [{ x: 1, y: 2 }] }])
+  expect(expressCalls).toEqual(['happy']) // 3D の男の子が喜ぶ（1 回）
   expect(screen.getByText('チェックイン完了')).toBeInTheDocument()
   expect(screen.getByText('+30 コイン')).toBeInTheDocument()
 })

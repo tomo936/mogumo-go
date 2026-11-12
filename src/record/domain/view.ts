@@ -2,7 +2,7 @@
 import { distanceMeters } from '../../map/domain/geo.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
 import { cellCenter } from '../../fog/domain/grid.ts'
-import { localFrame } from '../../map/domain/geo.ts'
+import { localFrame, metersPerPixel } from '../../map/domain/geo.ts'
 import type { ClumpBox } from '../../fog/domain/clumps.ts'
 import type { ClearedCell } from './timeline.ts'
 
@@ -34,7 +34,7 @@ export function viewOf(cells: ClearedCell[], home: LatLng | null): { center: Lat
 // 半径 radiusM が幅 widthPx に入るズーム
 export function zoomFor(radiusM: number, widthPx: number, lat: number): number {
   const target = (radiusM * 1.15 * 2) / widthPx // 1px あたりの m
-  const z = Math.log2((156543.03392 * Math.cos((lat * Math.PI) / 180)) / target)
+  const z = Math.log2(metersPerPixel(0, lat) / target) // 2026-11-12: 256px タイルの式で 1 段寄りすぎていたのを直した
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z))
 }
 
