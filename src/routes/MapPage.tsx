@@ -92,7 +92,7 @@ export function MapPage() {
   const [doneToday, setDoneToday] = useState(false)
   // チェックインの直後の「感想を書く」: 成功で持ち、演出が終わったら 10 秒出す。新しいチェックインで置き換わる
   const [reviewOffer, setReviewOffer] = useState<{ checkinId: string; shop: Shop; shown: boolean } | null>(null)
-  const [reviewing, setReviewing] = useState<{ checkinId: string; shop: Shop } | null>(null)
+  const [reviewing, setReviewing] = useState<{ checkinId: string; shop: Shop; day: string } | null>(null)
   useEffect(() => {
     if (!reviewOffer?.shown) return
     const t = setTimeout(() => setReviewOffer(null), REVIEW_OFFER_MS)
@@ -462,7 +462,7 @@ export function MapPage() {
           className="review-offer"
           aria-label="感想を書く"
           onClick={() => {
-            setReviewing({ checkinId: reviewOffer.checkinId, shop: reviewOffer.shop })
+            setReviewing({ checkinId: reviewOffer.checkinId, shop: reviewOffer.shop, day: jstDay(new Date()) })
             setReviewOffer(null)
           }}
         >
@@ -474,7 +474,7 @@ export function MapPage() {
           shopName={reviewing.shop.name}
           shopId={reviewing.shop.id}
           checkinId={reviewing.checkinId}
-          visitDay={jstDay(new Date())}
+          visitDay={reviewing.day}
           existing={null}
           existingPhotoUrl={null}
           onSaved={() => setReviewing(null)}
