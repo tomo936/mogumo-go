@@ -1,17 +1,16 @@
 // 地図の上に重ねる部品: 左上のキャラ札（Lv）、上の真ん中の気配、下の真ん中のメニュー（扇で5つ）。
-// 2026-11-10 オーナー決定の配置。メニューの丸のアイコンは仮（絵はミシェーラに依頼予定）。
+// 2026-11-10 オーナー決定の配置。メニュー・気配の絵はミシェーラの完成形（2026-11-12、丸と枠まで絵に入っている）。
 import { useState } from 'react'
 import { fanPositions } from '../domain/menuFan.ts'
 import { Icon } from '../../ui/Icon.tsx'
 import { CoinIcon } from '../../ui/CoinIcon.tsx'
-import type { IconName } from '../../ui/Icon.tsx'
 
 const CHARACTERS = import.meta.glob<string>('../../assets/characters/starter-*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>
 const characterUrl = (starterId: number) =>
   CHARACTERS[starterId === 102 ? '../../assets/characters/starter-girl.webp' : '../../assets/characters/starter-boy.webp']
 
-const MENU_ART = import.meta.glob<string>('../../assets/ui/menu-ramen.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>
-const ramenUrl = MENU_ART['../../assets/ui/menu-ramen.webp']
+const UI_ART = import.meta.glob<string>('../../assets/ui/*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>
+const art = (name: string) => UI_ART[`../../assets/ui/${name}.webp`]
 
 const FAN_RADIUS = 160
 const DISC = 54 // 扇の丸の大きさ（CSS の .hud-fan__disc と同じ）
@@ -39,12 +38,12 @@ type Props = {
 
 export function MapHud(p: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const items: { icon: IconName; name: string; run: () => void }[] = [
-    { icon: 'zukan', name: '図鑑', run: () => p.onZukan() },
-    { icon: 'record', name: '記録', run: () => p.onRecord() },
-    { icon: 'gacha', name: 'ガチャ', run: () => p.onSoon('ガチャ') },
-    { icon: 'person', name: 'マイページ', run: () => p.onMyPage() },
-    { icon: 'settings', name: '設定', run: () => p.onSettings() },
+  const items: { art: string; name: string; run: () => void }[] = [
+    { art: 'collection', name: '図鑑', run: () => p.onZukan() },
+    { art: 'record', name: '記録', run: () => p.onRecord() },
+    { art: 'gacha', name: 'ガチャ', run: () => p.onSoon('ガチャ') },
+    { art: 'mypage', name: 'マイページ', run: () => p.onMyPage() },
+    { art: 'settings', name: '設定', run: () => p.onSettings() },
   ]
   const spots = fanPositions(items.length, 0, 0, FAN_RADIUS)
   return (
@@ -78,7 +77,7 @@ export function MapHud(p: Props) {
       </button>
 
       <button type="button" className="hud-hint" aria-label="気配" aria-expanded={p.hintOpen} onClick={p.onHintTap}>
-        ？
+        <img src={art('kehai-cloud')} alt="" />
       </button>
 
       <div className="hud-menu">
@@ -95,9 +94,7 @@ export function MapHud(p: Props) {
                 it.run()
               }}
             >
-              <span className="hud-fan__disc">
-                <Icon name={it.icon} size={28} />
-              </span>
+              <img className="hud-fan__disc" src={art(`btn-${it.art}`)} alt="" />
               <small>{it.name}</small>
             </button>
           ))}
@@ -108,7 +105,7 @@ export function MapHud(p: Props) {
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((x) => !x)}
         >
-          {menuOpen ? <Icon name="close" size={28} /> : <img src={ramenUrl} alt="" className="hud-toggle__art" />}
+          <img src={art(menuOpen ? 'icon-close' : 'btn-cloche')} alt="" className="hud-toggle__art" />
         </button>
       </div>
 

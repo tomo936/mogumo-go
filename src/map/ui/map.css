@@ -148,21 +148,14 @@
   width: 62px;
   height: 62px;
   border: 0;
-  border-radius: 50%;
-  background: #fffdf7;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #6b4a2b;
-  font-size: 11px;
-  font-weight: 700;
+  background: none;
 }
-.hud-hint {
-  font-size: 30px;
-  font-weight: 800;
-  color: #c2652a;
+.hud-hint img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 .hud-menu {
   position: absolute;
@@ -174,27 +167,13 @@
 }
 .hud-toggle {
   padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #c2652a;
   position: absolute;
   left: -32px;
   bottom: 0;
   width: 64px;
   height: 64px;
-  border: 3px solid #f6c453;
-  border-radius: 50%;
-  background: #fffdf7;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-  font-size: 28px;
-  line-height: 1;
-  color: #4a3b2c;
-}
-.hud-toggle--close {
-  border-color: transparent;
-  font-size: 30px;
-  font-weight: 800;
+  border: 0;
+  background: none;
 }
 .hud-fan {
   position: absolute;
@@ -208,14 +187,11 @@
   color: #6b4a2b;
 }
 .hud-fan__disc {
-  width: 54px; /* MapHud.tsx の DISC */
+  display: block;
+  width: 54px; /* MapHud.tsx の DISC。絵に丸と枠が入っている */
   height: 54px;
-  border-radius: 50%;
-  background: #fffdf7;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.2));
+  pointer-events: none;
 }
 .hud-fan small {
   margin-top: 3px;
@@ -229,8 +205,6 @@
   line-height: 16px;
   white-space: nowrap;
 }
-.hud-fan svg,
-.hud-toggle svg,
 .hud-pins svg {
   flex: none;
 }
@@ -282,9 +256,10 @@
 
 
 .hud-toggle__art {
-  width: 46px;
-  height: 46px;
-  object-fit: contain;
+  display: block;
+  width: 64px;
+  height: 64px;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22));
   pointer-events: none;
 }
 

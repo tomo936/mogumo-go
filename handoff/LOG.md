@@ -55,3 +55,4 @@
 - 2026-11-11 Claude Code（Fable）: 3D のアバター用の絵の依頼を見直し（to-shiro/2026-11-11-avatar-3d-art.md）。オーナーの参考画像（art/reference/avatar/boy/）があるので三面図・色の見本は取り下げ。男の子の試作に OK が出たあとに、顔の参考 2 枚と女の子の参考画像 6 枚だけ。
 - 2026-11-11 Claude Code（Fable）: 3D のアバター用の絵の依頼から、男の子の顔の参考（おいしい・ねむい）を取り下げ（オーナー決定で表情は ふつう・うれしい の 2 つだけ）。残るのは女の子の参考画像だけ（to-shiro/2026-11-11-avatar-3d-art.md、着手は OK のあと）。
 - 2026-11-12 メニューアイコン 8 点とグルメコインを受領（art/ui/menu/・art/ui/coin/）。返信 handoff/to-shiro/2026-11-12-menu-icons-received.md
+- 2026-11-12 Claude Code: メニューアイコン 8 点とグルメコインを地図の画面に反映（src/assets/ui/*.webp、変換は art/ui/convert-ui.sh、MapHud・CoinIcon）。
