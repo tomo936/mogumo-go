@@ -279,12 +279,12 @@
   text-shadow: 0 2px 0 #6f5aa8;
 }
 .zukan__name {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 32px;
   margin-top: 5px;
-  padding: 1px 4px;
+  padding: 0 4px;
   border: 2px solid #4a2f18;
   border-radius: 6px;
   overflow: hidden;
@@ -293,19 +293,23 @@
   line-height: 13px;
   background: #fff;
   color: #4a2f18;
+}
+/* 2 行まで。3 行目は高さで切り、「…」を付ける（iPhone で 3 行目が少し見えたので高さも決める） */
+.zukan__name-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  max-height: 26px;
+  overflow: hidden;
   overflow-wrap: anywhere;
 }
-/* 1 行で収まる名前は真ん中に */
-.zukan__name--short {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-/* 長い名前は字を小さくして 2 行に収める（それでも入らない分は「…」） */
+/* 長い名前は字を小さく */
 .zukan__name--long {
   font-size: 9.5px;
   line-height: 12px;
-  padding-top: 2px;
+}
+.zukan__name--long .zukan__name-text {
+  max-height: 24px;
 }
 .zukan__card--unknown .zukan__name {
   border-color: transparent;

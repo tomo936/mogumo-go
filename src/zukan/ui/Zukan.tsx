@@ -18,10 +18,10 @@ import { KIND_LABEL } from '../../shops/domain/kindLabel.ts'
 const KIND_NAME = KIND_LABEL
 
 
-// カードの名前の札: 8 字までは 1 行で真ん中、18 字を超えたら字を小さく
+// カードの名前の札: 18 字を超えたら字を小さく
 const nameClass = (name: string) => {
   const n = [...name].length
-  return n <= 8 ? 'zukan__name--short' : n > 18 ? 'zukan__name--long' : ''
+  return n > 18 ? 'zukan__name--long' : ''
 }
 
 type Props = {
@@ -55,8 +55,8 @@ export function Zukan({ onLocate, onClose }: Props) {
   const filledAll = filledCount(all)
   const percent = total === 0 ? 0 : Math.round((filledAll / total) * 100)
   const lv = levelFor(expFromCounts(all.map((s) => s.visits?.count ?? 0)))
-  // カードの下の段: ホットペッパーのひと言。無ければはじめて行った日（カードを手に入れた日。2026-11-12 オーナー）
-  const feature = (s: ZukanShop) => s.catch ?? (s.visits ? `はじめて ${s.visits.firstDay.slice(5).replace('-', '.')}` : '')
+  // カードの下の段: ホットペッパーのひと言だけ。無いお店は空（2026-11-12 オーナー）
+  const feature = (s: ZukanShop) => s.catch ?? ''
 
   if (detail) {
     return <ZukanDetail shop={detail.shop} no={detail.no} onBack={() => setDetail(null)} onLocate={() => onLocate(detail.shop)} />
@@ -140,7 +140,7 @@ export function Zukan({ onLocate, onClose }: Props) {
                             <img src={cardUrl(s.kind)} alt="" className="zukan__model" />
                             <span className="zukan__q">？</span>
                           </span>
-                          <span className="zukan__name zukan__name--short">？？？</span>
+                          <span className="zukan__name">？？？</span>
                           <span className="zukan__foot">
                             <span className="zukan__feat">{s.catch ?? ''}</span>
                           </span>
@@ -160,7 +160,9 @@ export function Zukan({ onLocate, onClose }: Props) {
                         <span className="zukan__art">
                           {s.photoUrl ? <img src={s.photoUrl} alt="" /> : <img src={cardUrl(s.kind)} alt="" className="zukan__model" />}
                         </span>
-                        <span className={`zukan__name ${nameClass(s.name)}`}>{s.name}</span>
+                        <span className={`zukan__name ${nameClass(s.name)}`}>
+                          <span className="zukan__name-text">{s.name}</span>
+                        </span>
                         <span className="zukan__foot">
                           <span className="zukan__feat">{feature(s)}</span>
                           <span className="zukan__cnt">{`${s.visits.count}回`}</span>
