@@ -5,23 +5,23 @@
    247.2
   ],
   "new": [
-   266.3,
-   250.0
+   270.0,
+   250.6
   ]
  },
  "face": {
   "eyes_new": [
    [
-    123,
-    61,
-    222,
-    173
+    110,
+    67,
+    210,
+    179
    ],
    [
-    116,
-    331,
-    217,
-    440
+    103,
+    329,
+    203,
+    436
    ]
   ],
   "eyes_old": [
@@ -38,8 +38,8 @@
     409
    ]
   ],
-  "scale": 0.868,
-  "faces": 1022,
+  "scale": 0.898,
+  "faces": 1218,
   "cell1_changed_outside_boxes": 0,
   "cell2_changed_outside_boxes": 0,
   "cell3_changed_outside_boxes": 0

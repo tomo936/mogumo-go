@@ -10,8 +10,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 BOY = os.path.dirname(HERE)
 WORK = os.path.join(BOY, 'work'); os.makedirs(WORK, exist_ok=True)
 CFG = json.load(open(os.path.join(BOY, 'config.json')))
-G1 = json.load(open(os.path.join(BOY, 'gate1', 'boyS_s123_textured_00002_.json')))
-REF = '/home/otosa/mogumo-go/art/prototypes/avatar/input/sheet-'
+G1 = json.load(open(os.path.join(BOY, 'gate1', CFG['generate']['gate1'])))
+REF = '/home/otosa/mogumo-go/' + CFG['ref_prefix']
 LOG = {}
 
 
@@ -95,7 +95,7 @@ def save(name):
 # ===================================================================== 段 2: 向き・大きさ・掃除・区分け・色合わせ
 if STAGE == 2:
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    bpy.ops.import_scene.gltf(filepath=os.path.join(BOY, 'src', 'boyS_s123_textured_00002_.glb'))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(BOY, 'src', CFG['generate']['file']))
     ob = max((o for o in bpy.data.objects if o.type == 'MESH'), key=lambda o: len(o.data.polygons))
     ob.name = 'avatar'; ob.data.name = 'avatar'
     me = ob.data
@@ -153,7 +153,7 @@ if STAGE == 2:
         if np.dot(ax, [sign, 0, -0.3]) < 0: ax = -ax
         t = (fc - c0) @ ax; tn = (t - t[sel].min()) / (t[sel].max() - t[sel].min())
         hs = G1['inner'][k]['hand_t']
-        hand = sel & (tn >= hs + 0.1)
+        hand = sel & ((tn >= hs + 0.1) | ((tn >= hs - 0.05) & ~in_class(col, C['top'])))  # 2 回目: 袖口のすぐ先の手も入れる
         arm_hand |= hand
         LOG[f'hand{k}_faces'] = int(hand.sum())
     top = in_class(col, C['top'])
@@ -165,9 +165,14 @@ if STAGE == 2:
     # 腕の面（わきより下で胴の外）は持ち物にしない（手のひらの赤みが桃色の範囲に入るため）
     arm_zone = (np.abs(fc[:, 0]) > L['shoulder_x'] + 0.03) & (fc[:, 2] < L['armpit'] + 0.03)
     seg[pinkish & ~belt & ~arm_zone & (fc[:, 2] > 0.2) & (fc[:, 2] < L['neck'])] = 3
+    # 2 回目: 背中から後ろへ出た所（リュックの本体・持ち手・ふたの下）は、色でなく場所で持ち物にする（ふちのぎざぎざ・暗いすき間の元）
+    PZ = L['pack_zone']  # [背中の後ろの y, z の下, z の上, |x| の上限]
+    packgeo = (fc[:, 1] > PZ[0]) & (fc[:, 2] > PZ[1]) & (fc[:, 2] < PZ[2] - 0.03) & (np.abs(fc[:, 0]) < PZ[3])
+    packgeo |= (fc[:, 1] > PZ[0] + 0.025) & (fc[:, 2] >= PZ[2] - 0.03) & (fc[:, 2] < PZ[2] + 0.01) & (np.abs(fc[:, 0]) < 0.045)  # 持ち手（フードより後ろへ出た所だけ）
+    seg[packgeo] = 3
     # 靴
     seg[(fc[:, 2] < L['shoe_top']) & in_class(col, C['shoes'])] = 4
-    seg[(fc[:, 2] < L['shoe_top'] * 0.6)] = 4
+    seg[(fc[:, 2] < L['shoe_top'] - 0.01)] = 4  # 2 回目: 靴の上のふちより下は色によらず靴（靴の横の肌色のしみ）
     # 足・首の肌
     seg[(fc[:, 2] <= L['neck'] + 0.01) & skin & (seg == 0)] = 2
     me.attributes.new('seg', 'INT', 'FACE').data.foreach_set('value', seg)
@@ -177,20 +182,34 @@ if STAGE == 2:
     P = pixels(img); H, W = P.shape[:2]
     lab = np.full((H, W), -1, np.int16)   # 絵の画素ごとの区分け（面の UV の三角を塗る）
     fixm = np.zeros((H, W), np.int8)      # 1 = 手の青い面（肌で塗る）
-    hand_blue = (arm_hand & top) | neckfix
-    hood_rim = (seg == 0) & (hood | ((fc[:, 2] > L['neck'] - 0.04) & (fc[:, 1] > 0.0)))  # フードの後ろの上のふち（髪の色のしみ）
-    # わきの下（腕と胴のせまいすき間）の、生成で焼き込まれた暗いしみ: 腕を振ると見える。服の面だけ、服の色にする
+    # ---- 色の直し（2 回目）: 区分けごとの平均の色の移動と、しみの塗りつぶし（周りの同じ区分けの色で）だけ ----
+    # 面ごとに「直す所」の種類を決め、絵の上でその種類の中の「しみ」の画素を、同じ種類の良い画素からにじませて埋める
+    ty0 = float(np.median(fc[(np.abs(fc[:, 0]) < 0.1) & (fc[:, 2] > 0.28) & (fc[:, 2] < 0.34), 1]))
+    cat = np.zeros(len(fc), np.int8)
+    hood_rim = (seg == 0) & (hood | ((fc[:, 2] > L['neck'] - 0.04) & (fc[:, 1] > 0.0)))  # フードの後ろの上のふち
     underarm = (seg == 0) & (np.abs(fc[:, 0]) > 0.06) & (np.abs(fc[:, 0]) < L['shoulder_x'] + 0.06) & (fc[:, 2] > L['belt'][1]) & (fc[:, 2] < L['armpit'] + 0.06)
-    # 足の肌（靴の上から、半ズボンのすそまで）: 内側の暗い・灰色のしみ（生成で見えなかった所）を肌の色に
     hem = L['shoe_top']
     for z0 in np.arange(L['shoe_top'], L['crotch'], 0.005):
         bnd = (fc[:, 2] >= z0) & (fc[:, 2] < z0 + 0.005) & (np.abs(fc[:, 0]) < 0.13)
         if fa[bnd & top].sum() > 0.5 * fa[bnd].sum(): hem = float(z0); break
     LOG['shorts_hem'] = round(hem, 3)
-    legskin = (seg == 0) | (seg == 2)
-    legskin &= (fc[:, 2] > L['shoe_top'] + 0.005) & (fc[:, 2] < hem - 0.005) & (np.abs(fc[:, 0]) < 0.13)
+    legskin = ((seg == 0) | (seg == 2)) & (fc[:, 2] > L['shoe_top'] - 0.004) & (fc[:, 2] < hem - 0.004) & (np.abs(fc[:, 0]) < 0.13)
     seg[legskin] = 2
+    shoes = (seg == 4)
+    neckring = ((seg == 2) | neckfix) & (fc[:, 2] > L['neck'] - 0.04) & (fc[:, 2] < L['chin'] + 0.01)
+    chin_under = np.isin(seg, [1, 2]) & (fn[:, 2] < -0.35) & (fc[:, 2] > L['neck'] - 0.03) & (fc[:, 2] < L['chin'] + 0.04) & (fc[:, 1] < 0.03)
+    packf = (seg == 3)
+    nearpack = (seg == 0) & (fc[:, 1] > 0.03) & (fc[:, 2] > L['belt'][1] + 0.005) & (fc[:, 2] < L['neck'] + 0.02)
+    neckback = np.isin(seg, [0, 2]) & (fc[:, 2] > L['neck'] - 0.06) & (fc[:, 2] < L['neck'] + 0.03) & (np.abs(fc[:, 0]) < 0.13) & ~neckring & ~chin_under  # フードのえりのまわり（前も後ろも）
+    faceref = (seg == 2) & (fc[:, 2] > L['chin'] + 0.02) & (fc[:, 2] < L['eye_band'][0]) & (fn[:, 1] < -0.5)  # 首・あごの下を合わせる先（ほおの肌）
+    # 先に書いた方が優先
+    for code, m in ((1, arm_hand), (6, neckring | chin_under), (4, legskin), (5, shoes), (7, packf), (9, neckback), (8, nearpack), (2, hood_rim), (3, underarm), (10, faceref)):
+        cat[(cat == 0) & m] = code
+    LOG['fix_faces'] = {str(k): int((cat == k).sum()) for k in range(1, 11)}
     U = uv * [W, H]
+    lv = np.empty(len(me.loops), np.int64); me.loops.foreach_get('vertex_index', lv)
+    Vc = np.empty(len(me.vertices) * 3, np.float32); me.vertices.foreach_get('co', Vc); PC = Vc.reshape(-1, 3)[lv].reshape(-1, 3, 3)
+    xyz = np.full((H, W, 3), np.nan, np.float32)   # 2 回目: 画素ごとの 3D の位置（境目を三角形でなく高さの線で決めるため）
     for f in range(len(fc)):
         T = U[f]; x0, y0 = np.floor(T.min(0)).astype(int); x1, y1 = np.ceil(T.max(0)).astype(int) + 1
         x0, y0 = max(x0, 0), max(y0, 0); x1, y1 = min(x1, W), min(y1, H)
@@ -202,52 +221,113 @@ if STAGE == 2:
         w0 = ((by - cy_) * (X - cx_) + (cx_ - bx) * (Y - cy_)) / den; w1 = ((cy_ - ay) * (X - cx_) + (ax_ - cx_) * (Y - cy_)) / den
         ins = (w0 >= -0.02) & (w1 >= -0.02) & (1 - w0 - w1 >= -0.02)
         lab[y0:y1, x0:x1][ins] = seg[f]
-        if hand_blue[f]: fixm[y0:y1, x0:x1][ins] = 1
-        elif hood_rim[f]: fixm[y0:y1, x0:x1][ins] = 2
-        elif underarm[f]: fixm[y0:y1, x0:x1][ins] = 3
-        elif legskin[f]: fixm[y0:y1, x0:x1][ins] = 4
+        if cat[f]: fixm[y0:y1, x0:x1][ins] = cat[f]
+        w2 = 1 - w0 - w1
+        xyz[y0:y1, x0:x1][ins] = (w0[:, :, None] * PC[f, 0] + w1[:, :, None] * PC[f, 1] + w2[:, :, None] * PC[f, 2])[ins]
     # 面に覆われない画素（絵のすき間のにじみ止め）は、近い画素の区分けにする
     cov = lab >= 0
     for _ in range(6):
         grow = ~cov
         for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
-            nb = np.roll(np.roll(lab, dy, 0), dx, 1)
+            nb = np.roll(np.roll(lab, dy, 0), dx, 1); nf = np.roll(np.roll(fixm, dy, 0), dx, 1)
             take = grow & (lab < 0) & (nb >= 0)
-            lab[take] = nb[take]
+            lab[take] = nb[take]; fixm[take] = nf[take]
         cov = lab >= 0
     rgb = P[:, :, :3].copy()
+    # 2 回目: 靴と足・手と袖の境目は、面（三角形）でなく画素の 3D の位置で決める（三角形のぎざぎざが見えたため）
+    X_, Y_, Z_ = xyz[:, :, 0], xyz[:, :, 1], xyz[:, :, 2]
+    have = ~np.isnan(Z_); Zs = np.where(have, Z_, 9); Xs = np.where(have, X_, 9)
+    SL = L['shoe_line']
+    legs_px = have & (np.abs(Xs) < 0.14) & (Zs < hem - 0.006) & ~np.isin(fixm, [1])
+    shoe_px = legs_px & (Zs < SL); leg_px = legs_px & (Zs >= SL)
+    fixm[shoe_px] = 5; lab[shoe_px] = 4; fixm[leg_px] = 4; lab[leg_px] = 2
+    LOG['cuff'] = {}
+    for k, sign in (('L', 1), ('R', -1)):
+        A = G1['arm'][k]
+        sel = (sign * fc[:, 0] > 0.17) & (fc[:, 2] < A['armpit']) & (fc[:, 2] > A['hand'] - 0.02)
+        Pm = fc[sel]; c0 = Pm.mean(0); _, _, vt = np.linalg.svd(Pm - c0); ax = vt[0]
+        if np.dot(ax, [sign, 0, -0.3]) < 0: ax = -ax
+        t = (fc - c0) @ ax; tmin, tmax = t[sel].min(), t[sel].max()
+        armp = have & (sign * Xs > 0.17) & (Zs < A['armpit'])
+        tn = np.where(armp, ((np.nan_to_num(xyz) - c0) @ ax - tmin) / (tmax - tmin), -9)
+        skp = in_class(rgb, C['skin'])
+        cuff = None
+        for b0 in np.arange(0.3, 1.0, 0.01):   # 袖口: 腕の軸に沿って、肌の画素が半分を超える所
+            bb = armp & (tn >= b0) & (tn < b0 + 0.01)
+            if bb.sum() > 50 and (bb & skp).sum() / bb.sum() > 0.5: cuff = float(b0); break
+        if cuff is None: continue
+        LOG['cuff'][k] = round(cuff, 3)
+        hand_px = armp & (tn >= cuff); sleeve_px = armp & (tn >= cuff - 0.08) & (tn < cuff)
+        fixm[hand_px] = 1; lab[hand_px] = 2; fixm[sleeve_px] = 11; lab[sleeve_px] = 0
+    # 口・顔の前は首の直しに入れない（あごの下の直しが口にかかった）
+    Ys = np.where(have, Y_, 9)
+    fixm[(fixm == 6) & (Zs > L['chin'] - 0.01) & (Ys < -0.07)] = 0
+
+    def fill(bad, good, it=200):
+        """しみ（bad）を、まわりの良い画素（good）の色を少しずつにじませて埋める。届かない所は良い画素の中央値"""
+        bad = bad & ~good
+        if not bad.any() or not good.any(): return 0
+        ys, xs = np.nonzero(bad); y0, y1, x0, x1 = max(ys.min() - 24, 0), ys.max() + 25, max(xs.min() - 24, 0), xs.max() + 25
+        B = bad[y0:y1, x0:x1].copy(); Gd = good[y0:y1, x0:x1].copy(); C = rgb[y0:y1, x0:x1].copy()
+        for _ in range(it):
+            if not B.any(): break
+            m_ = Gd.astype(np.float32); acc = np.zeros_like(C); cnt = np.zeros_like(m_)
+            for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, -1), (1, -1), (-1, 1)):
+                acc += np.roll(np.roll(C * m_[:, :, None], dy, 0), dx, 1); cnt += np.roll(np.roll(m_, dy, 0), dx, 1)
+            gr = B & (cnt > 0)
+            if not gr.any(): break
+            C[gr] = acc[gr] / cnt[gr][:, None]; Gd |= gr; B &= ~gr
+        n_ = int(bad.sum())
+        rgb[y0:y1, x0:x1][bad[y0:y1, x0:x1]] = C[bad[y0:y1, x0:x1]]
+        left = bad.copy(); left[y0:y1, x0:x1] &= B
+        if left.any(): rgb[left] = np.median(rgb[good], 0)
+        return n_
+
+    # 髪: 混ざった青・肌色・白の点を埋めてから、平均の色を参考へ
     hair_px = lab == 1
     _, hs_, hv_ = hsv(rgb)
-    blue_in_hair = hair_px & (in_class(rgb, C['top']) | (hv_ > 0.5))  # 髪に混ざった青・肌色・白の点
-    hair_ok = hair_px & ~blue_in_hair
-    m_hair = rgb[hair_ok].mean(0)
+    blue_in_hair = hair_px & (in_class(rgb, C['top']) | (hv_ > 0.5))
+    LOG['hair_blue_px'] = fill(blue_in_hair, hair_px & ~blue_in_hair)
+    m_hair = rgb[hair_px].mean(0)
     r_hair = np.mean([ref_mean(v, C['hair_ref'], 0, 0.33) for v in ('front', 'side', 'back')], 0)
-    rgb[blue_in_hair] = m_hair
-    LOG['hair_blue_px'] = int(blue_in_hair.sum())
     rgb[hair_px] = np.clip(rgb[hair_px] + (r_hair - m_hair), 0, 1)
-    rim = (fixm == 2); rim_bad = rim & ~in_class(rgb, C['top'])
-    rgb[rim_bad] = np.median(rgb[rim & ~rim_bad], 0)
-    LOG['hood_rim_px'] = int(rim_bad.sum())
-    ua = (fixm == 3); _, _, uv_ = hsv(rgb)
-    ua_ok = ua & in_class(rgb, C['top']) & (uv_ > 0.45)
-    ua_bad = ua & ~in_class(rgb, C['top']) & (uv_ < 0.45)
-    rgb[ua_bad] = np.median(rgb[ua_ok], 0)
-    LOG['underarm_px'] = int(ua_bad.sum())
-    lg = (fixm == 4); lg_bad = lg & ~in_class(rgb, C['skin'])
-    rgb[lg_bad] = np.median(rgb[lg & ~lg_bad], 0)
-    LOG['leg_px'] = int(lg_bad.sum())
+    SK = in_class(rgb, C['skin']); TOP = in_class(rgb, C['top']); _, sat_, val_ = hsv(rgb)
+    # 1 手・4 足・6 首とあごの下: 肌でない・暗い画素を、同じ所の肌から
+    def odd(zone, ok, d, lo=0.55, hi=1.5):  # 区分けの中央値と、色み（明るさを除いた色）が d より違う・明るさが lo〜hi 倍の外の画素（灰色・青・茶色のしみ）
+        med = np.median(rgb[zone & ok], 0); ch = rgb / np.maximum(rgb.sum(2, keepdims=True), 1e-4); mc = med / max(med.sum(), 1e-4)
+        lum = rgb.sum(2) / max(med.sum(), 1e-4)
+        return (np.linalg.norm(ch - mc, axis=2) > d) | (lum < lo) | (lum > hi)
+    for code, nm, vmin in ((1, 'hand_px', 0.55), (4, 'leg_px', 0.6), (6, 'neck_px', 0.5)):
+        zone = fixm == code
+        bad = zone & (~SK | (val_ < vmin)); bad |= zone & odd(zone, ~bad, 0.035)
+        LOG[nm] = fill(bad, zone & ~bad)
+    # 6 首・あごの下: しみを埋めたあと、平均の色を ほおの肌の平均へ（生成で焼き込まれた影の茶色の輪）
+    z6 = fixm == 6; zr = (fixm == 10) & SK
+    if z6.any() and zr.any():
+        sh = rgb[zr].mean(0) - rgb[z6].mean(0); wz = np.clip((L['chin'] - 0.005 - Zs[z6]) / 0.025, 0, 1)[:, None]; rgb[z6] = np.clip(rgb[z6] + sh * 0.85 * wz, 0, 1)  # あごの前は少しずつ（境目の線を出さない）; LOG['neck_shift'] = sh.round(3).tolist()
+        LOG['neck_px2'] = fill(z6 & odd(z6, z6, 0.03, 0.75, 1.3), z6 & ~odd(z6, z6, 0.03, 0.75, 1.3))  # 移したあとに残った桃色・茶色
+    # 5 靴: 肌色・茶色の画素を、靴の青から
+    zone = fixm == 5; skinish = zone & (hsv(rgb)[0] < 0.14) & (sat_ > 0.12)
+    bad = skinish | (zone & ~TOP & (val_ > 0.35)); bad |= zone & odd(zone, ~bad, 0.05, 0.45, 1.6)
+    LOG['shoe_px'] = fill(bad, zone & ~bad)
+    # 2 フードのふち・3 わきの下・8 リュックのまわりの服・9 首の後ろ: 服の青でない・暗い画素を、服の青から
+    for code, nm, vmin in ((2, 'hood_rim_px', 0.0), (3, 'underarm_px', 0.45), (8, 'nearpack_px', 0.35)):
+        zone = fixm == code
+        LOG[nm] = fill(zone & (~TOP | (val_ < vmin)), zone & TOP & (val_ >= vmin))
+    # 11 袖口の手前: 肌色の画素を、袖の青から
+    zone = fixm == 11; LOG['sleeve_px'] = fill(zone & ~(TOP & (val_ >= 0.35)), zone & TOP & (val_ >= 0.35))
+    # 9 えりのまわり: 服の青・肌のどちらでもない画素（桃色・茶色・暗いすき間）を、近い青か肌から
+    zone = fixm == 9; okc = (TOP & (val_ >= 0.35)) | (SK & (val_ >= 0.55))
+    LOG['collar_px'] = fill(zone & ~okc, zone & okc)
+    # 7 リュック: 青い画素（ふちのぎざぎざ）・とても暗い画素（ふたの下のすき間）を、リュックの色から。そのあと平均の色を参考へ
+    zone = fixm == 7; PK = in_class(rgb, C['pack'])
+    bad = zone & (~PK | (val_ < 0.38)); bad |= zone & odd(zone, ~bad, 0.07, 0.4, 1.7)
+    LOG['pack_px'] = fill(bad, zone & ~bad)
     pack_px = lab == 3
     m_pack = rgb[pack_px].mean(0)
     r_pack = ref_mean('back', C['pack_ref'], 0.38, 0.75)
     rgb[pack_px] = np.clip(rgb[pack_px] + (r_pack - m_pack), 0, 1)
-    # 手の青い所: 手の肌の色（青でない手の画素の中央値）で塗る
-    hand_skin = (lab == 2) & ~(fixm == 1) & in_class(rgb, C['skin'])
-    sk = np.median(rgb[hand_skin], 0)
-    # 塗る所のふちを 2 画素ぼかして、周りの肌となじませる
-    fm = (fixm == 1).astype(np.float32)
-    for _ in range(2): fm = np.maximum(fm, (np.roll(fm, 1, 0) + np.roll(fm, -1, 0) + np.roll(fm, 1, 1) + np.roll(fm, -1, 1)) / 4 * 0.7)
-    rgb = rgb * (1 - fm[:, :, None]) + sk * fm[:, :, None]
-    LOG['colors'] = dict(hair_model=m_hair.round(3).tolist(), hair_ref=r_hair.round(3).tolist(), pack_model=m_pack.round(3).tolist(), pack_ref=r_pack.round(3).tolist(), hand_skin=sk.round(3).tolist())
+    LOG['colors'] = dict(hair_model=m_hair.round(3).tolist(), hair_ref=r_hair.round(3).tolist(), pack_model=m_pack.round(3).tolist(), pack_ref=r_pack.round(3).tolist())
     P[:, :, :3] = rgb
     img.pixels.foreach_set(P.ravel()); img.update(); img.pack()
     save('stage2.blend')
@@ -287,6 +367,7 @@ def vcomponents(me, mask):
 
 
 Mx = None
+LEG_STAND = float(os.environ.get('LEGSTAND', CFG['motion'].get('legStand', 0.0)))
 
 
 def reset(rig):
@@ -322,9 +403,10 @@ def apply_pose(rig, p, armDown):
         # 腕: まず A ポーズから下ろし（Y 軸）、それから前後に振る（X 軸）
         rot(rig, 'upperarm' + s, ('X', -g('arm' + s)), ('Y', sg * (armDown - g('armOut') - g('armOut' + s))))
         rot(rig, 'forearm' + s, ('X', -g('elbow' + s)))
-        rot(rig, 'thigh' + s, ('Y', -sg * g('legOut')), ('X', -g('thigh' + s)))
+        # 2 回目: 足の開きの土台 LEG_STAND（元の立ち絵のくるぶしの幅に合わせる。立ち・歩き・走り・喜び すべてに足す）。靴の裏は水平に戻す
+        rot(rig, 'thigh' + s, ('Y', -sg * (LEG_STAND + g('legOut'))), ('X', -g('thigh' + s)))
         rot(rig, 'shin' + s, ('X', g('knee' + s)))
-        rot(rig, 'foot' + s, ('X', g('foot' + s)))
+        rot(rig, 'foot' + s, ('Y', sg * (LEG_STAND + g('legOut'))), ('X', g('foot' + s)))
 
 
 # ===================================================================== 段 3: 骨と重み
@@ -519,12 +601,13 @@ if STAGE == 31:
     bpy.ops.wm.open_mainfile(filepath=os.path.join(WORK, 'stage3.blend'))
     rig = bpy.data.objects['rig']; D = math.radians
     AD = float(os.environ.get('ARMDOWN', CFG['motion'].get('armDown', 0.79)))
+    AO = json.load(open(os.path.join(WORK, 'stage3-log.json')))['landmarks']['armOpenL']  # A ポーズの腕の開き（度。2 回目: 形から）
     POSES = [
         ('A ポーズ', {}, 0.0),
         ('立ち（腕を下ろす）', {}, AD),
         ('左腕 前60・右腕 後40', {'armL': D(60), 'armR': -D(40)}, AD),
         ('左腕 後40・右腕 前60・ひじ90', {'armL': -D(40), 'armR': D(60), 'elbowL': D(90), 'elbowR': D(90)}, AD),
-        ('腕 横90', {}, -(D(90) - D(58))),
+        ('腕 横90', {}, -(D(90) - D(AO))),
         ('ひじ90（下ろした腕）', {'elbowL': D(90), 'elbowR': D(90)}, AD),
         ('左股 前60＋ひざ110・右股 後30', {'thighL': D(60), 'kneeL': D(110), 'thighR': -D(30)}, AD),
         ('左股 後30＋ひざ110・右股 前60', {'thighL': -D(30), 'kneeL': D(110), 'thighR': D(60)}, AD),
@@ -617,7 +700,28 @@ if STAGE == 4:
     happy[low] = old_happy[oy2, ox2][low]
     LOG['face'] = dict(eyes_new=[list(map(int, e)) for e in EB], eyes_old=[list(map(int, e)) for e in EO], scale=round(float(sx), 3), faces=len(seg_face))
     ns['happy'] = happy
-    partB = partB.replace('np.clip((1.0 - nd) * min(rx, ry) / 4, 0, 1)', 'np.clip((1.0 - nd) * min(rx, ry) / 12, 0, 1)')
+    # 2 回目: 目を消すぬり方を変える。箱のふち 1 画素を元の色に固定して中をならす（ラプラスの式）。だ円のやわらかいふちで元の暗い色が
+    # 半分残ると、目のまわりにうすい輪が出た（1 回目の不具合）。ふちと中が続いているので、箱の全体をぬっても境目が出ない
+    partB = partB.replace('np.clip((1.0 - nd) * min(rx, ry) / 4, 0, 1)', 'np.clip((1.0 - nd) * min(rx, ry) / 12, 0, 1)')  # うれしいの写し（ell）は 1 回目のまま
+    i0 = partB.index('def erase(img, box, pad, below=None):'); i1 = partB.index('def stroke(')
+    partB = partB[:i0] + textwrap.dedent("""
+        def erase(img, box, pad, below=None):
+            r0, c0, r1, c1 = max(box[0] - pad, 5), max(box[1] - pad, 1), min(box[2] + pad, img.shape[0] - 6), min(box[3] + pad, img.shape[1] - 2)
+            top = hsm(img[r0 - 4:r0, c0:c1 + 1].mean(0))
+            bot = hsm(img[r1 + 1:r1 + 5, c0:c1 + 1].mean(0))
+            t = ((np.arange(r0, r1 + 1) - r0 + 0.5) / (r1 - r0 + 1))[:, None, None]
+            full = img.copy()
+            full[r0:r1 + 1, c0:c1 + 1] = top[None] * (1 - t) + bot[None] * t
+            Rg = full[r0 - 1:r1 + 2, c0 - 1:c1 + 2].copy()
+            for _ in range(1500):
+                Rg[1:-1, 1:-1] = (Rg[:-2, 1:-1] + Rg[2:, 1:-1] + Rg[1:-1, :-2] + Rg[1:-1, 2:]) / 4
+            full[r0:r1 + 1, c0:c1 + 1] = Rg[1:-1, 1:-1]
+            m = np.zeros(img.shape[:2], np.float32); m[r0:r1 + 1, c0:c1 + 1] = 1
+            if below is not None:
+                m = m * np.clip(below - (yy - 0.5) + 0.5, 0, 1)
+            return img * (1 - m[:, :, None]) + full * m[:, :, None]
+
+    """) + partB[i1:]
     # この子の目は大きく、まつげが暗い所の箱の外へ出るので、消す範囲を広げる
     partB = partB.replace('PAD = 7', 'PAD = %d' % FC['erase_pad']).replace('ell(EB[0], 16), ell(EB[1], 16)', 'ell(EB[0], %d), ell(EB[1], %d)' % (FC['erase_pad'] + 9, FC['erase_pad'] + 9))
     assert 'PAD = %d' % FC['erase_pad'] in partB
