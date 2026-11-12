@@ -525,47 +525,29 @@
   font-weight: 800;
 }
 
-/* 「書く」: 欄のいちばん上の白紙のカード（点線）。2026-11-13 オーナー「小さいしダサい」 */
+/* 「書く」: 見出しの右の橙の丸いボタン（まだ書いていないときだけ）。2026-11-13 オーナー */
 .rv-write {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 56px;
-  margin: 2px 0 12px;
-  padding: 10px 12px !important;
-  border: 2.5px dashed #e8782f !important;
-  border-radius: 14px;
-  background: #fff6e9 !important;
-  color: #c45a17 !important;
-  font-size: 15px;
+  gap: 4px;
+  margin-left: auto;
+  height: 36px;
+  padding: 0 16px 0 10px !important;
+  border: 2.5px solid #4a2f18 !important;
+  border-radius: 99px;
+  background: #e8782f !important;
+  box-shadow: 2px 2px 0 #4a2f18;
+  color: #fff !important;
+  font-size: 14px;
   font-weight: 800;
 }
 .rv-write span {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #e8782f;
-  color: #fff;
   font-size: 18px;
   line-height: 1;
 }
 .rv-write:active {
-  transform: translateY(1px);
-}
-.rv-write--done {
-  border-color: #d9c4ab !important;
-  background: #fbf6ee !important;
-  color: #9a8068 !important;
-  font-size: 13px;
-  min-height: 46px;
-}
-.rv-write--done span {
-  background: #d9c4ab;
-  font-size: 14px;
+  transform: translate(2px, 2px);
+  box-shadow: none;
 }
 /* 書いた感想は 1 件ずつカード。右上の丸い ✎ で直す */
 .rv-mine {

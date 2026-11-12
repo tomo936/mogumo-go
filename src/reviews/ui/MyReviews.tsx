@@ -68,22 +68,18 @@ export function MyReviews({ shopId, shopName, load = loadMine, photos = photoUrl
 
   return (
     <div className="zd-box">
-      <h3 className="zd-box__title">わたしの感想</h3>
+      <h3 className="zd-box__title">
+        わたしの感想
+        {/* 「書く」= 新しい感想（いちばん新しい訪問の分）。まだ書いていないときだけ見出しの右に出す。
+            書いた感想は、それぞれの丸い ✎ で直す（2026-11-13 オーナー） */}
+        {target && !target.existing && (
+          <button type="button" className="rv-write" aria-label="書く" onClick={writeLatest}>
+            <span aria-hidden="true">＋</span>書く
+          </button>
+        )}
+      </h3>
       {data === 'loading' && <p className="zd-box__note">読み込んでいます…</p>}
       {data === 'error' && <p className="zd-box__note">感想を読み込めませんでした</p>}
-      {/* 「書く」= 新しい感想（いちばん新しい訪問の分）。欄のいちばん上の白紙のカード。
-          感想は 1 回の訪問に 1 件（D-03）なので、もう書いてあれば同じ場所に「次に行ったら」と出す（2026-11-13 オーナー） */}
-      {target &&
-        (target.existing ? (
-          <div className="rv-write rv-write--done">
-            <span aria-hidden="true">✎</span>次に行ったら新しく書けます
-          </div>
-        ) : (
-          <button type="button" className="rv-write" aria-label="書く" onClick={writeLatest}>
-            <span aria-hidden="true">＋</span>
-            {`${dayOf(target.checkinId).slice(5).replace('-', '/')} の感想を書く`}
-          </button>
-        ))}
       {typeof data === 'object' && first && (
         <>
           <MyReview r={first} url={urls.get(first.photoPath ?? '')} visitDay={dayOf(first.checkinId)} onEdit={() => edit(first)} />
@@ -97,7 +93,7 @@ export function MyReviews({ shopId, shopName, load = loadMine, photos = photoUrl
           )}
         </>
       )}
-      {typeof data === 'object' && !first && !target && <p className="zd-box__note">まだ感想がありません</p>}
+      {typeof data === 'object' && !first && <p className="zd-box__note">まだ感想がありません</p>}
       {editing && (
         <ReviewEditor
           shopName={shopName}
