@@ -524,3 +524,26 @@
   font-size: 18px;
   font-weight: 800;
 }
+/* 感想ごとの「直す」（2026-11-13 オーナー: 前の感想も直せるように） */
+.rv-mine__edit {
+  flex: none;
+  height: 26px;
+  padding: 0 10px !important;
+  border: 2px solid #4a2f18 !important;
+  border-radius: 99px;
+  background: #fff !important;
+  color: #4a2f18;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.zd-box__ed:disabled {
+  opacity: 0.4;
+}
+.zd-box__hint {
+  margin: -4px 0 8px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.75;
+}

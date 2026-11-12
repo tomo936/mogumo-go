@@ -25,11 +25,27 @@ test('新しい訪問の感想が先頭。非公開は「自分だけ」の札�
   expect(screen.getByText('🔒 自分だけ')).toBeInTheDocument()
   expect(screen.getByText('前の感想（1件）')).toBeInTheDocument()
   expect(await screen.findByRole('img', { name: '自分の写真' })).toHaveAttribute('src', 'https://s/me/p.jpg')
-  await userEvent.click(screen.getByRole('button', { name: '書く・直す' }))
+  // 「書く」はいつも出す。いちばん新しい訪問はもう書いてあるので押せず、次の訪問で書けると出す
+  expect(screen.getByRole('button', { name: '書く' })).toBeDisabled()
+  expect(screen.getByText('次に行ったら新しく書けます')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '2026.11.03 の感想を直す' }))
   expect(screen.getByLabelText('ひとこと')).toHaveValue('感想b')
 })
 
 test('読めなければ文を出す', async () => {
   render(<MyReviews shopId="hp:A" shopName="麺屋A" load={async () => { throw new Error('x') }} photos={photos} />)
   expect(await screen.findByText('感想を読み込めませんでした')).toBeInTheDocument()
+})
+
+test('新しい訪問に感想が無く前の訪問にあるとき: 見出しは「書く」（新しい訪問）、前の感想は「直す」で開ける', async () => {
+  const mine = [rv('a', 'c1', { body: '前の感想' })]
+  render(<MyReviews shopId="hp:A" shopName="麺屋A" load={async () => ({ visits, mine })} photos={photos} />)
+  await screen.findByText('前の感想')
+  await userEvent.click(screen.getByRole('button', { name: '書く' }))
+  expect(screen.getByRole('dialog', { name: '感想を書く' })).toHaveTextContent('2026.11.03 の訪問')
+  expect(screen.getByLabelText('ひとこと')).toHaveValue('')
+  await userEvent.click(screen.getByRole('button', { name: '閉じる' }))
+  await userEvent.click(screen.getByRole('button', { name: '2026.10.12 の感想を直す' }))
+  expect(screen.getByRole('dialog', { name: '感想を書く' })).toHaveTextContent('2026.10.12 の訪問')
+  expect(screen.getByLabelText('ひとこと')).toHaveValue('前の感想')
 })
