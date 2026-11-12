@@ -47,8 +47,8 @@ describe('clusterFeatures', () => {
     const f = clusterFeatures([single('a', 'ramen', 14), single('b', 'cafe', 8)], [bld('c', ['x', 'y', 'z'], 20)], new Set(), new Set(), new Set())
     expect(f.map((x) => [x.properties.liftTier, x.properties.lt])).toEqual([['high', 2], ['low', 0], ['high', 2]])
   })
-  it('寄ったら全部（17.5 から）。複合施設をまとめるのはいちばん引いたときだけ。3 軒以上でまとめる', () => {
-    expect(CLUSTER_UNTIL_ZOOM).toBe(17.5)
+  it('寄ったら全部（17 から）。複合施設をまとめるのはいちばん引いたときだけ。3 軒以上でまとめる', () => {
+    expect(CLUSTER_UNTIL_ZOOM).toBe(17) // 倍率 17 から全部のピン（17〜17.5 の細かいまとめはやめた＝オーナー 2026-11-13「3 段目いらなくない？」）
     expect(BUILDING_CLUSTER_UNTIL_ZOOM).toBeGreaterThan(16)
     expect(BUILDING_CLUSTER_UNTIL_ZOOM).toBeLessThan(CLUSTER_UNTIL_ZOOM)
     expect(CLUSTER_MIN_POINTS).toBe(3)

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { ClusterFeature } from '../domain/cluster.ts'
-import { BUILDING_CLUSTER_UNTIL_ZOOM, CLUSTER_MIN_POINTS } from '../domain/cluster.ts'
+import { BUILDING_CLUSTER_UNTIL_ZOOM, CLUSTER_MIN_POINTS, CLUSTER_UNTIL_ZOOM } from '../domain/cluster.ts'
 import { createShopClusters } from './shopClusters.ts'
 
 const feat = (id: string, bld: number): ClusterFeature => ({
@@ -43,6 +43,7 @@ describe('shopClusters', () => {
     const c = createShopClusters(f.map as never)
     c.attach('me-avatar-3d')
     expect(f.spec.clusterMinPoints).toBe(CLUSTER_MIN_POINTS)
+    expect(f.spec.clusterMaxZoom).toBe(CLUSTER_UNTIL_ZOOM - 1) // 倍率 17 からはまとめない
     expect(f.added.map((l) => l.before)).toEqual(['me-avatar-3d', 'me-avatar-3d'])
   })
 

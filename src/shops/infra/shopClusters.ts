@@ -18,7 +18,7 @@ const INK = '#4a2f18'
 const TIER = ['step', ['coalesce', ['get', 'total'], ['get', 'n']], clusterScale(2), 10, clusterScale(10), 30, clusterScale(30)] as const
 // まとめのピンの大きさ（ズームごと。段の倍率 TIER を掛ける前）と、屋根の上へ持ち上げる量。
 // icon-offset は icon-size 倍されるので、見せたい px ÷ そのズームの大きさ（shopPins と同じ考え方。2026-11-13 ピンが下すぎた直し）
-const manySize = (z: number) => 0.42 + 0.08 * Math.min(1, Math.max(0, (z - 14) / 3.5))
+const manySize = (z: number) => 0.42 + 0.08 * Math.min(1, Math.max(0, (z - 14) / 3.5)) // 下の icon-size（14→0.42、17.5→0.5）と同じ
 const liftFor = (z: number, repM: number): [number, number] => [0, -Math.round(((LIFT_PX_PER_M_AT_17_5 * repM * 2 ** (z - 17.5)) / manySize(z)) * 10) / 10]
 const MANY_OFFSET = [
   'interpolate',
@@ -152,7 +152,7 @@ export function createShopClusters(map: MapLibreMap) {
         cluster: true,
         clusterRadius: CLUSTER_RADIUS_PX,
         clusterMinPoints: CLUSTER_MIN_POINTS, // 3 軒以上でまとめる。2 軒以下は 1 軒ずつ
-        clusterMaxZoom: Math.floor(CLUSTER_UNTIL_ZOOM),
+        clusterMaxZoom: CLUSTER_UNTIL_ZOOM - 1, // この倍率まではまとめ、次の整数（17）からはまとめない
         // total: まとめた店の数／doneTotal: そのうち済み／lt: ピンを持ち上げる高さの段のいちばん高いもの
         clusterProperties: { total: ['+', ['get', 'n']], doneTotal: ['+', ['get', 'done']], lt: ['max', ['get', 'lt']] } as never,
       })
