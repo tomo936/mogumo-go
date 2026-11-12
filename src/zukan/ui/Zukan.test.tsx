@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import type { ZukanShop } from '../domain/zukan.ts'
 
-const load = vi.fn<() => Promise<ZukanShop[]>>()
-vi.mock('../infra/zukanApi.ts', () => ({ loadZukan: () => load() }))
+const load = vi.fn<(c?: unknown, o?: unknown) => Promise<ZukanShop[]>>()
+vi.mock('../infra/zukanApi.ts', () => ({ loadZukan: (c?: unknown, o?: unknown) => load(c, o) }))
 vi.mock('../../reviews/infra/reviewsApi.ts', () => ({
   loadMine: async () => ({ visits: [], mine: [] }),
   loadOthers: async () => ({ items: [], hasMore: false }),
@@ -117,4 +117,13 @@ test('1 ページは 9 枚', async () => {
 test('cardNo は 3 桁', () => {
   expect(cardNo(0)).toBe('No.001')
   expect(cardNo(41)).toBe('No.042')
+})
+
+test('地図のお店と晴れたマスを読み込みに渡す', async () => {
+  load.mockResolvedValueOnce([])
+  const mapShops = [{ id: 'osm:5', name: 'たこ焼き', lat: 35, lng: 139, kind: 'takoyaki' as const, details: null, mapId: null }]
+  const cleared = new Set(['1:2'])
+  render(<Zukan onLocate={() => {}} onClose={() => {}} mapShops={mapShops} cleared={cleared} />)
+  await screen.findByText(/まだ見つけたお店がありません/)
+  expect(load).toHaveBeenLastCalledWith(undefined, { mapShops, cleared })
 })

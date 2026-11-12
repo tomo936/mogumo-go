@@ -26,6 +26,8 @@ vi.mock('../reviews/infra/reviewsApi.ts', () => ({
   saveReview: async () => { throw new Error('x') },
   deleteReview: async () => {},
 }))
+const syncOsmShops = vi.fn(async (..._a: unknown[]) => {})
+vi.mock('../zukan/infra/osmSync.ts', () => ({ syncOsmShops: (...a: unknown[]) => syncOsmShops(...a) }))
 vi.mock('../mypage/infra/coins.ts', () => ({ loadCoins: () => Promise.resolve(420) }))
 const syncMissions = vi.fn()
 vi.mock('../missions/infra/missionsApi.ts', () => ({ syncMissions: (...a: unknown[]) => syncMissions(...a) }))
@@ -540,4 +542,19 @@ test('シートを開くとみんなの感想を読む。店が替われば古�
   expect(await screen.findByText('みんなの感想 ★3.5（2件）')).toBeInTheDocument()
   await act(async () => { slow({ avg: 1, count: 1 }) })
   expect(screen.queryByText('みんなの感想 ★1.0（1件）')).not.toBeInTheDocument()
+})
+
+// ---- 図鑑に地図のお店を出す（2026-11-13） ----
+test('図鑑を開くと、地図のお店のタイルを送り、地図のお店と晴れたマスを図鑑に渡す', async () => {
+  syncOsmShops.mockClear()
+  const takoyaki: Shop = { id: 'osm:5', name: 'たこ焼き ころ', lat: 35, lng: 139, kind: 'takoyaki', details: null, mapId: null }
+  mapShopsNow = [takoyaki]
+  render(
+    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+      <MapPage />
+    </AuthContext.Provider>,
+  )
+  await userEvent.click(screen.getByRole('button', { name: 'メニュー' }))
+  await userEvent.click(screen.getByRole('button', { name: '図鑑' }))
+  expect(syncOsmShops).toHaveBeenCalledWith('u1', [takoyaki], expect.any(Set))
 })

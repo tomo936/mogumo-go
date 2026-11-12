@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import './zukan.css'
-import type { ShopKind } from '../../shops/domain/shop.ts'
+import type { Shop, ShopKind } from '../../shops/domain/shop.ts'
 import { frameTier } from '../../checkin/domain/visits.ts'
 import { KIND_ORDER, PAGE_SIZE, buildZukan, cardNo, filledCount, pageCount, type ZukanShop } from '../domain/zukan.ts'
 import { loadZukan } from '../infra/zukanApi.ts'
@@ -27,23 +27,26 @@ const nameClass = (name: string) => {
 type Props = {
   onLocate: (shop: ZukanShop) => void // 詳細の「地図で見る」
   onClose: () => void
+  mapShops?: readonly Shop[] // 今の地図のお店（shops に書く前でもすぐ「？」を出す）
+  cleared?: ReadonlySet<string> // 地図の晴れたマス（自宅のまわり・町のクリアも入る）
 }
 
-export function Zukan({ onLocate, onClose }: Props) {
+export function Zukan({ onLocate, onClose, mapShops, cleared }: Props) {
   const [detail, setDetail] = useState<{ shop: ZukanShop; no: string } | null>(null)
   const [state, setState] = useState<{ status: 'loading' } | { status: 'error' } | { status: 'ready'; shops: ZukanShop[] }>({ status: 'loading' })
   const [kind, setKind] = useState<ShopKind>('ramen')
   const [page, setPage] = useState(0)
+  const [opened] = useState({ mapShops, cleared }) // 開いたときの地図のお店と晴れたマス（開いている間は読み直さない）
 
   useEffect(() => {
     let alive = true
-    loadZukan()
+    loadZukan(undefined, opened)
       .then((shops) => alive && setState({ status: 'ready', shops }))
       .catch(() => alive && setState({ status: 'error' }))
     return () => {
       alive = false
     }
-  }, [])
+  }, [opened])
 
   const byKind = useMemo(() => (state.status === 'ready' ? buildZukan(state.shops) : null), [state])
   const all = useMemo(() => (byKind ? [...byKind.values()].flat() : []), [byKind])

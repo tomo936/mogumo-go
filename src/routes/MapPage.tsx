@@ -43,6 +43,7 @@ import type { TownNews, TownSync } from '../towns/domain/progress.ts'
 import { TownBanner } from '../towns/ui/TownBanner.tsx'
 import { ReviewEditor } from '../reviews/ui/ReviewEditor.tsx'
 import { loadLatest, loadSummary } from '../reviews/infra/reviewsApi.ts'
+import { syncOsmShops } from '../zukan/infra/osmSync.ts'
 import type { Review } from '../reviews/domain/review.ts'
 import { jstDay } from '../checkin/domain/day.ts'
 
@@ -57,6 +58,7 @@ function loadPinsHidden(): boolean {
   }
 }
 
+const OSM_SYNC_MS = 60_000 // 地図のお店のタイルを送るか確かめる間隔
 const REVIEW_OFFER_MS = 10_000 // チェックインの後に「感想を書く」を出しておく時間
 
 export function MapPage() {
@@ -94,6 +96,24 @@ export function MapPage() {
   const [doneToday, setDoneToday] = useState(false)
   // チェックインの直後の「感想を書く」: 成功で持ち、演出が終わったら 10 秒出す。新しいチェックインで置き換わる
   const [reviewOffer, setReviewOffer] = useState<{ checkinId: string; shop: Shop; shown: boolean } | null>(null)
+  // 図鑑に地図のデータだけのお店を出す（設計 2026-11-12-zukan-osm-shops）: 晴れた場所の地図のお店のタイルを shops-osm に送る。
+  // お店がそろったとき・1 分ごと・図鑑を開いたとき。失敗しても何もしない（次にまた送る）
+  const osmEnabled = shopSourceEnabled(import.meta.env.DEV, window.location.hostname)
+  const syncOsm = useCallback(() => {
+    const inp = mapRef.current?.hintInputs()
+    if (!userId || !osmEnabled || !inp) return
+    void syncOsmShops(userId, inp.shops, inp.cleared)
+  }, [userId, osmEnabled])
+  useEffect(() => {
+    let alive = true
+    void mapRef.current?.whenShopsReady().then(() => alive && syncOsm())
+    const t = setInterval(syncOsm, OSM_SYNC_MS)
+    return () => {
+      alive = false
+      clearInterval(t)
+    }
+  }, [syncOsm])
+  const [zukanInput, setZukanInput] = useState<{ mapShops: readonly Shop[]; cleared: ReadonlySet<string> } | null>(null)
   // お店のシートの「みんなの感想」。シートを開いたときだけ読み、店が替われば古い返事は捨てる
   const [sheetReviews, setSheetReviews] = useState<{ shopId: string; summary: { avg: number; count: number } | null; latest: Review[] } | null>(null)
   const selectedId = selected?.id ?? null
@@ -423,6 +443,8 @@ export function MapPage() {
       )}
       {zukanOpen && (
         <Zukan
+          mapShops={zukanInput?.mapShops}
+          cleared={zukanInput?.cleared}
           onLocate={(z) => {
             setZukanOpen(false)
             mapRef.current?.focusAt(z) // 詳細の「地図で見る」: 視点をお店へ寄せて、シートを開く
@@ -513,6 +535,9 @@ export function MapPage() {
           onHintTap={() => (exploreOpen ? closeExplore() : openExplore())}
           onZukan={() => {
             closeExplore()
+            const inp = mapRef.current?.hintInputs()
+            setZukanInput(inp ? { mapShops: inp.shops, cleared: inp.cleared } : null)
+            syncOsm()
             setZukanOpen(true)
           }}
           onRecord={() => {
