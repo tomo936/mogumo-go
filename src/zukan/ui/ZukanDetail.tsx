@@ -1,93 +1,88 @@
-// 図鑑カードの詳細（手帳風）。仕様: docs/superpowers/specs/2026-11-10-zukan-design.md
-// 後で入れるもの（感想メモ・住所と営業時間・自分の写真）は、仮の枠だけ置く。口コミ・星は作らない。
+// 図鑑カードの詳細（案B。2026-11-12 オーナー決定）。大きなカード・数字 3 つ・わたしの感想・みんなの感想・地図で見る。
+// 仕様: docs/superpowers/specs/2026-11-12-zukan-b-reviews-design.md の 2.（共有ボタンと「お店の情報」は出さない）
 import './zukan.css'
-import type { ShopKind } from '../../shops/domain/shop.ts'
 import { frameTier } from '../../checkin/domain/visits.ts'
 import type { ZukanShop } from '../domain/zukan.ts'
 import { KIND_LABEL } from '../../shops/domain/kindLabel.ts'
+import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
+import { MyReviews } from '../../reviews/ui/MyReviews.tsx'
+import { ReviewList } from '../../reviews/ui/ReviewList.tsx'
+import { cardUrl } from './cardArt.ts'
 
-const KIND_NAME = KIND_LABEL
-const TIER_NAME = { normal: 'ふつう', silver: '銀', gold: '金' } as const
-const cards = import.meta.glob('../../assets/shops/cards/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
-const cardUrl = (kind: ShopKind) => cards[`../../assets/shops/cards/${kind}.webp`] ?? cards['../../assets/shops/cards/mystery.webp']
+const TIER_CHIP = { normal: null, silver: '銀の枠', gold: '金の枠' } as const
 
-// '2026-11-03' → '2026.11.03'
+// '2026-11-03' → '2026.11.03'、'11.03'
 const dotted = (day: string) => day.replaceAll('-', '.')
+const short = (day: string) => day.slice(5).replace('-', '.')
 
 type Props = {
   shop: ZukanShop
   no?: string
   onBack: () => void
-  onLocate: () => void // 地図でこのお店を見る（名前は仮）
+  onLocate: () => void
 }
 
-export function ZukanDetail({ shop, onBack, onLocate }: Props) {
-  const visited = shop.visits !== null
+export function ZukanDetail({ shop, no, onBack, onLocate }: Props) {
+  const v = shop.visits
+  const tier = v ? frameTier(v.count) : 'normal'
   return (
     <section className="zd" aria-label="図鑑カード詳細">
       <header className="zd__bar">
         <button type="button" className="zd__back" aria-label="戻る" onClick={onBack}>
-          ←
+          ‹
         </button>
-        <h2>図鑑カード詳細</h2>
+        {no && <span>{no}</span>}
       </header>
 
-      <div className="zd__paper">
-        <div className="zd__title">{visited ? shop.name : '？？？'}</div>
-
-        <div className={`zd__photo${visited ? '' : ' zd__photo--blur'}`}>
-          <span className="zd__tape" aria-hidden="true" />
-          <img src={visited && shop.photoUrl ? shop.photoUrl : cardUrl(shop.kind)} alt="" className={visited && shop.photoUrl ? '' : 'zd__model'} />
-          {visited && <span className="zd__label">公式の写真</span>}
+      <div className={`zd__hero zd__hero--${tier}`}>
+        <div className="zd__art">
+          {shop.photoUrl ? <img src={shop.photoUrl} alt="" /> : <img src={cardUrl(shop.kind)} alt="" className="zd__model" />}
+          {shop.photoUrl && <span className="zd__label">公式の写真</span>}
         </div>
-
-        {visited && (
-          <div className="zd__stamp" aria-label={`訪問済み ${dotted(shop.visits!.lastDay)}`}>
-            <b>訪問済み</b>
-            <span>{dotted(shop.visits!.lastDay)}</span>
-          </div>
-        )}
-
+        <h2 className="zd__name">{v ? shop.name : '？？？'}</h2>
         <div className="zd__chips">
-          <span className="zd__chip">{KIND_NAME[shop.kind]}</span>
-          {shop.budgetName && <span className="zd__chip zd__chip--blue">{shop.budgetName}</span>}
+          <span className="zd__chip">
+            <img src={PIN_ICON[shop.kind]} alt="" />
+            {KIND_LABEL[shop.kind]}
+          </span>
+          {shop.budgetName && <span className="zd__chip">{shop.budgetName}</span>}
+          {TIER_CHIP[tier] && <span className="zd__chip zd__chip--tier">{TIER_CHIP[tier]}</span>}
         </div>
-
         {shop.catch && <p className="zd__catch">{shop.catch}</p>}
-
-        {visited && (
-          <div className="zd__record">
-            <div><b>{`${shop.visits!.count}回`}</b>行った</div>
-            <div><b>{dotted(shop.visits!.firstDay)}</b>はじめて</div>
-            <div><b>{dotted(shop.visits!.lastDay)}</b>この前</div>
-            <div><b>{TIER_NAME[frameTier(shop.visits!.count)]}</b>の枠</div>
+        {v && (
+          <div className="zd__stamp" aria-label={`訪問済み ${dotted(v.lastDay)}`}>
+            <b>訪問済み</b>
+            <span>{dotted(v.lastDay)}</span>
           </div>
         )}
+      </div>
 
-        {/* 後で入れる枠（仮） */}
-        <div className="zd__box zd__box--dashed">
-          <div className="zd__box-title">感想メモ</div>
-          <p>準備中（感想は後の段で入ります）</p>
-        </div>
-
-        <div className="zd__box">
-          <div className="zd__box-title">店舗情報</div>
-          <p>住所・営業時間: 準備中</p>
-        </div>
-
-        <div className="zd__box zd__box--dashed">
-          <div className="zd__box-title">あなたの写真</div>
-          <p>準備中（写真は後の段で入ります）</p>
-        </div>
-
-        {visited ? (
+      {v && (
+        <>
+          <div className="zd__stats">
+            <div>
+              <b>
+                {v.count}
+                <small>回</small>
+              </b>
+              行った
+            </div>
+            <div title={dotted(v.firstDay)}>
+              <b>{short(v.firstDay)}</b>
+              はじめて
+            </div>
+            <div title={dotted(v.lastDay)}>
+              <b>{short(v.lastDay)}</b>
+              この前
+            </div>
+          </div>
+          <MyReviews shopId={shop.id} shopName={shop.name} />
+          <ReviewList shopId={shop.id} />
           <button type="button" className="zd__locate" onClick={onLocate}>
             地図で見る
           </button>
-        ) : (
-          <p className="zd__note">まだ行っていません。近くに行くと、ここに名前が出ます</p>
-        )}
-      </div>
+        </>
+      )}
     </section>
   )
 }

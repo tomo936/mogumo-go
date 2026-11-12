@@ -6,7 +6,16 @@ import type { ZukanShop } from '../domain/zukan.ts'
 const load = vi.fn<() => Promise<ZukanShop[]>>()
 vi.mock('../infra/zukanApi.ts', () => ({ loadZukan: () => load() }))
 const stars = vi.fn<() => Promise<Map<string, number>>>(async () => new Map())
-vi.mock('../../reviews/infra/reviewsApi.ts', () => ({ loadMyLatestStars: () => stars() }))
+vi.mock('../../reviews/infra/reviewsApi.ts', () => ({
+  loadMyLatestStars: () => stars(),
+  loadMine: async () => ({ visits: [], mine: [] }),
+  loadOthers: async () => ({ items: [], hasMore: false }),
+  loadSummary: async () => null,
+  photoUrls: async () => new Map(),
+  reportReview: async () => 'ok',
+  saveReview: async () => { throw new Error('x') },
+  deleteReview: async () => {},
+}))
 
 import { Zukan } from './Zukan.tsx'
 import { PAGE_SIZE, cardNo } from '../domain/zukan.ts'
@@ -36,7 +45,15 @@ test('行ったお店を押すと詳細が開き、地図で見るで onLocate �
   const onLocate = vi.fn()
   render(<Zukan onLocate={onLocate} onClose={() => {}} />)
   await userEvent.click(await screen.findByRole('button', { name: '麺屋A 2回行った' }))
-  expect(screen.getByText('図鑑カード詳細')).toBeInTheDocument()
+  const d = screen.getByRole('region', { name: '図鑑カード詳細' })
+  expect(d).toHaveTextContent('No.001')
+  expect(screen.getByLabelText('訪問済み 2026.11.08')).toBeInTheDocument()
+  expect(d).toHaveTextContent('2回行った')
+  expect(d).toHaveTextContent('はじめて')
+  expect(d).toHaveTextContent('この前')
+  expect(screen.getByRole('heading', { name: /わたしの感想/ })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: /みんなの感想/ })).toBeInTheDocument()
+  expect(d).not.toHaveTextContent('準備中')
   await userEvent.click(screen.getByRole('button', { name: '地図で見る' }))
   expect(onLocate).toHaveBeenCalledWith(visited)
 })
