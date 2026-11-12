@@ -57,9 +57,10 @@ type Props = {
   onLocate?: () => void // 地図の視点をこのお店へ寄せる（図鑑から開いたときだけ出す。名前は仮）
   backLabel?: string | null // ビルの一覧から開いたとき、左上の「‹ ビル名」（押すと onBack）
   onBack?: () => void
+  viewOnly?: boolean // 見るだけ（ワールドマップから飛んだ先）。チェックインのボタンと誤りの文を出さない
 }
 
-export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, masked = false, visits = null, recordReady, busy, error, onCheckin, onClose, onLocate, backLabel = null, onBack }: Props) {
+export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, masked = false, visits = null, recordReady, busy, error, onCheckin, onClose, onLocate, backLabel = null, onBack, viewOnly = false }: Props) {
   const [expanded, setExpanded] = useState(false) // 止まっている段（全画面か）
   const [openedAt] = useState(() => new Date()) // 営業中かは、シートを開いた時刻で決める
   const [height, setHeight] = useState<number | null>(null) // 引いている間・全画面の高さ（px）。小さい段で止まっているときは null（中身の高さ）
@@ -349,8 +350,8 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
       </div>
       {/* チェックインのボタンは段が変わっても下に置いたまま */}
       <div className="shop-sheet__foot">
-        {errorRow}
-        {button}
+        {!viewOnly && errorRow}
+        {!viewOnly && button}
         {locateButton}
         {!expanded && progress === 0 && (
           <button type="button" className="shop-sheet__more" onClick={() => settle('full')}>

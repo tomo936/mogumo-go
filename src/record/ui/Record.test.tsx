@@ -13,6 +13,7 @@ type Sync = (onUpdate: (s: TownSync) => void, opts?: { alive?: () => boolean }) 
 const sync = vi.fn<Sync>(async () => {})
 vi.mock('../../towns/infra/townsApi.ts', () => ({ syncUntilSettled: (...a: Parameters<Sync>) => sync(...a) }))
 
+vi.mock('../../world/ui/WorldMap.tsx', () => ({ WorldMap: ({ onClose }: { onClose: () => void }) => <button onClick={onClose}>world-close</button> }))
 vi.mock('./RecordMap.tsx', () => ({ RecordMap: () => <div data-testid="record-map" /> }))
 
 import { Record } from './Record.tsx'
@@ -137,4 +138,12 @@ test('はじめから じっせき のタブで開ける', async () => {
   load.mockResolvedValueOnce({ cells, visits, towns: [] })
   render(<Record home={null} onClose={() => {}} initialTab="badges" />)
   expect(await screen.findByRole('img', { name: 'はじめてのカフェ' })).toBeInTheDocument()
+})
+
+test('「ワールドマップ」を押すと日本地図が重なり、戻ると閉じる', async () => {
+  load.mockResolvedValueOnce({ cells, visits, towns: [] })
+  render(<Record home={null} onClose={() => {}} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'ワールドマップ' }))
+  await userEvent.click(screen.getByText('world-close'))
+  expect(screen.queryByText('world-close')).toBeNull()
 })

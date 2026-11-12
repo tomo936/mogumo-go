@@ -224,3 +224,15 @@ test('営業時間が読めれば「営業中 22:00まで」', () => {
     vi.useRealTimers()
   }
 })
+
+test('viewOnly ではチェックインのボタンも誤りの文も出さない', () => {
+  setup({ viewOnly: true, error: 'too_far', distanceM: 10 })
+  expect(screen.queryByRole('button', { name: /チェックイン/ })).toBeNull()
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(screen.getByText('麺屋もぐも')).toBeInTheDocument()
+})
+
+test('viewOnly でなければボタンがある', () => {
+  setup({ distanceM: 10 })
+  expect(screen.getByRole('button', { name: 'チェックイン' })).toBeInTheDocument()
+})

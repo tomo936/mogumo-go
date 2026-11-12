@@ -36,12 +36,18 @@ type Props = {
   pins: DayPin[]
   wave?: boolean
   outlines?: OutlineTown[] // 「町の範囲」を出すとき、行った町の形（出さないときは空）
+  focus?: { center: LatLng; zoom: number } // 指定すると、最初の視点をここにする（ワールドマップから飛んだ先）
+  onPinTap?: (shopId: string) => void // 指定すると、ピンを押したら札ではなくこれを呼ぶ
 }
 
 const NO_OUTLINES: OutlineTown[] = []
+const DONE_SVG =
+  '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#fff"/><circle cx="12" cy="12" r="10.1" fill="#3ecf8e"/><path d="M7.4 12.2l3.6 3.6 6-6.5" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 const mdLabel = (day: string) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`
 
-export function RecordMap({ cells, towns, t, home, pins, wave = true, outlines = NO_OUTLINES }: Props) {
+export function RecordMap({ cells, towns, t, home, pins, wave = true, outlines = NO_OUTLINES, focus, onPinTap }: Props) {
+  const onPinTapRef = useRef(onPinTap)
+  onPinTapRef.current = onPinTap
   const waveRef = useRef(wave) // 晴れる動き（波）を出すか。スライダーを引いているときは出さずにすぐ反映する
   waveRef.current = wave
   const containerRef = useRef<HTMLDivElement>(null)
@@ -55,14 +61,16 @@ export function RecordMap({ cells, towns, t, home, pins, wave = true, outlines =
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    const { center, radiusM } = viewOf(cells, home)
+    const view = viewOf(cells, home)
+    const center = focus ? focus.center : view.center
+    const radiusM = view.radiusM
     const theme = THEMES[pickTheme(window.location.search, MAP_THEME)]
     const map = new MapLibreMap({
       container,
       style: STYLE_URL,
       transformStyle: (_prev, next) => themeStyle(next, theme),
       center: [center.lng, center.lat],
-      zoom: zoomFor(radiusM, container.clientWidth || 360, center.lat),
+      zoom: focus ? focus.zoom : zoomFor(radiusM, container.clientWidth || 360, center.lat),
       pitch: 0,
       bearing: 0,
       minZoom: MIN_ZOOM,
@@ -221,6 +229,9 @@ export function RecordMap({ cells, towns, t, home, pins, wave = true, outlines =
     apply.current(t)
   }, [t])
   useEffect(() => {
+    if (focus) mapRef.current?.jumpTo({ center: [focus.center.lng, focus.center.lat], zoom: focus.zoom })
+  }, [focus?.center.lat, focus?.center.lng, focus?.zoom]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
     applyTowns.current(towns)
   }, [towns])
   useEffect(() => {
@@ -257,11 +268,22 @@ export function RecordMap({ cells, towns, t, home, pins, wave = true, outlines =
         const num = document.createElement('b')
         num.className = 'rc-pin__num'
         body.append(img, num)
+        if (onPinTapRef.current) {
+          // 見るだけの地図では、行ったお店に済みの印（DoneMark と同じ形）
+          const done = document.createElement('span')
+          done.className = 'rc-pin__done'
+          done.innerHTML = DONE_SVG
+          body.append(done)
+        }
         const tag = document.createElement('span')
         tag.className = 'rc-pin__tag'
         tag.hidden = true
         el.append(body, tag)
         el.addEventListener('click', () => {
+          if (onPinTapRef.current) {
+            onPinTapRef.current(p.shopId)
+            return
+          }
           const show = tag.hidden
           for (const other of markers.values()) other.tag.hidden = true
           tag.hidden = !show
