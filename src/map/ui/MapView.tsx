@@ -62,6 +62,7 @@ type Props = {
   onSelectBuilding: (shops: Shop[] | null, title?: string | null) => void // ビル・施設・駅（同じ建物の複数のお店）が押された。title は施設・駅の名前
   onPosition: (me: LatLng) => void // 1秒に4回まで
   onHintTap: (hintId: string) => void // 気配のピンが押された
+  paused?: boolean // 記録・図鑑など全画面の画面で地図が隠れているあいだ、毎コマの動き（アバター・カメラ・お店の更新）を止めて描かない。位置は受け取り続ける
   pinsHidden?: boolean // 店のピン（1軒・ビル・施設）・名前の札・気配のピンを出さない（2026-11-10 オーナー: 気配のピンも消す）
   ref?: Ref<MapViewHandle>
 }
@@ -74,7 +75,9 @@ const CHECKIN_WAVE_DELAY_MS = 900 // 紙吹雪のあと、霧の波が走り出�
 
 // 地図・カメラ・位置は MapLibre と ref だけで持ち、React の再描画を起こさない。
 // React に上げるのは位置情報の出来事（onStatus）だけ。
-export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, pinsHidden = false, ref }: Props) {
+export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, paused = false, pinsHidden = false, ref }: Props) {
+  const pausedRef = useRef(paused)
+  pausedRef.current = paused
   const containerRef = useRef<HTMLDivElement>(null)
   const onStatusRef = useRef(onStatus)
   const onShopsErrorRef = useRef(onShopsError)
@@ -325,6 +328,11 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     const tick = (now: number) => {
       const dt = now - loop.prevTime
       loop.prevTime = now
+      if (pausedRef.current) {
+        // 隠れているあいだは何も動かさない（地図も描き直さない）。戻ったら目標の位置へ寄っていく
+        loop.frame = requestAnimationFrame(tick)
+        return
+      }
       if (s.current && s.target) {
         const c = stepToward(s.current, s.target, dt)
         s.current = c
