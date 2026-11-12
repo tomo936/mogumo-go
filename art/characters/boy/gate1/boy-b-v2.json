@@ -1,0 +1,177 @@
+{
+ "src": "boy-b-v2.glb",
+ "flipped_to_front": false,
+ "tris": 30595,
+ "nonmanifold_edges": 205,
+ "islands": 1,
+ "fragments": 0,
+ "crotch": 0.175,
+ "legs_separate": true,
+ "arm": {
+  "L": {
+   "found": true,
+   "hand": 0.205,
+   "armpit": 0.285,
+   "gap_min": 0.0064,
+   "holes": []
+  },
+  "R": {
+   "found": true,
+   "hand": 0.205,
+   "armpit": 0.275,
+   "gap_min": 0.0135,
+   "holes": []
+  }
+ },
+ "neck": {
+  "z": 0.535,
+  "area": 0.0299,
+  "loops": 2,
+  "head_max": 0.1585,
+  "torso_top": 0.0849,
+  "ratio": 0.1889,
+  "prof": [
+   [
+    0.485,
+    0.0517,
+    1
+   ],
+   [
+    0.495,
+    0.0526,
+    2
+   ],
+   [
+    0.505,
+    0.0476,
+    1
+   ],
+   [
+    0.515,
+    0.0426,
+    1
+   ],
+   [
+    0.525,
+    0.0364,
+    1
+   ],
+   [
+    0.535,
+    0.0299,
+    2
+   ],
+   [
+    0.545,
+    0.0326,
+    2
+   ],
+   [
+    0.555,
+    0.0367,
+    2
+   ],
+   [
+    0.565,
+    0.0402,
+    2
+   ],
+   [
+    0.575,
+    0.0484,
+    1
+   ],
+   [
+    0.585,
+    0.0581,
+    1
+   ],
+   [
+    0.595,
+    0.0688,
+    1
+   ]
+  ]
+ },
+ "inner": {
+  "L": {
+   "sleeve_top": 0.0,
+   "sleeve_skin": 0.0,
+   "hand_skin": 0.2684,
+   "hand_t": 0.0,
+   "n_sleeve": 0,
+   "n_hand": 236
+  },
+  "R": {
+   "sleeve_top": 0.0,
+   "sleeve_skin": 0.0,
+   "hand_skin": 0.6861,
+   "hand_t": 0.0,
+   "n_sleeve": 0,
+   "n_hand": 213
+  }
+ },
+ "sil": {
+  "front": [
+   0.0932,
+   0.8385
+  ],
+  "side_right": [
+   0.0849,
+   0.837
+  ],
+  "side_if_left": [
+   0.173,
+   0.7479
+  ],
+  "back": [
+   0.1117,
+   0.806
+  ],
+  "armpit_ref": {
+   "L": 0.3634,
+   "R": 0.3684
+  },
+  "armpit_mesh2d": {
+   "L": 0.2707,
+   "R": 0.2732
+  },
+  "neck_ref": 0.5614,
+  "neck_mesh2d": 0.5639
+ },
+ "sym_front_iou": 0.958,
+ "checks": {
+  "armL_separate": true,
+  "armL_connected_at_shoulder": true,
+  "armL_gap": false,
+  "armL_armpit_vs_ref": false,
+  "armL_inner_sleeve_top": false,
+  "armL_inner_hand_skin": false,
+  "armR_separate": true,
+  "armR_connected_at_shoulder": true,
+  "armR_gap": true,
+  "armR_armpit_vs_ref": false,
+  "armR_inner_sleeve_top": false,
+  "armR_inner_hand_skin": false,
+  "legs_separate": true,
+  "neck_narrow": true,
+  "no_fragments": true,
+  "sil_front": false,
+  "sil_side": false,
+  "sil_back": false,
+  "head_height": true,
+  "symmetry": true
+ },
+ "pass": false,
+ "thresholds": {
+  "gap_min": 0.008,
+  "armpit_tol": 0.03,
+  "inner_top": 0.9,
+  "inner_skin": 0.9,
+  "neck_ratio": 0.35,
+  "sil_miss": 0.05,
+  "sym_iou": 0.9,
+  "frag": 0.005,
+  "head_tol": 0.05
+ }
+}
