@@ -113,16 +113,16 @@ test('最初の位置で霧とお店の層が作られ、fetchHotpepper が現�
 
 test('大型施設・お店・霧・霧の中の近い店は自分の位置の印より下に入れ、この順で上に重なる', () => {
   const { world, map } = setup()
-  vi.mocked(map.getLayer).mockImplementation(((id: string) => (id === 'me-ripple-0' || id === 'me-shadow' ? {} : undefined)) as never)
+  vi.mocked(map.getLayer).mockImplementation(((id: string) => (id === 'me-avatar-3d' || id === 'me-shadow' ? {} : undefined)) as never)
   world.onPosition(home)
-  expect(vi.mocked(map.addLayer).mock.calls).toEqual([[facilityLayer, 'me-ripple-0'], [shopLayer, 'me-ripple-0'], [fogLayer, 'me-ripple-0'], [fogShopLayer, 'me-ripple-0']])
+  expect(vi.mocked(map.addLayer).mock.calls).toEqual([[facilityLayer, 'me-avatar-3d'], [shopLayer, 'me-avatar-3d'], [fogLayer, 'me-avatar-3d'], [fogShopLayer, 'me-avatar-3d']])
 })
 
 test('お店のピンは霧の層の手前と自分の印の手前に入れ、1軒の店を渡し、タップはピンを先に見る', async () => {
   const { world, map } = setup()
-  vi.mocked(map.getLayer).mockImplementation(((id: string) => (id === 'me-ripple-0' ? {} : undefined)) as never)
+  vi.mocked(map.getLayer).mockImplementation(((id: string) => (id === 'me-avatar-3d' ? {} : undefined)) as never)
   world.onPosition(home)
-  expect(pinsApi.attach).toHaveBeenCalledWith('fog', 'me-ripple-0')
+  expect(pinsApi.attach).toHaveBeenCalledWith('fog', 'me-avatar-3d')
   await flush()
   expect(pinsApi.update).toHaveBeenLastCalledWith([expect.objectContaining({ id: 's1', model: 'ramen' })], expect.any(Set), expect.anything(), expect.any(Set))
   pinsApi.pick.mockReturnValueOnce(['s1'] as never)

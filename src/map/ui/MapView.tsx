@@ -216,7 +216,11 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       for (let i = 0; i < RIPPLE_COUNT; i++) {
         map.addLayer({
           id: `me-ripple-${i}`, type: 'circle', source: 'me-shadow',
-          paint: { 'circle-radius': 0, 'circle-opacity': 0, 'circle-stroke-color': RIPPLE_COLOR, 'circle-stroke-width': 0, 'circle-stroke-opacity': 0, 'circle-pitch-alignment': 'map' },
+          paint: {
+            'circle-radius': 0, 'circle-opacity': 0, 'circle-stroke-color': RIPPLE_COLOR, 'circle-stroke-width': 0, 'circle-stroke-opacity': 0, 'circle-pitch-alignment': 'map',
+            // 毎コマ値を替えるので、MapLibre の既定のなめらか変化（0.3 秒）は切る（遅れて見える）
+            'circle-radius-transition': { duration: 0 }, 'circle-stroke-width-transition': { duration: 0 }, 'circle-stroke-opacity-transition': { duration: 0 },
+          },
         })
       }
       map.addLayer(avatarModel.layer)
@@ -361,10 +365,12 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
           s.drawn = c
         }
         if (s.loaded) {
-          const mpp = metersPerPixel(map.getZoom(), c.lat)
+          // 半径は「ズーム 0 での px」を渡し、ズームに合わせた拡大は地図の側の式でする（拡大・縮小の途中でもずれない）
+          const mpp0 = metersPerPixel(0, c.lat)
           ripplesAt(now, CIRCLE_RADIUS_M, RIPPLE_PERIOD_MS, RIPPLE_COUNT).forEach((r, i) => {
             const id = `me-ripple-${i}`
-            map.setPaintProperty(id, 'circle-radius', r.radiusM / mpp)
+            const k = r.radiusM / mpp0
+            map.setPaintProperty(id, 'circle-radius', ['interpolate', ['exponential', 2], ['zoom'], 0, k, 24, k * 2 ** 24])
             map.setPaintProperty(id, 'circle-stroke-width', r.widthPx)
             map.setPaintProperty(id, 'circle-stroke-opacity', r.opacity)
           })
