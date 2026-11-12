@@ -324,6 +324,7 @@ export function MapPage() {
         onPosition={setMe}
         onHintTap={pickHint}
         pinsHidden={pinsHidden}
+        paused={recordTab !== null || zukanOpen || myPageOpen || settingsOpen}
       />
       {building && !selected && (
         <BuildingSheet

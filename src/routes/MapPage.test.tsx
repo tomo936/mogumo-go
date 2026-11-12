@@ -51,10 +51,10 @@ const northCalls: number[] = []
 vi.mock('../map/ui/MapView.tsx', async () => {
   const { useEffect, useImperativeHandle } = await import('react')
   return {
-    MapView: ({ pinsHidden, onStatus, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, ref }: {
+    MapView: ({ pinsHidden, paused, onStatus, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, ref }: {
       onStatus: (e: LocationEvent) => void; onShopsError: () => void
       onSelectShop: (s: Shop | null) => void; onSelectBuilding: (s: Shop[] | null) => void; onPosition: (p: LatLng) => void
-      onHintTap: (id: string) => void; pinsHidden?: boolean
+      onHintTap: (id: string) => void; pinsHidden?: boolean; paused?: boolean
       ref?: React.Ref<{ checkin(shop: Shop, cells: unknown[]): void; addTown(town: { id: string }): void }>
     }) => {
       useEffect(() => { mounts.push(onStatus) }, [onStatus])
@@ -65,7 +65,7 @@ vi.mock('../map/ui/MapView.tsx', async () => {
         hintInputs: () => ({ shops: mapShopsNow, near: mapShopsNow, cleared: new Set<string>(), checked: new Set<string>() }),
         whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, express: (k: string) => { expressCalls.push(k) }, subscribeBearing: () => () => {}, resetNorth: () => { northCalls.push(1) }, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
       }), [])
-      return <div data-testid="map-view" data-pins-hidden={String(pinsHidden)} />
+      return <div data-testid="map-view" data-pins-hidden={String(pinsHidden)} data-paused={String(!!paused)} />
     },
   }
 })
@@ -346,6 +346,14 @@ test('右上は方位磁針: 押すと北を上に戻す。ピンを出さない
   await userEvent.click(screen.getByRole('button', { name: '北を上にする' }))
   expect(northCalls.length).toBe(before + 1)
   localStorage.removeItem('mogumo.pinsHidden')
+})
+
+test('設定など全画面の画面を開いているあいだは、後ろの地図を止める', async () => {
+  renderPage()
+  expect(screen.getByTestId('map-view')).toHaveAttribute('data-paused', 'false')
+  await userEvent.click(screen.getByRole('button', { name: 'メニュー' }))
+  await userEvent.click(screen.getByRole('button', { name: '設定' }))
+  expect(screen.getByTestId('map-view')).toHaveAttribute('data-paused', 'true')
 })
 
 test('チェックインのあと、持っているコインが地図の上に出る', async () => {
