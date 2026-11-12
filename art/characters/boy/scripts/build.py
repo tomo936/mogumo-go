@@ -833,6 +833,9 @@ if STAGE == 5:
     block = block.replace("A = RUNA if run else 0.28", "A = MO['runSwing'] if run else MO['walkSwing']")
     block = block.replace("(1.45 + 0.12 * -ce) if run else (0.32 + 0.12 * -ce)", "(MO['runElbow'] + 0.12 * -ce) if run else (0.32 + 0.12 * -ce)")
     # 3 回目: わきを閉じる（腕の開きの足し分を設定から）。手は軽く握る（指のかたまりを曲げる）。うれしいは前の版と同じ開き・手は開いたまま
+    # 4 回目（オーナー: 走りの足をもっとまっすぐ）: 走りは腰のひねりを小さく、ももを内へ戻して、足を前後にまっすぐ振る
+    assert "p['hipTwist'] = -(0.12 if run else 0.10) * c" in block
+    block = block.replace("p['hipTwist'] = -(0.12 if run else 0.10) * c", "p['hipTwist'] = -(MO.get('runHipTwist', 0.12) if run else 0.10) * c\n    p['legOut'] = -MO.get('runLegIn', 0.0) if run else 0.0")
     block = block.replace("p['armOut'] = 0.12 if run else 0.04", "p['armOut'] = MO['runOut'] if run else MO['walkOut']\n    for s_ in 'LR': p['fingers' + s_] = MO['fist']")
     block = block.replace("p = {'armOut': 0.55 + 0.15 * math.sin(TAU * ph)", "p = {'armOut': 0.55 + (AD - 0.60) + 0.15 * math.sin(TAU * ph)")
     block = block.replace("'armOut': 0.03 + 0.02 * b, 'pack': 0.01 * b}", "'armOut': MO['idleOut'] + 0.02 * b, 'pack': 0.01 * b, 'fingersL': MO['fist'], 'fingersR': MO['fist']}")

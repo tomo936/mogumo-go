@@ -1,268 +1,271 @@
 {
- "id": 101,
- "name": "boy",
- "type": "humanoid",
- "sheet": "art/reference/avatar/boy-apose2/",
- "generate": {
-  "seed": 123,
-  "steps": 50,
-  "side": "right",
-  "max_facenum": 30000,
-  "file": "boyT_t123_textured_00001_.glb",
-  "gate1": "boyT_t123.json"
- },
- "colors": {
-  "skin": {
-   "h": [
-    0.015,
-    0.11
-   ],
-   "s": [
-    0.12,
-    0.75
-   ],
-   "v": [
-    0.55,
-    1
-   ]
+  "id": 101,
+  "name": "boy",
+  "type": "humanoid",
+  "sheet": "art/reference/avatar/boy-apose2/",
+  "generate": {
+    "seed": 123,
+    "steps": 50,
+    "side": "right",
+    "max_facenum": 30000,
+    "file": "boyT_t123_textured_00001_.glb",
+    "gate1": "boyT_t123.json"
   },
-  "top": {
-   "h": [
-    0.5,
-    0.72
-   ],
-   "s": [
-    0.2,
-    1
-   ]
-  },
-  "pack": {
-   "h": [
-    0.9,
-    0.04
-   ],
-   "s": [
-    0.3,
-    1
-   ],
-   "v": [
-    0.25,
-    1
-   ]
-  },
-  "shoes": {
-   "h": [
-    0.5,
-    0.72
-   ],
-   "s": [
-    0.2,
-    1
-   ]
-  },
-  "hair_ref": {
-   "h": [
-    0.95,
-    0.1
-   ],
-   "s": [
-    0.3,
-    1
-   ],
-   "v": [
-    0,
-    0.7
-   ]
-  },
-  "pack_ref": {
-   "h": [
-    0.9,
-    0.03
-   ],
-   "s": [
-    0.2,
-    1
-   ],
-   "v": [
-    0.6,
-    1
-   ]
-  }
- },
- "landmarks": {
-  "crotch": 0.135,
-  "armpit": 0.375,
-  "neck": 0.545,
-  "belt": [
-   0.232,
-   0.262
-  ],
-  "shoe_top": 0.065,
-  "eye_band": [
-   0.615,
-   0.715,
-   0.15
-  ],
-  "chin": 0.56,
-  "shoulder_x": 0.118,
-  "elbow_frac": 0.45,
-  "wrist_frac": 0.92,
-  "hipj_up": 0.02,
-  "ankle": 0.045,
-  "pack_dy": 0.09,
-  "shoulder_band": 0.03,
-  "leg_top": 0.25,
-  "pack_zone": [
-   0.085,
-   0.235,
-   0.49,
-   0.125
-  ],
-  "shoe_line": 0.062
- },
- "face": {
-  "box": [
-   -0.155,
-   0.155,
-   0.555,
-   0.765
-  ],
-  "cell": [
-   512,
-   347
-  ],
-  "erase_pad": 15
- },
- "motion": {
-  "armDown": 0.7,
-  "walkSwing": 0.28,
-  "runSwing": 0.5,
-  "runElbow": 1.35,
-  "runThighScale": 0.8,
-  "runKneeScale": 0.74,
-  "stride_note": "足の長さ（股の関節〜地面）0.195。歩きの股 +0.42/−0.32 は上限の 8 割（前 0.84・後 0.42）の中",
-  "legStand": 0.06,
-  "note_round2": "armDown: 腕の開き 55.5° の形で、元の立ち絵の手の幅（身長の 0.43）になるよう 0.60。legStand: 元の立ち絵のくるぶしの左右の中心の間（身長の 0.119）に合わせて 0.06",
-  "walkOut": 0.0,
-  "runOut": 0.0,
-  "idleOut": 0.0,
-  "fist": 1.4,
-  "note_round3": "3 回目: armDown 0.7（体から約 15°。0.8 では手が短パンに重なる）、歩き・走り・待機の腕の開きの足し分 0、手は 1.4（約 80°）握る、走りのひじ 1.35±0.12・振り 0.5。うれしいは前の版と同じ開き（armOut に 0.6 との差を足す）・手は開く"
- },
- "budget": {
-  "tris": 30000,
-  "mb": 2.0
- },
- "limits": {
-  "note": "関門 3 で破れなかった角度（ラジアン）。動きはこの 8 割まで",
-  "armFront": 1.047,
-  "armBack": 0.698,
-  "armSide": 1.571,
-  "elbow": 1.92,
-  "thighFront": 1.047,
-  "thighBack": 0.524,
-  "knee": 1.92,
-  "fingers": 1.92,
-  "note2": "3 回目: ひじ 110°・指 110° の試しの姿勢で破れなし（関門 3 の 3 回目）"
- },
- "ref_prefix": "art/prototypes/avatar/input/apose2-",
- "stand_ref": "art/reference/avatar/boy/",
- "note_round2": "2 回目（2026-11-12 午後）: 新しい形 boyT_t123。目印は gate1/boyT_t123.json と色の帯の測り（股 0.135・すそ 0.13・靴の上 0.065・ベルト 0.235〜0.26）から",
- "hand": {
-  "knuckle_frac": 0.45,
-  "wrist_band": 0.006,
-  "finger_band": 0.017,
-  "thumb_gap": 0.004,
-  "note": "3 回目: 手首・指の付け根の位置（手の長さの割合）と、混ぜる帯の半分の幅",
-  "pivot_palm": 0.3
- },
- "repaint": {
-  "note": "3 回目: 区分けごとの色（元の立ち絵 front-stand・side-stand・back から取った色。ベルトは絵に無いので形の赤をきれいにした色）と、陰・境目の設定",
   "colors": {
-   "hoodie": [
-    98,
-    158,
-    202
-   ],
-   "hair": [
-    138,
-    92,
-    70
-   ],
-   "skin": [
-    240,
-    196,
-    175
-   ],
-   "pack": [
-    240,
-    159,
-    167
-   ],
-   "shoe": [
-    99,
-    152,
-    202
-   ],
-   "sole": [
-    154,
-    177,
-    212
-   ],
-   "shorts": [
-    92,
-    145,
-    187
-   ],
-   "belt": [
-    196,
-    72,
-    68
-   ],
-   "strap": [
-    226,
-    140,
-    152
-   ]
+    "skin": {
+      "h": [
+        0.015,
+        0.11
+      ],
+      "s": [
+        0.12,
+        0.75
+      ],
+      "v": [
+        0.55,
+        1
+      ]
+    },
+    "top": {
+      "h": [
+        0.5,
+        0.72
+      ],
+      "s": [
+        0.2,
+        1
+      ]
+    },
+    "pack": {
+      "h": [
+        0.9,
+        0.04
+      ],
+      "s": [
+        0.3,
+        1
+      ],
+      "v": [
+        0.25,
+        1
+      ]
+    },
+    "shoes": {
+      "h": [
+        0.5,
+        0.72
+      ],
+      "s": [
+        0.2,
+        1
+      ]
+    },
+    "hair_ref": {
+      "h": [
+        0.95,
+        0.1
+      ],
+      "s": [
+        0.3,
+        1
+      ],
+      "v": [
+        0,
+        0.7
+      ]
+    },
+    "pack_ref": {
+      "h": [
+        0.9,
+        0.03
+      ],
+      "s": [
+        0.2,
+        1
+      ],
+      "v": [
+        0.6,
+        1
+      ]
+    }
   },
-  "hair_min_z": 0.66,
-  "belt_band": [
-   0.215,
-   0.28
-  ],
-  "sole_z": 0.012,
-  "thigh_r": 0.047,
-  "min_island": 25,
-  "smooth_iter": 4,
-  "sharp": 24,
-  "edge_w": 0.0012,
-  "ao_rays": 48,
-  "ao_dist": 0.05,
-  "ao_smooth": 4,
-  "ao_strength": 0.45,
-  "face_t0": 0.04,
-  "face_t1": 0.12,
-  "face_blur": 20,
-  "face_inset": 10,
-  "hem": 0.13,
-  "eye_pad": 10,
-  "blush_t": 0.05,
-  "blush_a": 0.55,
-  "dark_lum": 0.35,
-  "min_dark": 60,
-  "handle_y": 0.1115,
-  "belt_min_px": 40,
-  "vote_iter": 6,
-  "eye_lum": 0.45,
-  "mouth_lum": 0.62,
-  "blush_color": [
-   240,
-   150,
-   150
-  ],
-  "blush_r": 2.2,
-  "handle_zmax": 0.49,
-  "eye_padx": 2,
-  "feat_soft": 2
- }
+  "landmarks": {
+    "crotch": 0.135,
+    "armpit": 0.375,
+    "neck": 0.545,
+    "belt": [
+      0.232,
+      0.262
+    ],
+    "shoe_top": 0.065,
+    "eye_band": [
+      0.615,
+      0.715,
+      0.15
+    ],
+    "chin": 0.56,
+    "shoulder_x": 0.118,
+    "elbow_frac": 0.45,
+    "wrist_frac": 0.92,
+    "hipj_up": 0.02,
+    "ankle": 0.045,
+    "pack_dy": 0.09,
+    "shoulder_band": 0.03,
+    "leg_top": 0.25,
+    "pack_zone": [
+      0.085,
+      0.235,
+      0.49,
+      0.125
+    ],
+    "shoe_line": 0.062
+  },
+  "face": {
+    "box": [
+      -0.155,
+      0.155,
+      0.555,
+      0.765
+    ],
+    "cell": [
+      512,
+      347
+    ],
+    "erase_pad": 15
+  },
+  "motion": {
+    "armDown": 0.7,
+    "walkSwing": 0.28,
+    "runSwing": 0.5,
+    "runElbow": 1.35,
+    "runThighScale": 0.8,
+    "runKneeScale": 0.74,
+    "stride_note": "足の長さ（股の関節〜地面）0.195。歩きの股 +0.42/−0.32 は上限の 8 割（前 0.84・後 0.42）の中",
+    "legStand": 0.06,
+    "note_round2": "armDown: 腕の開き 55.5° の形で、元の立ち絵の手の幅（身長の 0.43）になるよう 0.60。legStand: 元の立ち絵のくるぶしの左右の中心の間（身長の 0.119）に合わせて 0.06",
+    "walkOut": 0.0,
+    "runOut": 0.0,
+    "idleOut": 0.0,
+    "fist": 1.4,
+    "note_round3": "3 回目: armDown 0.7（体から約 15°。0.8 では手が短パンに重なる）、歩き・走り・待機の腕の開きの足し分 0、手は 1.4（約 80°）握る、走りのひじ 1.35±0.12・振り 0.5。うれしいは前の版と同じ開き（armOut に 0.6 との差を足す）・手は開く",
+    "runHipTwist": 0.04,
+    "runLegIn": 0.05,
+    "note_round4": "runHipTwist 0.12→0.04・runLegIn 0.05（走りで足を前後にまっすぐ。オーナー 2026-11-12）"
+  },
+  "budget": {
+    "tris": 30000,
+    "mb": 2.0
+  },
+  "limits": {
+    "note": "関門 3 で破れなかった角度（ラジアン）。動きはこの 8 割まで",
+    "armFront": 1.047,
+    "armBack": 0.698,
+    "armSide": 1.571,
+    "elbow": 1.92,
+    "thighFront": 1.047,
+    "thighBack": 0.524,
+    "knee": 1.92,
+    "fingers": 1.92,
+    "note2": "3 回目: ひじ 110°・指 110° の試しの姿勢で破れなし（関門 3 の 3 回目）"
+  },
+  "ref_prefix": "art/prototypes/avatar/input/apose2-",
+  "stand_ref": "art/reference/avatar/boy/",
+  "note_round2": "2 回目（2026-11-12 午後）: 新しい形 boyT_t123。目印は gate1/boyT_t123.json と色の帯の測り（股 0.135・すそ 0.13・靴の上 0.065・ベルト 0.235〜0.26）から",
+  "hand": {
+    "knuckle_frac": 0.45,
+    "wrist_band": 0.006,
+    "finger_band": 0.017,
+    "thumb_gap": 0.004,
+    "note": "3 回目: 手首・指の付け根の位置（手の長さの割合）と、混ぜる帯の半分の幅",
+    "pivot_palm": 0.3
+  },
+  "repaint": {
+    "note": "3 回目: 区分けごとの色（元の立ち絵 front-stand・side-stand・back から取った色。ベルトは絵に無いので形の赤をきれいにした色）と、陰・境目の設定",
+    "colors": {
+      "hoodie": [
+        98,
+        158,
+        202
+      ],
+      "hair": [
+        138,
+        92,
+        70
+      ],
+      "skin": [
+        240,
+        196,
+        175
+      ],
+      "pack": [
+        240,
+        159,
+        167
+      ],
+      "shoe": [
+        99,
+        152,
+        202
+      ],
+      "sole": [
+        154,
+        177,
+        212
+      ],
+      "shorts": [
+        92,
+        145,
+        187
+      ],
+      "belt": [
+        196,
+        72,
+        68
+      ],
+      "strap": [
+        226,
+        140,
+        152
+      ]
+    },
+    "hair_min_z": 0.66,
+    "belt_band": [
+      0.215,
+      0.28
+    ],
+    "sole_z": 0.012,
+    "thigh_r": 0.047,
+    "min_island": 25,
+    "smooth_iter": 4,
+    "sharp": 24,
+    "edge_w": 0.0012,
+    "ao_rays": 48,
+    "ao_dist": 0.05,
+    "ao_smooth": 4,
+    "ao_strength": 0.45,
+    "face_t0": 0.04,
+    "face_t1": 0.12,
+    "face_blur": 20,
+    "face_inset": 10,
+    "hem": 0.13,
+    "eye_pad": 10,
+    "blush_t": 0.05,
+    "blush_a": 0.55,
+    "dark_lum": 0.35,
+    "min_dark": 60,
+    "handle_y": 0.1115,
+    "belt_min_px": 40,
+    "vote_iter": 6,
+    "eye_lum": 0.45,
+    "mouth_lum": 0.62,
+    "blush_color": [
+      240,
+      150,
+      150
+    ],
+    "blush_r": 2.2,
+    "handle_zmax": 0.49,
+    "eye_padx": 2,
+    "feat_soft": 2
+  }
 }
