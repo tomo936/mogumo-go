@@ -494,6 +494,7 @@ test('演出が終わると「感想を書く」が出て、10 秒で消える',
   act(() => last().position(here))
   act(() => last().select(shop))
   await user.click(screen.getByRole('button', { name: 'チェックイン' }))
+  await screen.findByText('チェックイン完了') // 演出が出てから時間を進める
   expect(screen.queryByRole('button', { name: '感想を書く' })).not.toBeInTheDocument()
   act(() => { vi.advanceTimersByTime(EFFECT_MS + 50) })
   expect(screen.getByRole('button', { name: '感想を書く' })).toBeInTheDocument()
@@ -511,11 +512,13 @@ test('押すとエディターがそのお店で開く。出ている間に別�
   act(() => last().position(here))
   act(() => last().select(shop))
   await user.click(screen.getByRole('button', { name: 'チェックイン' }))
+  await screen.findByText('チェックイン完了') // 演出が出てから時間を進める
   act(() => { vi.advanceTimersByTime(EFFECT_MS + 50) })
   expect(screen.getByRole('button', { name: '感想を書く' })).toBeInTheDocument()
   const other: Shop = { ...shop, id: 'hp:J2', name: 'カフェもぐ' }
   act(() => last().select(other))
   await user.click(screen.getByRole('button', { name: 'チェックイン' }))
+  await screen.findByText('チェックイン完了') // 演出が出てから時間を進める
   act(() => { vi.advanceTimersByTime(EFFECT_MS + 50) })
   await user.click(screen.getByRole('button', { name: '感想を書く' }))
   expect(screen.getByRole('dialog', { name: '感想を書く' })).toHaveTextContent('カフェもぐ')
