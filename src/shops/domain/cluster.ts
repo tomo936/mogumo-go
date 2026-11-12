@@ -6,7 +6,7 @@ import type { ShopKind } from './shop.ts'
 // 気配のお店（正体を伏せている）と霧の中の近いお店は数に入れない（気配は「？」のピンで単独に出す）。
 
 export const CLUSTER_UNTIL_ZOOM = 17.5 // これより引いたらまとめる。寄ったら今までどおり全部のピン
-export const CLUSTER_RADIUS_PX = 40 // 画面でこの近さ（ほぼ重なるくらい）のピンだけをまとめる。離れていれば 1 軒ずつ（2026-11-13 オーナー）
+export const CLUSTER_RADIUS_PX = 90 // 画面でこの近さまでのピンをまとめる（かなり離れていない限りまとめる。2026-11-13 オーナー「3以上はかなり離れてない限りまとめよう」）。2 軒以下はまとめない（CLUSTER_MIN_POINTS）
 export const CLUSTER_MIN_POINTS = 3 // 3 軒以上でまとめる。2 軒以下は 1 軒ずつのピン（「2」などは出さない）
 // 複合施設（ビル・駅・大型施設）をまとめに入れるのは、いちばん引いたときだけ。それ以外は今までのビルのピン（「6/6」など）
 export const BUILDING_CLUSTER_UNTIL_ZOOM = 16.3
