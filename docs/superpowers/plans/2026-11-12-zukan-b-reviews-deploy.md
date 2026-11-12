@@ -18,7 +18,13 @@
     where table_schema = 'public' and table_name = 'reviews' and column_name = 'is_public';
    ```
 
-## 3. iPhone で確かめること（dev）
+## 3. SQL 0008 を流す（dev も本番も）
+ニックネームを見せる人を「公開の感想がある人」だけにします。画面の見え方は変わりません。
+1. 右上のプロジェクト名を確かめる（dev は `mogumo-go-dev`）。
+2. SQL Editor で `supabase/migrations/0008_public_profiles_public_only.sql` を全部貼って Run。何度流しても同じ結果です。
+3. 確かめ: `select pg_get_viewdef('public.public_profiles'::regclass);` の結果に `is_public` が入っていれば OK。
+
+## 4. iPhone で確かめること（dev）
 - 図鑑: 一覧が案B のカード（3 列×3 段）、丸い字、行ったお店に No.・星（感想が無ければ「感想まだ」）・回数。
 - チェックインのあと: 紙ふぶきが終わると下に「✎ 感想を書く」が 10 秒出る。押して星・ひとこと・写真で保存できる。
 - 図鑑の詳細: 「わたしの感想」に今書いた感想と写真。非公開にすると「🔒 自分だけ」。「書く・直す」で直す・消す。
