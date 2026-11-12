@@ -1,4 +1,4 @@
-// 1軒だけの店のピン（地図の symbol レイヤー。MapLibre が GPU で描き、重なりは自動で間引く）。
+// 1軒だけの店のピン（地図の symbol レイヤー。MapLibre が GPU で描く）。重なっても全部出す（2026-11-13 オーナー「居酒屋が被ってると片方しか出ない」）。
 // 画像の登録・GeoJSON source の更新・レイヤー追加・タップの当たり判定をここに閉じこめる。
 // 雲より下に描く層（晴れた所の店）と、雲の上に描く層（霧の中の近い店）の2つ。
 import type { GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl'
@@ -62,9 +62,9 @@ export function createShopPins(map: MapLibreMap) {
       'icon-size': ICON_SIZE as never,
       'icon-anchor': 'bottom' as const, // ピンの先（絵の下の真ん中）を店の位置に合わせる
       'icon-offset': ICON_OFFSET as never, // そこから屋根の少し上へ持ち上げる
-      'icon-allow-overlap': false,
-      'icon-padding': 2,
-      'symbol-sort-key': ['get', 'sort'] as never, // 近い店ほど先に置かれる
+      'icon-allow-overlap': true, // 重なっても間引かない
+      'icon-ignore-placement': true, // ほかの文字やピンも隠さない
+      'symbol-z-order': 'viewport-y' as const, // 画面の下（カメラに近い）ピンほど前に描く
       visibility: hidden || moving ? ('none' as const) : ('visible' as const),
     },
   })
