@@ -1,0 +1,200 @@
+// S2: 30fps で撮る動画・比べ画像。?m=old（boy-b-skin＋式）／?m=v2（boy-b-v2＋glb の動き）、&what=video|actual|compare|chk（chk = うでのつなぎ目の前後比べ。候補を .superpowers/preview/avatar/cand.glb に置く）
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+const Q = new URLSearchParams(location.search)
+const save = (window as any).save as (k: string, v: string) => Promise<void>
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
+const scene = new THREE.Scene()
+scene.add(new THREE.HemisphereLight('#ffffff', '#e6dccf', 2.2))
+const sun = new THREE.DirectionalLight('#fff2e4', 2.4); sun.position.set(-0.6, 0.8, 0.55); scene.add(sun)
+const holder = new THREE.Group(); scene.add(holder)
+const cam = new THREE.OrthographicCamera()
+const ELEV = (35 * Math.PI) / 180
+const X = new THREE.Vector3(1, 0, 0), Z = new THREE.Vector3(0, 0, 1), q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion()
+type Rig = { v2: boolean; root: THREE.Group; inner: THREE.Object3D; bones: Record<string, THREE.Bone>; rest: Record<string, THREE.Quaternion>; parentRest: Record<string, THREE.Quaternion>; tris: number; faceMap: THREE.Texture | null; mixer: THREE.AnimationMixer | null; clips: Record<string, THREE.AnimationClip> }
+type Mode = 'idle' | 'walk' | 'run' | 'joy'
+// 前の版の式（round2-page.ts.txt の poseFor・applyPose と同じ）
+function poseFor(mode: Mode, ph: number) {
+  const s = Math.sin(ph * Math.PI * 2), c = Math.cos(ph * Math.PI * 2)
+  const p = { thighL: 0, thighR: 0, kneeL: 0, kneeR: 0, armL: 0, armR: 0, elbow: 0.15, elbowOut: 0, armOut: 0, y: 0, lean: 0, sway: 0, head: 0 }
+  if (mode === 'walk' || mode === 'run') {
+    const run = mode === 'run', a = run ? 0.72 : 0.5
+    p.thighL = a * s + (run ? 0.15 : 0); p.thighR = -a * s + (run ? 0.15 : 0)
+    p.kneeL = (run ? 1.3 : 0.7) * Math.max(0, c) + (run ? 0.25 : 0.05); p.kneeR = (run ? 1.3 : 0.7) * Math.max(0, -c) + (run ? 0.25 : 0.05)
+    p.armL = -a * 0.9 * s; p.armR = a * 0.9 * s; p.elbow = run ? 1.2 : 0.35
+    p.y = (run ? 0.05 : 0.018) * Math.abs(c); p.lean = run ? 0.2 : 0.04; p.sway = 0.04 * s; p.head = run ? -0.12 : 0
+  } else if (mode === 'joy') { p.y = 0.05 * Math.abs(s); p.armOut = 0.08 * Math.abs(s); p.head = -0.04 }
+  return p
+}
+function setBone(r: Rig, name: string, ...rots: [THREE.Vector3, number][]) {
+  const b = r.bones[name]; if (!b) return
+  q1.identity(); for (const [axis, ang] of rots) q1.multiply(q2.setFromAxisAngle(axis, ang))
+  b.quaternion.copy(r.parentRest[name]!).invert().multiply(q1).multiply(r.rest[name]!)
+}
+function applyPose(r: Rig, p: ReturnType<typeof poseFor>) {
+  setBone(r, 'thighL', [X, -p.thighL]); setBone(r, 'thighR', [X, -p.thighR]); setBone(r, 'shinL', [X, p.kneeL]); setBone(r, 'shinR', [X, p.kneeR])
+  setBone(r, 'upperarmL', [Z, p.armOut], [X, -p.armL]); setBone(r, 'upperarmR', [Z, -p.armOut], [X, -p.armR])
+  setBone(r, 'forearmL', [Z, p.elbowOut], [X, -p.elbow]); setBone(r, 'forearmR', [Z, -p.elbowOut], [X, -p.elbow])
+  setBone(r, 'chest', [X, p.lean], [Z, p.sway]); setBone(r, 'head', [X, p.head - p.lean * 0.6], [Z, -p.sway]); r.inner.position.y = p.y
+}
+async function load(url: string, v2: boolean): Promise<Rig> {
+  const g = await new GLTFLoader().loadAsync(url)
+  const root = new THREE.Group(); root.add(g.scene); g.scene.updateMatrixWorld(true)
+  const bones: Rig['bones'] = {}, rest: Rig['rest'] = {}, parentRest: Rig['parentRest'] = {}
+  let tris = 0, faceMap: THREE.Texture | null = null
+  g.scene.traverse((o) => {
+    const m = o as THREE.Mesh
+    if (m.isMesh) {
+      const old = m.material as THREE.MeshStandardMaterial; const map = old.map ?? null
+      if (map) { map.anisotropy = 8; map.colorSpace = THREE.SRGBColorSpace }
+      const isFace = old.name === 'face' || m.name.startsWith('face'); if (isFace) faceMap = map
+      const plate = isFace && !v2
+      if (map) {
+        m.material = new THREE.MeshStandardMaterial({ map, roughness: 0.9, metalness: 0, emissive: '#ffffff', emissiveMap: map, emissiveIntensity: 0.55, color: '#a2a2a2', ...(plate ? { transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 } : {}) })
+        if (plate) m.renderOrder = 2
+      } else m.material = new THREE.MeshStandardMaterial({ vertexColors: !!m.geometry.attributes.color, roughness: 0.85, metalness: 0 })
+      m.frustumCulled = false
+      tris += (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position!.count) / 3
+    }
+    if ((o as THREE.Bone).isBone) { bones[o.name] = o as THREE.Bone; rest[o.name] = o.getWorldQuaternion(new THREE.Quaternion()); parentRest[o.name] = o.parent!.getWorldQuaternion(new THREE.Quaternion()) }
+  })
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(0.2, 24), new THREE.MeshBasicMaterial({ color: '#82481f', transparent: true, opacity: 0.18, depthWrite: false }))
+  sh.rotation.x = -Math.PI / 2; sh.position.y = 0.003; root.add(sh)
+  const clips: Rig['clips'] = {}; for (const c of g.animations) clips[c.name] = c
+  const mixer = v2 ? new THREE.AnimationMixer(g.scene) : null
+  return { v2, root, inner: g.scene, bones, rest, parentRest, tris, faceMap, mixer, clips }
+}
+const CELLS = 4 // v2 の顔: ふつう・半分・閉じ・うれしい
+function setFace(r: Rig, i: number) { if (r.faceMap) r.faceMap.offset.x = r.v2 ? i / CELLS : (i === 3 ? 0.5 : 0) }
+const PERIOD: Record<Mode, number> = { walk: 1.0, run: 0.6, idle: 3.0, joy: 0.8 }
+let cur: Record<string, THREE.AnimationAction | null> = {}
+function poseAt(r: Rig, mode: Mode, t: number) {
+  if (!r.v2) { applyPose(r, poseFor(mode, (t / PERIOD[mode]) % 1)); return }
+  const key = r.root.uuid
+  const clip = r.clips[mode]!
+  const a = r.mixer!.clipAction(clip)
+  if (cur[key] !== a) { r.mixer!.stopAllAction(); a.play(); cur[key] = a }
+  r.mixer!.setTime(t % clip.duration)
+}
+// まばたき（0.15 秒）: ふつう→半分→閉じ→半分→ふつう
+function blinkCell(t: number) { const d = t; return d < 0 || d >= 0.15 ? 0 : d < 0.04 ? 1 : d < 0.11 ? 2 : 1 }
+function shot(r: Rig, w: number, h: number, hp: number, yaw: number, elev = ELEV, bg = '#fbf1d6', foot = 0.13, lookY = 0) {
+  holder.clear(); holder.add(r.root); r.root.rotation.y = (yaw * Math.PI) / 180
+  const up = new THREE.Vector3(0, Math.cos(elev), -Math.sin(elev)); const upp = Math.cos(elev) / hp
+  cam.left = -w / 2 * upp; cam.right = w / 2 * upp; cam.top = h / 2 * upp; cam.bottom = -h / 2 * upp; cam.near = -10; cam.far = 10
+  const t = up.clone().multiplyScalar((h / 2 - h * foot) * upp).add(new THREE.Vector3(0, lookY, 0))
+  cam.position.copy(t).add(new THREE.Vector3(0, Math.sin(elev), Math.cos(elev))); cam.up.set(0, 1, 0); cam.lookAt(t); cam.updateProjectionMatrix()
+  renderer.setPixelRatio(1); renderer.setSize(w, h, false); renderer.setClearColor(bg, 1); renderer.render(scene, cam)
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h
+  cv.getContext('2d')!.drawImage(renderer.domElement, 0, 0); return cv
+}
+const FONT = '"mp", sans-serif'
+function label(g: CanvasRenderingContext2D, s: string, x: number, y: number, size = 15) { g.font = `${size}px ${FONT}`; g.fillStyle = '#6b3f26'; g.fillText(s, x, y) }
+async function video(r: Rig) {
+  const N = 90 // 3 秒・30fps
+  for (let i = 0; i < N; i++) {
+    const t = i / 30
+    const cv = document.createElement('canvas'); cv.width = 560; cv.height = 560; const g = cv.getContext('2d')!
+    g.fillStyle = '#fff'; g.fillRect(0, 0, 560, 560)
+    let y = 0
+    for (const mode of ['walk', 'run'] as const) {
+      poseAt(r, mode, t); setFace(r, r.v2 ? blinkCell(t - 1.4) : 0)
+      g.drawImage(shot(r, 280, 280, 240, 90, 0.1, '#fff', 0.08), 0, y)
+      g.drawImage(shot(r, 280, 280, 205, 40, ELEV, '#fbf1d6', 0.1), 280, y)
+      label(g, mode === 'walk' ? 'あるく' : 'はしる', 8, y + 22); y += 280
+    }
+    await save(`v-${String(i).padStart(3, '0')}`, cv.toDataURL('image/png'))
+  }
+}
+async function actual(r: Rig) {
+  for (let i = 0; i < 30; i++) {
+    const t = i / 30; poseAt(r, 'walk', t); setFace(r, 0)
+    await save(`a-${String(i).padStart(2, '0')}`, shot(r, 60, 60, 34, 40, ELEV, '#fbf1d6', 0.12).toDataURL('image/png'))
+  }
+}
+function img(src: string) { return new Promise<HTMLImageElement>((ok, ng) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ng; i.src = src }) }
+async function compare(nw: Rig, old: Rig) {
+  const W = 1240, H = 1370
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d')!
+  g.fillStyle = '#fffaf0'; g.fillRect(0, 0, W, H)
+  label(g, 'もぐもGO アバター v2（S2）: 参考画像／前の版 boy-b-skin／今回 boy-b-v2', 16, 30, 20)
+  // 1 段目: 走り
+  const ref = await img('/art/reference/avatar/boy/run-side.webp')
+  const rh = 260, rw = ref.width * rh / ref.height
+  g.drawImage(ref, 16, 60, rw, rh); label(g, '参考（run-side）', 16, 340)
+  let x = 32 + rw
+  applyPose(old, poseFor('run', 0.25)); old.inner.updateMatrixWorld(true); setFace(old, 0)
+  g.drawImage(shot(old, 220, 260, 220, 90, 0.1, '#fff', 0.06), x, 60); label(g, '前の版 走り', x, 340); x += 230
+  for (const [lab, ph] of [['今回 走り 着地', 0.0], ['今回 走り 足を上げる', 0.2], ['今回 走り 両足が浮く', 0.38]] as const) {
+    poseAt(nw, 'run', ph * PERIOD.run); setFace(nw, 0)
+    g.drawImage(shot(nw, 220, 260, 220, 90, 0.1, '#fff', 0.06), x, 60); label(g, lab, x, 340); x += 230
+  }
+  // 2 段目: うでを前に振ったときの わき（ななめ後ろから）
+  let y = 370; x = 16
+  label(g, 'うでを大きく振ったときの わき（ななめ上から。前の版は平らな切り口が見えていた）', 16, y + 18, 16); y += 28
+  for (const [lab, r, mode, ph, yaw] of [['前の版 走り', old, 'run', 0.25, 120], ['前の版 走り', old, 'run', 0.25, 60], ['今回 走り', nw, 'run', 0.2, 120], ['今回 走り', nw, 'run', 0.2, 60], ['今回 うれしい', nw, 'joy', 0.3, 30]] as const) {
+    if (r.v2) poseAt(r, mode as Mode, ph * PERIOD[mode as Mode]); else applyPose(r, poseFor(mode as Mode, ph))
+    setFace(r, 0)
+    g.drawImage(shot(r, 230, 250, 230, yaw, 0.45, '#fff', 0.06), x, y); label(g, lab, x, y + 268); x += 240
+  }
+  // 3 段目: 顔
+  y += 290; x = 16
+  label(g, '顔（顔の面だけ絵を差し替え。板は使わない）', 16, y + 18, 16); y += 28
+  poseAt(nw, 'idle', 0)
+  for (const [lab, i] of [['ふつう', 0], ['半分', 1], ['閉じ', 2], ['うれしい', 3]] as const) {
+    setFace(nw, i); g.drawImage(shot(nw, 200, 200, 330, 20, 0.15, '#fbf1d6', -0.55), x, y); label(g, lab, x, y + 218); x += 210
+  }
+  applyPose(old, poseFor('idle', 0)); setFace(old, 3)
+  g.drawImage(shot(old, 200, 200, 330, 20, 0.15, '#fbf1d6', -0.55), x, y); label(g, '前の版 うれしい（板）', x, y + 218); setFace(old, 0)
+  // 4 段目: 実寸
+  y += 240; x = 16
+  label(g, '実寸（左: そのまま／右: 2 倍に拡大）  80px・40px', 16, y + 18, 16); y += 28
+  for (const hp of [80, 40]) {
+    for (const [mode, ph, f] of [['idle', 0, 0], ['walk', 0.2, 0], ['run', 0.2, 0], ['joy', 0.3, 3]] as const) {
+      poseAt(nw, mode, ph * PERIOD[mode]); setFace(nw, f)
+      const s = shot(nw, Math.round(hp * 1.1), Math.round(hp * 1.25), hp, 40, ELEV, '#fbf1d6', 0.1)
+      g.drawImage(s, x, y); g.imageSmoothingEnabled = false; g.drawImage(s, x + s.width + 4, y, s.width * 2, s.height * 2); g.imageSmoothingEnabled = true
+      x += s.width * 3 + 24
+    }
+    x = 16; y += Math.round(hp * 1.25) * 2 + 10
+  }
+  await save('compare', cv.toDataURL('image/png'))
+  // 動きの計算の時間（骨を動かして形を更新するまで。描画は除く）
+  const t0 = performance.now(); const n = 2000
+  for (let i = 0; i < n; i++) { poseAt(nw, 'run', i / 60); nw.inner.updateMatrixWorld(true) }
+  console.log('anim ms/frame', ((performance.now() - t0) / n).toFixed(4), 'tris', nw.tris, 'bones', Object.keys(nw.bones).length, 'clips', Object.keys(nw.clips).join(','))
+}
+// うでのつなぎ目の確認: 上 = 今の版、下 = 候補。あるく・はしるの、左うでが一番後ろ／一番前の瞬間を、横（90°）と ななめ上（40°）から
+async function chk(a: Rig, b: Rig) {
+  const T = 200, cols: [Mode, number, number, number][] = []
+  for (const mode of ['walk', 'run'] as const) for (const ph of [0.04, 0.54]) { cols.push([mode, ph, 90, 0.1]); cols.push([mode, ph, 40, ELEV]) }
+  cols.push(['joy', 0.3, 0, 0.1]); cols.push(['joy', 0.3, 40, ELEV])
+  const cv = document.createElement('canvas'); cv.width = T * cols.length; cv.height = T * 2 + 24; const g = cv.getContext('2d')!
+  g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height)
+  ;[a, b].forEach((r, row) => cols.forEach(([mode, ph, yaw, el], i) => {
+    poseAt(r, mode, ph * PERIOD[mode]); setFace(r, 0); r.inner.updateMatrixWorld(true)
+    g.drawImage(shot(r, T, T, Number(Q.get('hp') ?? 520), yaw, el, '#fbf1d6', 0.5, 0.42), i * T, row * T)
+    if (row === 0) label(g, `${mode === 'walk' ? 'あるく' : mode === 'joy' ? 'うれしい' : 'はしる'} ${ph < 0.5 ? '左うで後ろ' : '左うで前'} ${yaw}°`, i * T + 4, T * 2 + 18, 12)
+  }))
+  await save('chk', cv.toDataURL('image/png'))
+}
+async function main() {
+  const f = new FontFace('mp', 'url(/.superpowers/preview/avatar/MPLUSRounded1c-ExtraBold.ttf)'); await f.load(); document.fonts.add(f)
+  const m = Q.get('m') ?? 'v2', what = Q.get('what') ?? 'video'
+  const r = m === 'old' ? await load('/art/prototypes/avatar/boy-b-skin.glb', false) : await load('/art/prototypes/avatar/boy-b-v2.glb', true)
+  console.log('loaded', m, 'tris', r.tris, 'bones', Object.keys(r.bones).length)
+  if (what === 'dbg') {
+    r.root.traverse((o) => console.log('obj', o.type, o.name, (o as THREE.Mesh).isMesh ? (o as THREE.Mesh).geometry.attributes.position!.count : ''))
+    poseAt(r, 'walk', 0.2); r.inner.updateMatrixWorld(true)
+    r.inner.traverse((o) => { const m = o as THREE.SkinnedMesh; if (!m.isSkinnedMesh) return
+      const pos = m.geometry.attributes.position!, sw = m.geometry.attributes.skinWeight!, si = m.geometry.attributes.skinIndex!, v = new THREE.Vector3(); let bad = 0
+      for (let i = 0; i < pos.count; i++) { m.getVertexPosition(i, v); if (v.distanceTo(new THREE.Vector3(0, 0.45, 0)) > 0.62) { if (bad++ < 4) console.log('bad', m.name, i, v.toArray().map((x) => x.toFixed(2)).join(','), 'w', sw.getX(i), sw.getY(i), sw.getZ(i), sw.getW(i), 'j', si.getX(i), si.getY(i), si.getZ(i), si.getW(i)) } }
+      console.log('mesh', m.name, 'verts', pos.count, 'bad', bad, 'bones', m.skeleton.bones.map((b) => b.name).join(','))
+    })
+  } else if (what === 'video') await video(r)
+  else if (what === 'actual') await actual(r)
+  else if (what === 'chk') await chk(r, await load('/.superpowers/preview/avatar/cand.glb', true))
+  else await compare(r, await load('/art/prototypes/avatar/boy-b-skin.glb', false))
+  document.body.dataset.ready = '1'
+}
+main().catch((e) => { document.body.dataset.ready = '1'; console.error(String(e?.stack ?? e)) })

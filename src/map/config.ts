@@ -22,4 +22,18 @@ export const AVATAR_SPEED_TAU_MS = 300 // 速さをならす時間（コマご�
 export const AVATAR_MIN_MOVE_M = 0.5 // これ以上動いてから向きを更新する（止まりぎわのぶれで向きが回らないように）
 export const AVATAR_FRAMES = 21
 export const AVATAR_FPS = 14
-export const AVATAR_HEIGHT_PX = 40 // 画面上の高さ（2026-11-09 本人「巨人かよ」で 64→40）
+export const AVATAR_HEIGHT_PX = 40 // 2D の男の子（3D が読めないときの代わり）の画面上の高さ（2026-11-09 本人「巨人かよ」で 64→40）
+// 3D の男の子（段 7）。大きさは地図の上で固定（引けばお店と同じ割合で小さくなる。2026-11-11 オーナー）
+export const AVATAR_HEIGHT_M = 20 // 身長（地図の上の m）。ズーム 17 で約 40px
+export const AVATAR_MIN_PX = 16 // 画面でこれより小さくしない
+export const AVATAR_RUN_SPEED_MPS = 2.0 // これ以上の速さは走り（SPEC の目安）。AVATAR_WALK_SPEED_MPS 以下は待機
+export const AVATAR_MOTION_HOLD_MS = 1000 // 新しい速さがこれだけ続いてから動きを替える（行ったり来たりを防ぐ）
+export const AVATAR_FADE_S = 0.25 // 動きを替えるときに混ぜる時間
+// 歩き・走りの再生の速さ = 進む速さ ÷ 基準の速さ（基準の速さで 1 倍）。上下の範囲に収める。
+// D12 の式（進む速さ ÷（歩幅 × 2 ÷ 周期））を身長 20m の体の歩幅で計算すると、歩き 1.4m/秒で約 0.2 倍になり
+// 足がほとんど動かなく見えるので、基準の速さは見た目で決めた（2026-11-12 段 7）
+export const AVATAR_WALK_REF_MPS = 1.2
+export const AVATAR_RUN_REF_MPS = 3.0
+export const AVATAR_RATE_MIN = 0.7
+export const AVATAR_RATE_MAX = 1.4
+export const AVATAR_JOY_PLAYS = 2 // うれしいの動き（1 回 0.8 秒）を何回

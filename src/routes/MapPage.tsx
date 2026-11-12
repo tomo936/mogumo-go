@@ -269,6 +269,8 @@ export function MapPage() {
       setEffect({ coins: result.coins, reveal: maskedBefore ? posted.name : null, key: ++effectSeq.current, exp: gain, levelUp: after > before ? after : null })
       if (result.wasHint) hints.markCompleted(posted)
       mapRef.current?.checkin(posted, result.newCells)
+      // 3D の男の子が喜ぶ。レベルが上がるのはチェックインのときだけなので、両方でも 1 回
+      mapRef.current?.express('happy')
       // 町の進み具合をサーバーに確かめる（失敗しても、チェックインはそのまま）
       refreshStats() // コインとレベルの数字を読み直す
       void syncMissions(null).then((w) => {

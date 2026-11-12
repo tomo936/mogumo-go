@@ -1,0 +1,141 @@
+// 男の子（新しい流れ）の撮影ページ。?glb=<パス>&what=<shots|grid|joints|video|small|face>
+// shots: &s=名前:yaw:elev:大きさ(px):見える高さ:注目点x:y:z[:動き:時刻[:顔のこま]] を ; でつなぐ。1 枚ずつ保存。
+// 向き: yaw 0 = 正面、90 = 右横（キャラの右側）、180 = 後ろ、270 = 左横。elev は見下ろしの度。
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+const Q = new URLSearchParams(location.search)
+const save = (window as any).save as (k: string, v: string) => Promise<void>
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
+renderer.outputColorSpace = THREE.SRGBColorSpace
+const scene = new THREE.Scene()
+scene.add(new THREE.HemisphereLight('#ffffff', '#e6dccf', 2.2))
+const sun = new THREE.DirectionalLight('#fff2e4', 2.4); sun.position.set(-0.6, 0.8, 0.55); scene.add(sun)
+const cam = new THREE.OrthographicCamera()
+const D = Math.PI / 180
+let mixer: THREE.AnimationMixer | null = null
+let clips: Record<string, THREE.AnimationClip> = {}
+let faceMap: THREE.Texture | null = null
+let root: THREE.Object3D
+let cur: THREE.AnimationAction | null = null
+
+async function load(url: string) {
+  const g = await new GLTFLoader().loadAsync(url)
+  root = g.scene
+  root.traverse((o) => {
+    const m = o as THREE.Mesh
+    if (!m.isMesh) return
+    const old = m.material as THREE.MeshStandardMaterial
+    const map = old.map ?? null
+    if (map) { map.anisotropy = 8; map.colorSpace = THREE.SRGBColorSpace }
+    if (old.name === 'face') faceMap = map
+    if (!m.geometry.attributes.normal) m.geometry.computeVertexNormals()
+    m.material = new THREE.MeshStandardMaterial({ map, roughness: 0.9, metalness: 0, emissive: '#ffffff', emissiveMap: map, emissiveIntensity: 0.55, color: '#a2a2a2', side: Q.get('ds') ? THREE.DoubleSide : THREE.FrontSide })
+    m.frustumCulled = false
+  })
+  scene.add(root)
+  // 骨の無い生成そのままの形は、足の裏 0・身長 1・まん中 0 にそろえる
+  if (!g.animations.length && !Q.get('raw')) {
+    const b = new THREE.Box3().setFromObject(root); const s = 1 / (b.max.y - b.min.y)
+    root.scale.setScalar(s); root.position.set(-(b.max.x + b.min.x) / 2 * s, -b.min.y * s, -(b.max.z + b.min.z) / 2 * s)
+  }
+  for (const c of g.animations) clips[c.name] = c
+  mixer = g.animations.length ? new THREE.AnimationMixer(root) : null
+}
+function pose(anim: string, t: number) {
+  if (!mixer || !clips[anim]) return
+  const a = mixer.clipAction(clips[anim]!)
+  if (cur !== a) { mixer.stopAllAction(); a.play(); cur = a }
+  mixer.setTime(t + 1e-4) // 動きを替えた直後の 0 秒ちょうどは、前の動きの姿勢が残ることがある（撮影ページの都合）
+  mixer.update(0)
+  root.updateMatrixWorld(true)
+}
+function setFace(i: number) { if (faceMap) faceMap.offset.x = i / 4 }
+// 1 枚撮る: 注目点 tgt を、yaw・elev の向きから、見える高さ vh で
+function shot(w: number, h: number, yaw: number, elev: number, vh: number, tgt: THREE.Vector3, bg = '#ffffff', near = -10) {
+  const dir = new THREE.Vector3(-Math.sin(yaw * D) * Math.cos(elev * D), Math.sin(elev * D), Math.cos(yaw * D) * Math.cos(elev * D))
+  const upp = vh / h
+  cam.left = -w / 2 * upp; cam.right = w / 2 * upp; cam.top = h / 2 * upp; cam.bottom = -h / 2 * upp; cam.near = near; cam.far = 10
+  cam.position.copy(tgt).add(dir); cam.up.set(0, 1, 0); cam.lookAt(tgt); cam.updateProjectionMatrix()
+  renderer.setPixelRatio(1); renderer.setSize(w, h, false); renderer.setClearColor(bg, 1); renderer.render(scene, cam)
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h
+  cv.getContext('2d')!.drawImage(renderer.domElement, 0, 0); return cv
+}
+function label(g: CanvasRenderingContext2D, s: string, x: number, y: number, size = 14) { g.font = `${size}px sans-serif`; g.fillStyle = '#6b3f26'; g.fillText(s, x, y) }
+const DIRS: [string, number, number][] = [['正面', 0, 0], ['右横', 90, 0], ['左横', 270, 0], ['後ろ', 180, 0], ['斜め上の前', 30, 40], ['斜め上の後ろ', 150, 40]]
+const PERIOD: Record<string, number> = { walk: 1.0, run: 0.6, idle: 3.0, joy: 0.8 }
+const MID = new THREE.Vector3(0, 0.5, 0)
+
+async function shots() {
+  for (const spec of (Q.get('s') ?? '').split(';').filter(Boolean)) {
+    const [name, yaw, elev, px, vh, x, y, z, anim, t, face, near] = spec.split(':')
+    if (anim) pose(anim, Number(t))
+    setFace(Number(face ?? 0))
+    const cv = shot(Number(px), Number(px), Number(yaw), Number(elev), Number(vh), new THREE.Vector3(Number(x), Number(y), Number(z)), Q.get('bg') ?? '#ffffff', near ? Number(near) : -10)
+    await save(name!, cv.toDataURL('image/png'))
+  }
+}
+// 1 つの動きの並べ画像: 6 方向 × 8 コマ（1 こま T px）
+async function grid() {
+  const anim = Q.get('anim')!, T = Number(Q.get('t') ?? 300), P = PERIOD[anim]!
+  const cv = document.createElement('canvas'); cv.width = T * 8 + 90; cv.height = T * 6 + 24; const g = cv.getContext('2d')!
+  g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height)
+  for (let k = 0; k < 8; k++) label(g, `${k}/8`, 90 + k * T + 4, 18)
+  DIRS.forEach(([lab, yaw, elev], r) => {
+    label(g, lab, 4, 24 + r * T + T / 2)
+    for (let k = 0; k < 8; k++) {
+      pose(anim, (k / 8) * P); setFace(0)
+      g.drawImage(shot(T, T, yaw, elev, 1.12, MID, r % 2 ? '#fbf0d9' : '#ffffff'), 90 + k * T, 24 + r * T)
+    }
+  })
+  await save(`grid-${anim}`, cv.toDataURL('image/png'))
+}
+// 動画のコマ: 斜め上の前から 4 つの動き（各 2 周）。左 600px、右に実寸 40px・16px を 4 倍
+async function video() {
+  // 2 回目: 正面（少し上 8°）からの歩き・走りも入れる（足の幅を見るため）
+  // 最後に、待機中のまばたきを顔の大写し（顔が画面の高さの約半分）で 3 回（オーナーの依頼。こまの切り替えは 0.04→0.07→0.04 秒のまま）
+  const seq: [string, number, number, number][] = [['idle', 3.0, 30, 40], ['walk', 2.0, 30, 40], ['walk', 2.0, 0, 8], ['run', 1.2, 30, 40], ['run', 1.2, 0, 8], ['joy', 1.6, 30, 40], ['idle', 3.6, 0, 0]]
+  let n = 0
+  for (const [si, [anim, dur, yaw, elev]] of seq.entries()) {
+    const face = si === seq.length - 1
+    for (let i = 0; i < Math.round(dur * 30); i++) {
+      const t = i / 30
+      pose(anim, t % PERIOD[anim]!)
+      const bl = anim === 'joy' ? 3 : face ? blink((t % 1.2) + 1.0) : blink(t)
+      setFace(bl)
+      const cv = document.createElement('canvas'); cv.width = 1000; cv.height = 640; const g = cv.getContext('2d')!
+      g.fillStyle = '#fbf0d9'; g.fillRect(0, 0, 1000, 640)
+      g.drawImage(face ? shot(600, 600, 0, 0, 0.42, new THREE.Vector3(0, 0.68, 0), '#fbf0d9') : shot(600, 600, yaw, elev, 1.12, MID, '#fbf0d9'), 0, 20)
+      g.imageSmoothingEnabled = false
+      const s40 = shot(44, 44, 30, 40, 1.12, MID, '#fbf0d9'), s16 = shot(18, 18, 30, 40, 1.12, MID, '#fbf0d9')
+      g.drawImage(s40, 620, 60, 176, 176); g.drawImage(s16, 820, 60, 72, 72)
+      g.drawImage(s40, 640, 300); g.drawImage(s16, 700, 313)
+      g.imageSmoothingEnabled = true
+      label(g, face ? 'まばたき（顔の大写し）' : `${anim}${yaw === 0 ? '（正面）' : '（斜め上の前）'}`, 10, 18, 16); label(g, '40px・16px（4 倍）', 620, 50); label(g, '実寸', 640, 290)
+      await save(`v-${String(n++).padStart(4, '0')}`, cv.toDataURL('image/png'))
+    }
+  }
+}
+function blink(t: number) { const d = (t % 3) - 1.5; return d < 0 || d >= 0.15 ? 0 : d < 0.04 ? 1 : d < 0.11 ? 2 : 1 }
+// 決めた姿勢の並べ画像: 行 = 姿勢（動き anim の i コマ目）、列 = 6 方向
+async function posegrid() {
+  const anim = Q.get('anim')!, n = Number(Q.get('n')), T = Number(Q.get('t') ?? 260), rows = (Q.get('rows') ?? '').split(',').filter(Boolean).map(Number)
+  const R = rows.length ? rows : [...Array(n).keys()]
+  const cv = document.createElement('canvas'); cv.width = T * 6 + 30; cv.height = T * R.length; const g = cv.getContext('2d')!
+  g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height)
+  R.forEach((i, r) => {
+    pose(anim, i / 30 + 0.001); setFace(0)
+    label(g, String(i), 4, r * T + 20, 16)
+    DIRS.forEach(([, yaw, elev], c) => g.drawImage(shot(T, T, yaw, elev, 1.12, MID, c % 2 ? '#fbf0d9' : '#ffffff'), 30 + c * T, r * T))
+  })
+  await save(`pose-${anim}`, cv.toDataURL('image/png'))
+}
+async function main() {
+  await load(Q.get('glb')!)
+  const what = Q.get('what') ?? 'shots'
+  if (what === 'shots') await shots()
+  else if (what === 'grid') await grid()
+  else if (what === 'video') await video()
+  else if (what === 'posegrid') await posegrid()
+  document.body.dataset.ready = '1'
+}
+main().catch((e) => { document.body.dataset.ready = '1'; console.error(String(e?.stack ?? e)) })

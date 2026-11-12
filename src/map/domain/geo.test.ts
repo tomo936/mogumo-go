@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { circlePolygon, distanceMeters, localFrame } from './geo.ts'
+import { circlePolygon, distanceMeters, localFrame, metersPerPixel } from './geo.ts'
 
 const tokyo = { lat: 35.6812, lng: 139.7671 }
 
@@ -27,4 +27,10 @@ test('localFrame: to → back で 0.01m 以内に戻る、北と東が正', () =
   expect(q.x).toBeGreaterThan(0)
   expect(q.y).toBeGreaterThan(0)
   expect(distanceMeters(p, f.back(q))).toBeLessThan(0.01)
+})
+
+test('metersPerPixel: MapLibre（512px のタイル）。赤道・ズーム 0 で地球 1 周 ÷ 512、ズーム 1 つで半分', () => {
+  expect(metersPerPixel(0, 0)).toBeCloseTo(78271.517, 2)
+  expect(metersPerPixel(17, 35)).toBeCloseTo(metersPerPixel(16, 35) / 2, 9)
+  expect(metersPerPixel(17, 35)).toBeCloseTo(0.489, 3)
 })

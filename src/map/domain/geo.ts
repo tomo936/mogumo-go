@@ -5,6 +5,11 @@ export type LatLng = { lat: number; lng: number }
 const EARTH_RADIUS_M = 6371008.8
 const rad = (deg: number) => (deg * Math.PI) / 180
 
+// 地図の 1px が何 m か（北緯 lat、ズーム zoom）。MapLibre は 512px のタイルなので、ズーム 0 で地球 1 周が 512px
+export function metersPerPixel(zoom: number, lat: number): number {
+  return ((2 * Math.PI * 6378137) / 512) * Math.cos(rad(lat)) / 2 ** zoom
+}
+
 export function distanceMeters(a: LatLng, b: LatLng): number {
   const dLat = rad(b.lat - a.lat)
   const dLng = rad(b.lng - a.lng)

@@ -23,6 +23,7 @@ import type { Shop } from '../../shops/domain/shop.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
 import { createAvatar } from '../infra/avatarMarker.ts'
 import { createAvatarModel } from '../infra/avatarModel.ts'
+import type { Expression } from '../infra/avatarModel.ts'
 import { attachWorld } from './worldLayers.ts'
 import { createHintPins } from '../../hints/infra/hintPins.ts'
 import type { DailyHint } from '../../hints/domain/hint.ts'
@@ -45,6 +46,7 @@ export type MapViewHandle = {
   setHints(hints: readonly DailyHint[], positions: ReadonlyMap<string, LatLng>, revealed: ReadonlySet<string>): void
   focusAt(p: LatLng): void // お店をタップしたときと同じカメラの寄せ。戻すのは unfocus
   bounceHint(hintId: string): void
+  express(kind: Expression): void // 3D の男の子の表情（チェックイン・レベルが上がったとき 'happy'）。読めていなければ何もしない
 }
 
 const hintedShopIds = (hints: readonly DailyHint[], positions: ReadonlyMap<string, LatLng>): Set<string> =>
@@ -81,6 +83,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   const worldRef = useRef<ReturnType<typeof attachWorld> | null>(null)
   const pinsHiddenRef = useRef(pinsHidden) // 世界ができる前に決まっていた分も、できたときに渡す
   const hintPinsRef = useRef<ReturnType<typeof createHintPins> | null>(null)
+  const avatarModelRef = useRef<ReturnType<typeof createAvatarModel> | null>(null)
   useEffect(() => {
     pinsHiddenRef.current = pinsHidden
     worldRef.current?.setPinsVisible(!pinsHidden)
@@ -128,6 +131,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     },
     focusAt: (p) => focusAtRef.current(p),
     bounceHint: (id) => hintPinsRef.current?.bounce(id),
+    express: (kind) => avatarModelRef.current?.express(kind),
     checkin: (shop, newCells) => {
       const t = setTimeout(() => {
         checkinTimers.current.delete(t)
@@ -177,6 +181,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
 
     const avatar = createAvatar(map) // 自分のアバター（お試し版）
     const avatarModel = createAvatarModel(map) // 3D の男の子（読めたら 2D の絵の代わりに出す）
+    avatarModelRef.current = avatarModel
 
     // 位置: target が最新の目標、current が画面に出している位置、drawn がサークルを描いた位置
     const s: {
@@ -310,7 +315,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         s.current = c
         s.world?.onPosition(c)
         avatar.update(c, dt)
-        avatarModel.setPose(c, avatar.heading(), now)
+        avatarModel.update(c, avatar.heading(), avatar.speed(), dt, now)
         avatar.setHidden(avatarModel.ready())
         if (now - loop.positionAt >= POSITION_EVERY_MS) {
           loop.positionAt = now
@@ -346,6 +351,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
       worldRef.current = null
+      avatarModelRef.current = null
       hintPins.dispose()
       hintPinsRef.current = null
       s.world?.dispose()

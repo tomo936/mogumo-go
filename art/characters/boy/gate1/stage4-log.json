@@ -1,0 +1,47 @@
+{
+ "mouth_centers": {
+  "old": [
+   225.7,
+   247.2
+  ],
+  "new": [
+   270.0,
+   250.6
+  ]
+ },
+ "face": {
+  "eyes_new": [
+   [
+    110,
+    67,
+    210,
+    179
+   ],
+   [
+    103,
+    329,
+    203,
+    436
+   ]
+  ],
+  "eyes_old": [
+   [
+    77,
+    78,
+    163,
+    179
+   ],
+   [
+    77,
+    314,
+    163,
+    409
+   ]
+  ],
+  "scale": 0.898,
+  "faces": 1218,
+  "cell1_changed_outside_boxes": 0,
+  "cell2_changed_outside_boxes": 0,
+  "cell3_changed_outside_boxes": 0
+ }
+}

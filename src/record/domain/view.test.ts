@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cellOf } from '../../fog/domain/grid.ts'
+import { metersPerPixel } from '../../map/domain/geo.ts'
 import { clearedBox, inBox, viewOf, zoomFor } from './view.ts'
 
 const home = { lat: 35.6505, lng: 139.6365 }
@@ -30,6 +31,10 @@ describe('viewOf', () => {
 describe('zoomFor', () => {
   it('半径が大きいほどズームは小さい（遠くまで入れる）', () => {
     expect(zoomFor(1000, 360, 35.65)).toBeLessThan(zoomFor(300, 360, 35.65))
+  })
+  it('MapLibre（512px のタイル）で、半径の 1.15 倍が幅の半分に入る', () => {
+    const z = zoomFor(400, 360, 35)
+    expect(metersPerPixel(z, 35) * 180).toBeCloseTo(400 * 1.15, 3)
   })
   it('13〜17 の範囲に収まる', () => {
     expect(zoomFor(100000, 360, 35)).toBe(13)
