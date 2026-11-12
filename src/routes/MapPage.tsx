@@ -42,6 +42,8 @@ import { syncUntilSettled } from '../towns/infra/townsApi.ts'
 import type { TownNews, TownSync } from '../towns/domain/progress.ts'
 import { TownBanner } from '../towns/ui/TownBanner.tsx'
 import { ReviewEditor } from '../reviews/ui/ReviewEditor.tsx'
+import { loadLatest, loadSummary } from '../reviews/infra/reviewsApi.ts'
+import type { Review } from '../reviews/domain/review.ts'
 import { jstDay } from '../checkin/domain/day.ts'
 
 const SHOPS_ERROR_BANNER_MS = 6000
@@ -92,6 +94,19 @@ export function MapPage() {
   const [doneToday, setDoneToday] = useState(false)
   // チェックインの直後の「感想を書く」: 成功で持ち、演出が終わったら 10 秒出す。新しいチェックインで置き換わる
   const [reviewOffer, setReviewOffer] = useState<{ checkinId: string; shop: Shop; shown: boolean } | null>(null)
+  // お店のシートの「みんなの感想」。シートを開いたときだけ読み、店が替われば古い返事は捨てる
+  const [sheetReviews, setSheetReviews] = useState<{ shopId: string; summary: { avg: number; count: number } | null; latest: Review[] } | null>(null)
+  const selectedId = selected?.id ?? null
+  useEffect(() => {
+    if (!selectedId) return
+    let alive = true
+    Promise.all([loadSummary(selectedId), loadLatest(selectedId)])
+      .then(([summary, latest]) => alive && setSheetReviews({ shopId: selectedId, summary, latest }))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [selectedId])
   const [reviewing, setReviewing] = useState<{ checkinId: string; shop: Shop; day: string } | null>(null)
   useEffect(() => {
     if (!reviewOffer?.shown) return
@@ -363,6 +378,7 @@ export function MapPage() {
           doneToday={doneToday}
           hint={hints.hintFor(selected)}
           masked={hints.isMasked(selected)}
+          reviews={sheetReviews?.shopId === selected.id ? sheetReviews : null}
           busy={busy}
           error={checkinError}
           onCheckin={() => void checkin()}

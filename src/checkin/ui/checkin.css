@@ -1025,3 +1025,39 @@
     transform: translate(-50%, 16px) scale(0.85);
   }
 }
+
+/* お店のシートの「みんなの感想」（2026-11-12） */
+.shop-reviews {
+  margin-top: 12px;
+}
+.shop-reviews__list {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.shop-reviews__list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+.shop-reviews__list li + li {
+  border-top: 1px dashed rgba(138, 90, 50, 0.3);
+}
+.shop-reviews__name {
+  font-weight: 700;
+}
+.shop-reviews__stars {
+  color: #ffaa22;
+  font-size: 12px;
+}
+.shop-reviews__body {
+  width: 100%;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.5;
+}

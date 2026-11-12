@@ -236,3 +236,31 @@ test('viewOnly でなければボタンがある', () => {
   setup({ distanceM: 10 })
   expect(screen.getByRole('button', { name: 'チェックイン' })).toBeInTheDocument()
 })
+
+// ---- みんなの感想（2026-11-12） ----
+const rv = (id: string, nickname: string, stars: number, body: string | null) => ({
+  id, checkinId: `c${id}`, shopId: 'hp:J001', userId: `u${id}`, stars, body, photoPath: null, isPublic: true, createdAt: '2026-11-03T03:00:00Z', nickname,
+})
+
+test('全画面: みんなの感想の件数・平均と新しい 2 件', async () => {
+  setup({ reviews: { summary: { avg: 4.3, count: 12 }, latest: [rv('1', 'ぽこ', 5, 'スープ最高'), rv('2', 'もぐ太郎', 4, null)] } })
+  await expand()
+  expect(screen.getByText('みんなの感想 ★4.3（12件）')).toBeInTheDocument()
+  expect(screen.getByText('ぽこ')).toBeInTheDocument()
+  expect(screen.getByText('スープ最高')).toBeInTheDocument()
+  expect(screen.getByText('もぐ太郎')).toBeInTheDocument()
+})
+
+test('感想が無ければ「まだ感想がありません」、読み中は欄を出さない、伏せた気配は出さない', async () => {
+  const { unmount } = render(<ShopSheet shop={hp} distanceM={32} busy={false} error={null} onCheckin={vi.fn()} onClose={vi.fn()} reviews={{ summary: null, latest: [] }} />)
+  await expand()
+  expect(screen.getByText('まだ感想がありません')).toBeInTheDocument()
+  unmount()
+  const r2 = render(<ShopSheet shop={hp} distanceM={32} busy={false} error={null} onCheckin={vi.fn()} onClose={vi.fn()} />)
+  await expand()
+  expect(screen.queryByText(/みんなの感想/)).not.toBeInTheDocument()
+  r2.unmount()
+  render(<ShopSheet shop={hp} distanceM={32} busy={false} error={null} onCheckin={vi.fn()} onClose={vi.fn()} masked reviews={{ summary: { avg: 4, count: 1 }, latest: [rv('1', 'ぽこ', 4, 'x')] }} />)
+  await expand()
+  expect(screen.queryByText(/みんなの感想/)).not.toBeInTheDocument()
+})

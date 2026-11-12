@@ -15,6 +15,7 @@ import { frameTier, nextTier } from '../domain/visits.ts'
 import { dragHeight, sheetStop } from '../domain/sheetDrag.ts'
 import type { SheetStop } from '../domain/sheetDrag.ts'
 import type { FrameTier, Visits } from '../domain/visits.ts'
+import type { Review } from '../../reviews/domain/review.ts'
 import { hintLines } from '../../hints/domain/hint.ts'
 import { Icon } from '../../ui/Icon.tsx'
 import type { DailyHint } from '../../hints/domain/hint.ts'
@@ -57,10 +58,11 @@ type Props = {
   onLocate?: () => void // 地図の視点をこのお店へ寄せる（図鑑から開いたときだけ出す。名前は仮）
   backLabel?: string | null // ビルの一覧から開いたとき、左上の「‹ ビル名」（押すと onBack）
   onBack?: () => void
+  reviews?: { summary: { avg: number; count: number } | null; latest: Review[] } | null // みんなの感想（読み中・読めないは null）
   viewOnly?: boolean // 見るだけ（ワールドマップから飛んだ先）。チェックインのボタンと誤りの文を出さない
 }
 
-export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, masked = false, visits = null, recordReady, busy, error, onCheckin, onClose, onLocate, backLabel = null, onBack, viewOnly = false }: Props) {
+export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, masked = false, visits = null, recordReady, busy, error, onCheckin, onClose, onLocate, backLabel = null, onBack, viewOnly = false, reviews = null }: Props) {
   const [expanded, setExpanded] = useState(false) // 止まっている段（全画面か）
   const [openedAt] = useState(() => new Date()) // 営業中かは、シートを開いた時刻で決める
   const [height, setHeight] = useState<number | null>(null) // 引いている間・全画面の高さ（px）。小さい段で止まっているときは null（中身の高さ）
@@ -335,6 +337,26 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
                   <p className="shop-record__next">
                     まだ行っていません。チェックインで <b>+30</b>
                   </p>
+                )}
+              </div>
+            )}
+            {reviews && !masked && (
+              <div className="shop-reviews">
+                <p className="shop-record__title">
+                  {reviews.summary ? `みんなの感想 ★${reviews.summary.avg.toFixed(1)}（${reviews.summary.count}件）` : 'みんなの感想'}
+                </p>
+                {reviews.latest.length === 0 ? (
+                  <p className="shop-record__next">まだ感想がありません</p>
+                ) : (
+                  <ul className="shop-reviews__list">
+                    {reviews.latest.map((r) => (
+                      <li key={r.id}>
+                        <span className="shop-reviews__name">{r.nickname ?? 'だれか'}</span>
+                        <span className="shop-reviews__stars" aria-label={`星 ${r.stars}`}>{'★'.repeat(r.stars)}</span>
+                        {r.body && <span className="shop-reviews__body">{r.body}</span>}
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
             )}
