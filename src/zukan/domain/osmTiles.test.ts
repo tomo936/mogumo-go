@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { cellKey, cellOf } from '../../fog/domain/grid.ts'
-import { dueTiles, tileOf, tilesOfClearedShops } from './osmTiles.ts'
-import type { Shop } from '../../shops/domain/shop.ts'
+import { dueTiles, tileOf, tilesOfCleared } from './osmTiles.ts'
 
-const shop = (id: string, lat: number, lng: number): Shop => ({ id, name: id, lat, lng, kind: 'takoyaki', details: null, mapId: null })
 
 describe('tileOf', () => {
   it('ズーム 14 のタイル（東京駅）', () => {
@@ -11,14 +9,18 @@ describe('tileOf', () => {
   })
 })
 
-describe('tilesOfClearedShops', () => {
-  it('晴れたマスにある osm: の店のタイルだけ、重複なし', () => {
-    const a = shop('osm:1', 35.6812, 139.7671)
-    const b = shop('osm:2', 35.6813, 139.7672)
-    const fog = shop('osm:3', 35.70, 139.70)
-    const hp = shop('hp:1', 35.6812, 139.7671)
-    const cleared = new Set([cellKey(cellOf(a)), cellKey(cellOf(b)), cellKey(cellOf(hp))])
-    expect(tilesOfClearedShops([a, b, fog, hp], cleared)).toEqual([{ x: 14552, y: 6451 }])
+describe('tilesOfCleared', () => {
+  it('晴れたマスが載っているタイル（重複なし）。地図に読み込んでいなくても選べる', () => {
+    const a = cellKey(cellOf({ lat: 35.6812, lng: 139.7671 }))
+    const b = cellKey(cellOf({ lat: 35.6813, lng: 139.7672 }))
+    expect(tilesOfCleared(new Set([a, b]))).toEqual([{ x: 14552, y: 6451 }])
+  })
+  it('タイルの境目にまたがるマスは両側のタイル', () => {
+    // ズーム 14 のタイルの西端（x=14552 の端の経度）をまたぐマス
+    const west = (14552 / 2 ** 14) * 360 - 180
+    const k = cellKey(cellOf({ lat: 35.6812, lng: west }))
+    const xs = tilesOfCleared(new Set([k])).map((t) => t.x).sort()
+    expect(xs).toEqual([14551, 14552])
   })
 })
 

@@ -11,17 +11,31 @@ export type Box = { south: number; north: number; west: number; east: number }
 
 const round = (v: number) => Math.round(v * 1e6) / 1e6
 
-// 晴れたマス（"x:y"）を、0.02 度の四角にまとめる
+// マス（"x:y"）の南西の角と北東の角（マスの外側の境目）
+export function cellBounds(key: string): { south: number; north: number; west: number; east: number } | null {
+  const m = /^(-?\d+):(-?\d+)$/.exec(key)
+  if (!m) return null
+  const x = Number(m[1])
+  const y = Number(m[2])
+  const sw = cellCenter({ x, y })
+  const ne = cellCenter({ x: x + 1, y: y + 1 })
+  const hLat = (ne.lat - sw.lat) / 2
+  const hLng = (ne.lng - sw.lng) / 2
+  return { south: sw.lat - hLat, north: sw.lat + hLat, west: sw.lng - hLng, east: sw.lng + hLng }
+}
+
+// 晴れたマスを、0.02 度の四角にまとめる。境目にまたがるマスは両側の四角に入れる（境目の向こうのお店を落とさない）
 export function areaBoxes(clearedKeys: Iterable<string>): Box[] {
   const seen = new Map<string, Box>()
   for (const k of clearedKeys) {
-    const m = /^(-?\d+):(-?\d+)$/.exec(k)
-    if (!m) continue
-    const c = cellCenter({ x: Number(m[1]), y: Number(m[2]) })
-    const by = Math.floor(c.lat / AREA_DEG)
-    const bx = Math.floor(c.lng / AREA_DEG)
-    const key = `${bx}:${by}`
-    if (!seen.has(key)) seen.set(key, { south: round(by * AREA_DEG), north: round((by + 1) * AREA_DEG), west: round(bx * AREA_DEG), east: round((bx + 1) * AREA_DEG) })
+    const c = cellBounds(k)
+    if (!c) continue
+    for (let by = Math.floor(c.south / AREA_DEG); by <= Math.floor(c.north / AREA_DEG); by++) {
+      for (let bx = Math.floor(c.west / AREA_DEG); bx <= Math.floor(c.east / AREA_DEG); bx++) {
+        const key = `${bx}:${by}`
+        if (!seen.has(key)) seen.set(key, { south: round(by * AREA_DEG), north: round((by + 1) * AREA_DEG), west: round(bx * AREA_DEG), east: round((bx + 1) * AREA_DEG) })
+      }
+    }
   }
   return [...seen.values()]
 }
