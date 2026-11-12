@@ -19,8 +19,8 @@ function MyReview({ r, url, visitDay, onEdit }: { r: Review; url: string | undef
         {!r.isPublic && <span className="rv-mine__private">🔒 自分だけ</span>}
         <span className="rv-mine__day">{visitDay.replaceAll('-', '.')}</span>
       </div>
-      <button type="button" className="rv-mine__edit" aria-label={`${visitDay.replaceAll('-', '.')} の感想を直す`} onClick={onEdit}>
-        <span aria-hidden="true">✎</span>
+      <button type="button" className="rv-mine__edit" aria-label={`${visitDay.replaceAll('-', '.')} の感想を編集`} onClick={onEdit}>
+        編集
       </button>
       {r.body && <p className="rv-mine__memo">{r.body}</p>}
       {r.photoPath && url && (

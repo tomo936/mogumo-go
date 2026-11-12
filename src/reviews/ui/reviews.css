@@ -553,26 +553,25 @@
 .rv-mine {
   position: relative;
   margin-top: 8px;
-  padding: 12px 52px 12px 12px;
+  padding: 12px 76px 12px 12px;
   border: 2px solid #ead7bf;
   border-radius: 14px;
   background: #fffaf3;
 }
 .rv-mine__edit {
+  /* 「書く」と同じ橙の丸いボタン（2026-11-13 オーナー「合わせるべき」「編集だけでいい」） */
   position: absolute;
-  top: 8px;
-  right: 8px;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  padding: 0 !important;
+  top: 10px;
+  right: 10px;
+  height: 32px;
+  padding: 0 14px !important;
   border: 2.5px solid #4a2f18 !important;
-  border-radius: 50%;
-  background: #fff !important;
+  border-radius: 99px;
+  background: #e8782f !important;
   box-shadow: 2px 2px 0 #4a2f18;
-  color: #4a2f18;
-  font-size: 17px;
+  color: #fff !important;
+  font-size: 13px;
+  font-weight: 800;
 }
 .rv-mine__edit:active {
   transform: translate(2px, 2px);
