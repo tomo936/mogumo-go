@@ -1001,31 +1001,6 @@
   filter: drop-shadow(0 1px 1px rgba(31, 42, 55, 0.25));
 }
 
-/* チェックインの直後に 10 秒だけ出る「感想を書く」（2026-11-12） */
-.review-offer {
-  position: fixed;
-  left: 50%;
-  bottom: calc(118px + env(safe-area-inset-bottom));
-  z-index: 25;
-  transform: translateX(-50%);
-  height: 50px;
-  padding: 0 24px;
-  border: 2.5px solid #8a5a32;
-  border-radius: 99px;
-  background: #e8782f;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 800;
-  box-shadow: 0 5px 0 #8a5a32, 0 8px 18px rgba(90, 58, 30, 0.25);
-  animation: review-offer-in 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both;
-}
-@keyframes review-offer-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 16px) scale(0.85);
-  }
-}
-
 /* お店のシートの「みんなの感想」（2026-11-12） */
 .shop-reviews {
   margin-top: 12px;
@@ -1060,4 +1035,47 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   line-height: 1.5;
+}
+
+/* チェックインのとなりの「✎ 感想」（行ったお店だけ。2026-11-13）。同じ高さ・同じ線で、色は控えめ */
+.shop-sheet__actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+.shop-sheet__actions .shop-sheet__go {
+  margin-top: 0;
+}
+.shop-sheet__actions .shop-sheet__go {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+.shop-sheet__review {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 92px;
+  height: 52px;
+  padding: 0;
+  border: 2.5px solid #7a4a26;
+  border-radius: 14px;
+  background: #fff8ec;
+  box-shadow: 0 4px 0 #7a4a26;
+  color: #7a4a26;
+  font-size: 16px;
+  font-weight: 900;
+}
+.shop-sheet__review span {
+  font-size: 18px;
+}
+.shop-sheet__review:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #7a4a26;
+}
+.shop-sheet:not(.shop-sheet--full) .shop-sheet__review {
+  height: 46px;
 }

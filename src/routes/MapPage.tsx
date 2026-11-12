@@ -42,7 +42,8 @@ import { syncUntilSettled } from '../towns/infra/townsApi.ts'
 import type { TownNews, TownSync } from '../towns/domain/progress.ts'
 import { TownBanner } from '../towns/ui/TownBanner.tsx'
 import { ReviewEditor } from '../reviews/ui/ReviewEditor.tsx'
-import { loadLatest, loadSummary } from '../reviews/infra/reviewsApi.ts'
+import { loadLatest, loadMine, loadSummary, photoUrls } from '../reviews/infra/reviewsApi.ts'
+import { targetCheckin } from '../reviews/domain/review.ts'
 import { syncOsmShops } from '../zukan/infra/osmSync.ts'
 import type { HintOrigin } from '../zukan/domain/hintText.ts'
 import type { Review } from '../reviews/domain/review.ts'
@@ -59,7 +60,6 @@ function loadPinsHidden(): boolean {
   }
 }
 
-const REVIEW_OFFER_MS = 10_000 // チェックインの後に「感想を書く」を出しておく時間
 
 export function MapPage() {
   const { session, signOut } = useAuth()
@@ -94,8 +94,6 @@ export function MapPage() {
   const [checkinError, setCheckinError] = useState<CheckinError | null>(null)
   const [effect, setEffect] = useState<{ coins: 0 | 30 | 40; reveal: string | null; key: number; exp: number; levelUp: number | null } | null>(null)
   const [doneToday, setDoneToday] = useState(false)
-  // チェックインの直後の「感想を書く」: 成功で持ち、演出が終わったら 10 秒出す。新しいチェックインで置き換わる
-  const [reviewOffer, setReviewOffer] = useState<{ checkinId: string; shop: Shop; shown: boolean } | null>(null)
   // 図鑑に地図のデータだけのお店を出す（設計 2026-11-12-zukan-osm-shops）: 晴れた場所の地図のお店のタイルを shops-osm に送る。
   // 霧が晴れたとき（チェックイン・町のクリア）・お店がそろったとき・図鑑を開いたとき。時間では送らない（オーナー 2026-11-13）。
   // 失敗しても何もしない（次にまた送る）
@@ -128,12 +126,26 @@ export function MapPage() {
       alive = false
     }
   }, [selectedId])
-  const [reviewing, setReviewing] = useState<{ checkinId: string; shop: Shop; day: string } | null>(null)
-  useEffect(() => {
-    if (!reviewOffer?.shown) return
-    const t = setTimeout(() => setReviewOffer(null), REVIEW_OFFER_MS)
-    return () => clearTimeout(t)
-  }, [reviewOffer])
+  // 感想を書く・直す（お店のシートの「✎ 感想」から。いちばん新しい訪問が対象。2026-11-13 オーナー: 浮くボタンはやめてシートに置く）
+  const [reviewing, setReviewing] = useState<{ checkinId: string; shopId: string; shopName: string; day: string; existing: Review | null; photoUrl: string | null } | null>(null)
+  const openReview = async (shop: Shop) => {
+    try {
+      // 合体したお店は、地図の点（mapId）の方に訪問が付いていることがある
+      let id = shop.id
+      let mine = await loadMine(id)
+      if (mine.visits.length === 0 && shop.mapId) {
+        id = shop.mapId
+        mine = await loadMine(id)
+      }
+      const t = targetCheckin(mine.visits, mine.mine)
+      const visit = t ? mine.visits.find((v) => v.checkinId === t.checkinId) : undefined
+      if (!t || !visit) return
+      const photoUrl = t.existing?.photoPath ? ((await photoUrls([t.existing.photoPath])).get(t.existing.photoPath) ?? null) : null
+      setReviewing({ checkinId: t.checkinId, shopId: id, shopName: shop.name, day: jstDay(new Date(visit.checkedInAt)), existing: t.existing, photoUrl })
+    } catch {
+      // 読めなければ開かない（シートはそのまま）
+    }
+  }
   const [record, setRecord] = useState<{ visits: Visits | null; ready: boolean }>({ visits: null, ready: false })
   const [exploreOpen, setExploreOpen] = useState(false)
   const [pickedHint, setPickedHint] = useState<string | null>(null)
@@ -316,7 +328,6 @@ export function MapPage() {
       const before = levelFor(exp).level
       const after = levelFor(exp + gain).level
       setExp(exp + gain)
-      setReviewOffer({ checkinId: result.checkinId, shop: posted, shown: false })
       setEffect({ coins: result.coins, reveal: maskedBefore ? posted.name : null, key: ++effectSeq.current, exp: gain, levelUp: after > before ? after : null })
       if (result.wasHint) hints.markCompleted(posted)
       mapRef.current?.checkin(posted, result.newCells)
@@ -401,6 +412,7 @@ export function MapPage() {
           doneToday={doneToday}
           hint={hints.hintFor(selected)}
           masked={hints.isMasked(selected)}
+          onReview={() => void openReview(selected)}
           reviews={sheetReviews?.shopId === selected.id ? sheetReviews : null}
           busy={busy}
           error={checkinError}
@@ -495,30 +507,16 @@ export function MapPage() {
       )}
       {effect && <CheckinEffect key={effect.key} coins={effect.coins} exp={effect.exp} levelUp={effect.levelUp} reveal={effect.reveal} onDone={() => {
             setEffect(null)
-            setReviewOffer((o) => (o ? { ...o, shown: true } : o))
             if (!selectedRef.current) mapRef.current?.unfocus() // 演出が終わったらカメラを自分に戻す
           }} />}
-      {!effect && reviewOffer?.shown && (
-        <button
-          type="button"
-          className="review-offer"
-          aria-label="感想を書く"
-          onClick={() => {
-            setReviewing({ checkinId: reviewOffer.checkinId, shop: reviewOffer.shop, day: jstDay(new Date()) })
-            setReviewOffer(null)
-          }}
-        >
-          ✎ 感想を書く
-        </button>
-      )}
       {reviewing && (
         <ReviewEditor
-          shopName={reviewing.shop.name}
-          shopId={reviewing.shop.id}
+          shopName={reviewing.shopName}
+          shopId={reviewing.shopId}
           checkinId={reviewing.checkinId}
           visitDay={reviewing.day}
-          existing={null}
-          existingPhotoUrl={null}
+          existing={reviewing.existing}
+          existingPhotoUrl={reviewing.photoUrl}
           onSaved={() => setReviewing(null)}
           onDeleted={() => setReviewing(null)}
           onClose={() => setReviewing(null)}

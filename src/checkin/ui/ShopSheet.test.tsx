@@ -264,3 +264,22 @@ test('感想が無ければ「まだ感想がありません」、読み中は�
   await expand()
   expect(screen.queryByText(/みんなの感想/)).not.toBeInTheDocument()
 })
+
+// ---- 感想を書く（2026-11-13 オーナー: シートに置く） ----
+test('行ったお店はチェックインのとなりに「感想」。押すと onReview', async () => {
+  const onReview = vi.fn()
+  render(<ShopSheet shop={hp} distanceM={32} busy={false} error={null} onCheckin={vi.fn()} onClose={vi.fn()} visits={twice} onReview={onReview} />)
+  await userEvent.click(screen.getByRole('button', { name: '感想を書く' }))
+  expect(onReview).toHaveBeenCalled()
+})
+
+test('行っていない・伏せた気配・onReview が無いときは出さない', () => {
+  const { unmount } = render(<ShopSheet shop={hp} distanceM={32} busy={false} error={null} onCheckin={vi.fn()} onClose={vi.fn()} visits={null} onReview={vi.fn()} />)
+  expect(screen.queryByRole('button', { name: '感想を書く' })).not.toBeInTheDocument()
+  unmount()
+  const r = render(<ShopSheet shop={hp} distanceM={32} busy={false} error={null} onCheckin={vi.fn()} onClose={vi.fn()} visits={twice} masked onReview={vi.fn()} />)
+  expect(screen.queryByRole('button', { name: '感想を書く' })).not.toBeInTheDocument()
+  r.unmount()
+  render(<ShopSheet shop={hp} distanceM={32} busy={false} error={null} onCheckin={vi.fn()} onClose={vi.fn()} visits={twice} />)
+  expect(screen.queryByRole('button', { name: '感想を書く' })).not.toBeInTheDocument()
+})

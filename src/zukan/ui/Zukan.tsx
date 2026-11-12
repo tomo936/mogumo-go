@@ -9,9 +9,8 @@ import { frameTier } from '../../checkin/domain/visits.ts'
 import { KIND_ORDER, PAGE_SIZE, buildZukan, cardNo, filledCount, pageCount, type ZukanShop } from '../domain/zukan.ts'
 import { loadZukan } from '../infra/zukanApi.ts'
 import { Icon } from '../../ui/Icon.tsx'
-import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
 import { ZukanDetail } from './ZukanDetail.tsx'
-import { cardUrl } from './cardArt.ts'
+import { cardUrl, kindIcon } from './cardArt.ts'
 import { whereText } from '../domain/hintText.ts'
 import type { HintOrigin } from '../domain/hintText.ts'
 import { expFromCounts, levelFor } from '../domain/level.ts'
@@ -118,7 +117,7 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null }: P
                   setHint(null)
                 }}
               >
-                <img src={PIN_ICON[k]} alt="" />
+                <img src={kindIcon(k)} alt="" />
                 {KIND_NAME[k]}
               </button>
             ))}

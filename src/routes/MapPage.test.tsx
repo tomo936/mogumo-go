@@ -20,7 +20,10 @@ const postCheckin = vi.fn()
 vi.mock('../checkin/infra/checkinApi.ts', () => ({ postCheckin: (...a: unknown[]) => postCheckin(...a), loadProgress: () => Promise.resolve({ visitsByShop: new Map() }) }))
 const loadSummary = vi.fn(async (_id: string): Promise<{ avg: number; count: number } | null> => null)
 const loadLatest = vi.fn(async (_id: string) => [] as unknown[])
+const loadMine = vi.fn(async (_id: string): Promise<{ visits: { checkinId: string; checkedInAt: string }[]; mine: unknown[] }> => ({ visits: [], mine: [] }))
 vi.mock('../reviews/infra/reviewsApi.ts', () => ({
+  loadMine: (id: string) => loadMine(id),
+  photoUrls: async () => new Map(),
   loadSummary: (id: string) => loadSummary(id),
   loadLatest: (id: string) => loadLatest(id),
   saveReview: async () => { throw new Error('x') },
@@ -43,6 +46,7 @@ const addTownCalls: string[] = []
 const hintTaps: ((id: string) => void)[] = []
 const focusAtCalls: LatLng[] = []
 let mapShopsNow: Shop[] = []
+let visitsNow: { count: number; firstDay: string; lastDay: string } | null = null
 afterEach(() => vi.useRealTimers())
 beforeEach(() => {
   localStorage.clear()
@@ -50,6 +54,7 @@ beforeEach(() => {
   readTodayHints.mockResolvedValue({ ok: true, set: null })
   postDailyHints.mockReset()
   mapShopsNow = []
+  visitsNow = null
   focusAtCalls.length = 0
   syncUntilSettled.mockReset()
   syncUntilSettled.mockResolvedValue(undefined)
@@ -72,7 +77,7 @@ vi.mock('../map/ui/MapView.tsx', async () => {
       useEffect(() => { shopErrors.push(onShopsError) }, [onShopsError])
       useEffect(() => { hintTaps.push(onHintTap) }, [onHintTap])
       useEffect(() => { handlers.push({ select: onSelectShop, building: onSelectBuilding, position: onPosition }) }, [onSelectShop, onSelectBuilding, onPosition])
-      useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, addTown: (town: { id: string }) => { addTownCalls.push(town.id) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false, visitsFor: () => null, progressReady: () => true, checked: () => new Set<string>(),
+      useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, addTown: (town: { id: string }) => { addTownCalls.push(town.id) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false, visitsFor: () => visitsNow, progressReady: () => true, checked: () => new Set<string>(),
         hintInputs: () => ({ shops: mapShopsNow, near: mapShopsNow, cleared: new Set<string>(), checked: new Set<string>() }),
         whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, express: (k: string) => { expressCalls.push(k) }, subscribeBearing: () => () => {}, resetNorth: () => { northCalls.push(1) }, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
       }), [])
@@ -486,8 +491,8 @@ test('画面を離れたら、町の呼び直しは止まる（alive が false�
   expect(opts.alive()).toBe(false)
 })
 
-// ---- チェックインの直後の「感想を書く」（10 秒） ----
-test('演出が終わると「感想を書く」が出て、10 秒で消える', async () => {
+// ---- 感想を書く（お店のシートのチェックインのとなり。2026-11-13 オーナー） ----
+test('チェックインのあと、地図の上に浮くボタンは出ない', async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
   postCheckin.mockReset()
@@ -496,34 +501,20 @@ test('演出が終わると「感想を書く」が出て、10 秒で消える',
   act(() => last().position(here))
   act(() => last().select(shop))
   await user.click(screen.getByRole('button', { name: 'チェックイン' }))
-  await screen.findByText('チェックイン完了') // 演出が出てから時間を進める
-  expect(screen.queryByRole('button', { name: '感想を書く' })).not.toBeInTheDocument()
+  await screen.findByText('チェックイン完了')
   act(() => { vi.advanceTimersByTime(EFFECT_MS + 50) })
-  expect(screen.getByRole('button', { name: '感想を書く' })).toBeInTheDocument()
-  act(() => { vi.advanceTimersByTime(10_000) })
   expect(screen.queryByRole('button', { name: '感想を書く' })).not.toBeInTheDocument()
 })
 
-test('押すとエディターがそのお店で開く。出ている間に別のチェックインをしたら新しい方になる', async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true })
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-  postCheckin.mockReset()
-  postCheckin.mockResolvedValueOnce({ ok: true, checkinId: 'c1', coins: 30, newCells: [] })
-  postCheckin.mockResolvedValueOnce({ ok: true, checkinId: 'c2', coins: 30, newCells: [] })
+test('行ったお店のシートの「感想」で、いちばん新しい訪問のエディターが開く', async () => {
+  loadMine.mockResolvedValueOnce({ visits: [{ checkinId: 'c9', checkedInAt: '2026-11-12T03:00:00Z' }], mine: [] })
+  visitsNow = { count: 1, firstDay: '2026-11-12', lastDay: '2026-11-12' }
   renderPage()
   act(() => last().position(here))
   act(() => last().select(shop))
-  await user.click(screen.getByRole('button', { name: 'チェックイン' }))
-  await screen.findByText('チェックイン完了') // 演出が出てから時間を進める
-  act(() => { vi.advanceTimersByTime(EFFECT_MS + 50) })
-  expect(screen.getByRole('button', { name: '感想を書く' })).toBeInTheDocument()
-  const other: Shop = { ...shop, id: 'hp:J2', name: 'カフェもぐ' }
-  act(() => last().select(other))
-  await user.click(screen.getByRole('button', { name: 'チェックイン' }))
-  await screen.findByText('チェックイン完了') // 演出が出てから時間を進める
-  act(() => { vi.advanceTimersByTime(EFFECT_MS + 50) })
-  await user.click(screen.getByRole('button', { name: '感想を書く' }))
-  expect(screen.getByRole('dialog', { name: '感想を書く' })).toHaveTextContent('カフェもぐ')
+  await userEvent.click(await screen.findByRole('button', { name: '感想を書く' }))
+  expect(loadMine).toHaveBeenCalledWith('hp:J1')
+  expect(await screen.findByRole('dialog', { name: '感想を書く' })).toHaveTextContent('2026.11.12 の訪問')
 })
 
 test('シートを開くとみんなの感想を読む。店が替われば古い返事は捨てる', async () => {
