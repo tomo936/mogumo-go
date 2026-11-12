@@ -64,8 +64,8 @@
   padding: 10px 14px;
   border-radius: 18px;
   background: #fff;
-  border: 2.5px solid #8a5a32;
-  box-shadow: 0 4px 0 #8a5a32;
+  border: 2.5px solid #4a2f18;
+  box-shadow: 3px 3px 0 #4a2f18;
 }
 .zukan__ring {
   --p: 0;
@@ -195,27 +195,33 @@
   position: relative;
   display: block;
   width: 100%;
-  border: 0;
-  border-radius: 14px;
-  padding: 5px 5px 7px;
+  border: 2.5px solid #4a2f18;
+  border-radius: 12px;
+  padding: 4px 4px 6px;
   text-align: center;
-  color: inherit;
+  color: #4a2f18;
+  box-shadow: 3px 3px 0 #4a2f18;
 }
 .zukan__card--visited {
-  background: linear-gradient(160deg, #ffb06a, #f07a3a);
-  box-shadow: 0 4px 0 #b5531a, 0 6px 12px rgba(138, 90, 50, 0.25);
+  /* 金属はグラデーションでなく、平らな地＋くっきりした光の帯 2 本＋右下の濃い縁（アニメ塗り。2026-11-12 オーナー「AI っぽい」→ 案1 改） */
+  --m: #d98a4e;
+  --hi: #f3b685;
+  --lo: #a65a28;
+  background: linear-gradient(118deg, var(--m) 0 58%, var(--hi) 58% 66%, var(--m) 66% 71%, var(--hi) 71% 74%, var(--m) 74%);
+  box-shadow: inset -4px -4px 0 var(--lo), 3px 3px 0 #4a2f18;
 }
 .zukan__card--silver {
-  background: linear-gradient(160deg, #ffffff, #c5d1de 40%, #eef3f8 55%, #a9b8c8);
-  box-shadow: 0 4px 0 #7f8fa1, 0 6px 12px rgba(80, 100, 120, 0.25);
+  --m: #c3cdd8;
+  --hi: #eef3f8;
+  --lo: #8d9cad;
 }
 .zukan__card--gold {
-  background: linear-gradient(160deg, #fff6c8, #f5c542 35%, #fff0a8 50%, #d99a14);
-  box-shadow: 0 4px 0 #a26f05, 0 6px 12px rgba(160, 110, 0, 0.3);
+  --m: #f5c330;
+  --hi: #ffe68a;
+  --lo: #c98a00;
 }
 .zukan__card--unknown {
-  background: linear-gradient(160deg, #c9b6f2, #9d86d9);
-  box-shadow: 0 4px 0 #6f5aa8;
+  background: #b9a6e8;
 }
 .zukan__no {
   display: block;
@@ -224,16 +230,7 @@
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.06em;
-  color: #fff;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
-}
-.zukan__card--silver .zukan__no {
-  color: #4b5d70;
-  text-shadow: none;
-}
-.zukan__card--gold .zukan__no {
-  color: #7a4b00;
-  text-shadow: none;
+  color: #4a2f18;
 }
 .zukan__art {
   position: relative;
@@ -241,9 +238,9 @@
   aspect-ratio: 1;
   overflow: hidden;
   margin-top: 3px;
-  border-radius: 9px;
-  background: radial-gradient(circle at 50% 35%, #fffdf6, #ffe7c4);
-  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  background: #fffaf0;
+  border: 2px solid #4a2f18;
 }
 .zukan__art img {
   display: block;
@@ -255,8 +252,7 @@
   object-fit: contain;
 }
 .zukan__card--unknown .zukan__art {
-  background: repeating-radial-gradient(circle at 50% 50%, #b6a1e6 0 6px, #a993de 6px 12px);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: #a08bd8;
 }
 .zukan__card--unknown .zukan__art img {
   filter: brightness(0) opacity(0.22);
@@ -278,16 +274,19 @@
   height: 29px;
   margin-top: 5px;
   padding: 0 4px;
-  border-radius: 7px;
+  border: 2px solid #4a2f18;
+  border-radius: 6px;
   overflow: hidden;
   font-size: 11.5px;
   font-weight: 800;
   line-height: 1.25;
-  background: #5a3a1e;
-  color: #fff;
+  background: #fff;
+  color: #4a2f18;
 }
 .zukan__card--unknown .zukan__name {
+  border-color: transparent;
   background: none;
+  color: #fff;
 }
 .zukan__meta {
   display: flex;
@@ -297,38 +296,23 @@
   margin-top: 3px;
   font-size: 9.5px;
   font-weight: 800;
-  color: #fff;
-}
-.zukan__card--silver .zukan__meta,
-.zukan__card--gold .zukan__meta {
-  color: #5a3a1e;
+  color: #4a2f18;
 }
 .zukan__stars {
   font-size: 10px;
   letter-spacing: -1px;
-  color: #fff3a0;
-  text-shadow: 0 1px 0 rgba(120, 50, 0, 0.5);
-}
-.zukan__card--silver .zukan__stars,
-.zukan__card--gold .zukan__stars {
-  color: #e07800;
-  text-shadow: none;
+  color: #e0560f;
 }
 .zukan__stars.zukan__stars--none {
   font-size: 9px;
   letter-spacing: 0;
-  color: #fff;
-  text-shadow: none;
-}
-.zukan__card--silver .zukan__stars--none,
-.zukan__card--gold .zukan__stars--none {
-  color: #8a6a4a;
+  color: #6b4a2b;
 }
 .zukan__cnt {
   padding: 1px 5px;
   border-radius: 99px;
-  background: rgba(255, 255, 255, 0.85);
-  color: #8a5a32;
+  background: #4a2f18;
+  color: #fff;
 }
 .zukan__hint {
   display: block;
@@ -393,28 +377,34 @@
   line-height: 1;
 }
 .zd__hero {
+  --m: #d98a4e;
+  --hi: #f3b685;
+  --lo: #a65a28;
   position: relative;
   margin: 4px 18px 0;
   padding: 12px 12px 14px;
+  border: 3px solid #4a2f18;
   border-radius: 22px;
-  background: linear-gradient(160deg, #ffb06a, #f07a3a);
-  box-shadow: 0 6px 0 #b5531a, 0 10px 20px rgba(138, 90, 50, 0.25);
+  background: linear-gradient(118deg, var(--m) 0 60%, var(--hi) 60% 67%, var(--m) 67% 72%, var(--hi) 72% 75%, var(--m) 75%);
+  box-shadow: inset -6px -6px 0 var(--lo), 5px 5px 0 #4a2f18;
 }
 .zd__hero--silver {
-  background: linear-gradient(160deg, #ffffff, #c5d1de 40%, #eef3f8 55%, #a9b8c8);
-  box-shadow: 0 6px 0 #7f8fa1, 0 10px 20px rgba(80, 100, 120, 0.25);
+  --m: #c3cdd8;
+  --hi: #eef3f8;
+  --lo: #8d9cad;
 }
 .zd__hero--gold {
-  background: linear-gradient(160deg, #fff6c8, #f5c542 35%, #fff0a8 50%, #d99a14);
-  box-shadow: 0 6px 0 #a26f05, 0 10px 20px rgba(160, 110, 0, 0.3);
+  --m: #f5c330;
+  --hi: #ffe68a;
+  --lo: #c98a00;
 }
 .zd__art {
   position: relative;
   aspect-ratio: 4 / 3;
   overflow: hidden;
   border-radius: 14px;
-  background: radial-gradient(circle at 50% 35%, #fffdf6, #ffe7c4);
-  border: 3px solid #fff;
+  background: #fffaf0;
+  border: 2.5px solid #4a2f18;
 }
 .zd__art img {
   display: block;
@@ -438,9 +428,10 @@
 .zd__name {
   margin: 10px 0 8px;
   padding: 6px;
+  border: 2.5px solid #4a2f18;
   border-radius: 12px;
-  background: #5a3a1e;
-  color: #fff;
+  background: #fff;
+  color: #4a2f18;
   text-align: center;
   font-size: 20px;
   font-weight: 800;
@@ -457,9 +448,10 @@
   gap: 3px;
   height: 26px;
   padding: 0 10px;
+  border: 2px solid #4a2f18;
   border-radius: 99px;
   background: #fff;
-  color: #8a5a32;
+  color: #4a2f18;
   font-size: 12px;
   font-weight: 800;
 }
@@ -469,25 +461,15 @@
   margin-left: -5px;
 }
 .zd__chip--tier {
-  background: #7a4b00;
-  color: #ffe27a;
-}
-.zd__hero--silver .zd__chip--tier {
-  background: #4b5d70;
-  color: #eef3f8;
+  background: #4a2f18;
+  color: #ffe68a;
 }
 .zd__catch {
   margin: 10px 4px 0;
   text-align: center;
   font-size: 12.5px;
   font-weight: 800;
-  color: #fff;
-  text-shadow: 0 1px 0 rgba(120, 50, 0, 0.4);
-}
-.zd__hero--silver .zd__catch,
-.zd__hero--gold .zd__catch {
-  color: #5a3a1e;
-  text-shadow: none;
+  color: #4a2f18;
 }
 .zd__stamp {
   position: absolute;
@@ -523,9 +505,9 @@
   font-size: 11px;
   font-weight: 800;
   background: #fff;
-  border: 2.5px solid #8a5a32;
+  border: 2.5px solid #4a2f18;
   border-radius: 16px;
-  box-shadow: 0 4px 0 #8a5a32;
+  box-shadow: 3px 3px 0 #4a2f18;
 }
 .zd__stats b {
   display: block;

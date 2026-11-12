@@ -59,8 +59,8 @@
   padding: 12px 14px;
   border-radius: 16px;
   background: #fff;
-  border: 2.5px solid #8a5a32;
-  box-shadow: 0 4px 0 #8a5a32;
+  border: 2.5px solid #4a2f18;
+  box-shadow: 3px 3px 0 #4a2f18;
 }
 .rv-ed__label {
   display: block;
@@ -249,8 +249,8 @@
   padding: 14px;
   border-radius: 16px;
   background: #fff;
-  border: 2.5px solid #8a5a32;
-  box-shadow: 0 4px 0 #8a5a32;
+  border: 2.5px solid #4a2f18;
+  box-shadow: 3px 3px 0 #4a2f18;
 }
 .zd-box__title {
   display: flex;

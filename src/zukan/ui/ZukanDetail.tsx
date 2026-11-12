@@ -9,7 +9,8 @@ import { MyReviews } from '../../reviews/ui/MyReviews.tsx'
 import { ReviewList } from '../../reviews/ui/ReviewList.tsx'
 import { cardUrl } from './cardArt.ts'
 
-const TIER_CHIP = { normal: null, silver: '銀の枠', gold: '金の枠' } as const
+// 段の呼び名は 銅（1〜2 回）・銀（3〜9 回）・金（10 回〜）。2026-11-12 オーナー「金銀銅」
+const TIER_CHIP = { normal: '銅の枠', silver: '銀の枠', gold: '金の枠' } as const
 
 // '2026-11-03' → '2026.11.03'、'11.03'
 const dotted = (day: string) => day.replaceAll('-', '.')
@@ -46,7 +47,7 @@ export function ZukanDetail({ shop, no, onBack, onLocate }: Props) {
             {KIND_LABEL[shop.kind]}
           </span>
           {shop.budgetName && <span className="zd__chip">{shop.budgetName}</span>}
-          {TIER_CHIP[tier] && <span className="zd__chip zd__chip--tier">{TIER_CHIP[tier]}</span>}
+          <span className="zd__chip zd__chip--tier">{TIER_CHIP[tier]}</span>
         </div>
         {shop.catch && <p className="zd__catch">{shop.catch}</p>}
         {v && (
