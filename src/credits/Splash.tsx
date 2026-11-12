@@ -20,6 +20,7 @@ export function Splash() {
         <span>Powered by ホットペッパーグルメ Webサービス</span>
         <span>町の境目: 「国勢調査 町丁・字等別境界データ」（総務省統計局・e-Stat）を加工して作成</span>
         <span>地名検索: 国土地理院</span>
+        <span>チェーン店の判定: name-suggestion-index（OpenStreetMap, BSD-3-Clause）</span>
       </span>
     </button>
   )
