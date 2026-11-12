@@ -4,10 +4,9 @@ import './zukan.css'
 import { frameTier } from '../../checkin/domain/visits.ts'
 import type { ZukanShop } from '../domain/zukan.ts'
 import { KIND_LABEL } from '../../shops/domain/kindLabel.ts'
-import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
 import { MyReviews } from '../../reviews/ui/MyReviews.tsx'
 import { ReviewList } from '../../reviews/ui/ReviewList.tsx'
-import { cardUrl } from './cardArt.ts'
+import { cardUrl, kindIcon } from './cardArt.ts'
 import { Icon } from '../../ui/Icon.tsx'
 
 // 段の呼び名は 銅（1〜2 回）・銀（3〜9 回）・金（10 回〜）。2026-11-12 オーナー「金銀銅」
@@ -44,7 +43,7 @@ export function ZukanDetail({ shop, no, onBack, onLocate }: Props) {
         <h2 className="zd__name">{v ? shop.name : '？？？'}</h2>
         <div className="zd__chips">
           <span className="zd__chip">
-            <img src={PIN_ICON[shop.kind]} alt="" />
+            <img src={kindIcon(shop.kind)} alt="" />
             {KIND_LABEL[shop.kind]}
           </span>
           {shop.budgetName && <span className="zd__chip">{shop.budgetName}</span>}

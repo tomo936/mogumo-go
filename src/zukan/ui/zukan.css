@@ -153,7 +153,7 @@
   gap: 4px;
   flex: none;
   height: 36px;
-  padding: 0 12px 0 6px;
+  padding: 0 14px 0 8px;
   border-radius: 99px;
   border: 2px solid #d9b48f;
   background: #fff;
@@ -162,8 +162,8 @@
   font-weight: 800;
 }
 .zukan__tab img {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
 }
 .zukan__tab--on {

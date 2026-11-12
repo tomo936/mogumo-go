@@ -59,10 +59,11 @@ type Props = {
   backLabel?: string | null // ビルの一覧から開いたとき、左上の「‹ ビル名」（押すと onBack）
   onBack?: () => void
   reviews?: { summary: { avg: number; count: number } | null; latest: Review[] } | null // みんなの感想（読み中・読めないは null）
+  onReview?: () => void // 行ったお店の「感想を書く」（チェックインのとなり。2026-11-13 オーナー）
   viewOnly?: boolean // 見るだけ（ワールドマップから飛んだ先）。チェックインのボタンと誤りの文を出さない
 }
 
-export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, masked = false, visits = null, recordReady, busy, error, onCheckin, onClose, onLocate, backLabel = null, onBack, viewOnly = false, reviews = null }: Props) {
+export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, masked = false, visits = null, recordReady, busy, error, onCheckin, onClose, onLocate, backLabel = null, onBack, viewOnly = false, reviews = null, onReview }: Props) {
   const [expanded, setExpanded] = useState(false) // 止まっている段（全画面か）
   const [openedAt] = useState(() => new Date()) // 営業中かは、シートを開いた時刻で決める
   const [height, setHeight] = useState<number | null>(null) // 引いている間・全画面の高さ（px）。小さい段で止まっているときは null（中身の高さ）
@@ -373,7 +374,16 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
       {/* チェックインのボタンは段が変わっても下に置いたまま */}
       <div className="shop-sheet__foot">
         {!viewOnly && errorRow}
-        {!viewOnly && button}
+        {!viewOnly && (onReview && visits && !masked ? (
+          <div className="shop-sheet__actions">
+            {button}
+            <button type="button" className="shop-sheet__review" aria-label="感想を書く" onClick={onReview}>
+              <span aria-hidden="true">✎</span>感想
+            </button>
+          </div>
+        ) : (
+          button
+        ))}
         {locateButton}
         {!expanded && progress === 0 && (
           <button type="button" className="shop-sheet__more" onClick={() => settle('full')}>
