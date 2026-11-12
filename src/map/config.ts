@@ -8,6 +8,12 @@ export const MIN_ZOOM = 16
 export const MAX_ZOOM = 18
 export const INITIAL_ZOOM = 17
 export const CIRCLE_RADIUS_M = 50
+// 足元の範囲の波紋（A2、2026-11-12 オーナー「案1」）。波の色・1 周の時間・本数。塗りは範囲の目印として残す
+export const RIPPLE_COLOR = '#ff8f45'
+export const RIPPLE_FILL_COLOR = '#ff9f5a'
+export const RIPPLE_FILL_OPACITY = 0.13
+export const RIPPLE_PERIOD_MS = 2600
+export const RIPPLE_COUNT = 2
 export const MAX_ACCURACY_M = 50
 // 最初の1回だけはこの精度まで受け入れて地図を出す（屋内・PC の Wi-Fi 測位は 50m より粗いことが多い）
 export const FIRST_FIX_MAX_ACCURACY_M = 2000

@@ -6,12 +6,13 @@ import type { GeoJSONSource } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './map.css'
 import {
-  CIRCLE_RADIUS_M, FIRST_FIX_TIMEOUT_MS, INITIAL_ZOOM, MAP_THEME, MAX_ZOOM, MIN_ZOOM, PITCH, STYLE_URL,
+  CIRCLE_RADIUS_M, RIPPLE_COLOR, RIPPLE_COUNT, RIPPLE_FILL_COLOR, RIPPLE_FILL_OPACITY, RIPPLE_PERIOD_MS, FIRST_FIX_TIMEOUT_MS, INITIAL_ZOOM, MAP_THEME, MAX_ZOOM, MIN_ZOOM, PITCH, STYLE_URL,
 } from '../config.ts'
 import { themeStyle } from '../infra/theme.ts'
 import { pickTheme, THEMES } from '../infra/themes.ts'
 import { isFakeWalkEnabled, startFakeWalk } from '../infra/fakeWalk.ts'
-import { circlePolygon, distanceMeters } from '../domain/geo.ts'
+import { circlePolygon, distanceMeters, metersPerPixel } from '../domain/geo.ts'
+import { ripplesAt } from '../domain/ripple.ts'
 import type { LatLng } from '../domain/geo.ts'
 import { watchLocation } from '../infra/location.ts'
 import type { LocationEvent } from '../domain/locationStatus.ts'
@@ -210,8 +211,14 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     map.on('load', () => {
       map.addSource('me-circle', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addSource('me-shadow', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
-      map.addLayer({ id: 'me-circle-fill', type: 'fill', source: 'me-circle', paint: { 'fill-color': '#4aa8ff', 'fill-opacity': 0.15 } })
-      map.addLayer({ id: 'me-circle-line', type: 'line', source: 'me-circle', paint: { 'line-color': '#4aa8ff', 'line-width': 2, 'line-opacity': 0.6 } })
+      map.addLayer({ id: 'me-circle-fill', type: 'fill', source: 'me-circle', paint: { 'fill-color': RIPPLE_FILL_COLOR, 'fill-opacity': RIPPLE_FILL_OPACITY } })
+      // 波紋: 地面に寝た円（中は透明・ふちだけ）。大きさ・太さ・濃さは毎コマ tick で変える
+      for (let i = 0; i < RIPPLE_COUNT; i++) {
+        map.addLayer({
+          id: `me-ripple-${i}`, type: 'circle', source: 'me-shadow',
+          paint: { 'circle-radius': 0, 'circle-opacity': 0, 'circle-stroke-color': RIPPLE_COLOR, 'circle-stroke-width': 0, 'circle-stroke-opacity': 0, 'circle-pitch-alignment': 'map' },
+        })
+      }
       map.addLayer(avatarModel.layer)
       map.addLayer({
         id: 'me-shadow', type: 'circle', source: 'me-shadow',
@@ -352,6 +359,15 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
           ;(map.getSource('me-circle') as GeoJSONSource).setData(circlePolygon(c, CIRCLE_RADIUS_M))
           ;(map.getSource('me-shadow') as GeoJSONSource).setData({ type: 'Point', coordinates: [c.lng, c.lat] })
           s.drawn = c
+        }
+        if (s.loaded) {
+          const mpp = metersPerPixel(map.getZoom(), c.lat)
+          ripplesAt(now, CIRCLE_RADIUS_M, RIPPLE_PERIOD_MS, RIPPLE_COUNT).forEach((r, i) => {
+            const id = `me-ripple-${i}`
+            map.setPaintProperty(id, 'circle-radius', r.radiusM / mpp)
+            map.setPaintProperty(id, 'circle-stroke-width', r.widthPx)
+            map.setPaintProperty(id, 'circle-stroke-opacity', r.opacity)
+          })
         }
       }
       loop.frame = requestAnimationFrame(tick)
