@@ -7,10 +7,9 @@ export const CLUSTER_RADIUS_PX = 72 // 画面でこの近さのピンをまと�
 // 札の数字。100 以上は「99+」
 export const badgeText = (n: number): string => (n > 99 ? '99+' : String(n))
 
-// 札の丸の直径に対する字の大きさ。丸のまま、桁が増えたら字を小さくして収める（楕円にしない）
-export function badgeFontRatio(text: string): number {
-  return text.length >= 3 ? 0.36 : text.length === 2 ? 0.5 : 0.62
-}
+// 札の字の大きさは桁によらず同じ（2026-11-13 オーナー）。いちばん長い「99+」が丸の中に収まる大きさにそろえる
+export const BADGE_WIDEST_TEXT = '99+'
+export const BADGE_TEXT_FIT = 0.74 // 丸の直径に対して、いちばん長い字の幅をここまでにする
 
 // まとめた数でピンの大きさを 3 段に（2〜9・10〜29・30 以上）
 export const clusterScale = (n: number): number => (n >= 30 ? 1.25 : n >= 10 ? 1.12 : 1)

@@ -4,7 +4,7 @@
 import type { GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl'
 import '@fontsource/m-plus-rounded-1c/800.css'
 import baseUrl from '../../assets/pins/cluster-base.png'
-import { badgeFontRatio, badgeText, CLUSTER_RADIUS_PX, CLUSTER_UNTIL_ZOOM, clusterScale } from '../domain/cluster.ts'
+import { BADGE_TEXT_FIT, BADGE_WIDEST_TEXT, badgeText, CLUSTER_RADIUS_PX, CLUSTER_UNTIL_ZOOM, clusterScale } from '../domain/cluster.ts'
 import type { ClusterFeature } from '../domain/cluster.ts'
 
 export const CLUSTER_SOURCE = 'shop-clusters'
@@ -16,30 +16,51 @@ const INK = '#4a2f18'
 const TIER = ['step', ['coalesce', ['get', 'total'], ['get', 'n']], clusterScale(2), 10, clusterScale(10), 30, clusterScale(30)] as const
 const ICON_SIZE = ['interpolate', ['linear'], ['zoom'], 14, 0.2, 16, 0.22, 18, 0.29] as const // 1 軒のピン（shopPins と同じ大きさ）
 
-// まとめのピンの絵（256px の台＋右上の丸い札）。pixelRatio 2 で使う
-function drawCluster(base: HTMLImageElement, n: number): ImageData {
-  const W = 360, H = 320, PIN = 256
+// まとめのピンの絵（256px の台＋右上の丸い札）。pixelRatio 2 で使う。
+// 札: インクの縁＋右下の平らな影（アプリのボタンと同じ）、橙の地、内側に白い輪。数字は白にインクの縁。
+// 字の大きさは桁によらず同じ（「99+」が収まる大きさ）。字の実際の高さを測って、丸のちょうど真ん中に置く
+export function drawCluster(base: CanvasImageSource, n: number): ImageData {
+  const W = 360, H = 330, PIN = 256
   const cv = document.createElement('canvas')
   cv.width = W
   cv.height = H
   const c = cv.getContext('2d')!
   const px = (W - PIN) / 2, py = H - PIN // ピンの先が絵の下の真ん中
   c.drawImage(base, px, py, PIN, PIN)
-  const D = 100, r = D / 2
-  const cx = px + PIN - 34, cy = py + 18 // 札の中心（ピンの右上にかかる）
+  const D = 104, r = D / 2
+  const cx = px + PIN - 30, cy = py + 14 // 札の真ん中（ピンの右上にかかる）
+  const circle = (x: number, y: number, rr: number) => {
+    c.beginPath()
+    c.arc(x, y, rr, 0, Math.PI * 2)
+  }
   c.fillStyle = INK
-  c.beginPath(); c.arc(cx + 4, cy + 5, r, 0, Math.PI * 2); c.fill() // 平らな影
+  circle(cx + 5, cy + 6, r + 5) // 平らな影
+  c.fill()
+  circle(cx, cy, r + 5) // インクの縁
+  c.fill()
+  c.fillStyle = '#ffffff'
+  circle(cx, cy, r + 1) // 白い輪
+  c.fill()
   c.fillStyle = '#ff7a3d'
-  c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.fill()
-  c.lineWidth = 7; c.strokeStyle = '#fff'; c.stroke()
-  c.lineWidth = 3; c.strokeStyle = INK
-  c.beginPath(); c.arc(cx, cy, r + 4, 0, Math.PI * 2); c.stroke()
+  circle(cx, cy, r - 5) // 橙の地
+  c.fill()
+  // 字の大きさ: 「99+」の幅が丸の BADGE_TEXT_FIT に収まる大きさ（全部の数で同じ）
+  c.font = `800 100px ${FONT}`
+  const px100 = (100 * D * BADGE_TEXT_FIT) / c.measureText(BADGE_WIDEST_TEXT).width
+  const size = Math.min(56, Math.floor(px100))
+  c.font = `800 ${size}px ${FONT}`
   const text = badgeText(n)
-  c.fillStyle = '#fff'
-  c.textAlign = 'center'
-  c.textBaseline = 'middle'
-  c.font = `800 ${Math.round(D * badgeFontRatio(text))}px ${FONT}`
-  c.fillText(text, cx, cy + 3)
+  const m = c.measureText(text)
+  const x = cx - (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2 // 左端 x−L・右端 x＋R の真ん中を cx に
+  const y = cy + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2
+  c.textAlign = 'left'
+  c.textBaseline = 'alphabetic'
+  c.lineJoin = 'round'
+  c.lineWidth = 7
+  c.strokeStyle = INK
+  c.strokeText(text, x, y)
+  c.fillStyle = '#ffffff'
+  c.fillText(text, x, y)
   return c.getImageData(0, 0, W, H)
 }
 

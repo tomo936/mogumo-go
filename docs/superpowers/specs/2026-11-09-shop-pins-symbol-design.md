@@ -33,5 +33,5 @@ SPEC S16「お店のピンには、その店のジャンルが分かる可愛い
 ## 2026-11-13 変更（オーナー）
 - 重なっても全部出す（`icon-allow-overlap: true`、画面の下ほど手前 `symbol-z-order: viewport-y`）。
 - ただし引いたとき（ズーム 17.5 未満）はまとめる（`src/shops/domain/cluster.ts`・`src/shops/infra/shopClusters.ts`、MapLibre の cluster、画面で 72px の近さ）。
-  - 1 軒は今のピン、2 軒以上（まとめ・ビル）は「その他」のピン（`src/assets/pins/cluster-base.png`、`node art/prototypes/compose-pins.mjs cluster`）の右上に丸い数字の札を 1 枚の絵として描く。数字は丸の真ん中・桁で字を小さく・100 以上は「99+」。数で 3 段の大きさ。
+  - 1 軒は今のピン、2 軒以上（まとめ・ビル）は「その他」のピン（`src/assets/pins/cluster-base.png`、`node art/prototypes/compose-pins.mjs cluster`）の右上に丸い数字の札を 1 枚の絵として描く。数字は丸の真ん中（字の実際の高さで合わせる）・字の大きさは桁によらず同じ（「99+」が収まる大きさ。2026-11-13 オーナー）・100 以上は「99+」。札はインクの縁と平らな影・橙の地・白い輪、数字は白にインクの縁。数で 3 段の大きさ。
   - 押すとほどけるところまで寄る。気配のお店と霧の中の近いお店は数に入れない。引いたときはビルのピンを隠し、名前の札は残す（`.pins-far`）。
