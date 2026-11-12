@@ -524,26 +524,88 @@
   font-size: 18px;
   font-weight: 800;
 }
-/* 感想ごとの「直す」（2026-11-13 オーナー: 前の感想も直せるように） */
-.rv-mine__edit {
-  flex: none;
-  height: 26px;
-  padding: 0 10px !important;
-  border: 2px solid #4a2f18 !important;
-  border-radius: 99px;
-  background: #fff !important;
-  color: #4a2f18;
-  font-size: 11.5px;
+
+/* 「書く」: 欄のいちばん上の白紙のカード（点線）。2026-11-13 オーナー「小さいしダサい」 */
+.rv-write {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  margin: 2px 0 12px;
+  padding: 10px 12px !important;
+  border: 2.5px dashed #e8782f !important;
+  border-radius: 14px;
+  background: #fff6e9 !important;
+  color: #c45a17 !important;
+  font-size: 15px;
   font-weight: 800;
 }
-
-.zd-box__ed:disabled {
-  opacity: 0.4;
+.rv-write span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e8782f;
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
 }
-.zd-box__hint {
-  margin: -4px 0 8px;
-  text-align: right;
-  font-size: 11px;
-  font-weight: 500;
-  opacity: 0.75;
+.rv-write:active {
+  transform: translateY(1px);
+}
+.rv-write--done {
+  border-color: #d9c4ab !important;
+  background: #fbf6ee !important;
+  color: #9a8068 !important;
+  font-size: 13px;
+  min-height: 46px;
+}
+.rv-write--done span {
+  background: #d9c4ab;
+  font-size: 14px;
+}
+/* 書いた感想は 1 件ずつカード。右上の丸い ✎ で直す */
+.rv-mine {
+  position: relative;
+  margin-top: 8px;
+  padding: 12px 52px 12px 12px;
+  border: 2px solid #ead7bf;
+  border-radius: 14px;
+  background: #fffaf3;
+}
+.rv-mine__edit {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0 !important;
+  border: 2.5px solid #4a2f18 !important;
+  border-radius: 50%;
+  background: #fff !important;
+  box-shadow: 2px 2px 0 #4a2f18;
+  color: #4a2f18;
+  font-size: 17px;
+}
+.rv-mine__edit:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+.rv-mine .rv-mine__row {
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.rv-mine .rv-mine__stars {
+  font-size: 18px;
+}
+.rv-mine__private {
+  white-space: nowrap;
+}
+.rv-mine .rv-mine__day {
+  margin-left: 0;
 }
