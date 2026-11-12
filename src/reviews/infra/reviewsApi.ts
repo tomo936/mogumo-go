@@ -125,18 +125,6 @@ export async function loadSummary(shopId: string, client?: ReviewsClient): Promi
   return summarize(stars)
 }
 
-// 図鑑の一覧用: 店ごとに、自分のいちばん新しい感想の星
-export async function loadMyLatestStars(client?: ReviewsClient): Promise<Map<string, number>> {
-  const c = await getClient(client)
-  const me = await myId(c)
-  const res = await c.from('reviews').select('shop_id, stars').eq('user_id', me).order('created_at', { ascending: false })
-  const out = new Map<string, number>()
-  for (const r of rows(res, 'reviews_unavailable')) {
-    if (typeof r.shop_id === 'string' && typeof r.stars === 'number' && !out.has(r.shop_id)) out.set(r.shop_id, r.stars)
-  }
-  return out
-}
-
 async function removeQuietly(c: ReviewsClient, path: string): Promise<void> {
   try {
     await c.storage.from(BUCKET).remove([path])

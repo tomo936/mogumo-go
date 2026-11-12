@@ -5,9 +5,7 @@ import type { ZukanShop } from '../domain/zukan.ts'
 
 const load = vi.fn<() => Promise<ZukanShop[]>>()
 vi.mock('../infra/zukanApi.ts', () => ({ loadZukan: () => load() }))
-const stars = vi.fn<() => Promise<Map<string, number>>>(async () => new Map())
 vi.mock('../../reviews/infra/reviewsApi.ts', () => ({
-  loadMyLatestStars: () => stars(),
   loadMine: async () => ({ visits: [], mine: [] }),
   loadOthers: async () => ({ items: [], hasMore: false }),
   loadSummary: async () => null,
@@ -70,28 +68,32 @@ test('ジャンルが無いときは案内を出す', async () => {
   expect(await screen.findByText(/まだ見つけたお店がありません/)).toBeInTheDocument()
 })
 
-test('行ったカード: No.・名前・回数・自分の感想の星。無ければ「感想まだ」', async () => {
-  const b: ZukanShop = { ...visited, id: 'hp:C', name: '麺屋C', visits: { count: 6, firstDay: '2026-10-01', lastDay: '2026-11-01' } }
+test('行ったカード: No.・名前・回数・お店の特徴（ひと言、無ければジャンル）', async () => {
+  const b: ZukanShop = { ...visited, id: 'hp:C', name: '麺屋C', catch: null, visits: { count: 6, firstDay: '2026-10-01', lastDay: '2026-11-01' } }
   load.mockResolvedValueOnce([visited, b])
-  stars.mockResolvedValueOnce(new Map([['hp:A', 4]]))
   render(<Zukan onLocate={() => {}} onClose={() => {}} />)
   const a = await screen.findByRole('button', { name: '麺屋A 2回行った' })
   expect(a).toHaveTextContent('No.001')
-  expect(a).toHaveTextContent('★★★★☆')
+  expect(a).toHaveTextContent('こだわり')
+  expect(a).not.toHaveTextContent('感想まだ')
   const c = screen.getByRole('button', { name: '麺屋C 6回行った' })
   expect(c).toHaveTextContent('No.002')
-  expect(c).toHaveTextContent('感想まだ')
+  expect(c).toHaveTextContent('ラーメン')
   expect(c).toHaveTextContent('6回')
   expect(c).toHaveClass('zukan__card--silver')
 })
 
-test('10 回以上は金の枠。星が読めなくても図鑑は出る', async () => {
+test('10 回以上は金の枠', async () => {
   load.mockResolvedValueOnce([{ ...visited, visits: { count: 10, firstDay: '2026-10-01', lastDay: '2026-11-01' } }])
-  stars.mockRejectedValueOnce(new Error('x'))
   render(<Zukan onLocate={() => {}} onClose={() => {}} />)
-  const a = await screen.findByRole('button', { name: '麺屋A 10回行った' })
-  expect(a).toHaveClass('zukan__card--gold')
-  expect(a).toHaveTextContent('感想まだ')
+  expect(await screen.findByRole('button', { name: '麺屋A 10回行った' })).toHaveClass('zukan__card--gold')
+})
+
+test('カードの下の段は、行ったカードも「？」のカードも同じ 1 行（ひと言が無くても行を置く）', async () => {
+  load.mockResolvedValueOnce([visited, { ...unknown, catch: null }])
+  const { container } = render(<Zukan onLocate={() => {}} onClose={() => {}} />)
+  await screen.findByText('？？？')
+  expect(container.querySelectorAll('.zukan__card .zukan__foot')).toHaveLength(2)
 })
 
 test('行っていないカードは押せない', async () => {

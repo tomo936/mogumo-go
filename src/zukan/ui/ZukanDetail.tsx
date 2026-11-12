@@ -8,6 +8,7 @@ import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
 import { MyReviews } from '../../reviews/ui/MyReviews.tsx'
 import { ReviewList } from '../../reviews/ui/ReviewList.tsx'
 import { cardUrl } from './cardArt.ts'
+import { Icon } from '../../ui/Icon.tsx'
 
 // 段の呼び名は 銅（1〜2 回）・銀（3〜9 回）・金（10 回〜）。2026-11-12 オーナー「金銀銅」
 const TIER_CHIP = { normal: '銅の枠', silver: '銀の枠', gold: '金の枠' } as const
@@ -30,7 +31,7 @@ export function ZukanDetail({ shop, no, onBack, onLocate }: Props) {
     <section className="zd" aria-label="図鑑カード詳細">
       <header className="zd__bar">
         <button type="button" className="zd__back" aria-label="戻る" onClick={onBack}>
-          ‹
+          <Icon name="back" size={20} />
         </button>
         {no && <span>{no}</span>}
       </header>

@@ -8,10 +8,10 @@ import type { ShopKind } from '../../shops/domain/shop.ts'
 import { frameTier } from '../../checkin/domain/visits.ts'
 import { KIND_ORDER, PAGE_SIZE, buildZukan, cardNo, filledCount, pageCount, type ZukanShop } from '../domain/zukan.ts'
 import { loadZukan } from '../infra/zukanApi.ts'
-import { loadMyLatestStars } from '../../reviews/infra/reviewsApi.ts'
+import { Icon } from '../../ui/Icon.tsx'
 import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
 import { ZukanDetail } from './ZukanDetail.tsx'
-import { cardUrl, starText } from './cardArt.ts'
+import { cardUrl } from './cardArt.ts'
 import { expFromCounts, levelFor } from '../domain/level.ts'
 import { KIND_LABEL } from '../../shops/domain/kindLabel.ts'
 
@@ -26,7 +26,6 @@ type Props = {
 export function Zukan({ onLocate, onClose }: Props) {
   const [detail, setDetail] = useState<{ shop: ZukanShop; no: string } | null>(null)
   const [state, setState] = useState<{ status: 'loading' } | { status: 'error' } | { status: 'ready'; shops: ZukanShop[] }>({ status: 'loading' })
-  const [stars, setStars] = useState<Map<string, number>>(new Map())
   const [kind, setKind] = useState<ShopKind>('ramen')
   const [page, setPage] = useState(0)
 
@@ -35,10 +34,6 @@ export function Zukan({ onLocate, onClose }: Props) {
     loadZukan()
       .then((shops) => alive && setState({ status: 'ready', shops }))
       .catch(() => alive && setState({ status: 'error' }))
-    // 自分の感想の星。読めなくても図鑑は出す（「感想まだ」になる）
-    loadMyLatestStars()
-      .then((m) => alive && setStars(m))
-      .catch(() => {})
     return () => {
       alive = false
     }
@@ -54,7 +49,8 @@ export function Zukan({ onLocate, onClose }: Props) {
   const filledAll = filledCount(all)
   const percent = total === 0 ? 0 : Math.round((filledAll / total) * 100)
   const lv = levelFor(expFromCounts(all.map((s) => s.visits?.count ?? 0)))
-  const starOf = (s: ZukanShop) => stars.get(s.id) ?? (s.mapId ? stars.get(s.mapId) : undefined)
+  // カードの下の段: お店の特徴（ホットペッパーのひと言、無ければジャンル。2026-11-12 オーナー「感想じゃなくて特徴」）
+  const feature = (s: ZukanShop) => s.catch ?? s.genreName ?? KIND_NAME[s.kind]
 
   if (detail) {
     return <ZukanDetail shop={detail.shop} no={detail.no} onBack={() => setDetail(null)} onLocate={() => onLocate(detail.shop)} />
@@ -64,7 +60,7 @@ export function Zukan({ onLocate, onClose }: Props) {
     <section className="zukan" aria-label="図鑑">
       <header className="zukan__banner">
         <button type="button" className="zukan__close" aria-label="閉じる" onClick={onClose}>
-          ✕
+          <Icon name="close" size={18} />
         </button>
         <h2 className="zukan__title">
           <span>お店図鑑</span>
@@ -139,12 +135,13 @@ export function Zukan({ onLocate, onClose }: Props) {
                             <span className="zukan__q">？</span>
                           </span>
                           <span className="zukan__name">？？？</span>
-                          {s.catch && <span className="zukan__hint">{s.catch}</span>}
+                          <span className="zukan__foot">
+                            <span className="zukan__feat">{s.catch ?? ''}</span>
+                          </span>
                         </div>
                       </li>
                     )
                   }
-                  const star = starOf(s)
                   return (
                     <li key={s.id}>
                       <button
@@ -158,12 +155,8 @@ export function Zukan({ onLocate, onClose }: Props) {
                           {s.photoUrl ? <img src={s.photoUrl} alt="" /> : <img src={cardUrl(s.kind)} alt="" className="zukan__model" />}
                         </span>
                         <span className="zukan__name">{s.name}</span>
-                        <span className="zukan__meta">
-                          {star ? (
-                            <span className="zukan__stars">{starText(star)}</span>
-                          ) : (
-                            <span className="zukan__stars zukan__stars--none">感想まだ</span>
-                          )}
+                        <span className="zukan__foot">
+                          <span className="zukan__feat">{feature(s)}</span>
                           <span className="zukan__cnt">{`${s.visits.count}回`}</span>
                         </span>
                       </button>
