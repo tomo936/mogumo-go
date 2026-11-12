@@ -10,7 +10,7 @@ import { clusterSpots, pinLayout, pinScale } from '../domain/pins.ts'
 import type { Shop } from '../domain/shop.ts'
 import { projectAt } from '../../lib/threeLayer.ts'
 import { PIN_ICON } from './pinIcons.ts'
-import { BUILDING_CLUSTER_UNTIL_ZOOM } from '../domain/cluster.ts'
+import { BUILDING_CLUSTER_UNTIL_ZOOM, CLUSTER_MIN_POINTS } from '../domain/cluster.ts'
 import { screenScale } from './screenScale.ts'
 import type { PlacedShop } from './shopLayer.ts'
 
@@ -152,6 +152,8 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
   const marker = (b: PinnedBuilding, at: LatLng, fill: (el: HTMLElement) => number, sizeM: number, topM = b.topM): Shown => {
     const outer = document.createElement('div')
     outer.className = 'bldg-pins'
+    // 3 軒以上のビルは、いちばん引いたときまとめのピンに入る（そのとき .pins-far でピンを隠す）。2 軒以下はいつもビルのピン
+    if (b.shops.length >= CLUSTER_MIN_POINTS) outer.classList.add('bldg-pins--clustered')
     const el = document.createElement('div')
     el.className = 'bldg-pins__scale'
     outer.appendChild(el)
