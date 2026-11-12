@@ -107,7 +107,7 @@
   - `loadSummary(shopId): Promise<{ avg: number; count: number } | null>`
     - 自分を除いた `stars` 列だけを読み、`summarize` する。
   - `loadLatest(shopId, n = 2): Promise<Review[]>`（お店のシート用。写真の URL は取らない）
-  - `loadMyLatestStars(): Promise<Map<string, number>>`
+  - ~~`loadMyLatestStars()`~~（2026-11-12 カードの下の段をお店の特徴に変えたので削除）
     - 図鑑の一覧用。自分の感想を `created_at` の新しい順に読み、店ごとに最初の 1 件の星を取る。
   - `saveReview(input: { shopId; checkinId; existing: Review | null; stars; body; isPublic; photo: { kind: 'keep' } | { kind: 'remove' } | { kind: 'new'; file: Blob } }): Promise<Review>`
     - 新しい写真なら、`compressPhoto` してから `{uid}/{crypto.randomUUID()}.jpg` に上げる。

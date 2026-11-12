@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('./photo.ts', () => ({ compressPhoto: async () => new Blob(['x'], { type: 'image/jpeg' }) }))
 
-import { deleteReview, loadMine, loadMyLatestStars, loadOthers, loadSummary, photoUrls, reportReview, saveReview } from './reviewsApi.ts'
+import { deleteReview, loadMine, loadOthers, loadSummary, photoUrls, reportReview, saveReview } from './reviewsApi.ts'
 import type { Review } from '../domain/review.ts'
 import type { ReviewsClient } from './reviewsApi.ts'
 
@@ -82,15 +82,6 @@ describe('loadMine', () => {
     const res = await loadMine('hp:A', client)
     expect(res.visits).toEqual([{ checkinId: 'c1', checkedInAt: '2026-11-03T03:00:00Z' }])
     expect(res.mine[0]).toMatchObject({ id: 'r1', isPublic: false })
-  })
-})
-
-describe('loadMyLatestStars', () => {
-  it('店ごとに新しい 1 件の星', async () => {
-    const { client } = fake(() => ({ data: [{ shop_id: 'hp:A', stars: 5 }, { shop_id: 'hp:A', stars: 2 }, { shop_id: 'hp:B', stars: 3 }], error: null }))
-    const m = await loadMyLatestStars(client)
-    expect(m.get('hp:A')).toBe(5)
-    expect(m.get('hp:B')).toBe(3)
   })
 })
 

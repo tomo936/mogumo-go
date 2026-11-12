@@ -1,6 +1,7 @@
 // 感想を書く・直す画面（全画面のシート。案B の茶色の線と橙のボタン）。仕様: 2026-11-12-zukan-b-reviews-design.md の 3.
 import { useEffect, useState } from 'react'
 import './reviews.css'
+import { Icon } from '../../ui/Icon.tsx'
 import { REVIEW_BODY_MAX, validateDraft } from '../domain/review.ts'
 import type { Review } from '../domain/review.ts'
 import { deleteReview, saveReview } from '../infra/reviewsApi.ts'
@@ -73,7 +74,7 @@ export function ReviewEditor({ shopName, shopId, checkinId, visitDay, existing, 
     <section className="rv-ed" role="dialog" aria-label="感想を書く">
       <header className="rv-ed__bar">
         <button type="button" className="rv-ed__close" aria-label="閉じる" onClick={onClose} disabled={busy}>
-          ✕
+          <Icon name="close" size={18} />
         </button>
         <div className="rv-ed__head">
           <b>{shopName}</b>
