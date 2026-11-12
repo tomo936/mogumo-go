@@ -28,7 +28,7 @@ test('新しい訪問の感想が先頭。非公開は「自分だけ」の札�
   // 「書く」はいつも出す。いちばん新しい訪問はもう書いてあるので押せず、次の訪問で書けると出す
   expect(screen.queryByRole('button', { name: '書く' })).not.toBeInTheDocument()
   expect(screen.queryByText(/次に行ったら/)).not.toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: '2026.11.03 の感想を直す' }))
+  await userEvent.click(screen.getByRole('button', { name: '2026.11.03 の感想を編集' }))
   expect(screen.getByLabelText('ひとこと')).toHaveValue('感想b')
 })
 
@@ -45,7 +45,7 @@ test('新しい訪問に感想が無く前の訪問にあるとき: 見出しは
   expect(screen.getByRole('dialog', { name: '感想を書く' })).toHaveTextContent('2026.11.03 の訪問')
   expect(screen.getByLabelText('ひとこと')).toHaveValue('')
   await userEvent.click(screen.getByRole('button', { name: '閉じる' }))
-  await userEvent.click(screen.getByRole('button', { name: '2026.10.12 の感想を直す' }))
+  await userEvent.click(screen.getByRole('button', { name: '2026.10.12 の感想を編集' }))
   expect(screen.getByRole('dialog', { name: '感想を書く' })).toHaveTextContent('2026.10.12 の訪問')
   expect(screen.getByLabelText('ひとこと')).toHaveValue('前の感想')
 })
