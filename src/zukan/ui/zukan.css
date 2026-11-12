@@ -11,8 +11,11 @@
 .zd * {
   box-sizing: border-box;
 }
-.zukan button,
-.zd button {
+/* アプリ全体の button（src/index.css）の余白 12px 24px と青い地を消す。:where で強さを上げないので、各部品の指定が勝つ */
+:where(.zukan, .zd) button {
+  padding: 0;
+  background: none;
+  color: inherit;
   font-family: inherit;
 }
 
@@ -276,20 +279,33 @@
   text-shadow: 0 2px 0 #6f5aa8;
 }
 .zukan__name {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 29px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  height: 32px;
   margin-top: 5px;
-  padding: 0 4px;
+  padding: 1px 4px;
   border: 2px solid #4a2f18;
   border-radius: 6px;
   overflow: hidden;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 800;
-  line-height: 1.25;
+  line-height: 13px;
   background: #fff;
   color: #4a2f18;
+  overflow-wrap: anywhere;
+}
+/* 1 行で収まる名前は真ん中に */
+.zukan__name--short {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* 長い名前は字を小さくして 2 行に収める（それでも入らない分は「…」） */
+.zukan__name--long {
+  font-size: 9.5px;
+  line-height: 12px;
+  padding-top: 2px;
 }
 .zukan__card--unknown .zukan__name {
   border-color: transparent;
