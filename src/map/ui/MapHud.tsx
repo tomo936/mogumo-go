@@ -1,8 +1,7 @@
 // 地図の上に重ねる部品: 左上のキャラ札（Lv）、上の真ん中の気配、下の真ん中のメニュー（扇で5つ）。
 // 2026-11-10 オーナー決定の配置。メニュー・気配の絵はミシェーラの完成形（2026-11-12、丸と枠まで絵に入っている）。
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { fanPositions } from '../domain/menuFan.ts'
-import { Icon } from '../../ui/Icon.tsx'
 import { CoinIcon } from '../../ui/CoinIcon.tsx'
 
 const CHARACTERS = import.meta.glob<string>('../../assets/characters/starter-*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>
@@ -32,8 +31,8 @@ type Props = {
   onMyPage: () => void
   onSettings: () => void
   onSoon: (name: string) => void
-  pinsHidden: boolean
-  onTogglePins: () => void
+  subscribeBearing: (cb: (bearingDeg: number) => void) => () => void // 地図の回転を受け取る（方位磁針）
+  onCompass: () => void // 方位磁針を押した: 北を上に戻す
 }
 
 export function MapHud(p: Props) {
@@ -65,16 +64,7 @@ export function MapHud(p: Props) {
         </div>
       )}
 
-      <button
-        type="button"
-        className="hud-pins"
-        aria-label={p.pinsHidden ? 'ピンを出す' : 'ピンを隠す'}
-        aria-pressed={p.pinsHidden}
-        onClick={p.onTogglePins}
-      >
-        <Icon name={p.pinsHidden ? 'pinOff' : 'pin'} size={22} />
-        <small>ピン</small>
-      </button>
+      <Compass subscribe={p.subscribeBearing} onTap={p.onCompass} />
 
       <button type="button" className="hud-hint" aria-label="気配" aria-expanded={p.hintOpen} onClick={p.onHintTap}>
         <img src={art('kehai-cloud')} alt="" />
@@ -110,5 +100,23 @@ export function MapHud(p: Props) {
       </div>
 
     </>
+  )
+}
+
+// 右上の方位磁針（2026-11-12 オーナー: ピンのボタンの代わり。ピンの出し入れは設定に残る）。
+// 地図が回ると、針が北を指すように絵ごと回す。押すと北を上に戻す。回すたびに画面全体を描き直さないよう、絵の向きだけを直接変える
+function Compass({ subscribe, onTap }: { subscribe: Props['subscribeBearing']; onTap: () => void }) {
+  const imgRef = useRef<HTMLImageElement>(null)
+  useEffect(
+    () =>
+      subscribe((b) => {
+        if (imgRef.current) imgRef.current.style.transform = `rotate(${-b}deg)`
+      }),
+    [subscribe],
+  )
+  return (
+    <button type="button" className="hud-compass" aria-label="北を上にする" onClick={onTap}>
+      <img ref={imgRef} src={art('compass')} alt="" />
+    </button>
   )
 }

@@ -47,6 +47,7 @@ beforeEach(() => {
   addTownCalls.length = 0
   expressCalls.length = 0
 })
+const northCalls: number[] = []
 vi.mock('../map/ui/MapView.tsx', async () => {
   const { useEffect, useImperativeHandle } = await import('react')
   return {
@@ -62,7 +63,7 @@ vi.mock('../map/ui/MapView.tsx', async () => {
       useEffect(() => { handlers.push({ select: onSelectShop, building: onSelectBuilding, position: onPosition }) }, [onSelectShop, onSelectBuilding, onPosition])
       useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, addTown: (town: { id: string }) => { addTownCalls.push(town.id) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false, visitsFor: () => null, progressReady: () => true, checked: () => new Set<string>(),
         hintInputs: () => ({ shops: mapShopsNow, near: mapShopsNow, cleared: new Set<string>(), checked: new Set<string>() }),
-        whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, express: (k: string) => { expressCalls.push(k) }, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
+        whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, express: (k: string) => { expressCalls.push(k) }, subscribeBearing: () => () => {}, resetNorth: () => { northCalls.push(1) }, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
       }), [])
       return <div data-testid="map-view" data-pins-hidden={String(pinsHidden)} />
     },
@@ -332,22 +333,19 @@ test('30m に入ると帯「気配の正体は…『○○』！」が出る', a
   expect(screen.getByText('気配の正体は…『麺屋かくれ』！')).toBeInTheDocument()
 })
 
-test('ピンのボタンで出す・出さないが切りかわり、その端末に覚える', async () => {
-  const view = () => render(
+test('右上は方位磁針: 押すと北を上に戻す。ピンを出さない設定（端末に覚えた分）は地図に渡る', async () => {
+  localStorage.setItem('mogumo.pinsHidden', '1')
+  render(
     <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
     </AuthContext.Provider>,
   )
-  const first = view()
-  expect(screen.getByTestId('map-view')).toHaveAttribute('data-pins-hidden', 'false')
-  await userEvent.click(screen.getByRole('button', { name: 'ピンを隠す' }))
   expect(screen.getByTestId('map-view')).toHaveAttribute('data-pins-hidden', 'true')
-  expect(localStorage.getItem('mogumo.pinsHidden')).toBe('1')
-  first.unmount()
-  view() // 開き直しても覚えている
-  expect(screen.getByTestId('map-view')).toHaveAttribute('data-pins-hidden', 'true')
-  await userEvent.click(screen.getByRole('button', { name: 'ピンを出す' }))
-  expect(localStorage.getItem('mogumo.pinsHidden')).toBe('0')
+  expect(screen.queryByRole('button', { name: 'ピンを隠す' })).not.toBeInTheDocument()
+  const before = northCalls.length
+  await userEvent.click(screen.getByRole('button', { name: '北を上にする' }))
+  expect(northCalls.length).toBe(before + 1)
+  localStorage.removeItem('mogumo.pinsHidden')
 })
 
 test('チェックインのあと、持っているコインが地図の上に出る', async () => {

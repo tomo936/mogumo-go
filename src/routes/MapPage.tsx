@@ -78,6 +78,7 @@ export function MapPage() {
   }
 
   const mapRef = useRef<MapViewHandle>(null)
+  const subscribeBearing = useCallback((cb: (b: number) => void) => mapRef.current?.subscribeBearing(cb) ?? (() => {}), [])
   const [selected, setSelected] = useState<Shop | null>(null)
   const [building, setBuilding] = useState<{ shops: Shop[]; checked: ReadonlySet<string>; title: string | null } | null>(null)
   const [me, setMe] = useState<LatLng | null>(null)
@@ -470,8 +471,8 @@ export function MapPage() {
             setSettingsOpen(true)
           }}
           onSoon={(name) => setSoonName(name)}
-          pinsHidden={pinsHidden}
-          onTogglePins={togglePins}
+          subscribeBearing={subscribeBearing}
+          onCompass={() => mapRef.current?.resetNorth()}
         />
         {soonName && <p className="hud-soon" role="status">{`${soonName}は準備中です`}</p>}
       </div>

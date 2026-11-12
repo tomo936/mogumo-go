@@ -14,3 +14,4 @@ conv art/ui/menu/btn-cloche-v4.png btn-cloche 192
 conv art/ui/menu/icon-close-v2.png icon-close 192
 conv art/ui/menu/kehai-icon-cloud.png kehai-cloud 192
 conv art/ui/coin/gourmet-coin.png gourmet-coin 96
+ffmpeg -y -loglevel error -i art/ui/menu/compass.png -vf "crop=388:388:62:62,scale=192:192:flags=lanczos" -c:v libwebp -lossless 0 -quality 85 -compression_level 6 "$out/compass.webp"  # 方位磁針（絵のまわりの余白を切る）
