@@ -2,9 +2,14 @@
 
 シロとの受け渡しは `handoff/`（別物）。こちらは Claude Code 自身の会話の引き継ぎ。
 
-最終更新: 2026-11-12 深夜2（Claude Code）。区切りごとに上書きする。
+最終更新: 2026-11-13（Claude Code）。区切りごとに上書きする。
 
 ## いまの状態
+- 【2026-11-13 区切り（最新）】dev は `2712430`（main は未反映）。ブランチ `cycle1-building`。
+  - **図鑑B＋感想と写真 完了・dev に反映**（オーナーが iPhone で見ながら直した）: 枠はインクの線＋平らな金銀銅（銅=1〜2回・銀=3〜9・金=10〜、光の帯 2 本、右上の印なし）、カードの下はホットペッパーのひと言だけ（無いお店は空）、名前は 2 行まで、図鑑・感想の画面ではアプリ全体の button の余白を消した（iPhone で ×・← がつぶれていた）。SQL 0007・0008（public_profiles を公開の感想がある人だけ）はオーナーが dev に流し済み。レビュー（tester）は Critical/Important なし、残りの小さい指摘は `.superpowers/sdd/2026-11-12-zukan-b-reviews/progress.md`。
+  - **次（途中）: 図鑑に地図のデータだけのお店を出す**（オーナー「晴れてる中にたこ焼きあるのに図鑑にない」→ 方針 3＋1 承認）。設計 `docs/superpowers/specs/2026-11-12-zukan-osm-shops-design.md`、計画 `docs/superpowers/plans/2026-11-12-zukan-osm-shops.md`。
+    - 済み: Task 1 関数 `supabase/functions/shops-osm/`（タイル番号だけ受け取り、サーバーで地図を読んで shops に upsert）、Task 2 `src/zukan/domain/osmTiles.ts`・`src/zukan/infra/osmSync.ts`、Task 3 の前半 `loadZukan(client, { mapShops, cleared })`（osm のジャンルを地図と同じに・hp と 1 枚にまとめる）。
+    - 残り: Task 3 後半 = `Zukan` に `mapShops`・`cleared` の props を足して `loadZukan` に渡す／`MapPage` で `mapRef.current.hintInputs()` の shops・cleared を図鑑に渡し、お店がそろったとき・1 分ごと・図鑑を開いたときに `syncOsmShops(userId, shops, cleared)`。Task 4 = オーナー用の置き方の手順（関数 `shops-osm` を新しく置く。ファイル core.ts・osmTile.ts・index.ts、Verify JWT オン、Secrets なし）・CLAUDE.md・テスト／型／lint／build → dev。
 - 【2026-11-12 深夜2 区切り（最新）】dev は `3735b34`（main は未反映）。ブランチ `cycle1-building`（`c67c2a1`）。
   - **順番の変更（オーナー）**: 絵の生成が追いつかないので、A10（パンケーキ）より先に **A2 足元の円** と **感想と写真** をやる。あわせて **図鑑の見た目を作り直す**（オーナー「全体的に安っぽい」）。
   - **A2 完了・iPhone 確認済み**（オーナー「問題ない」）: 50m の範囲 = うすいオレンジの塗り＋足元から外へ広がるオレンジの波 2 本（2.6 秒で 1 周）。動かない外縁は無し。計算 `src/map/domain/ripple.ts`、値 `config.ts` の `RIPPLE_*`。半径はズームの式で地図の側（引いてもずれない）、MapLibre の既定のなめらか変化は切った。描く順は 塗り・波 → お店の建物 → 霧 → アバター（`worldLayers.ts` の `PLAYER_LAYERS` を `me-avatar-3d` 基準に）。見本 `.superpowers/preview/ring/`。
