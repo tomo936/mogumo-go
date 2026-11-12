@@ -823,6 +823,11 @@ if STAGE == 5:
     Mx = Matrix
     bpy.ops.wm.open_mainfile(filepath=os.path.join(WORK, 'stage4r.blend'))   # 3 回目: 塗り直した物から
     rig = bpy.data.objects['rig']; MO = CFG['motion']; AD = float(os.environ.get('ARMDOWN', MO['armDown']))
+    for mi_, path_ in ((0, os.path.join(WORK, 'body-r3.png')), (1, os.path.join(BOY, 'face4.png'))):   # 3 回目: 塗り直した絵を読み直す
+        for n_ in bpy.data.objects['avatar'].data.materials[mi_].node_tree.nodes:
+            if n_.type == 'TEX_IMAGE':
+                im_ = bpy.data.images.load(path_, check_existing=False); im_.colorspace_settings.name = n_.image.colorspace_settings.name
+                im_.pack(); im_.name = n_.image.name + '_r3'; n_.image = im_
     src = open('/home/otosa/mogumo-go/art/prototypes/avatar/blender-v2.py').read().split('\n')
     block = '\n'.join(src[333:441])   # spline・WALK・RUN・gait・joy・idle・lift（blender-v2.py の動きの節。決め方の実績）
     block = block.replace("A = RUNA if run else 0.28", "A = MO['runSwing'] if run else MO['walkSwing']")

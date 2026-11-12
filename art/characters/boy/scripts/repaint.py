@@ -220,6 +220,7 @@ img = np.zeros((H, W, 3), np.float32); img[cov] = rgb
 img = dilate_fill(img, cov)
 Pb = pixels(bimg); Pb[:, :, :3] = img; Pb[:, :, 3] = 1
 bimg.pixels.foreach_set(Pb.ravel()); bimg.update(); bimg.pack()
+bimg.filepath_raw = os.path.join(WORK, 'body-r3.png'); bimg.file_format = 'PNG'; bimg.save()   # 段 5 はこの絵を読み直す（.blend の中の詰めた絵が古いまま残ったため）
 
 # ---------------------------------------------------------------- 顔の 4 こま
 FC_ = CFG['face']; CW, CHh = FC_['cell']
