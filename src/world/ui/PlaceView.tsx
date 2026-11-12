@@ -1,5 +1,6 @@
 // 見るだけの地図（ワールドマップから飛んだ先）。真上の地図に、記録と同じ雲。行ったお店のピンだけ出す（仕様 S1）。
-// チェックインはできない。「今いる場所に戻る」で記録ごと閉じる。
+// チェックインはできない。左上の「ワールドマップ」で戻る。「今いる場所に戻る」で記録ごと閉じる。
+// 「見ているだけ」の帯は出さない（2026-11-12 オーナー）。
 import { useMemo, useState } from 'react'
 import { RecordMap } from '../../record/ui/RecordMap.tsx'
 import type { ClearedCell, VisitEntry } from '../../record/domain/timeline.ts'
@@ -10,11 +11,9 @@ import type { LatLng } from '../../map/domain/geo.ts'
 import { ShopSheet } from '../../checkin/ui/ShopSheet.tsx'
 import { addVisit } from '../../checkin/domain/visits.ts'
 import type { Visits } from '../../checkin/domain/visits.ts'
-import closeArt from '../../assets/ui/icon-close.webp'
 import './world.css'
 
 type Props = {
-  title: string
   center: LatLng
   zoom: number
   cells: ClearedCell[]
@@ -27,7 +26,7 @@ type Props = {
 
 type Placed = VisitEntry & { lat: number; lng: number }
 
-export function PlaceView({ title, center, zoom, cells, towns, visits, home, onBack, onReturn }: Props) {
+export function PlaceView({ center, zoom, cells, towns, visits, home, onBack, onReturn }: Props) {
   const [now] = useState(() => Date.now())
   const [openId, setOpenId] = useState<string | null>(null)
   const focus = useMemo(() => ({ center, zoom }), [center, zoom])
@@ -57,16 +56,15 @@ export function PlaceView({ title, center, zoom, cells, towns, visits, home, onB
   return (
     <section className="vw" aria-label="見るだけの地図">
       <RecordMap cells={cells} towns={towns} t={now} home={home} pins={pins} wave={false} focus={focus} onPinTap={setOpenId} />
-      <div className="vw-band">
-        <b>👀 見ているだけ</b>
-        <small>{title}・チェックインはできません</small>
-        <button type="button" className="x" aria-label="閉じる" onClick={onBack}>
-          <img src={closeArt} alt="" />
-        </button>
-      </div>
-      <button type="button" className="vw-back" onClick={onReturn}>
-        <span aria-hidden="true">📍</span>今いる場所に戻る
+      <button type="button" className="vw-world" aria-label="ワールドマップへ戻る" onClick={onBack}>
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        ワールドマップ
       </button>
+      {!open && (
+        <button type="button" className="vw-back" onClick={onReturn}>
+          <span aria-hidden="true">📍</span>今いる場所に戻る
+        </button>
+      )}
       {open && (
         <ShopSheet
           viewOnly

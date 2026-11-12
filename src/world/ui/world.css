@@ -28,13 +28,7 @@
 .tw.top{flex-direction:column-reverse}
 .tw.top span{margin:0 0 1px}
 /* 見るだけ */
-.vw-band{position:absolute;left:10px;right:10px;top:12px;z-index:5;background:#fffaf0;border:2.5px solid #7a4a26;border-radius:20px;box-shadow:0 4px 0 rgba(122,74,38,.25);padding:10px 52px 10px 14px;color:#4a3b2c}
-.vw-band::before{content:'';position:absolute;inset:4px;border:1.5px dashed #e3cfaa;border-radius:15px;pointer-events:none}
-.vw-band b{display:block;font-size:17px;color:#6b4a2b}
-.vw-band small{font-size:12px;color:#7a6450;font-weight:700}
-.vw-band .x{position:absolute;right:8px;top:50%;margin-top:-18px;width:36px;height:36px;border:0;padding:0;background:none}
-.vw-band .x img{width:36px;height:36px}
-.vw-back{position:absolute;left:12px;right:12px;bottom:232px;z-index:5;height:54px;border:2.5px solid #7a4a26;border-radius:999px;background:#e8782f;color:#fff;font-size:18px;font-weight:800;box-shadow:0 4px 0 #8f4a1a;display:flex;align-items:center;justify-content:center;gap:8px;padding:0}
+.vw-back{position:absolute;left:12px;right:12px;bottom:calc(28px + env(safe-area-inset-bottom));z-index:5;height:54px;border:2.5px solid #7a4a26;border-radius:999px;background:#e8782f;color:#fff;font-size:18px;font-weight:800;box-shadow:0 4px 0 #8f4a1a;display:flex;align-items:center;justify-content:center;gap:8px;padding:0}
 
 .wm,.vw{position:fixed;inset:0;z-index:60;background:#fbf1d6;font-family:inherit}
 .wm-back,.vw-back,.wm-list button,.tw,.wm-flags{font-family:inherit}
@@ -49,7 +43,6 @@
 .wm-list .msg{padding:14px 16px;font-size:14px;color:#7a6450;font-weight:700;display:block}
 .tw{pointer-events:auto;cursor:pointer;border:0;background:none;padding:0}
 .vw-back{cursor:pointer}
-.vw-band .x{cursor:pointer}
 /* 記録のタブと地図のあいだの行（右寄せ。地図には重ねない） */
 .rc__worldrow{display:flex;justify-content:flex-end;padding:0 0 8px}
 .rc__world{display:flex;align-items:center;gap:6px;height:38px;padding:0 14px 0 10px;border:2.5px solid #7a4a26;border-radius:999px;background:#e8782f;color:#fff;font-size:14px;font-weight:800;box-shadow:0 3px 0 #8f4a1a;cursor:pointer;font-family:inherit}
@@ -66,3 +59,5 @@
 .wm-flags span svg{width:24px;height:29px}
 .wm-flags small{font-size:10px;font-weight:800;line-height:1}
 .wm-flags:not(.on){background:#efe6d2;opacity:.85}
+/* 見るだけ: 左上のワールドマップへ戻るボタン（検索欄の←と同じ手帳風） */
+.vw-world{position:absolute;left:12px;top:calc(12px + env(safe-area-inset-top));z-index:5;height:44px;display:flex;align-items:center;gap:4px;padding:0 16px 0 10px;border:2.5px solid #7a4a26;border-radius:999px;background:#fffaf0;color:#6b4a2b;font:inherit;font-size:15px;font-weight:800;box-shadow:0 3px 0 rgba(122,74,38,.25);cursor:pointer}
