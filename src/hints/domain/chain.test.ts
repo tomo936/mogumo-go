@@ -18,11 +18,13 @@ describe('isChainName（小さな一覧で）', () => {
     expect(isChainName('ラーメン山岡家 中野店', list)).toBe(true)
     expect(isChainName('ガスト 新宿店', list)).toBe(true)
   })
-  it('2文字の名前は前方一致だけ', () => {
+  it('3文字以下の名前は、名前だけ・最初の語・名前＋〇〇店のときだけ', () => {
     expect(isChainName('松屋', list)).toBe(true)
     expect(isChainName('松屋 渋谷店', list)).toBe(true)
+    expect(isChainName('松屋渋谷店', list)).toBe(true)
     expect(isChainName('まつや食堂', list)).toBe(false)
     expect(isChainName('老舗松屋食堂', list)).toBe(false)
+    expect(isChainName('松屋食堂', list)).toBe(false)
   })
   it('空の名前・一覧に無い名前は違う', () => {
     expect(isChainName('', list)).toBe(false)
@@ -33,6 +35,12 @@ describe('isChainName（小さな一覧で）', () => {
 describe('isChainName（本物の一覧で）', () => {
   it.each(['ラーメン山岡家 中野店', 'すき家 新宿店', 'スターバックス コーヒー 渋谷店', 'サイゼリヤ 池袋店', '松屋 高田馬場店'])('%s は当たる', (n) => {
     expect(isChainName(n)).toBe(true)
+  })
+  it.each(['かつや 中野店', 'かつや中野店', 'ガスト', 'hub 渋谷店', 'さと 豊中店'])('短い名前でも、名前だけ・名前＋〇〇店なら当たる: %s', (n) => {
+    expect(isChainName(n)).toBe(true)
+  })
+  it.each(['とんかつやまだ', 'ガストロパブ 炎', 'さとう食堂', '松屋食堂', 'てんやわんや', 'カフェ hubble'])('短い名前を途中や頭に含むだけの個人店は当たらない: %s', (n) => {
+    expect(isChainName(n)).toBe(false)
   })
   it.each(['まつや食堂', 'すきや食堂', '老舗松屋', '麺屋もぐも', '洋食 さくら亭', 'ビストロ田中'])('%s は当たらない', (n) => {
     expect(isChainName(n)).toBe(false)
@@ -49,6 +57,10 @@ describe('chainLikeByCount', () => {
     const shops = [{ name: '麺や 太郎' }, { name: '麺や太郎' }, { name: '麺や　太郎' }, { name: 'ほか' }, { name: 'ほか' }]
     expect([...chainLikeByCount(shops)]).toEqual(['麺や太郎'])
     expect(chainLikeByCount(shops, 2).size).toBe(2)
+  })
+  it('支店名（最後の〇〇店）は除いて数える', () => {
+    const shops = [{ name: 'らーめん大将 中野店' }, { name: 'らーめん大将 新宿店' }, { name: 'らーめん大将 高円寺店' }]
+    expect([...chainLikeByCount(shops)]).toEqual(['らーめん大将'])
   })
 })
 
