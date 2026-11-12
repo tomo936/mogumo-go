@@ -57,7 +57,7 @@ const THIN_RESCAN_M = 3 // 候補の洗い出しをやり直す移動距離
 type WorldMap = MapLibreMap
 
 // 自分の位置の印（MapView で下から順に足す）。霧とお店はこれより下に入れる
-const PLAYER_LAYERS = ['me-circle-fill', 'me-circle-line', 'me-shadow']
+const PLAYER_LAYERS = ['me-circle-fill', 'me-ripple-0', 'me-shadow']
 
 // 輪郭を見分ける文字列（別々の店の座標から戻したので、頂点数と最初の頂点を 1e-5 度に丸めて比べる）
 const ringKey = (ring: LatLng[]) => `${ring.length}:${ring[0].lat.toFixed(5)},${ring[0].lng.toFixed(5)}`
