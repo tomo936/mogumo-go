@@ -856,9 +856,19 @@ if STAGE == 5:
         for s in 'LR':
             f = rig.pose.bones['foot' + s]; m = min(m, f.head.z - REST_ANKLE, f.tail.z - REST_TOE)
         return m
+    def idle_r5(ph):
+        T2 = 2 * math.pi
+        br = math.sin(T2 * 2 * ph)            # 息（4 秒に 2 回）
+        sw = math.sin(T2 * ph)                # 体重の左右の移動（4 秒に 1 回）
+        p = {'hipRoll': 0.018 * sw, 'hipTwist': 0.012 * math.sin(T2 * (ph - 0.15)),
+             'chestRoll': -0.014 * sw, 'chestLean': -0.018 * br,
+             'headPitch': -0.012 + 0.014 * math.sin(T2 * 2 * (ph - 0.06)), 'headTwist': 0.03 * math.sin(T2 * (ph - 0.3)),
+             'armOut': MO['idleOut'] + 0.012 * br, 'elbowL': 0.14 + 0.03 * br, 'elbowR': 0.14 + 0.03 * br,
+             'fingersL': MO['fist'], 'fingersR': MO['fist']}
+        return p
     ACTS = {'walk': (30, lambda ph: ns['gait'](ph, ns['WALK'], False), lambda ph: 0.0),
             'run': (18, lambda ph: ns['gait'](ph, RUN, True), ns['lift_run']),
-            'idle': (90, ns['idle'], None),
+            'idle': (120, idle_r5, lambda ph: 0.0),   # 5 回目: ふくらまさない自然な待機（体重の移動・息で胸と肩が少し上がる・頭のゆらぎ）。4 秒
             'joy': (24, ns['joy'], ns['lift_joy'])}
     bpy.context.scene.render.fps = 30
     rig.animation_data_create()
