@@ -13,7 +13,7 @@ const UI_ART = import.meta.glob<string>('../../assets/ui/*.webp', { query: '?url
 const art = (name: string) => UI_ART[`../../assets/ui/${name}.webp`]
 
 const FAN_RADIUS = 160
-const DISC = 54 // 扇の丸の大きさ（CSS の .hud-fan__disc と同じ）
+const DISC = 64 // 扇の丸の大きさ（CSS の .hud-fan__disc と同じ。2026-11-12 オーナー「もう少し大きく」で 54→64）
 const LABEL_BLOCK = 19 // 丸の下の文字の高さ＋すきま（CSS の .hud-fan small と同じ）
 const BOX_W = 76 // 文字が入る幅（CSS の .hud-fan と同じ）
 
