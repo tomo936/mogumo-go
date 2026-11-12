@@ -199,6 +199,11 @@
 .pins-off .bldg-pins {
   visibility: hidden;
 }
+/* 引いたとき（ズーム 17.5 より下）はビルのピンを隠す（まとめのピンに入る）。名前の札は残す。2026-11-13 */
+.pins-far .bldg-pin,
+.pins-far .bldg-pin__more {
+  visibility: hidden;
+}
 
 /* ビルの上のピン。お店ごとのピンはシロの色分けの絵（src/assets/pins/）、まとめたピンは白い丸。
    外枠は MapLibre のマーカーなので absolute のまま（relative にすると文書の流れに乗り、前の気配のピンの高さ分だけ下へずれる） */

@@ -7,6 +7,7 @@ import { pinFeatures } from '../domain/pinFeatures.ts'
 import { LIFT_TIERS } from '../domain/pinLift.ts'
 import { checkBadgeImage } from './checkBadge.ts'
 import { PIN_ICON } from './pinIcons.ts'
+import { CLUSTER_UNTIL_ZOOM } from '../domain/cluster.ts'
 
 export const PIN_SOURCE = 'shop-pins'
 export const PIN_LAYER = 'shop-pins' // 晴れた所の店（雲より下）
@@ -56,6 +57,8 @@ export function createShopPins(map: MapLibreMap) {
     id,
     type: 'symbol' as const,
     source: PIN_SOURCE,
+    // 晴れた所のピンは寄ったときだけ（引いたら shopClusters がまとめて出す）。霧の中の近い店はいつも
+    ...(fog ? {} : { minzoom: CLUSTER_UNTIL_ZOOM }),
     filter: ['==', ['get', 'fog'], fog] as never,
     layout: {
       'icon-image': ['concat', 'pin-', ['get', 'kind'], ['case', ['get', 'done'], '-done', '']] as never, // 済みの店は右上に ✓ の付いた絵

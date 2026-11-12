@@ -10,6 +10,7 @@ import { clusterSpots, pinLayout, pinScale } from '../domain/pins.ts'
 import type { Shop } from '../domain/shop.ts'
 import { projectAt } from '../../lib/threeLayer.ts'
 import { PIN_ICON } from './pinIcons.ts'
+import { CLUSTER_UNTIL_ZOOM } from '../domain/cluster.ts'
 import { screenScale } from './screenScale.ts'
 import type { PlacedShop } from './shopLayer.ts'
 
@@ -38,6 +39,7 @@ export type PinDebugRow = {
 // 地図の入れ物に付ける class。css 側（checkin.css）で .bldg-pins を隠す
 const MOVING_CLASS = 'pins-moving' // 人が地図を動かしている間
 const HIDDEN_CLASS = 'pins-off' // 「ピンを出さない」のボタン
+const FAR_CLASS = 'pins-far' // 引いている（まとめのピンに任せる）
 
 const SCATTER_SIZE_M = 16 // 散らばったピンの大きさを決める目安の幅（2026-11-09 本人「施設の中のピンも小さい」で 10→16）
 
@@ -245,6 +247,10 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
   map.on('render', fit) // 3D を描いたあと（そのコマのカメラ）で合わせる
 
   const container = map.getContainer()
+  // 引いたとき（ズーム 17.5 より下）はビルのピンを隠す（shopClusters のまとめに入る）。名前の札は残す。2026-11-13
+  const farClass = () => container.classList.toggle(FAR_CLASS, map.getZoom() < CLUSTER_UNTIL_ZOOM)
+  map.on('zoom', farClass)
+  farClass()
 
   return {
     update(next: PinnedBuilding[], nextChecked: ReadonlySet<string>) {
@@ -262,7 +268,8 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
       container.classList.toggle(HIDDEN_CLASS, hidden)
     },
     dispose() {
-      container.classList.remove(MOVING_CLASS, HIDDEN_CLASS)
+      container.classList.remove(MOVING_CLASS, HIDDEN_CLASS, FAR_CLASS)
+      map.off('zoom', farClass)
       map.off('zoomend', onZoom)
       map.off('render', fit)
       for (const { m } of markers) m.remove()

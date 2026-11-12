@@ -9,8 +9,10 @@
 //   アイコンはどれも大きな画像（約 1300〜1500px）で、絵の外形の形がまちまちなので、1枚ごとに測って縮める。
 import { execFileSync } from 'child_process'
 
-const KINDS = 'ramen sushi soba washoku izakaya chinese yakiniku western curry cafe sweets bakery mystery other donburi burger ethnic okonomiyaki takoyaki'.split(' ')
-const CX = 256, CY = 224, R = 159.5, FIT = 0.88, OUT = 128
+// 引数 cluster: まとめのピンの台（その他の絵を 256px で src/assets/pins/cluster-base.png に。2026-11-13）
+const CLUSTER = process.argv[2] === 'cluster'
+const KINDS = CLUSTER ? ['other'] : 'ramen sushi soba washoku izakaya chinese yakiniku western curry cafe sweets bakery mystery other donburi burger ethnic okonomiyaki takoyaki'.split(' ')
+const CX = 256, CY = 224, R = 159.5, FIT = 0.88, OUT = CLUSTER ? 256 : 128
 const ALPHA = 16 // これより濃い点を絵とみなす
 
 const raw = (f) => execFileSync('ffmpeg', ['-v', 'error', '-i', f, '-f', 'rawvideo', '-pix_fmt', 'rgba', '-'], { maxBuffer: 1 << 30 })
@@ -30,7 +32,7 @@ for (const k of KINDS) {
   const s = (R * FIT) / m
   const w = Math.round(bw * s), h = Math.round(bh * s)
   const ox = Math.round(CX - w / 2), oy = Math.round(CY - h / 2)
-  const name = k === 'sweets' ? 'cake' : k
+  const name = CLUSTER ? 'cluster-base' : k === 'sweets' ? 'cake' : k
   execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', `art/pins/frames/pin-${k}.png`, '-i', icon, '-filter_complex',
     `[1]crop=${bw}:${bh}:${x0}:${y0},scale=${w}:${h}:flags=lanczos[i];[0][i]overlay=${ox}:${oy}:format=auto,scale=${OUT}:${OUT}:flags=lanczos`,
     '-frames:v', '1', `src/assets/pins/${name}.png`])

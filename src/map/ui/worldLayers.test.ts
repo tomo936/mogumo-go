@@ -25,6 +25,7 @@ vi.mock('../infra/userMove.ts', () => ({
 }))
 vi.mock('../../shops/infra/shopPins.ts', () => ({ createShopPins: () => pinsApi }))
 vi.mock('../../shops/infra/buildingPins.ts', () => ({ createBuildingPins: () => buildingApi }))
+vi.mock('../../shops/infra/shopClusters.ts', () => ({ createShopClusters: () => ({ attach: vi.fn(), update: vi.fn(), setVisible: vi.fn(), setMoving: vi.fn(), pick: () => null, dispose: vi.fn() }) }))
 
 vi.mock('../../shops/domain/facility.ts', async (orig) => {
   const a = await orig<typeof import('../../shops/domain/facility.ts')>()
