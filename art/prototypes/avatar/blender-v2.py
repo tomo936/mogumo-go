@@ -697,6 +697,22 @@ if STEP >= 4:
     fmat.name = 'face'  # 板の材質の名前と重なって face.001 になっていた
     print('face material', fmat.name)
 
+# ===================== 頭（髪ふくむ）は頭の骨 100% に固定（胸の重みが混ざると、胸のひねり・呼吸で髪がぷるぷる揺れる） =====================
+HEADG = av.vertex_groups['head']
+nlock = 0
+for v in me.vertices:
+    z = v.co.z
+    k = sstep((z - 0.72) / 0.06)  # 0.72 から 0.78 で、頭 100% へ
+    if k <= 0.001:
+        continue
+    ws = {g.group: g.weight for g in v.groups}
+    for gi, w in ws.items():
+        if gi != HEADG.index:
+            av.vertex_groups[gi].add([v.index], w * (1 - k), 'REPLACE')
+    HEADG.add([v.index], ws.get(HEADG.index, 0.0) * (1 - k) + k, 'REPLACE')
+    nlock += 1
+print('head-locked verts', nlock)
+
 # ===================== 書き出し =====================
 if 'capk' in me.attributes:
     me.attributes.remove(me.attributes['capk'])
