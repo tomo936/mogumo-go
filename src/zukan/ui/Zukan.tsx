@@ -12,6 +12,8 @@ import { Icon } from '../../ui/Icon.tsx'
 import { PIN_ICON } from '../../shops/infra/pinIcons.ts'
 import { ZukanDetail } from './ZukanDetail.tsx'
 import { cardUrl } from './cardArt.ts'
+import { whereText } from '../domain/hintText.ts'
+import type { HintOrigin } from '../domain/hintText.ts'
 import { expFromCounts, levelFor } from '../domain/level.ts'
 import { KIND_LABEL } from '../../shops/domain/kindLabel.ts'
 
@@ -29,13 +31,15 @@ type Props = {
   onClose: () => void
   mapShops?: readonly Shop[] // 今の地図のお店（shops に書く前でもすぐ「？」を出す）
   cleared?: ReadonlySet<string> // 地図の晴れたマス（自宅のまわり・町のクリアも入る）
+  origin?: HintOrigin | null // 「？」のヒントをどこから測るか（今いる場所・無ければ自宅）。無ければヒントは出さない
 }
 
-export function Zukan({ onLocate, onClose, mapShops, cleared }: Props) {
+export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null }: Props) {
   const [detail, setDetail] = useState<{ shop: ZukanShop; no: string } | null>(null)
   const [state, setState] = useState<{ status: 'loading' } | { status: 'error' } | { status: 'ready'; shops: ZukanShop[] }>({ status: 'loading' })
   const [kind, setKind] = useState<ShopKind>('ramen')
   const [page, setPage] = useState(0)
+  const [hint, setHint] = useState<{ id: string; text: string } | null>(null) // 押した「？」のカードのヒント
   const [opened] = useState({ mapShops, cleared }) // 開いたときの地図のお店と晴れたマス（開いている間は読み直さない）
 
   useEffect(() => {
@@ -111,6 +115,7 @@ export function Zukan({ onLocate, onClose, mapShops, cleared }: Props) {
                 onClick={() => {
                   setKind(k)
                   setPage(0)
+                  setHint(null)
                 }}
               >
                 <img src={PIN_ICON[k]} alt="" />
@@ -135,19 +140,35 @@ export function Zukan({ onLocate, onClose, mapShops, cleared }: Props) {
                 {shown.map((s, i) => {
                   const no = cardNo(current * PAGE_SIZE + i)
                   if (!s.visits) {
+                    const back = (
+                      <>
+                        <span className="zukan__no">{no}</span>
+                        <span className="zukan__art">
+                          <img src={cardUrl(s.kind)} alt="" className="zukan__model" />
+                          <span className="zukan__q">？</span>
+                        </span>
+                        <span className="zukan__name">？？？</span>
+                        <span className="zukan__foot">
+                          <span className="zukan__feat">{s.catch ?? ''}</span>
+                        </span>
+                      </>
+                    )
                     return (
                       <li key={s.id}>
-                        <div className="zukan__card zukan__card--unknown" aria-label="まだ行っていないお店">
-                          <span className="zukan__no">{no}</span>
-                          <span className="zukan__art">
-                            <img src={cardUrl(s.kind)} alt="" className="zukan__model" />
-                            <span className="zukan__q">？</span>
-                          </span>
-                          <span className="zukan__name">？？？</span>
-                          <span className="zukan__foot">
-                            <span className="zukan__feat">{s.catch ?? ''}</span>
-                          </span>
-                        </div>
+                        {origin ? (
+                          <button
+                            type="button"
+                            className={`zukan__card zukan__card--unknown${hint?.id === s.id ? ' zukan__card--hinted' : ''}`}
+                            aria-label="まだ行っていないお店のヒント"
+                            onClick={() => setHint(hint?.id === s.id ? null : { id: s.id, text: whereText(origin, s) })}
+                          >
+                            {back}
+                          </button>
+                        ) : (
+                          <div className="zukan__card zukan__card--unknown" aria-label="まだ行っていないお店">
+                            {back}
+                          </div>
+                        )}
                       </li>
                     )
                   }
@@ -177,11 +198,11 @@ export function Zukan({ onLocate, onClose, mapShops, cleared }: Props) {
               </ul>
               {pages > 1 && (
                 <div className="zukan__pager">
-                  <button type="button" disabled={current === 0} onClick={() => setPage(current - 1)} aria-label="前のページ">
+                  <button type="button" disabled={current === 0} onClick={() => { setPage(current - 1); setHint(null) }} aria-label="前のページ">
                     ‹
                   </button>
                   <span>{`${current + 1} / ${pages}`}</span>
-                  <button type="button" disabled={current >= pages - 1} onClick={() => setPage(current + 1)} aria-label="次のページ">
+                  <button type="button" disabled={current >= pages - 1} onClick={() => { setPage(current + 1); setHint(null) }} aria-label="次のページ">
                     ›
                   </button>
                 </div>
@@ -189,6 +210,14 @@ export function Zukan({ onLocate, onClose, mapShops, cleared }: Props) {
             </>
           )}
         </>
+      )}
+      {hint && (
+        <div className="zukan__hintbar" role="status">
+          <span>{`このお店は ${hint.text}`}</span>
+          <button type="button" aria-label="ヒントを閉じる" onClick={() => setHint(null)}>
+            <Icon name="close" size={14} />
+          </button>
+        </div>
       )}
     </section>
   )

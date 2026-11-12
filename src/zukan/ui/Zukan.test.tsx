@@ -97,12 +97,20 @@ test('カードの下の段は、行ったカードも「？」のカードも�
   expect(container.querySelectorAll('.zukan__card .zukan__foot')).toHaveLength(2)
 })
 
-test('行っていないカードは押せない', async () => {
+test('行っていないカードを押すと、場所のヒント（方角と距離）が出る。詳細は開かない', async () => {
+  load.mockResolvedValueOnce([{ ...unknown, lat: 35.65 + 350 / 111_320, lng: 139.63 }])
+  render(<Zukan onLocate={() => {}} onClose={() => {}} origin={{ pos: { lat: 35.65, lng: 139.63 }, from: 'here' }} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'まだ行っていないお店のヒント' }))
+  expect(screen.getByRole('status')).toHaveTextContent('ここから 北へ 350m')
+  expect(screen.queryByRole('region', { name: '図鑑カード詳細' })).not.toBeInTheDocument()
+  expect(screen.queryByText('秘密のラーメン屋')).not.toBeInTheDocument()
+})
+
+test('どこから測るか分からなければ、行っていないカードは押せない', async () => {
   load.mockResolvedValueOnce([unknown])
   render(<Zukan onLocate={() => {}} onClose={() => {}} />)
   await screen.findByText('？？？')
-  expect(screen.queryByRole('button', { name: /秘密/ })).not.toBeInTheDocument()
-  expect(screen.getByLabelText('まだ行っていないお店').tagName).not.toBe('BUTTON')
+  expect(screen.queryByRole('button', { name: 'まだ行っていないお店のヒント' })).not.toBeInTheDocument()
 })
 
 test('1 ページは 9 枚', async () => {
