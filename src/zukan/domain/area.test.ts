@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cellKey, cellOf } from '../../fog/domain/grid.ts'
+import { cellCenter, cellKey, cellOf } from '../../fog/domain/grid.ts'
 import { AREA_DEG, areaBoxes, boxFilter, nearbyTwins } from './area.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
 
@@ -9,7 +9,7 @@ describe('areaBoxes', () => {
   it('晴れたマスを 0.02 度の四角にまとめる（同じ四角は 1 つ）', () => {
     const a = cellKey(cellOf({ lat: 35.6812, lng: 139.7671 }))
     const b = cellKey(cellOf({ lat: 35.6813, lng: 139.7672 }))
-    const far = cellKey(cellOf({ lat: 34.70, lng: 135.50 }))
+    const far = cellKey(cellOf({ lat: 34.705, lng: 135.505 }))
     const boxes = areaBoxes([a, b, far])
     expect(boxes).toHaveLength(2)
     for (const box of boxes) {
@@ -17,6 +17,14 @@ describe('areaBoxes', () => {
       expect(box.east - box.west).toBeCloseTo(AREA_DEG)
     }
     expect(boxes.some((x) => x.south <= 35.6812 && 35.6812 < x.north && x.west <= 139.7671 && 139.7671 < x.east)).toBe(true)
+  })
+  it('四角の境目にまたがるマスは、両側の四角を読む（境目の向こうのお店を落とさない）', () => {
+    const c = cellOf({ lat: 35.66, lng: 139.705 }) // 35.66 は 0.02 度の境目
+    const half = (cellCenter({ x: c.x, y: c.y + 1 }).lat - cellCenter(c).lat) / 2
+    const south = cellCenter(c).lat - half
+    expect(south).toBeLessThan(35.66) // このマスは境目をまたぐ（南の端は境目より南）
+    const boxes = areaBoxes([cellKey(c)])
+    expect(boxes.map((b) => b.south).sort()).toEqual([35.64, 35.66])
   })
   it('形の違うキーは捨てる', () => {
     expect(areaBoxes(['x', '1:'])).toEqual([])

@@ -65,3 +65,38 @@ describe('loadZukan', () => {
     expect(filters.every((f) => f.startsWith('or:') || f.startsWith('in:'))).toBe(true)
   })
 })
+
+// 本当に絞り込む偽のサーバー（or の四角と in の id を当てはめる）
+const filteringClient = (rows: Record<string, unknown>[]) => {
+  const make = (keep: (r: Record<string, unknown>) => boolean) => {
+    const q = {
+      or: (f: string) => {
+        const boxes = [...f.matchAll(/and\(lat\.gte\.([-\d.]+),lat\.lt\.([-\d.]+),lng\.gte\.([-\d.]+),lng\.lt\.([-\d.]+)\)/g)].map((m) => m.slice(1).map(Number))
+        return make((r) => keep(r) && boxes.some(([s, n, w, e]) => (r.lat as number) >= s && (r.lat as number) < n && (r.lng as number) >= w && (r.lng as number) < e))
+      },
+      in: (_c: string, ids: string[]) => make((r) => keep(r) && ids.includes(r.shop_id as string)),
+      order: () => q,
+      range: (from: number, to: number) => Promise.resolve({ data: rows.filter(keep).slice(from, to + 1), error: null }),
+    }
+    return q
+  }
+  return { from: () => ({ select: () => make(() => true) }) }
+}
+
+describe('読む範囲を絞っても、晴れた場所のお店は 1 軒も落とさない', () => {
+  it('四角の境目のまわりにばらまいたお店で、全部読んだときと同じになる', async () => {
+    const rows: Record<string, unknown>[] = []
+    let seed = 7
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
+    for (let i = 0; i < 300; i++) {
+      // 1 度四方のあちこちの、四角の境目（0.02 度ごと）の ±0.0001 度（約 10m）に置く。晴れたマスどうしは離れているので、境目で落とすと気づける
+      const lat = 35 + Math.floor(rnd() * 50) * 0.02 + (rnd() - 0.5) * 0.0002
+      const lng = 139 + Math.floor(rnd() * 50) * 0.02 + (rnd() - 0.5) * 0.0002
+      rows.push({ shop_id: `osm:${i}`, name: `店${i}`, lat, lng, genre_name: 'restaurant' })
+    }
+    const cleared = new Set(rows.filter((_, i) => i % 2 === 0).map((r) => cellKey(cellOf({ lat: r.lat as number, lng: r.lng as number }))))
+    const want = rows.filter((r) => cleared.has(cellKey(cellOf({ lat: r.lat as number, lng: r.lng as number })))).map((r) => r.shop_id).sort()
+    const got = (await loadZukan(filteringClient(rows), { cleared })).filter((s) => s.cleared).map((s) => s.id).sort()
+    expect(got).toEqual(want)
+  })
+})

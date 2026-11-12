@@ -102,7 +102,7 @@ export function MapPage() {
   const syncOsm = useCallback(() => {
     const inp = mapRef.current?.hintInputs()
     if (!userId || !osmEnabled || !inp) return
-    void syncOsmShops(userId, inp.shops, inp.cleared)
+    void syncOsmShops(userId, inp.cleared)
   }, [userId, osmEnabled])
   useEffect(() => {
     let alive = true

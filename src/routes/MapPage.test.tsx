@@ -556,7 +556,7 @@ test('図鑑を開くと、地図のお店のタイルを送り、地図のお�
   )
   await userEvent.click(screen.getByRole('button', { name: 'メニュー' }))
   await userEvent.click(screen.getByRole('button', { name: '図鑑' }))
-  expect(syncOsmShops).toHaveBeenCalledWith('u1', [takoyaki], expect.any(Set))
+  expect(syncOsmShops).toHaveBeenCalledWith('u1', expect.any(Set))
 })
 
 test('チェックインで霧が晴れたら、地図のお店のタイルを送る（時間では送らない）', async () => {

@@ -1,8 +1,7 @@
-// 晴れた場所の地図のお店のタイルを関数 shops-osm に送る。送った日は端末に置く（同じタイルは 7 日に 1 回）。
+// 晴れたマスが載っているタイルを関数 shops-osm に送る（地図に読み込んでいない晴れた場所も）。送った日は端末に置く（同じタイルは 7 日に 1 回）。
 // 失敗したタイルは「送った」にしないので、次の機会に送り直す。失敗してもアプリは止めない。
 import { jstDay } from '../../checkin/domain/day.ts'
-import type { Shop } from '../../shops/domain/shop.ts'
-import { dueTiles, tileKey, tilesOfClearedShops } from '../domain/osmTiles.ts'
+import { dueTiles, tileKey, tilesOfCleared } from '../domain/osmTiles.ts'
 import type { Tile } from '../domain/osmTiles.ts'
 
 const KEY = (userId: string) => `mogumo.osmSync.${userId}`
@@ -49,14 +48,13 @@ let running = false
 
 export async function syncOsmShops(
   userId: string,
-  shops: readonly Shop[],
   cleared: ReadonlySet<string>,
   opts: { post?: (tiles: Tile[]) => Promise<boolean>; now?: Date } = {},
 ): Promise<void> {
   if (running) return
   const sent = readSent(userId)
   const today = jstDay(opts.now ?? new Date())
-  const tiles = dueTiles(tilesOfClearedShops(shops, cleared), sent, today)
+  const tiles = dueTiles(tilesOfCleared(cleared), sent, today)
   if (tiles.length === 0) return
   running = true
   try {

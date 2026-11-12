@@ -1,8 +1,7 @@
 // 晴れた場所の地図のお店を shops に入れてもらうため、関数 shops-osm に送るタイルを選ぶ（純粋な計算）。
 // 設計: docs/superpowers/specs/2026-11-12-zukan-osm-shops-design.md
-import { cellKey, cellOf } from '../../fog/domain/grid.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
-import type { Shop } from '../../shops/domain/shop.ts'
+import { cellBounds } from './area.ts'
 
 export const OSM_TILE_Z = 14 // supabase/functions/shops-osm/core.ts の TILE_Z と同じ
 export const OSM_MAX_TILES = 9 // 同じく MAX_TILES
@@ -20,13 +19,16 @@ export function tileOf(p: LatLng, z = OSM_TILE_Z): Tile {
   }
 }
 
-// 晴れたマスにある地図のお店（osm:）が載っているタイル（重複なし）
-export function tilesOfClearedShops(shops: readonly Shop[], cleared: ReadonlySet<string>): Tile[] {
+// 晴れたマスが載っているタイル（重複なし）。地図に読み込んでいない場所（前に晴らした所・町のクリア）も入る。
+// タイルの境目にまたがるマスは両側のタイルに入れる
+export function tilesOfCleared(cleared: Iterable<string>): Tile[] {
   const out = new Map<string, Tile>()
-  for (const s of shops) {
-    if (!s.id.startsWith('osm:') || !cleared.has(cellKey(cellOf(s)))) continue
-    const t = tileOf(s)
-    out.set(tileKey(t), t)
+  for (const k of cleared) {
+    const b = cellBounds(k)
+    if (!b) continue
+    const sw = tileOf({ lat: b.south, lng: b.west })
+    const ne = tileOf({ lat: b.north, lng: b.east })
+    for (let y = ne.y; y <= sw.y; y++) for (let x = sw.x; x <= ne.x; x++) out.set(`${x}/${y}`, { x, y })
   }
   return [...out.values()]
 }
