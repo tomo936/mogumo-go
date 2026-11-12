@@ -10,15 +10,17 @@ import { starText } from '../../zukan/ui/cardArt.ts'
 
 type Props = { shopId: string; shopName: string; load?: typeof loadMine; photos?: typeof photoUrls }
 
-const dotted = (iso: string) => jstDay(new Date(iso)).replaceAll('-', '.')
 
-function MyReview({ r, url }: { r: Review; url: string | undefined }) {
+function MyReview({ r, url, visitDay, onEdit }: { r: Review; url: string | undefined; visitDay: string; onEdit: () => void }) {
   return (
     <div className="rv-mine">
       <div className="rv-mine__row">
         <span className="rv-mine__stars" aria-label={`星 ${r.stars}`}>{starText(r.stars)}</span>
         {!r.isPublic && <span className="rv-mine__private">🔒 自分だけ</span>}
-        <span className="rv-mine__day">{dotted(r.createdAt)}</span>
+        <span className="rv-mine__day">{visitDay.replaceAll('-', '.')}</span>
+        <button type="button" className="rv-mine__edit" aria-label={`${visitDay.replaceAll('-', '.')} の感想を直す`} onClick={onEdit}>
+          直す
+        </button>
       </div>
       {r.body && <p className="rv-mine__memo">{r.body}</p>}
       {r.photoPath && url && (
@@ -34,7 +36,8 @@ function MyReview({ r, url }: { r: Review; url: string | undefined }) {
 export function MyReviews({ shopId, shopName, load = loadMine, photos = photoUrls }: Props) {
   const [data, setData] = useState<{ visits: VisitRef[]; mine: Review[] } | 'loading' | 'error'>('loading')
   const [urls, setUrls] = useState<Map<string, string>>(new Map())
-  const [editing, setEditing] = useState(false)
+  // 開いているエディター: どの訪問の感想か（新しく書く・前の感想を直す）
+  const [editing, setEditing] = useState<{ checkinId: string; day: string; existing: Review | null } | null>(null)
 
   const reload = useCallback(() => {
     let alive = true
@@ -55,7 +58,12 @@ export function MyReviews({ shopId, shopName, load = loadMine, photos = photoUrl
 
   const ordered = typeof data === 'object' ? myReviewsByVisit(data.visits, data.mine) : []
   const target = typeof data === 'object' ? targetCheckin(data.visits, data.mine) : null
-  const targetVisit = typeof data === 'object' && target ? data.visits.find((v) => v.checkinId === target.checkinId) : undefined
+  const dayOf = (checkinId: string) => {
+    const v = typeof data === 'object' ? data.visits.find((x) => x.checkinId === checkinId) : undefined
+    return v ? jstDay(new Date(v.checkedInAt)) : ''
+  }
+  const edit = (r: Review) => setEditing({ checkinId: r.checkinId, day: dayOf(r.checkinId), existing: r })
+  const writeLatest = () => target && setEditing({ checkinId: target.checkinId, day: dayOf(target.checkinId), existing: target.existing })
   const [first, ...older] = ordered
 
   return (
@@ -63,22 +71,25 @@ export function MyReviews({ shopId, shopName, load = loadMine, photos = photoUrl
       <h3 className="zd-box__title">
         わたしの感想
         {target && ordered.length > 0 && (
-          <button type="button" className="zd-box__ed" onClick={() => setEditing(true)}>
-            書く・直す
+          // 「書く」= 新しい感想（いちばん新しい訪問の分）。「直す」= 書いた感想それぞれ。2026-11-13 オーナー「それぞれあるべき」。
+          // 感想は 1 回の訪問に 1 件（D-03）なので、いちばん新しい訪問をもう書いてあれば押せない
+          <button type="button" className="zd-box__ed" onClick={writeLatest} disabled={target.existing !== null}>
+            書く
           </button>
         )}
       </h3>
       {data === 'loading' && <p className="zd-box__note">読み込んでいます…</p>}
       {data === 'error' && <p className="zd-box__note">感想を読み込めませんでした</p>}
+      {target?.existing && <p className="zd-box__hint">次に行ったら新しく書けます</p>}
       {typeof data === 'object' &&
         (first ? (
           <>
-            <MyReview r={first} url={urls.get(first.photoPath ?? '')} />
+            <MyReview r={first} url={urls.get(first.photoPath ?? '')} visitDay={dayOf(first.checkinId)} onEdit={() => edit(first)} />
             {older.length > 0 && (
               <details className="rv-older">
                 <summary>{`前の感想（${older.length}件）`}</summary>
                 {older.map((r) => (
-                  <MyReview key={r.id} r={r} url={urls.get(r.photoPath ?? '')} />
+                  <MyReview key={r.id} r={r} url={urls.get(r.photoPath ?? '')} visitDay={dayOf(r.checkinId)} onEdit={() => edit(r)} />
                 ))}
               </details>
             )}
@@ -87,29 +98,29 @@ export function MyReviews({ shopId, shopName, load = loadMine, photos = photoUrl
           <div className="zd-box__empty">
             <p className="zd-box__note">まだ感想がありません</p>
             {target && (
-              <button type="button" className="zd-box__write" onClick={() => setEditing(true)}>
+              <button type="button" className="zd-box__write" onClick={writeLatest}>
                 感想を書く
               </button>
             )}
           </div>
         ))}
-      {editing && target && targetVisit && (
+      {editing && (
         <ReviewEditor
           shopName={shopName}
           shopId={shopId}
-          checkinId={target.checkinId}
-          visitDay={jstDay(new Date(targetVisit.checkedInAt))}
-          existing={target.existing}
-          existingPhotoUrl={target.existing?.photoPath ? (urls.get(target.existing.photoPath) ?? null) : null}
+          checkinId={editing.checkinId}
+          visitDay={editing.day}
+          existing={editing.existing}
+          existingPhotoUrl={editing.existing?.photoPath ? (urls.get(editing.existing.photoPath) ?? null) : null}
           onSaved={() => {
-            setEditing(false)
+            setEditing(null)
             reload()
           }}
           onDeleted={() => {
-            setEditing(false)
+            setEditing(null)
             reload()
           }}
-          onClose={() => setEditing(false)}
+          onClose={() => setEditing(null)}
         />
       )}
     </div>
