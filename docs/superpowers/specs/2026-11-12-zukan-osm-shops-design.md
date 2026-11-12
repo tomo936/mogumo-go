@@ -36,7 +36,7 @@
 - アプリ:
   - `src/zukan/domain/osmTiles.ts`: お店と晴れたマスから送るタイルを選ぶ、7 日の間隔の計算。
   - `src/zukan/infra/osmSync.ts`: 関数を呼ぶ、送った日を localStorage に置く（`mogumo.osmSync.<userId>`）。
-  - `MapPage`: お店の読み込みがそろったとき、1 分ごと、図鑑を開いたときに呼ぶ。失敗しても何もしない（次にまた送る）。
+  - `MapPage`: 霧が晴れたとき（チェックイン・町のクリア）、お店の読み込みがそろったとき、図鑑を開いたときに呼ぶ。時間では呼ばない（オーナー 2026-11-13）。失敗しても何もしない（次にまた送る）。
   - `loadZukan`: `osm:` のジャンルの直しと、`mergeShops` でのまとめ。
   - `Zukan`: `mapShops`（今の地図のお店）と `cleared`（晴れたマス）を受け取って足す。
 

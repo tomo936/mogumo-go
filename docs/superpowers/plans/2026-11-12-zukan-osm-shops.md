@@ -32,7 +32,7 @@
 - Commit `zukan: send cleared map-shop tiles to shops-osm`
 
 ### Task 3: 図鑑の読み込みと画面
-- Modify: `src/zukan/infra/zukanApi.ts`（`osm:` は `kindFromMap(genre_name ?? '', name)`、`mergeShops` で地図の店をホットペッパーの店にまとめ `mapId` を付ける、引数 `opts?: { mapShops?: Shop[]; cleared?: ReadonlySet<string> }`：地図の店を足し、晴れたマスを合わせる）、`src/zukan/ui/Zukan.tsx`（`mapShops`・`cleared` を受け取り `loadZukan` に渡す）、`src/routes/MapPage.tsx`（お店がそろったとき・1 分ごと・図鑑を開いたときに `syncOsmShops`、図鑑に地図のお店と晴れたマスを渡す）
+- Modify: `src/zukan/infra/zukanApi.ts`（`osm:` は `kindFromMap(genre_name ?? '', name)`、`mergeShops` で地図の店をホットペッパーの店にまとめ `mapId` を付ける、引数 `opts?: { mapShops?: Shop[]; cleared?: ReadonlySet<string> }`：地図の店を足し、晴れたマスを合わせる）、`src/zukan/ui/Zukan.tsx`（`mapShops`・`cleared` を受け取り `loadZukan` に渡す）、`src/routes/MapPage.tsx`（霧が晴れたとき・お店がそろったとき・図鑑を開いたときに `syncOsmShops`、図鑑に地図のお店と晴れたマスを渡す）
 - Test: `zukanApi.test.ts`（osm のジャンル、まとめて回数が合う、地図の店が足される、晴れたマスで cleared）
 - Commit `zukan: include map shops, device cleared cells, same genre and merge as the map`
 
