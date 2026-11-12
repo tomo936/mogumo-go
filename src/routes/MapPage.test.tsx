@@ -5,6 +5,7 @@ import { AuthContext } from '../auth/AuthContext.ts'
 import type { LatLng } from '../map/domain/geo.ts'
 import type { LocationEvent } from '../map/domain/locationStatus.ts'
 import type { Shop } from '../shops/domain/shop.ts'
+import { EFFECT_MS } from '../checkin/ui/CheckinEffect.tsx'
 import { MapPage } from './MapPage.tsx'
 
 vi.mock('../checkin/ui/confetti.ts', () => ({ startConfetti: () => () => {} }))
@@ -473,4 +474,41 @@ test('画面を離れたら、町の呼び直しは止まる（alive が false�
   expect(opts.alive()).toBe(true)
   unmount()
   expect(opts.alive()).toBe(false)
+})
+
+// ---- チェックインの直後の「感想を書く」（10 秒） ----
+test('演出が終わると「感想を書く」が出て、10 秒で消える', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  postCheckin.mockReset()
+  postCheckin.mockResolvedValue({ ok: true, checkinId: 'c1', coins: 30, newCells: [] })
+  renderPage()
+  act(() => last().position(here))
+  act(() => last().select(shop))
+  await user.click(screen.getByRole('button', { name: 'チェックイン' }))
+  expect(screen.queryByRole('button', { name: '感想を書く' })).not.toBeInTheDocument()
+  act(() => { vi.advanceTimersByTime(EFFECT_MS + 50) })
+  expect(screen.getByRole('button', { name: '感想を書く' })).toBeInTheDocument()
+  act(() => { vi.advanceTimersByTime(10_000) })
+  expect(screen.queryByRole('button', { name: '感想を書く' })).not.toBeInTheDocument()
+})
+
+test('押すとエディターがそのお店で開く。出ている間に別のチェックインをしたら新しい方になる', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  postCheckin.mockReset()
+  postCheckin.mockResolvedValueOnce({ ok: true, checkinId: 'c1', coins: 30, newCells: [] })
+  postCheckin.mockResolvedValueOnce({ ok: true, checkinId: 'c2', coins: 30, newCells: [] })
+  renderPage()
+  act(() => last().position(here))
+  act(() => last().select(shop))
+  await user.click(screen.getByRole('button', { name: 'チェックイン' }))
+  act(() => { vi.advanceTimersByTime(EFFECT_MS + 50) })
+  expect(screen.getByRole('button', { name: '感想を書く' })).toBeInTheDocument()
+  const other: Shop = { ...shop, id: 'hp:J2', name: 'カフェもぐ' }
+  act(() => last().select(other))
+  await user.click(screen.getByRole('button', { name: 'チェックイン' }))
+  act(() => { vi.advanceTimersByTime(EFFECT_MS + 50) })
+  await user.click(screen.getByRole('button', { name: '感想を書く' }))
+  expect(screen.getByRole('dialog', { name: '感想を書く' })).toHaveTextContent('カフェもぐ')
 })

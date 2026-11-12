@@ -1000,3 +1000,28 @@
   display: flex;
   filter: drop-shadow(0 1px 1px rgba(31, 42, 55, 0.25));
 }
+
+/* チェックインの直後に 10 秒だけ出る「感想を書く」（2026-11-12） */
+.review-offer {
+  position: fixed;
+  left: 50%;
+  bottom: calc(118px + env(safe-area-inset-bottom));
+  z-index: 25;
+  transform: translateX(-50%);
+  height: 50px;
+  padding: 0 24px;
+  border: 2.5px solid #8a5a32;
+  border-radius: 99px;
+  background: #e8782f;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 5px 0 #8a5a32, 0 8px 18px rgba(90, 58, 30, 0.25);
+  animation: review-offer-in 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes review-offer-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px) scale(0.85);
+  }
+}
