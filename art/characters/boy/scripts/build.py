@@ -862,7 +862,7 @@ if STAGE == 5:
         sw = math.sin(T2 * ph)                # 体重の左右の移動（4 秒に 1 回）
         p = {'hipRoll': 0.018 * sw, 'hipTwist': 0.012 * math.sin(T2 * (ph - 0.15)),
              'chestRoll': -0.014 * sw, 'chestLean': -0.018 * br,
-             'headPitch': -0.012 + 0.014 * math.sin(T2 * 2 * (ph - 0.06)), 'headTwist': 0.03 * math.sin(T2 * (ph - 0.3)),
+             'headPitch': -0.012, 'headTwist': 0.03 * math.sin(T2 * (ph - 0.3)),
              'armOut': MO['idleOut'] + 0.012 * br, 'elbowL': 0.14 + 0.03 * br, 'elbowR': 0.14 + 0.03 * br,
              'fingersL': MO['fist'], 'fingersR': MO['fist']}
         return p
