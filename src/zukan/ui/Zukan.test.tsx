@@ -135,3 +135,11 @@ test('地図のお店と晴れたマスを読み込みに渡す', async () => {
   await screen.findByText(/まだ見つけたお店がありません/)
   expect(load).toHaveBeenLastCalledWith(undefined, { mapShops, cleared })
 })
+
+test('歩いて位置が変わると、出ているヒントも今の位置から測り直す', async () => {
+  load.mockResolvedValueOnce([{ ...unknown, lat: 35.65 + 350 / 111_320, lng: 139.63 }])
+  const { rerender } = render(<Zukan onLocate={() => {}} onClose={() => {}} origin={{ pos: { lat: 35.65, lng: 139.63 }, from: 'here' }} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'まだ行っていないお店のヒント' }))
+  rerender(<Zukan onLocate={() => {}} onClose={() => {}} origin={{ pos: { lat: 35.65 + 200 / 111_320, lng: 139.63 }, from: 'here' }} />)
+  expect(screen.getByRole('status')).toHaveTextContent('ここから 北へ 150m')
+})

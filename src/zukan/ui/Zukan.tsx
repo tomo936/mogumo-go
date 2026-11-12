@@ -39,7 +39,7 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null }: P
   const [state, setState] = useState<{ status: 'loading' } | { status: 'error' } | { status: 'ready'; shops: ZukanShop[] }>({ status: 'loading' })
   const [kind, setKind] = useState<ShopKind>('ramen')
   const [page, setPage] = useState(0)
-  const [hint, setHint] = useState<{ id: string; text: string } | null>(null) // 押した「？」のカードのヒント
+  const [hint, setHint] = useState<{ id: string; at: { lat: number; lng: number } } | null>(null) // 押した「？」のカード（文は今の位置から毎回測る）
   const [opened] = useState({ mapShops, cleared }) // 開いたときの地図のお店と晴れたマス（開いている間は読み直さない）
 
   useEffect(() => {
@@ -160,7 +160,7 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null }: P
                             type="button"
                             className={`zukan__card zukan__card--unknown${hint?.id === s.id ? ' zukan__card--hinted' : ''}`}
                             aria-label="まだ行っていないお店のヒント"
-                            onClick={() => setHint(hint?.id === s.id ? null : { id: s.id, text: whereText(origin, s) })}
+                            onClick={() => setHint(hint?.id === s.id ? null : { id: s.id, at: { lat: s.lat, lng: s.lng } })}
                           >
                             {back}
                           </button>
@@ -211,9 +211,9 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null }: P
           )}
         </>
       )}
-      {hint && (
+      {hint && origin && (
         <div className="zukan__hintbar" role="status">
-          <span>{`このお店は ${hint.text}`}</span>
+          <span>{`このお店は ${whereText(origin, hint.at)}`}</span>
           <button type="button" aria-label="ヒントを閉じる" onClick={() => setHint(null)}>
             <Icon name="close" size={14} />
           </button>
