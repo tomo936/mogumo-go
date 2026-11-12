@@ -53,3 +53,6 @@
 .tw,.cl{pointer-events:auto;cursor:pointer;border:0;background:none;padding:0}
 .vw-back{cursor:pointer}
 .vw-band .x{cursor:pointer}
+/* 記録のタブと地図のあいだの行（右寄せ。地図には重ねない） */
+.rc__worldrow{display:flex;justify-content:flex-end;padding:0 0 8px}
+.rc__world{display:flex;align-items:center;gap:6px;height:38px;padding:0 14px 0 10px;border:2.5px solid #7a4a26;border-radius:999px;background:#e8782f;color:#fff;font-size:14px;font-weight:800;box-shadow:0 3px 0 #8f4a1a;cursor:pointer;font-family:inherit}

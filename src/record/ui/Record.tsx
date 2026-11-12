@@ -21,6 +21,8 @@ import { loadTownShapes, syncUntilSettled } from '../../towns/infra/townsApi.ts'
 import type { OutlineTown } from '../../towns/domain/outline.ts'
 import type { Geometry } from '../../towns/domain/shape.ts'
 import { TownList, type TownListState } from '../../towns/ui/TownList.tsx'
+import { WorldMap } from '../../world/ui/WorldMap.tsx'
+import { PlaceView } from '../../world/ui/PlaceView.tsx'
 
 type State = { status: 'loading' } | { status: 'error' } | { status: 'ready'; cells: ClearedCell[]; visits: VisitEntry[]; towns: ClearedTown[] }
 
@@ -60,6 +62,8 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync }: Pro
   const [byStep, setByStep] = useState(false) // 日付を ‹ › で送ったときだけ、晴れる動きを見せる（スライダーは引いたぶんをすぐ反映）
   const [showRange, setShowRange] = useState(false) // 「町の範囲」（行った町の境目と名前）を地図に出すか
   const [shapes, setShapes] = useState<Map<string, { name: string; geom: Geometry; bbox: OutlineTown['bbox'] }> | null>(null)
+  const [worldOpen, setWorldOpen] = useState(false) // ワールドマップ（日本全体）を重ねて出す
+  const [place, setPlace] = useState<{ name: string; center: LatLng; zoom: number } | null>(null) // 飛んだ先（見るだけ）
   const [t, setT] = useState<number | null>(null) // スライダーの日付（null = いちばん新しい）
 
   useEffect(() => {
@@ -164,6 +168,12 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync }: Pro
 
       {state.status === 'ready' && tab === 'record' && (
         <>
+          <div className="rc__worldrow">
+            <button type="button" className="rc__world" onClick={() => setWorldOpen(true)}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" /></svg>
+              ワールドマップ
+            </button>
+          </div>
           <div className="rc__mapcard">
             <RecordMap cells={cells} towns={towns} t={now} home={home} pins={pins} wave={byStep} outlines={outlines} />
             <button
@@ -241,6 +251,29 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync }: Pro
                 ))}
               </div>
             ))
+          )}
+        </>
+      )}
+
+      {worldOpen && state.status === 'ready' && (
+        <>
+          <WorldMap
+            towns={townState.status === 'ready' ? townState.towns : []}
+            onClose={() => { setWorldOpen(false); setPlace(null) }}
+            onOpen={setPlace}
+          />
+          {place && (
+            <PlaceView
+              title={place.name}
+              center={place.center}
+              zoom={place.zoom}
+              cells={cells}
+              towns={towns}
+              visits={visits}
+              home={home}
+              onBack={() => setPlace(null)}
+              onReturn={onClose}
+            />
           )}
         </>
       )}
