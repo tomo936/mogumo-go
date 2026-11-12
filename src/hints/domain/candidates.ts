@@ -4,6 +4,7 @@ import type { Cleared } from '../../fog/domain/clearing.ts'
 import { distanceMeters } from '../../map/domain/geo.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
+import { chainLikeByCount, isChainName, normalizeShopName } from './chain.ts'
 import { HINT_AWAY_RADIUS_M, HINT_HOME_RADIUS_M, HINT_MAX_HP_CANDIDATES, HINT_MAX_OSM_CANDIDATES } from '../config.ts'
 
 export type Candidates = { hp: string[]; osm: { id: string; lat: number; lng: number }[] }
@@ -40,8 +41,10 @@ function sample<T>(xs: readonly T[], n: number, random: () => number): T[] {
 export function collectCandidates(i: In): Candidates {
   const hp: string[] = []
   const osm: Candidates['osm'] = []
+  const many = chainLikeByCount(i.shops)
   for (const s of i.shops) {
     if (s.name === '') continue
+    if (isChainName(s.name) || many.has(normalizeShopName(s.name))) continue
     if (isClearedAt(i.cleared, s)) continue
     if (i.checked.has(s.id) || (s.mapId && i.checked.has(s.mapId))) continue
     if (!inRange(s, i)) continue

@@ -2,6 +2,8 @@
 // 下の「写した部品」は checkin から写したもの（Edge Function はフォルダごとに置くため import できない）。
 // keep in sync: supabase/functions/checkin/core.ts（同じ答えを返すことを core.test.ts で確かめる）
 
+import { isChainName } from './chain.ts'
+
 // ---- 写した部品（checkin/core.ts） ----
 export const MATCH_M = 40 // 合体とみなす最大距離。src/shops/config.ts の MATCH_DISTANCE_M と同じにしておくこと（keep in sync）
 
@@ -207,6 +209,10 @@ export function budgetShort(budget: string | null): string | null {
 }
 
 export type ShopLite = { shop_id: string; name: string; lat: number; lng: number; genre_name: string | null; catch: string | null; budget_name: string | null }
+// チェーン店を外す（名前が分かった後・抽選の前。判定は src/hints/domain/chain.ts の写し）
+export function dropChains<T extends { name: string }>(shops: readonly T[]): T[] {
+  return shops.filter((s) => !isChainName(s.name))
+}
 export type HintRowIn = { slot: number; shop_id: string; hint_genre: string | null; hint_catch: string | null; hint_budget: string | null; is_mystery: boolean }
 export type HintRowOut = HintRowIn & { hint_id: string; generation: number; completed_checkin_id: string | null }
 

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { normalizeName as clientNormalizeName } from '../../../src/shops/domain/merge.ts'
 import * as checkin from '../checkin/core.ts'
 import {
-  HINT_COUNT, HINT_MAX_HP_CANDIDATES, HINT_MAX_OSM_CANDIDATES, budgetShort, catchFragment, centroid, composeDraw, distanceM, farEnough,
+  HINT_COUNT, HINT_MAX_HP_CANDIDATES, HINT_MAX_OSM_CANDIDATES, budgetShort, catchFragment, centroid, composeDraw, distanceM, dropChains, farEnough,
   findPoi, hintRow, jstDay, namesMatch, normalizeName, parseRequest, planDraw, shuffle, tilesToTry, toResponse,
 } from './core.ts'
 import type { HintRowOut, PoiFeature, ShopLite } from './core.ts'
@@ -112,6 +112,13 @@ describe('composeDraw', () => {
     const r = composeDraw({ hp, wantHp: 3, osmOk: ['osm:1', 'osm:2'], wantOsm: 2 })
     expect(r.length).toBe(HINT_COUNT)
     expect(new Set(r).size).toBe(r.length)
+  })
+})
+
+describe('dropChains', () => {
+  it('チェーン名の店を外し、ほかは順番のまま残す', () => {
+    const shops = [{ name: 'ラーメン山岡家 中野店' }, { name: '麺屋もぐも' }, { name: 'すき家 新宿店' }, { name: 'まつや食堂' }]
+    expect(dropChains(shops).map((s) => s.name)).toEqual(['麺屋もぐも', 'まつや食堂'])
   })
 })
 

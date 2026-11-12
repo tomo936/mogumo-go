@@ -4,8 +4,9 @@
 // プライバシー: 自宅・現在地・距離は受け取らない。候補の一覧・位置・ユーザーID・トークンをログに出さない・保存しない。
 // ホットペッパーには問い合わせない（鍵は使わない）。shops の控えと地図タイルだけを読む。
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { HINT_MYSTERY_VERIFY_TRIES, composeDraw, farEnough, hintRow, jstDay, parseRequest, planDraw, shuffle, toResponse } from './core.ts'
+import { HINT_MYSTERY_VERIFY_TRIES, composeDraw, dropChains, farEnough, hintRow, jstDay, parseRequest, planDraw, shuffle, toResponse } from './core.ts'
 import type { HintRowOut, ShopLite } from './core.ts'
+import { isChainName } from './chain.ts'
 import { UpstreamError, verifyOsm } from './osmTile.ts'
 
 const CORS = {
@@ -96,7 +97,7 @@ Deno.serve(async (req: Request) => {
         .select('shop_id, name, lat, lng, genre_name, catch, budget_name')
         .in('shop_id', input.hp)
       if (error) throw new Error('shops read')
-      hpShops = (data ?? []).filter((s: ShopLite) => typeof s.name === 'string' && s.name.trim() !== '')
+      hpShops = dropChains((data ?? []).filter((s: ShopLite) => typeof s.name === 'string' && s.name.trim() !== ''))
     }
     let osmCands = input.osm
     const candIds = [...hpShops.map((s) => s.shop_id), ...osmCands.map((c) => c.id)]
@@ -128,6 +129,7 @@ Deno.serve(async (req: Request) => {
         if (e instanceof UpstreamError) break
         throw e
       }
+      if (poi && isChainName(poi.name)) continue // チェーン店は気配にしない
       if (poi) osmOk.push({ shop_id: c.id, name: poi.name, lat: poi.lat, lng: poi.lng, genre_name: poi.subclass, catch: null, budget_name: null })
     }
     if (osmOk.length > 0) {
