@@ -10,9 +10,10 @@ const rv = (id: string, checkinId: string, extra: Partial<Review> = {}): Review 
 const visits = [{ checkinId: 'c2', checkedInAt: '2026-11-03T03:00:00Z' }, { checkinId: 'c1', checkedInAt: '2026-10-12T03:00:00Z' }]
 const photos = vi.fn(async (paths: string[]) => new Map(paths.map((p) => [p, `https://s/${p}`])))
 
-test('感想が無ければ、いちばん上の「＋ 11/03 の感想を書く」→ エディターが新しい訪問で開く', async () => {
+test('感想が無ければ「まだ感想がありません」と見出しの「＋ 書く」→ エディターが新しい訪問で開く', async () => {
   render(<MyReviews shopId="hp:A" shopName="麺屋A" load={async () => ({ visits, mine: [] })} photos={photos} />)
-  await userEvent.click(await screen.findByRole('button', { name: '書く' }))
+  expect(await screen.findByText('まだ感想がありません')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '書く' }))
   expect(screen.getByRole('dialog', { name: '感想を書く' })).toHaveTextContent('2026.11.03 の訪問')
 })
 
@@ -26,7 +27,7 @@ test('新しい訪問の感想が先頭。非公開は「自分だけ」の札�
   expect(await screen.findByRole('img', { name: '自分の写真' })).toHaveAttribute('src', 'https://s/me/p.jpg')
   // 「書く」はいつも出す。いちばん新しい訪問はもう書いてあるので押せず、次の訪問で書けると出す
   expect(screen.queryByRole('button', { name: '書く' })).not.toBeInTheDocument()
-  expect(screen.getByText('次に行ったら新しく書けます')).toBeInTheDocument()
+  expect(screen.queryByText(/次に行ったら/)).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: '2026.11.03 の感想を直す' }))
   expect(screen.getByLabelText('ひとこと')).toHaveValue('感想b')
 })
