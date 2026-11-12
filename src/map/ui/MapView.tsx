@@ -47,6 +47,8 @@ export type MapViewHandle = {
   focusAt(p: LatLng): void // お店をタップしたときと同じカメラの寄せ。戻すのは unfocus
   bounceHint(hintId: string): void
   express(kind: Expression): void // 3D の男の子の表情（チェックイン・レベルが上がったとき 'happy'）。読めていなければ何もしない
+  subscribeBearing(cb: (bearingDeg: number) => void): () => void // 地図の回転（北 0・時計回り）が変わるたびに呼ぶ。方位磁針用。返り値で止める
+  resetNorth(): void // 北を上に戻す
 }
 
 const hintedShopIds = (hints: readonly DailyHint[], positions: ReadonlyMap<string, LatLng>): Set<string> =>
@@ -84,6 +86,8 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   const pinsHiddenRef = useRef(pinsHidden) // 世界ができる前に決まっていた分も、できたときに渡す
   const hintPinsRef = useRef<ReturnType<typeof createHintPins> | null>(null)
   const avatarModelRef = useRef<ReturnType<typeof createAvatarModel> | null>(null)
+  const mapRef = useRef<MapLibreMap | null>(null)
+  const bearingSubs = useRef(new Set<(b: number) => void>())
   useEffect(() => {
     pinsHiddenRef.current = pinsHidden
     worldRef.current?.setPinsVisible(!pinsHidden)
@@ -132,6 +136,12 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     focusAt: (p) => focusAtRef.current(p),
     bounceHint: (id) => hintPinsRef.current?.bounce(id),
     express: (kind) => avatarModelRef.current?.express(kind),
+    subscribeBearing: (cb) => {
+      bearingSubs.current.add(cb)
+      cb(mapRef.current?.getBearing() ?? 0)
+      return () => { bearingSubs.current.delete(cb) }
+    },
+    resetNorth: () => mapRef.current?.easeTo({ bearing: 0, duration: 400 }),
     checkin: (shop, newCells) => {
       const t = setTimeout(() => {
         checkinTimers.current.delete(t)
@@ -173,6 +183,11 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       attributionControl: false, // 出典は起動時のスプラッシュと「出典」ボタンで示す
     })
     map.touchZoomRotate.disableRotation()
+    mapRef.current = map
+    map.on('rotate', () => {
+      const b = map.getBearing()
+      for (const cb of bearingSubs.current) cb(b)
+    })
     if (readyRef.current!.done) newReady()
     const hintPins = createHintPins(map, (id) => onHintTapRef.current(id))
     hintPinsRef.current = hintPins
@@ -355,6 +370,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       hintPins.dispose()
       hintPinsRef.current = null
       s.world?.dispose()
+      mapRef.current = null
       map.remove()
     }
   }, [home])
