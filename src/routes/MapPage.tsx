@@ -58,7 +58,6 @@ function loadPinsHidden(): boolean {
   }
 }
 
-const OSM_SYNC_MS = 60_000 // 地図のお店のタイルを送るか確かめる間隔
 const REVIEW_OFFER_MS = 10_000 // チェックインの後に「感想を書く」を出しておく時間
 
 export function MapPage() {
@@ -97,7 +96,8 @@ export function MapPage() {
   // チェックインの直後の「感想を書く」: 成功で持ち、演出が終わったら 10 秒出す。新しいチェックインで置き換わる
   const [reviewOffer, setReviewOffer] = useState<{ checkinId: string; shop: Shop; shown: boolean } | null>(null)
   // 図鑑に地図のデータだけのお店を出す（設計 2026-11-12-zukan-osm-shops）: 晴れた場所の地図のお店のタイルを shops-osm に送る。
-  // お店がそろったとき・1 分ごと・図鑑を開いたとき。失敗しても何もしない（次にまた送る）
+  // 霧が晴れたとき（チェックイン・町のクリア）・お店がそろったとき・図鑑を開いたとき。時間では送らない（オーナー 2026-11-13）。
+  // 失敗しても何もしない（次にまた送る）
   const osmEnabled = shopSourceEnabled(import.meta.env.DEV, window.location.hostname)
   const syncOsm = useCallback(() => {
     const inp = mapRef.current?.hintInputs()
@@ -107,10 +107,8 @@ export function MapPage() {
   useEffect(() => {
     let alive = true
     void mapRef.current?.whenShopsReady().then(() => alive && syncOsm())
-    const t = setInterval(syncOsm, OSM_SYNC_MS)
     return () => {
       alive = false
-      clearInterval(t)
     }
   }, [syncOsm])
   const [zukanInput, setZukanInput] = useState<{ mapShops: readonly Shop[]; cleared: ReadonlySet<string> } | null>(null)
@@ -161,9 +159,10 @@ export function MapPage() {
       townSeen.current.add(`${n.id}:${n.kind}`)
       if (n.kind === 'clear' && n.town) mapRef.current?.addTown(n.town)
     }
+    if (fresh.some((n) => n.kind === 'clear')) syncOsm() // 町のクリアで霧が晴れた
     setTownNews((q) => [...q, ...fresh])
     if (fresh.some((n) => n.coins > 0)) loadCoins().then(setCoins).catch(() => {}) // 町のコインを数字に反映
-  }, [])
+  }, [syncOsm])
   const busyRef = useRef(false)
   const effectSeq = useRef(0)
   const selectedRef = useRef<Shop | null>(null)
@@ -318,6 +317,7 @@ export function MapPage() {
       setEffect({ coins: result.coins, reveal: maskedBefore ? posted.name : null, key: ++effectSeq.current, exp: gain, levelUp: after > before ? after : null })
       if (result.wasHint) hints.markCompleted(posted)
       mapRef.current?.checkin(posted, result.newCells)
+      syncOsm() // チェックインで霧が晴れた
       // 3D の男の子が喜ぶ。レベルが上がるのはチェックインのときだけなので、両方でも 1 回
       mapRef.current?.express('happy')
       // 町の進み具合をサーバーに確かめる（失敗しても、チェックインはそのまま）

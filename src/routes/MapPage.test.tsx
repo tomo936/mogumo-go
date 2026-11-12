@@ -558,3 +558,24 @@ test('図鑑を開くと、地図のお店のタイルを送り、地図のお�
   await userEvent.click(screen.getByRole('button', { name: '図鑑' }))
   expect(syncOsmShops).toHaveBeenCalledWith('u1', [takoyaki], expect.any(Set))
 })
+
+test('チェックインで霧が晴れたら、地図のお店のタイルを送る（時間では送らない）', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  syncOsmShops.mockClear()
+  postCheckin.mockReset()
+  postCheckin.mockResolvedValue({ ok: true, checkinId: 'c1', coins: 30, newCells: [{ x: 1, y: 2 }] })
+  render(
+    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+      <MapPage />
+    </AuthContext.Provider>,
+  )
+  await act(async () => {}) // お店がそろったときの 1 回
+  const afterReady = syncOsmShops.mock.calls.length
+  act(() => { vi.advanceTimersByTime(5 * 60_000) })
+  expect(syncOsmShops.mock.calls.length).toBe(afterReady)
+  act(() => last().position(here))
+  act(() => last().select(shop))
+  await user.click(screen.getByRole('button', { name: 'チェックイン' }))
+  expect(syncOsmShops.mock.calls.length).toBe(afterReady + 1)
+})
