@@ -264,7 +264,6 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync }: Pro
           />
           {place && (
             <PlaceView
-              title={place.name}
               center={place.center}
               zoom={place.zoom}
               cells={cells}
