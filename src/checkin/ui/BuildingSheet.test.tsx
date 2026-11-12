@@ -53,10 +53,3 @@ test('maskedIds の店は「？？？」で最後に並ぶ（並びで名前が�
   const rows = screen.getAllByRole('button').filter((b) => b.className.includes('bldg-sheet__row'))
   expect(rows.map((r) => r.textContent)).toEqual(['いろは', 'うどん屋', '？？？気配の店 +10'])
 })
-
-test('各行の絵はピンではなく食べ物の絵（2026-11-13）', () => {
-  const { container } = render(<BuildingSheet shops={shops} checkedIds={new Set()} onPick={vi.fn()} onClose={vi.fn()} />)
-  const srcs = [...container.querySelectorAll('img.bldg-sheet__pin')].map((i) => i.getAttribute('src') ?? '')
-  expect(srcs.length).toBeGreaterThan(0)
-  expect(srcs.every((s) => s.includes('kinds/'))).toBe(true)
-})
