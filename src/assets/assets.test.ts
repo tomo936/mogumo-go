@@ -11,9 +11,9 @@ const KINDS = [
 ]
 
 describe('ピンの絵', () => {
-  it('合成済みのピンが 19 枚そろっている（sweets は cake、「？」は mystery、フォークとナイフは other）', () => {
+  it('合成済みのピンが 19 枚＋まとめの台がそろっている（sweets は cake、「？」は mystery、フォークとナイフは other、まとめは cluster-base 256px）', () => {
     const names = Object.keys(pins).map((p) => p.replace('./pins/', '').replace('.png', ''))
-    expect(names.sort()).toEqual([...KINDS, 'other', ...NEW_KINDS].sort())
+    expect(names.sort()).toEqual([...KINDS, 'other', ...NEW_KINDS, 'cluster-base'].sort())
   })
 })
 

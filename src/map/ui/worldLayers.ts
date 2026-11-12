@@ -28,6 +28,8 @@ import { createFacilityLayer } from '../../shops/infra/facilityLayer.ts'
 import type { PlacedFacility } from '../../shops/infra/facilityPick.ts'
 import type { PinnedBuilding } from '../../shops/infra/buildingPins.ts'
 import { createShopPins } from '../../shops/infra/shopPins.ts'
+import { createShopClusters } from '../../shops/infra/shopClusters.ts'
+import { clusterFeatures } from '../../shops/domain/cluster.ts'
 import { createShopLayer } from '../../shops/infra/shopLayer.ts'
 import type { PlacedShop } from '../../shops/infra/shopLayer.ts'
 import { distanceMeters, localFrame } from '../domain/geo.ts'
@@ -109,9 +111,11 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const facilityLayer = createFacilityLayer()
   const shopPins = createShopPins(map) // 1軒の店のピン（symbol レイヤー）
   const buildingPins = createBuildingPins(map, (ids) => deps.onPinTap(ids))
+  const shopClusters = createShopClusters(map) // 引いたときのまとめのピン（ズーム 17.5 より引いたとき。2026-11-13）
   // 人が地図を動かしている間は、店のピン（1軒・ビル・施設）を隠す。歩いてカメラが自動でついてくる動きでは隠さない
   const stopUserMove = watchUserMove(map, (moving) => {
     shopPins.setMoving(moving)
+    shopClusters.setMoving(moving)
     buildingPins.setMoving(moving)
   })
   const debugOverlay = debugOn(window.location.search) ? createDebugOverlay(map, buildingPins.debugRows) : null // ?debug のときだけ
@@ -386,6 +390,13 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     const done = checkedNow()
     if (shownFrom) shopPins.update(hintedIds.size === 0 ? shownPlaced : shownPlaced.filter((s) => !s.shopIds.some((id) => hintedIds.has(id))), shownInFog, shownFrom, done) // 1軒の店の ✓ はピンの絵の右上
     buildingPins.update(shownBuildings, done)
+    shopClusters.update(clusterFeatures(
+      shownPlaced,
+      shownBuildings.map((b) => ({ id: b.placed.id, lat: b.placed.lat, lng: b.placed.lng, shopIds: b.shops.map((s) => s.id) })),
+      shownInFog,
+      hintedIds,
+      done,
+    ))
   }
 
   // クリアした町は全部晴れ。町の形から、雲を置く場所のまわり（TOWN_FILL_HALF_M）だけをセルにして足す。
@@ -572,6 +583,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         map.addLayer(fogShopLayer, below)
         // お店のピン: 晴れた所の店は雲の下、霧の中の近い店は雲の上。どちらも自分の印より下
         shopPins.attach(fogLayer.id, below)
+        shopClusters.attach(fogLayer.id)
         setFog(p)
       } else if (distanceMeters(fogCenter, p) >= FOG_REBUILD_M) {
         setFog(p)
@@ -582,7 +594,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     },
     shopsNear: () => near,
     titleOf: (ids) => shownFacilities.find((f) => f.shopIds.includes(ids[0]))?.name ?? null,
-    pick: (point) => shopPins.pick(point) ?? fogShopLayer.pick(point) ?? shopLayer.pick(point) ?? facilityLayer.pick(point), // 手前に出やすい小さい模型を先に
+    pick: (point) => shopClusters.pick(point) ?? shopPins.pick(point) ?? fogShopLayer.pick(point) ?? shopLayer.pick(point) ?? facilityLayer.pick(point), // 手前に出やすい小さい模型を先に
     focus(shopIds) {
       focusIds = new Set(shopIds ?? [])
       if (refreshedAt && !disposed) showShops(refreshedAt)
@@ -609,6 +621,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     },
     setPinsVisible(visible) {
       shopPins.setVisible(visible)
+      shopClusters.setVisible(visible)
       buildingPins.setHidden(!visible)
     },
     shopsReady: () => ready.fired,
@@ -622,6 +635,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       if (frameId !== null) cancelAnimationFrame(frameId)
       stopUserMove()
       shopPins.dispose()
+      shopClusters.dispose()
       buildingPins.dispose()
       debugOverlay?.dispose()
       map.off('idle', onIdle)
