@@ -7,7 +7,7 @@ import type { ShopKind } from './shop.ts'
 // 地図の symbol レイヤーに渡すお店のピンの地物。
 // done: チェックイン済みか（右上に ✓ の付いた絵を使う）
 // liftM: 模型の高さ＋少し（m）／liftTier: その段（低・中・高。ピンの持ち上げを選ぶ）
-// kind: 絵の種類（model と同じ）／fog: 霧の中の近い店か／sort: 現在地からの距離（m）。小さいほど先に置かれ、重なったときに残る
+// kind: 絵の種類（model と同じ）／fog: 霧の中の近い店か／sort: 現在地からの距離（m。今は描く順に使っていない＝重なっても全部出し、画面の下ほど手前に描く）
 export type PinFeature = {
   type: 'Feature'
   geometry: { type: 'Point'; coordinates: [number, number] }

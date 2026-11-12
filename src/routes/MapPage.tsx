@@ -44,6 +44,7 @@ import { TownBanner } from '../towns/ui/TownBanner.tsx'
 import { ReviewEditor } from '../reviews/ui/ReviewEditor.tsx'
 import { loadLatest, loadSummary } from '../reviews/infra/reviewsApi.ts'
 import { syncOsmShops } from '../zukan/infra/osmSync.ts'
+import type { HintOrigin } from '../zukan/domain/hintText.ts'
 import type { Review } from '../reviews/domain/review.ts'
 import { jstDay } from '../checkin/domain/day.ts'
 
@@ -111,7 +112,7 @@ export function MapPage() {
       alive = false
     }
   }, [syncOsm])
-  const [zukanInput, setZukanInput] = useState<{ mapShops: readonly Shop[]; cleared: ReadonlySet<string> } | null>(null)
+  const [zukanInput, setZukanInput] = useState<{ mapShops: readonly Shop[]; cleared: ReadonlySet<string>; origin: HintOrigin | null } | null>(null)
   // お店のシートの「みんなの感想」。シートを開いたときだけ読み、店が替われば古い返事は捨てる
   const [sheetReviews, setSheetReviews] = useState<{ shopId: string; summary: { avg: number; count: number } | null; latest: Review[] } | null>(null)
   const selectedId = selected?.id ?? null
@@ -445,6 +446,7 @@ export function MapPage() {
         <Zukan
           mapShops={zukanInput?.mapShops}
           cleared={zukanInput?.cleared}
+          origin={zukanInput?.origin ?? null}
           onLocate={(z) => {
             setZukanOpen(false)
             mapRef.current?.focusAt(z) // 詳細の「地図で見る」: 視点をお店へ寄せて、シートを開く
@@ -536,7 +538,9 @@ export function MapPage() {
           onZukan={() => {
             closeExplore()
             const inp = mapRef.current?.hintInputs()
-            setZukanInput(inp ? { mapShops: inp.shops, cleared: inp.cleared } : null)
+            // 「？」のヒントは今いる場所から（地図で取っている現在地）。まだ無ければ自宅から
+            const origin: HintOrigin | null = me ? { pos: me, from: 'here' } : home ? { pos: home, from: 'home' } : null
+            setZukanInput({ mapShops: inp?.shops ?? [], cleared: inp?.cleared ?? new Set(), origin })
             syncOsm()
             setZukanOpen(true)
           }}

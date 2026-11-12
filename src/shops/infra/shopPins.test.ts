@@ -82,6 +82,9 @@ test('層に icon-offset と済み用の icon-image が付く', () => {
   expect(layout['icon-offset']).toBeDefined()
   expect(JSON.stringify(layout['icon-offset'])).toContain('liftTier') // 高さの段で持ち上げを変える
   expect(JSON.stringify(layout['icon-image'])).toContain('-done')
+  expect(layout['icon-allow-overlap']).toBe(true) // 重なっても全部出す（2026-11-13 オーナー）
+  expect(layout['icon-ignore-placement']).toBe(true)
+  expect(layout['symbol-z-order']).toBe('viewport-y') // 画面の下（手前）のピンほど前に描く
 })
 
 test('setVisible で2層とも切りかえ、隠している間は pick も null。attach 前の指定も効く', () => {
