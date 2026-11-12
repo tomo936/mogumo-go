@@ -188,7 +188,7 @@ def arm_side(sign):
         if crotch is None or z <= crotch: continue
         L = big(SL[float(z)], 5e-5); t = torso(L)
         if t is None: continue
-        side = [l for l in L if l is not t and sign * l['cx'] > 0.04 and (sign * l['x0'] > sign * 0 if sign > 0 else l['x1'] < 0)]
+        side = [l for l in L if l is not t and sign * l['cx'] > 0.04 and (sign * l['x0'] > sign * 0 if sign > 0 else l['x1'] < 0) and sign * l['cx'] > (t['x1'] if sign > 0 else -t['x0'])]  # 胴の幅の内側の小さな輪（ズボンの中の足の筒など）は腕にしない（2 回目）
         gap = None
         if side:
             tp = t['pts']; gaps = []
