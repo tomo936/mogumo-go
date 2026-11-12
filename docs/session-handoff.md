@@ -2,9 +2,16 @@
 
 シロとの受け渡しは `handoff/`（別物）。こちらは Claude Code 自身の会話の引き継ぎ。
 
-最終更新: 2026-11-12 深夜（Claude Code）。区切りごとに上書きする。
+最終更新: 2026-11-12 深夜2（Claude Code）。区切りごとに上書きする。
 
 ## いまの状態
+- 【2026-11-12 深夜2 区切り（最新）】dev は `3735b34`（main は未反映）。ブランチ `cycle1-building`（`c67c2a1`）。
+  - **順番の変更（オーナー）**: 絵の生成が追いつかないので、A10（パンケーキ）より先に **A2 足元の円** と **感想と写真** をやる。あわせて **図鑑の見た目を作り直す**（オーナー「全体的に安っぽい」）。
+  - **A2 完了・iPhone 確認済み**（オーナー「問題ない」）: 50m の範囲 = うすいオレンジの塗り＋足元から外へ広がるオレンジの波 2 本（2.6 秒で 1 周）。動かない外縁は無し。計算 `src/map/domain/ripple.ts`、値 `config.ts` の `RIPPLE_*`。半径はズームの式で地図の側（引いてもずれない）、MapLibre の既定のなめらか変化は切った。描く順は 塗り・波 → お店の建物 → 霧 → アバター（`worldLayers.ts` の `PLAYER_LAYERS` を `me-avatar-3d` 基準に）。見本 `.superpowers/preview/ring/`。
+  - **図鑑＋感想と写真: 設計・計画まで済み、実装はまだ（次はここから）**。オーナーの決定: 見た目は **案B コレクションカード**（見本 `.superpowers/preview/zukan2/`、`?d=B&s=list|detail`、`z.css` の `.dB`。A シール・C 手帳・D ボンボンドロップ風は不採用）、感想はチェックイン直後（10 秒のボタン）と図鑑の詳細で書ける、**感想は公開・非公開を選べる（既定は公開）**。設計 `docs/superpowers/specs/2026-11-12-zukan-b-reviews-design.md`、計画 `docs/superpowers/plans/2026-11-12-zukan-b-reviews.md`（9 段。リーダーが直接作る。1 段目の感想の決まりから）。
+  - **SQL 0007（`supabase/migrations/0007_review_visibility.sql`、reviews.is_public と RLS）はオーナーが dev に流し済み**。`reviews`・`review_reports`・バケット `review-photos` は dev にある（オーナー確認）。
+  - 丸い字体 M PLUS Rounded 1c（`@fontsource`）は図鑑・感想の画面だけ。全体に広げるかは後で。
+  - その後の順番: A9＋A8 → A7＋A4 → ガチャ → A3 → A6 → A5、A10 はミシェーラの絵が来てから（表 `docs/superpowers/plans/2026-11-12-roadmap-additions.md`、正式には未確認）。
 - 【2026-11-12 深夜 区切り（最新）】dev は `dab1660`（main は未反映）。ブランチ `cycle1-building`（`0a68258`）。
   - **ワールドマップ＋検索 完了**（iPhone で確認済み）。`src/world/`。記録のタブと地図のあいだの「ワールドマップ」→ 日本地図に行った町ごとの旗（数字にまとめない・右下で旗 ON/OFF・寄ると町名）、地名検索（国土地理院、出典表示あり）→ 見るだけの地図（`RecordMap` の `focus`・`onPinTap`、行ったお店 ✓ だけ・ほかは雲＝仕様 S1、左上「‹ ワールドマップ」、下に「今いる場所に戻る」、シートは `ShopSheet viewOnly`）。都道府県の塗りはやらない（オーナー）。設計 `docs/superpowers/specs/2026-11-12-world-map-design.md`、見本の台本 `.superpowers/preview/worldmap/`（gitignore）。
   - **重さ**: 記録・図鑑・マイページ・設定を開いているあいだ後ろの地図を止める（`MapView` の `paused`）。オーナー「軽くなった」。
