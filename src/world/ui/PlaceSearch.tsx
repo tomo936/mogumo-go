@@ -52,7 +52,7 @@ export function PlaceSearch({ onPick, onBack, search = defaultSearch }: Props) {
         </button>
         <label className="wm-search on">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="M15.5 15.5L21 21" /></svg>
-          <input type="search" value={q} placeholder="地名で探す" aria-label="地名で探す" onChange={(e) => setQ(e.target.value)} />
+          <input type="text" value={q} placeholder="地名で探す" aria-label="地名で探す" onChange={(e) => setQ(e.target.value)} />
           {q !== '' && (
             <button type="button" className="x" aria-label="消す" onClick={() => setQ('')}>×</button>
           )}

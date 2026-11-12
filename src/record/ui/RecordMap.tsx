@@ -41,6 +41,8 @@ type Props = {
 }
 
 const NO_OUTLINES: OutlineTown[] = []
+const DONE_SVG =
+  '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#fff"/><circle cx="12" cy="12" r="10.1" fill="#3ecf8e"/><path d="M7.4 12.2l3.6 3.6 6-6.5" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 const mdLabel = (day: string) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`
 
 export function RecordMap({ cells, towns, t, home, pins, wave = true, outlines = NO_OUTLINES, focus, onPinTap }: Props) {
@@ -266,6 +268,13 @@ export function RecordMap({ cells, towns, t, home, pins, wave = true, outlines =
         const num = document.createElement('b')
         num.className = 'rc-pin__num'
         body.append(img, num)
+        if (onPinTapRef.current) {
+          // 見るだけの地図では、行ったお店に済みの印（DoneMark と同じ形）
+          const done = document.createElement('span')
+          done.className = 'rc-pin__done'
+          done.innerHTML = DONE_SVG
+          body.append(done)
+        }
         const tag = document.createElement('span')
         tag.className = 'rc-pin__tag'
         tag.hidden = true

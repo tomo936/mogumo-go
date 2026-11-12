@@ -56,3 +56,8 @@
 /* 記録のタブと地図のあいだの行（右寄せ。地図には重ねない） */
 .rc__worldrow{display:flex;justify-content:flex-end;padding:0 0 8px}
 .rc__world{display:flex;align-items:center;gap:6px;height:38px;padding:0 14px 0 10px;border:2.5px solid #7a4a26;border-radius:999px;background:#e8782f;color:#fff;font-size:14px;font-weight:800;box-shadow:0 3px 0 #8f4a1a;cursor:pointer;font-family:inherit}
+/* 見るだけの地図は全画面（記録の地図の正方形の指定を上書き） */
+.vw .rc-map{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;border-radius:0}
+.vw .rc-pin__done{position:absolute;right:-5px;top:-5px;display:block}
+.vw .rc-pin__done svg{display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.3))}
+.vw .rc-pin--today{width:46px}
