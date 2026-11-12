@@ -1,0 +1,177 @@
+{
+ "src": "stage2.glb",
+ "flipped_to_front": false,
+ "tris": 29996,
+ "nonmanifold_edges": 0,
+ "islands": 1,
+ "fragments": 0,
+ "crotch": 0.175,
+ "legs_separate": true,
+ "arm": {
+  "L": {
+   "found": true,
+   "hand": 0.265,
+   "armpit": 0.365,
+   "gap_min": 0.0084,
+   "holes": []
+  },
+  "R": {
+   "found": true,
+   "hand": 0.265,
+   "armpit": 0.365,
+   "gap_min": 0.009,
+   "holes": []
+  }
+ },
+ "neck": {
+  "z": 0.535,
+  "area": 0.0231,
+  "loops": 2,
+  "head_max": 0.1502,
+  "torso_top": 0.0795,
+  "ratio": 0.1536,
+  "prof": [
+   [
+    0.485,
+    0.0477,
+    1
+   ],
+   [
+    0.495,
+    0.0458,
+    1
+   ],
+   [
+    0.505,
+    0.0437,
+    1
+   ],
+   [
+    0.515,
+    0.0424,
+    2
+   ],
+   [
+    0.525,
+    0.0275,
+    2
+   ],
+   [
+    0.535,
+    0.0231,
+    2
+   ],
+   [
+    0.545,
+    0.0281,
+    2
+   ],
+   [
+    0.555,
+    0.0333,
+    2
+   ],
+   [
+    0.565,
+    0.0406,
+    1
+   ],
+   [
+    0.575,
+    0.0518,
+    1
+   ],
+   [
+    0.585,
+    0.0611,
+    1
+   ],
+   [
+    0.595,
+    0.071,
+    1
+   ]
+  ]
+ },
+ "inner": {
+  "L": {
+   "sleeve_top": 1.0,
+   "sleeve_skin": 0.0,
+   "hand_skin": 1.0,
+   "hand_t": 0.65,
+   "n_sleeve": 80,
+   "n_hand": 41
+  },
+  "R": {
+   "sleeve_top": 1.0,
+   "sleeve_skin": 0.0,
+   "hand_skin": 0.9384,
+   "hand_t": 0.6,
+   "n_sleeve": 76,
+   "n_hand": 49
+  }
+ },
+ "sil": {
+  "front": [
+   0.0058,
+   0.9392
+  ],
+  "side_right": [
+   0.0304,
+   0.8925
+  ],
+  "side_if_left": [
+   0.1344,
+   0.7828
+  ],
+  "back": [
+   0.0249,
+   0.8962
+  ],
+  "armpit_ref": {
+   "L": 0.3634,
+   "R": 0.3684
+  },
+  "armpit_mesh2d": {
+   "L": 0.3509,
+   "R": 0.3534
+  },
+  "neck_ref": 0.5614,
+  "neck_mesh2d": 0.5614
+ },
+ "sym_front_iou": 0.9644,
+ "checks": {
+  "armL_separate": true,
+  "armL_connected_at_shoulder": true,
+  "armL_gap": true,
+  "armL_armpit_vs_ref": true,
+  "armL_inner_sleeve_top": true,
+  "armL_inner_hand_skin": true,
+  "armR_separate": true,
+  "armR_connected_at_shoulder": true,
+  "armR_gap": true,
+  "armR_armpit_vs_ref": true,
+  "armR_inner_sleeve_top": true,
+  "armR_inner_hand_skin": true,
+  "legs_separate": true,
+  "neck_narrow": true,
+  "no_fragments": true,
+  "sil_front": true,
+  "sil_side": true,
+  "sil_back": true,
+  "head_height": true,
+  "symmetry": true
+ },
+ "pass": true,
+ "thresholds": {
+  "gap_min": 0.008,
+  "armpit_tol": 0.03,
+  "inner_top": 0.9,
+  "inner_skin": 0.9,
+  "neck_ratio": 0.35,
+  "sil_miss": 0.05,
+  "sym_iou": 0.9,
+  "frag": 0.005,
+  "head_tol": 0.05
+ }
+}

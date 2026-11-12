@@ -1,0 +1,17 @@
+{
+ "id": 101, "name": "boy", "type": "humanoid",
+ "sheet": "art/reference/avatar/boy-apose/sheet.webp",
+ "generate": { "seed": 123, "steps": 50, "side": "right", "max_facenum": 30000, "file": "boyS_s123_textured_00002_.glb" },
+ "colors": {
+  "skin": { "h": [0.015, 0.11], "s": [0.12, 0.75], "v": [0.55, 1] },
+  "top": { "h": [0.5, 0.72], "s": [0.2, 1] },
+  "pack": { "h": [0.9, 0.04], "s": [0.3, 1], "v": [0.25, 1] },
+  "shoes": { "h": [0.5, 0.72], "s": [0.2, 1] },
+  "hair_ref": { "h": [0.95, 0.1], "s": [0.3, 1], "v": [0, 0.7] },
+  "pack_ref": { "h": [0.9, 0.03], "s": [0.2, 1], "v": [0.6, 1] }
+ },
+ "landmarks": { "crotch": 0.175, "armpit": 0.365, "neck": 0.535, "belt": [0.232, 0.262], "shoe_top": 0.07, "eye_band": [0.61, 0.705, 0.14], "chin": 0.585 },
+ "face": {},
+ "motion": {},
+ "budget": { "tris": 30000, "mb": 2.0 }
+}
