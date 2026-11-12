@@ -30,7 +30,10 @@ def sstep(t):
 GI = {g.name: g.index for g in av.vertex_groups}
 ARMG = {GI[n] for n in GI if 'arm' in n}
 CAPX = 0.142
-ARMBLEND = float(os.environ.get('ARMBLEND', '0.45'))
+ARMBLEND = float(os.environ.get('ARMBLEND', '1.0'))  # 3 回目: 0.45 → 1.0（うでの切り口は胸に付けたまま、うでの面は 5cm かけて回る）
+BLENDW = float(os.environ.get('BLENDW', '0.05'))
+RUNA = float(os.environ.get('RUNA', '0.5'))
+CAPINSET = int(os.environ.get('CAPINSET', '0'))  # 3 回目: 3 → 0（縁取りが切り口の縁を面から外し、すき間＝向こうが見える細い線を作っていた）
 bm = bmesh.new()
 bm.from_mesh(me)
 dl = bm.verts.layers.deform.active
@@ -93,11 +96,14 @@ for k, pts in kd_src.items():
 for k, depth in ((1, -0.0045), (2, 0.004)):
     for side in (1, -1):
         faces = [f for f in bm.faces if f[capk] == k and f.verts[0].co.x * side > 0]
+        # 3 回目: 切り口は絵の継ぎ目で何枚かに分かれていて、別々に内へ縁取られ、間にすき間（向こうが見える細い線）が開いていた → 先に点をつなぐ
+        bmesh.ops.remove_doubles(bm, verts=list({v for f in faces for v in f.verts}), dist=1e-5)
+        faces = [f for f in bm.faces if f.is_valid and f[capk] == k and f.verts[0].co.x * side > 0]
         cv = {v for f in faces for v in f.verts}
         lo = Vector((min(v.co.x for v in cv), min(v.co.y for v in cv), min(v.co.z for v in cv)))
         hi = Vector((max(v.co.x for v in cv), max(v.co.y for v in cv), max(v.co.z for v in cv)))
-        for _ in range(3):
-            r = bmesh.ops.inset_region(bm, faces=faces, thickness=0.007, depth=depth, use_even_offset=False)
+        for _ in range(CAPINSET):
+            r = bmesh.ops.inset_region(bm, faces=faces, thickness=0.007, depth=depth, use_even_offset=False, use_boundary=False)  # 3 回目: 外の縁は動かさない（動かすと胴・うでの面との間にすき間＝明るい細い線が開いていた）
             for nf in r['faces']:
                 nf[capk] = k
         # 細い角で点が飛び出さないように、元の切り口の箱（x は ±2cm）の中へ戻す
@@ -111,6 +117,21 @@ for f in bm.faces:  # 面ごとに 1 色（点ごとに違う絵の島を指す�
         _, i, _ = kds[f[capk]].find(f.calc_center_median())
         for l in f.loops:
             l[uvl].uv = kd_src[f[capk]][i][1]
+# 3 回目（腕の筋）: 面ごとの色でも、胴の濃い青・ひもの赤を拾って縞（青と赤の筋）になるので、切り口は全部 1 色（胴の青のまん中の色）にする
+CAPUNI = os.environ.get('CAPUNI', '1') == '1'
+if CAPUNI:
+    def _col(uv):
+        return _px[int(uv[1] * _H) % _H, int(uv[0] * _W) % _W][:3]
+    cands = [uv for _, uv in kd_src[1] if (lambda c: c[2] > c[0] + 0.15 and c[2] > c[1])(_col(uv))]
+    C = np.array([_col(uv) for uv in cands])
+    lum = C @ np.array([0.3, 0.59, 0.11])
+    med = np.median(C[lum >= np.percentile(lum, 60)], 0)  # まん中より少し明るい胴の青（暗いと、わきの「濃い青のすき間」に見える）
+    capuv = cands[int(np.argmin(((C - med) ** 2).sum(1)))]
+    print('cap uniform color', np.round(_col(capuv), 3), 'from', len(cands))
+    for f in bm.faces:
+        if f[capk]:
+            for l in f.loops:
+                l[uvl].uv = capuv
 def in_zone(co):
     return 0.125 < abs(co.x) and 0.25 < co.z < 0.50
 
@@ -158,7 +179,7 @@ for v in bm.verts:
     if a > 0.5:
         s = 0.5 * sstep((z - 0.45) / 0.08) if z > 0.45 else 0.0
         if ARMBLEND and 0.24 < z < 0.52:  # 2 回目: うでの切り口のまわり（わきの面から 2.5cm）は胸にも付けて、切り口が半分だけ回るように
-            s = max(s, ARMBLEND * sstep(1 - (ax - CAPX) / 0.025))
+            s = max(s, ARMBLEND * sstep(1 - (ax - CAPX) / BLENDW))
     elif a <= 0.5 and z > 0.45 and ax > 0.11:
         s = 0.3 * sstep((ax - 0.11) / 0.032) * sstep((z - 0.45) / 0.05)
     else:
@@ -356,7 +377,7 @@ def gait(ph, K, run):
         p['knee' + s] = spline(K['knee'], q)
         p['foot' + s] = spline(K['foot'], q)
         sg = 1 if s == 'L' else -1
-        A = 0.5 if run else 0.28
+        A = RUNA if run else 0.28
         c = math.cos(TAU * (q - 0.04))
         p['arm' + s] = -A * c + (0.05 if run else 0.0)
         ce = math.cos(TAU * (q - 0.07))

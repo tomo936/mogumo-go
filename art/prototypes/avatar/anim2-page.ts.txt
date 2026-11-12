@@ -1,4 +1,4 @@
-// S2: 30fps で撮る動画・比べ画像。?m=old（boy-b-skin＋式）／?m=v2（boy-b-v2＋glb の動き）、&what=video|actual|compare
+// S2: 30fps で撮る動画・比べ画像。?m=old（boy-b-skin＋式）／?m=v2（boy-b-v2＋glb の動き）、&what=video|actual|compare|chk（chk = うでのつなぎ目の前後比べ。候補を .superpowers/preview/avatar/cand.glb に置く）
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 const Q = new URLSearchParams(location.search)
@@ -164,6 +164,20 @@ async function compare(nw: Rig, old: Rig) {
   for (let i = 0; i < n; i++) { poseAt(nw, 'run', i / 60); nw.inner.updateMatrixWorld(true) }
   console.log('anim ms/frame', ((performance.now() - t0) / n).toFixed(4), 'tris', nw.tris, 'bones', Object.keys(nw.bones).length, 'clips', Object.keys(nw.clips).join(','))
 }
+// うでのつなぎ目の確認: 上 = 今の版、下 = 候補。あるく・はしるの、左うでが一番後ろ／一番前の瞬間を、横（90°）と ななめ上（40°）から
+async function chk(a: Rig, b: Rig) {
+  const T = 200, cols: [Mode, number, number, number][] = []
+  for (const mode of ['walk', 'run'] as const) for (const ph of [0.04, 0.54]) { cols.push([mode, ph, 90, 0.1]); cols.push([mode, ph, 40, ELEV]) }
+  cols.push(['joy', 0.3, 0, 0.1]); cols.push(['joy', 0.3, 40, ELEV])
+  const cv = document.createElement('canvas'); cv.width = T * cols.length; cv.height = T * 2 + 24; const g = cv.getContext('2d')!
+  g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height)
+  ;[a, b].forEach((r, row) => cols.forEach(([mode, ph, yaw, el], i) => {
+    poseAt(r, mode, ph * PERIOD[mode]); setFace(r, 0); r.inner.updateMatrixWorld(true)
+    g.drawImage(shot(r, T, T, Number(Q.get('hp') ?? 520), yaw, el, '#fbf1d6', 0.5, 0.42), i * T, row * T)
+    if (row === 0) label(g, `${mode === 'walk' ? 'あるく' : mode === 'joy' ? 'うれしい' : 'はしる'} ${ph < 0.5 ? '左うで後ろ' : '左うで前'} ${yaw}°`, i * T + 4, T * 2 + 18, 12)
+  }))
+  await save('chk', cv.toDataURL('image/png'))
+}
 async function main() {
   const f = new FontFace('mp', 'url(/.superpowers/preview/avatar/MPLUSRounded1c-ExtraBold.ttf)'); await f.load(); document.fonts.add(f)
   const m = Q.get('m') ?? 'v2', what = Q.get('what') ?? 'video'
@@ -179,6 +193,7 @@ async function main() {
     })
   } else if (what === 'video') await video(r)
   else if (what === 'actual') await actual(r)
+  else if (what === 'chk') await chk(r, await load('/.superpowers/preview/avatar/cand.glb', true))
   else await compare(r, await load('/art/prototypes/avatar/boy-b-skin.glb', false))
   document.body.dataset.ready = '1'
 }
