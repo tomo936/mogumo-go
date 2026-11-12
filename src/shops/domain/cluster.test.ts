@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { badgeFontRatio, badgeText, clusterFeatures, clusterScale, CLUSTER_UNTIL_ZOOM } from './cluster.ts'
+import { BADGE_TEXT_FIT, BADGE_WIDEST_TEXT, badgeText, clusterFeatures, clusterScale, CLUSTER_UNTIL_ZOOM } from './cluster.ts'
 
 describe('badgeText', () => {
   it('99 までは数字、100 以上は 99+', () => {
@@ -10,11 +10,10 @@ describe('badgeText', () => {
   })
 })
 
-describe('badgeFontRatio', () => {
-  it('桁が増えるほど字を小さく（丸の直径に対する割合）。3 文字でも丸に収まる', () => {
-    expect(badgeFontRatio('5')).toBeGreaterThan(badgeFontRatio('15'))
-    expect(badgeFontRatio('15')).toBeGreaterThan(badgeFontRatio('99+'))
-    expect(badgeFontRatio('99+')).toBeLessThanOrEqual(0.4)
+describe('札の字', () => {
+  it('いちばん長い字は 99+（字の大きさはこれが丸に収まる大きさでそろえる）', () => {
+    expect(badgeText(1000)).toBe(BADGE_WIDEST_TEXT)
+    expect(BADGE_TEXT_FIT).toBeLessThan(0.8)
   })
 })
 
