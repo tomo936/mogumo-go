@@ -113,6 +113,7 @@ export function Settings(p: Props) {
             <p>データ: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a></p>
             <p>町の境目の出典: <a href="https://www.e-stat.go.jp/" target="_blank" rel="noreferrer">政府統計の総合窓口（e-Stat）</a></p>
             <p>「国勢調査 町丁・字等別境界データ」（総務省統計局）を加工して作成</p>
+            <p>地名検索: <a href="https://www.gsi.go.jp/" target="_blank" rel="noreferrer">国土地理院</a></p>
           </div>
         )}
         <a className="st__row st__link st__hp" href="https://webservice.recruit.co.jp/" target="_blank" rel="noopener noreferrer">
