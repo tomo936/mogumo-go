@@ -16,8 +16,14 @@
 .rv-ed *::before {
   box-sizing: border-box;
 }
-.rv-ed button,
 .rv-ed textarea {
+  font-family: inherit;
+}
+/* アプリ全体の button（src/index.css）の余白と青い地を消す（強さは上げない） */
+:where(.rv-ed, .zd-box, .rv-zoom) button {
+  padding: 0;
+  background: none;
+  color: inherit;
   font-family: inherit;
 }
 .rv-ed__bar {

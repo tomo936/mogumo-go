@@ -18,6 +18,12 @@ import { KIND_LABEL } from '../../shops/domain/kindLabel.ts'
 const KIND_NAME = KIND_LABEL
 
 
+// カードの名前の札: 8 字までは 1 行で真ん中、18 字を超えたら字を小さく
+const nameClass = (name: string) => {
+  const n = [...name].length
+  return n <= 8 ? 'zukan__name--short' : n > 18 ? 'zukan__name--long' : ''
+}
+
 type Props = {
   onLocate: (shop: ZukanShop) => void // 詳細の「地図で見る」
   onClose: () => void
@@ -134,7 +140,7 @@ export function Zukan({ onLocate, onClose }: Props) {
                             <img src={cardUrl(s.kind)} alt="" className="zukan__model" />
                             <span className="zukan__q">？</span>
                           </span>
-                          <span className="zukan__name">？？？</span>
+                          <span className="zukan__name zukan__name--short">？？？</span>
                           <span className="zukan__foot">
                             <span className="zukan__feat">{s.catch ?? ''}</span>
                           </span>
@@ -154,7 +160,7 @@ export function Zukan({ onLocate, onClose }: Props) {
                         <span className="zukan__art">
                           {s.photoUrl ? <img src={s.photoUrl} alt="" /> : <img src={cardUrl(s.kind)} alt="" className="zukan__model" />}
                         </span>
-                        <span className="zukan__name">{s.name}</span>
+                        <span className={`zukan__name ${nameClass(s.name)}`}>{s.name}</span>
                         <span className="zukan__foot">
                           <span className="zukan__feat">{feature(s)}</span>
                           <span className="zukan__cnt">{`${s.visits.count}回`}</span>
