@@ -55,8 +55,8 @@ export function Zukan({ onLocate, onClose }: Props) {
   const filledAll = filledCount(all)
   const percent = total === 0 ? 0 : Math.round((filledAll / total) * 100)
   const lv = levelFor(expFromCounts(all.map((s) => s.visits?.count ?? 0)))
-  // カードの下の段: お店の特徴（ホットペッパーのひと言、無ければジャンル。2026-11-12 オーナー「感想じゃなくて特徴」）
-  const feature = (s: ZukanShop) => s.catch ?? s.genreName ?? KIND_NAME[s.kind]
+  // カードの下の段: ホットペッパーのひと言。無ければはじめて行った日（カードを手に入れた日。2026-11-12 オーナー）
+  const feature = (s: ZukanShop) => s.catch ?? (s.visits ? `はじめて ${s.visits.firstDay.slice(5).replace('-', '.')}` : '')
 
   if (detail) {
     return <ZukanDetail shop={detail.shop} no={detail.no} onBack={() => setDetail(null)} onLocate={() => onLocate(detail.shop)} />

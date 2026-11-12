@@ -68,7 +68,7 @@ test('ジャンルが無いときは案内を出す', async () => {
   expect(await screen.findByText(/まだ見つけたお店がありません/)).toBeInTheDocument()
 })
 
-test('行ったカード: No.・名前・回数・お店の特徴（ひと言、無ければジャンル）', async () => {
+test('行ったカード: No.・名前・回数・お店の特徴（ひと言、無ければはじめて行った日）', async () => {
   const b: ZukanShop = { ...visited, id: 'hp:C', name: '麺屋C', catch: null, visits: { count: 6, firstDay: '2026-10-01', lastDay: '2026-11-01' } }
   load.mockResolvedValueOnce([visited, b])
   render(<Zukan onLocate={() => {}} onClose={() => {}} />)
@@ -78,7 +78,7 @@ test('行ったカード: No.・名前・回数・お店の特徴（ひと言、
   expect(a).not.toHaveTextContent('感想まだ')
   const c = screen.getByRole('button', { name: '麺屋C 6回行った' })
   expect(c).toHaveTextContent('No.002')
-  expect(c).toHaveTextContent('ラーメン')
+  expect(c).toHaveTextContent('はじめて 10.01')
   expect(c).toHaveTextContent('6回')
   expect(c).toHaveClass('zukan__card--silver')
 })
