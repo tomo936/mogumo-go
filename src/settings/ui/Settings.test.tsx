@@ -46,6 +46,7 @@ test('位置情報の使い方を押すと説明が開く、出典も開く', as
   // 町の境目（e-Stat の利用規約: 出典と、加工したことを書く）
   expect(screen.getByRole('link', { name: '政府統計の総合窓口（e-Stat）' })).toHaveAttribute('href', 'https://www.e-stat.go.jp/')
   expect(screen.getByText('「国勢調査 町丁・字等別境界データ」（総務省統計局）を加工して作成')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'M PLUS Rounded 1c' })).toHaveAttribute('href', 'https://fonts.google.com/specimen/M+PLUS+Rounded+1c')
   expect(screen.getByRole('link', { name: 'name-suggestion-index' })).toHaveAttribute('href', 'https://github.com/osmlab/name-suggestion-index')
 })
 

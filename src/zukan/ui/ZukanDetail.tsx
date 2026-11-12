@@ -16,6 +16,7 @@ const dotted = (day: string) => day.replaceAll('-', '.')
 
 type Props = {
   shop: ZukanShop
+  no?: string
   onBack: () => void
   onLocate: () => void // 地図でこのお店を見る（名前は仮）
 }

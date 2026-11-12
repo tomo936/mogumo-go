@@ -114,6 +114,7 @@ export function Settings(p: Props) {
             <p>町の境目の出典: <a href="https://www.e-stat.go.jp/" target="_blank" rel="noreferrer">政府統計の総合窓口（e-Stat）</a></p>
             <p>「国勢調査 町丁・字等別境界データ」（総務省統計局）を加工して作成</p>
             <p>地名検索: <a href="https://www.gsi.go.jp/" target="_blank" rel="noreferrer">国土地理院</a></p>
+            <p>図鑑の字体: <a href="https://fonts.google.com/specimen/M+PLUS+Rounded+1c" target="_blank" rel="noreferrer">M PLUS Rounded 1c</a>（SIL Open Font License 1.1）</p>
             <p>チェーン店の判定: <a href="https://github.com/osmlab/name-suggestion-index" target="_blank" rel="noreferrer">name-suggestion-index</a>（OpenStreetMap, BSD-3-Clause）</p>
           </div>
         )}
