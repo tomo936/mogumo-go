@@ -199,9 +199,9 @@
 .pins-off .bldg-pins {
   visibility: hidden;
 }
-/* 引いたとき（ズーム 17.5 より下）はビルのピンを隠す（まとめのピンに入る）。名前の札は残す。2026-11-13 */
-.pins-far .bldg-pin,
-.pins-far .bldg-pin__more {
+/* いちばん引いたとき（倍率 16.3 未満）は、まとめに入る 3 軒以上のビルのピンだけ隠す。名前の札と 2 軒以下のビルのピンは残す。2026-11-13 */
+.pins-far .bldg-pins--clustered .bldg-pin,
+.pins-far .bldg-pins--clustered .bldg-pin__more {
   visibility: hidden;
 }
 

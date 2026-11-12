@@ -31,16 +31,20 @@ describe('clusterFeatures', () => {
   it('1 軒の店は n=1、ビルは中のお店の数（bld=1）。霧の中・気配のお店は入れない', () => {
     const f = clusterFeatures(
       [single('hp:1'), single('osm:fog'), single('hp:hint')],
-      [bld('bld:1', ['hp:2', 'hp:3', 'hp:hint2'])],
+      [bld('bld:1', ['hp:2', 'hp:3', 'hp:4', 'hp:hint2'])],
       new Set(['osm:fog']),
       new Set(['hp:hint', 'hp:hint2']),
       new Set(['hp:2']),
     )
-    expect(f.map((x) => [x.properties.id, x.properties.n, x.properties.done, x.properties.bld])).toEqual([['hp:1', 1, 0, 0], ['bld:1', 2, 1, 1]])
+    expect(f.map((x) => [x.properties.id, x.properties.n, x.properties.done, x.properties.bld])).toEqual([['hp:1', 1, 0, 0], ['bld:1', 3, 1, 1]])
     expect(f[0].properties.kind).toBe('ramen')
   })
+  it('2 軒以下のビルはまとめに入れない（「2」の札を出さず、今までのビルのピンのまま。気配を除いて数える）', () => {
+    const f = clusterFeatures([], [bld('two', ['a', 'b']), bld('three-with-hint', ['a', 'b', 'c-hint']), bld('three', ['a', 'b', 'c'])], new Set(), new Set(['c-hint']), new Set())
+    expect(f.map((x) => x.properties.id)).toEqual(['three'])
+  })
   it('ピンを持ち上げる高さの段（模型の高さ）を付ける。ラーメンの 14m は高い模型、カフェの 8m は低い', () => {
-    const f = clusterFeatures([single('a', 'ramen', 14), single('b', 'cafe', 8)], [bld('c', ['x', 'y'], 20)], new Set(), new Set(), new Set())
+    const f = clusterFeatures([single('a', 'ramen', 14), single('b', 'cafe', 8)], [bld('c', ['x', 'y', 'z'], 20)], new Set(), new Set(), new Set())
     expect(f.map((x) => [x.properties.liftTier, x.properties.lt])).toEqual([['high', 2], ['low', 0], ['high', 2]])
   })
   it('寄ったら全部（17.5 から）。複合施設をまとめるのはいちばん引いたときだけ。3 軒以上でまとめる', () => {
