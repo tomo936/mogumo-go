@@ -1,7 +1,7 @@
-// ワールドマップ（全画面）。日本全体に、行った町を旗で出す。近い旗は数の丸にまとめる。上に検索、下に帯。
+// ワールドマップ（全画面）。日本全体に、行った町ごとに旗を立てる（数字にはまとめない。2026-11-12 オーナー）。
+// 旗は右のボタンで出す・隠す。町名の札は寄ったときだけ。上に検索、下に帯。
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Map as MapLibreMap, Marker } from 'maplibre-gl'
-import { renderToStaticMarkup } from 'react-dom/server'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import '../../map/infra/maplibreWorker.ts'
 import { MAP_THEME, STYLE_URL } from '../../map/config.ts'
@@ -9,11 +9,8 @@ import { THEMES, pickTheme } from '../../map/infra/themes.ts'
 import { themeStyle } from '../../map/infra/theme.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
 import type { TownProgress } from '../../towns/domain/progress.ts'
-import { TownIcon } from '../../towns/ui/TownIcon.tsx'
 import { boxCenter, zoomForBox } from '../domain/box.ts'
 import type { Box } from '../domain/box.ts'
-import { clusterMarks } from '../domain/cluster.ts'
-import type { TownMark } from '../domain/cluster.ts'
 import { loadTownBoxes } from '../infra/townBoxes.ts'
 import { PlaceSearch } from './PlaceSearch.tsx'
 import './world.css'
@@ -21,10 +18,14 @@ import './world.css'
 const WORLD_MIN_ZOOM = 4
 const WORLD_MAX_ZOOM = 11
 const JAPAN: [number, number] = [136.5, 37.6]
-const CLUSTER_PX = 44
-const NOT_YET_FLAG =
-  '<svg width="34" height="34" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="#cbb896"/><circle cx="20" cy="20" r="15.5" fill="#efe6d2"/><path d="M15 11.5v17.5" stroke="#8a6d4b" stroke-width="2.2" stroke-linecap="round"/><path d="M16.6 12.4h10.6l-2.9 3.9 2.9 3.9H16.6z" fill="#8a6d4b"/></svg>'
-const CLEAR_FLAG = renderToStaticMarkup(<TownIcon kind="clear" size={34} />)
+const NAME_ZOOM = 7 // これより寄ったら町名の札を出す（引いたときは旗だけ）
+// 地面に立てた旗（クリア＝橙、途中＝クリーム）。下の端が町の位置
+const flagSvg = (fill: string) =>
+  `<svg width="36" height="43" viewBox="0 0 30 36" aria-hidden="true"><ellipse cx="9" cy="33" rx="6" ry="2.2" fill="rgba(90,60,30,.25)"/><path d="M9 33V5" stroke="#7a4a26" stroke-width="2.6" stroke-linecap="round"/><path d="M10 5.5h15.5l-4 5.2 4 5.2H10z" fill="${fill}" stroke="#7a4a26" stroke-width="2" stroke-linejoin="round"/><circle cx="9" cy="4" r="2.4" fill="#f6c453" stroke="#7a4a26" stroke-width="1.4"/></svg>`
+const CLEAR_FLAG = flagSvg('#e8782f')
+const NOT_YET_FLAG = flagSvg('#fff4dc')
+
+type TownMark = { id: string; name: string; cleared: boolean; lat: number; lng: number }
 
 type Props = {
   towns: TownProgress[]
@@ -42,6 +43,10 @@ export function WorldMap({ towns, onClose, onOpen, loadBoxes = loadTownBoxes }: 
   const onOpenRef = useRef(onOpen)
   onOpenRef.current = onOpen
   const redraw = useRef<() => void>(() => {})
+  const [flags, setFlags] = useState(true) // 旗を出すか
+  const flagsRef = useRef(flags)
+  flagsRef.current = flags
+  const [far, setFar] = useState(true) // 引いて見ている（町名の札を隠す）
 
   const marks = useMemo(
     () =>
@@ -94,39 +99,24 @@ export function WorldMap({ towns, onClose, onOpen, loadBoxes = loadTownBoxes }: 
     const draw = () => {
       for (const m of markers) m.remove()
       markers = []
-      const points = marksRef.current.map((mark) => {
-        const p = map.project([mark.lng, mark.lat])
-        return { mark, x: p.x, y: p.y }
-      })
-      for (const g of clusterMarks(points, CLUSTER_PX)) {
-        const first = g.members[0]
-        const lngLat: [number, number] = [first.lng, first.lat]
-        if (g.members.length === 1) {
-          const btn = document.createElement('button')
-          btn.type = 'button'
-          btn.className = `tw ${first.cleared ? 'clear' : ''}`
-          btn.setAttribute('aria-label', first.name)
-          btn.innerHTML = (first.cleared ? CLEAR_FLAG : NOT_YET_FLAG) + `<span>${esc(first.name)}</span>`
-          btn.addEventListener('click', () => {
-            const b = boxesRef.current.get(first.id)
-            if (!b) return
-            onOpenRef.current({
-              name: first.name,
-              center: boxCenter(b),
-              zoom: zoomForBox(b, el.clientWidth || 390, el.clientHeight || 844, 13, 17),
-            })
+      if (!flagsRef.current) return
+      for (const mark of marksRef.current) {
+        const btn = document.createElement('button')
+        btn.type = 'button'
+        btn.className = `tw ${mark.cleared ? 'clear' : ''}`
+        btn.setAttribute('aria-label', mark.name)
+        btn.innerHTML = (mark.cleared ? CLEAR_FLAG : NOT_YET_FLAG) + `<span>${esc(mark.name)}</span>`
+        btn.addEventListener('click', () => {
+          const b = boxesRef.current.get(mark.id)
+          if (!b) return
+          onOpenRef.current({
+            name: mark.name,
+            center: boxCenter(b),
+            zoom: zoomForBox(b, el.clientWidth || 390, el.clientHeight || 844, 13, 17),
           })
-          markers.push(new Marker({ element: btn, anchor: 'top', offset: [0, -17] }).setLngLat(lngLat).addTo(map))
-        } else {
-          const btn = document.createElement('button')
-          btn.type = 'button'
-          btn.className = 'cl'
-          btn.setAttribute('aria-label', `${g.members.length}つの町`)
-          btn.innerHTML = `<i>${g.members.length}</i>`
-          const ll = map.unproject([g.x, g.y])
-          btn.addEventListener('click', () => map.easeTo({ center: ll, zoom: Math.min(WORLD_MAX_ZOOM, map.getZoom() + 2) }))
-          markers.push(new Marker({ element: btn, anchor: 'center' }).setLngLat([ll.lng, ll.lat]).addTo(map))
-        }
+        })
+        // 旗の竿の根元（左下寄り）が町の位置。札は旗の下に出る
+        markers.push(new Marker({ element: btn, anchor: 'top', offset: [7, -40] }).setLngLat([mark.lng, mark.lat]).addTo(map))
       }
     }
     redraw.current = draw
@@ -138,7 +128,7 @@ export function WorldMap({ towns, onClose, onOpen, loadBoxes = loadTownBoxes }: 
       }
       draw()
     })
-    map.on('moveend', draw)
+    map.on('zoomend', () => setFar(map.getZoom() < NAME_ZOOM))
     return () => {
       redraw.current = () => {}
       for (const m of markers) m.remove()
@@ -151,16 +141,26 @@ export function WorldMap({ towns, onClose, onOpen, loadBoxes = loadTownBoxes }: 
   boxesRef.current = boxes
   useEffect(() => {
     redraw.current()
-  }, [marks])
+  }, [marks, flags])
 
   const cleared = towns.filter((t) => t.clearedAt !== null).length
   return (
-    <section className="wm" aria-label="ワールドマップ">
+    <section className={`wm ${far ? 'wm--far' : ''}`} aria-label="ワールドマップ">
       <div ref={ref} className="wm-map" />
       <PlaceSearch
         onBack={onClose}
         onPick={(p) => onOpen({ name: p.title, center: { lat: p.lat, lng: p.lng }, zoom: 15 })}
       />
+      <button
+        type="button"
+        className={`wm-flags ${flags ? 'on' : ''}`}
+        aria-label={flags ? '旗を隠す' : '旗を出す'}
+        aria-pressed={flags}
+        onClick={() => setFlags((v) => !v)}
+      >
+        <span dangerouslySetInnerHTML={{ __html: flags ? CLEAR_FLAG : NOT_YET_FLAG }} />
+        <small>{flags ? '旗 ON' : '旗 OFF'}</small>
+      </button>
       <div className="wm-band" aria-label={`行った町 ${towns.length} クリア ${cleared}`}>
         <div className="cell"><b>{towns.length}</b><span>行った町</span></div>
         <div className="sep" />

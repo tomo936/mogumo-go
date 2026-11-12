@@ -61,9 +61,19 @@ test('旗を押すと町の四角に寄せて onOpen、四角が無い町は旗�
   expect(arg.zoom).toBeGreaterThanOrEqual(13)
 })
 
-test('近い町は数の丸にまとまる', async () => {
+test('近い町でも数字にまとめず、町ごとに旗を立てる', async () => {
   render(<WorldMap towns={[town('a', 'A', null), town('b', 'B', null)]} onClose={() => {}} onOpen={() => {}} loadBoxes={async () => new Map([['a', box(35, 139)], ['b', box(35, 139)]])} />)
-  await waitFor(() => expect(marker('2つの町')).toBeDefined())
+  await waitFor(() => expect(marker('A')).toBeDefined())
+  expect(marker('B')).toBeDefined()
+})
+
+test('旗のボタンで旗を隠す・また出す', async () => {
+  render(<WorldMap towns={[town('a', 'A', 1)]} onClose={() => {}} onOpen={() => {}} loadBoxes={async () => new Map([['a', box(35, 139)]])} />)
+  await waitFor(() => expect(marker('A')).toBeDefined())
+  fireEvent.click(screen.getByRole('button', { name: '旗を隠す' }))
+  expect(marker('A')).toBeUndefined()
+  fireEvent.click(screen.getByRole('button', { name: '旗を出す' }))
+  expect(marker('A')).toBeDefined()
 })
 
 test('検索の候補を押すと zoom 15 で onOpen、←で onClose', async () => {

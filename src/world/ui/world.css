@@ -27,9 +27,6 @@
 .tw.clear span{color:#a24d18;border-color:#c2652a}
 .tw.top{flex-direction:column-reverse}
 .tw.top span{margin:0 0 1px}
-.cl{position:absolute;display:flex;flex-direction:column;align-items:center;pointer-events:none}
-.cl i{font-style:normal;width:46px;height:46px;box-sizing:border-box;border-radius:50%;border:3px solid #fffdf7;background:#c2652a;color:#fff;font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2.5px #7a4a26,0 3px 6px rgba(90,60,30,.4)}
-.cl span{margin-top:5px;padding:1px 8px;border-radius:999px;background:#fffdf7;border:1.5px solid #7a4a26;font-size:12px;font-weight:800;color:#a24d18;white-space:nowrap;line-height:17px}
 /* 見るだけ */
 .vw-band{position:absolute;left:10px;right:10px;top:12px;z-index:5;background:#fffaf0;border:2.5px solid #7a4a26;border-radius:20px;box-shadow:0 4px 0 rgba(122,74,38,.25);padding:10px 52px 10px 14px;color:#4a3b2c}
 .vw-band::before{content:'';position:absolute;inset:4px;border:1.5px dashed #e3cfaa;border-radius:15px;pointer-events:none}
@@ -40,7 +37,7 @@
 .vw-back{position:absolute;left:12px;right:12px;bottom:232px;z-index:5;height:54px;border:2.5px solid #7a4a26;border-radius:999px;background:#e8782f;color:#fff;font-size:18px;font-weight:800;box-shadow:0 4px 0 #8f4a1a;display:flex;align-items:center;justify-content:center;gap:8px;padding:0}
 
 .wm,.vw{position:fixed;inset:0;z-index:60;background:#fbf1d6;font-family:inherit}
-.wm-back,.vw-back,.wm-list button,.tw,.cl{font-family:inherit}
+.wm-back,.vw-back,.wm-list button,.tw,.wm-flags{font-family:inherit}
 .wm-back{cursor:pointer}
 .wm-search{cursor:text}
 .wm-search input{flex:1;min-width:0;border:0;outline:0;background:none;font:inherit;font-size:16px;color:#4a3b2c;font-weight:700;padding:0}
@@ -50,7 +47,7 @@
 .wm-list button:first-child{border-top:0}
 .wm-list .src{padding:8px 16px;border-top:2px dashed #e3cfaa;font-size:11px;color:#8a7560;display:block}
 .wm-list .msg{padding:14px 16px;font-size:14px;color:#7a6450;font-weight:700;display:block}
-.tw,.cl{pointer-events:auto;cursor:pointer;border:0;background:none;padding:0}
+.tw{pointer-events:auto;cursor:pointer;border:0;background:none;padding:0}
 .vw-back{cursor:pointer}
 .vw-band .x{cursor:pointer}
 /* 記録のタブと地図のあいだの行（右寄せ。地図には重ねない） */
@@ -61,3 +58,11 @@
 .vw .rc-pin__done{position:absolute;right:-5px;top:-5px;display:block}
 .vw .rc-pin__done svg{display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.3))}
 .vw .rc-pin--today{width:46px}
+/* 旗（町ごと）。引いたときは札を隠して旗だけ */
+.tw svg{display:block}
+.wm--far .tw span{display:none}
+/* 旗を出す・隠すボタン（右、帯の上） */
+.wm-flags{position:absolute;right:12px;bottom:118px;z-index:5;width:58px;height:58px;border-radius:50%;border:2.5px solid #7a4a26;background:#fffaf0;box-shadow:0 3px 0 rgba(122,74,38,.3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:0;cursor:pointer;color:#7a4a26}
+.wm-flags span svg{width:24px;height:29px}
+.wm-flags small{font-size:10px;font-weight:800;line-height:1}
+.wm-flags:not(.on){background:#efe6d2;opacity:.85}
