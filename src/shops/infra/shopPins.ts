@@ -28,13 +28,13 @@ export function iconSizeAt(zoom: number): number {
   const t = Math.min(1, Math.max(0, (zoom - 16) / 2))
   return SIZE_AT_16 + (SIZE_AT_18 - SIZE_AT_16) * t
 }
-const LIFT_ZOOMS = [14, 15, 16, 17, 18, 19, 20] // 整数ズームごとに計算し、間は直線でつなぐ（誤差は数px）
+export const LIFT_ZOOMS = [14, 15, 16, 17, 18, 19, 20] // 整数ズームごとに計算し、間は直線でつなぐ（誤差は数px）
 export function liftOffsetAt(zoom: number, heightM: number): [number, number] {
   const px = LIFT_PX_PER_M_AT_17_5 * heightM * 2 ** (zoom - 17.5)
   return [0, -Math.round((px / iconSizeAt(zoom)) * 10) / 10]
 }
 // 式は配列を動的に作れないので、ズームごとに「段 → literal」の match を用意する
-const ICON_OFFSET = [
+export const ICON_OFFSET = [
   'interpolate',
   ['linear'],
   ['zoom'],

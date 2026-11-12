@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BADGE_TEXT_FIT, BADGE_WIDEST_TEXT, badgeText, clusterFeatures, clusterScale, CLUSTER_UNTIL_ZOOM } from './cluster.ts'
+import { BADGE_TEXT_FIT, BADGE_WIDEST_TEXT, badgeText, BUILDING_CLUSTER_UNTIL_ZOOM, clusterFeatures, clusterScale, CLUSTER_MIN_POINTS, CLUSTER_UNTIL_ZOOM } from './cluster.ts'
 
 describe('badgeText', () => {
   it('99 までは数字、100 以上は 99+', () => {
@@ -26,19 +26,27 @@ describe('clusterScale', () => {
 })
 
 describe('clusterFeatures', () => {
-  const single = (id: string, model = 'ramen') => ({ id, model, lat: 35, lng: 139, shopIds: [id] })
-  it('1 軒の店は n=1、ビルは中のお店の数。霧の中・気配のお店は入れない', () => {
+  const single = (id: string, model = 'ramen', sizeM = 14) => ({ id, model, lat: 35, lng: 139, shopIds: [id], sizeM })
+  const bld = (id: string, shopIds: string[], topM = 12) => ({ id, lat: 35, lng: 139, shopIds, topM })
+  it('1 軒の店は n=1、ビルは中のお店の数（bld=1）。霧の中・気配のお店は入れない', () => {
     const f = clusterFeatures(
       [single('hp:1'), single('osm:fog'), single('hp:hint')],
-      [{ id: 'bld:1', lat: 35, lng: 139, shopIds: ['hp:2', 'hp:3', 'hp:hint2'] }],
+      [bld('bld:1', ['hp:2', 'hp:3', 'hp:hint2'])],
       new Set(['osm:fog']),
       new Set(['hp:hint', 'hp:hint2']),
       new Set(['hp:2']),
     )
-    expect(f.map((x) => [x.properties.id, x.properties.n, x.properties.done])).toEqual([['hp:1', 1, 0], ['bld:1', 2, 1]])
+    expect(f.map((x) => [x.properties.id, x.properties.n, x.properties.done, x.properties.bld])).toEqual([['hp:1', 1, 0, 0], ['bld:1', 2, 1, 1]])
     expect(f[0].properties.kind).toBe('ramen')
   })
-  it('寄ったら全部（ズーム 17.5 から）', () => {
+  it('ピンを持ち上げる高さの段（模型の高さ）を付ける。ラーメンの 14m は高い模型、カフェの 8m は低い', () => {
+    const f = clusterFeatures([single('a', 'ramen', 14), single('b', 'cafe', 8)], [bld('c', ['x', 'y'], 20)], new Set(), new Set(), new Set())
+    expect(f.map((x) => [x.properties.liftTier, x.properties.lt])).toEqual([['high', 2], ['low', 0], ['high', 2]])
+  })
+  it('寄ったら全部（17.5 から）。複合施設をまとめるのはいちばん引いたときだけ。3 軒以上でまとめる', () => {
     expect(CLUSTER_UNTIL_ZOOM).toBe(17.5)
+    expect(BUILDING_CLUSTER_UNTIL_ZOOM).toBeGreaterThan(16)
+    expect(BUILDING_CLUSTER_UNTIL_ZOOM).toBeLessThan(CLUSTER_UNTIL_ZOOM)
+    expect(CLUSTER_MIN_POINTS).toBe(3)
   })
 })

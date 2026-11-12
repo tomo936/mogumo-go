@@ -10,7 +10,7 @@ import { clusterSpots, pinLayout, pinScale } from '../domain/pins.ts'
 import type { Shop } from '../domain/shop.ts'
 import { projectAt } from '../../lib/threeLayer.ts'
 import { PIN_ICON } from './pinIcons.ts'
-import { CLUSTER_UNTIL_ZOOM } from '../domain/cluster.ts'
+import { BUILDING_CLUSTER_UNTIL_ZOOM } from '../domain/cluster.ts'
 import { screenScale } from './screenScale.ts'
 import type { PlacedShop } from './shopLayer.ts'
 
@@ -247,8 +247,9 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
   map.on('render', fit) // 3D を描いたあと（そのコマのカメラ）で合わせる
 
   const container = map.getContainer()
-  // 引いたとき（ズーム 17.5 より下）はビルのピンを隠す（shopClusters のまとめに入る）。名前の札は残す。2026-11-13
-  const farClass = () => container.classList.toggle(FAR_CLASS, map.getZoom() < CLUSTER_UNTIL_ZOOM)
+  // いちばん引いたとき（BUILDING_CLUSTER_UNTIL_ZOOM より下）だけビルのピンを隠す（shopClusters のまとめに入る）。名前の札は残す。
+  // それ以外は今までのビルのピン（「6/6」など。2026-11-13 オーナー）
+  const farClass = () => container.classList.toggle(FAR_CLASS, map.getZoom() < BUILDING_CLUSTER_UNTIL_ZOOM)
   map.on('zoom', farClass)
   farClass()
 
