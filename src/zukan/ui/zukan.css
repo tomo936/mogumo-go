@@ -1,449 +1,533 @@
-/* お店図鑑（手帳風）。参考: 2026-11-10 オーナーのイメージ画像。装飾は CSS（絵の素材はミシェーラに依頼予定） */
+/* お店図鑑（案B コレクションカード。見本 .superpowers/preview/zukan2/ の .dB。2026-11-12 オーナー決定）
+   丸い字体は図鑑・図鑑の詳細・感想の画面だけ（使う字の範囲だけ読む） */
+@import '@fontsource/m-plus-rounded-1c/500.css';
+@import '@fontsource/m-plus-rounded-1c/800.css';
+
+.zukan,
+.zd {
+  font-family: 'M PLUS Rounded 1c', system-ui, sans-serif;
+}
+.zukan *,
+.zd * {
+  box-sizing: border-box;
+}
+.zukan button,
+.zd button {
+  font-family: inherit;
+}
+
 .zukan {
   position: fixed;
   inset: 0;
   z-index: 30;
   overflow-y: auto;
-  padding: calc(10px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom));
-  color: #4a3b2c;
-  background-color: #f3e9d6;
-  background-image: radial-gradient(rgba(120, 90, 50, 0.07) 1px, transparent 1px);
-  background-size: 14px 14px;
+  padding: env(safe-area-inset-top) 0 calc(18px + env(safe-area-inset-bottom));
+  color: #5a3a1e;
+  background: #fff6e4 repeating-linear-gradient(-45deg, transparent 0 14px, rgba(255, 200, 140, 0.12) 14px 28px);
 }
 .zukan__banner {
   position: relative;
-  margin: 4px 0 12px;
-  padding: 16px 16px 14px;
-  background: #fbf6ea;
-  box-shadow: 0 2px 6px rgba(90, 60, 30, 0.15);
-  /* 紙のちぎれた縁 */
-  clip-path: polygon(0 3%, 4% 0, 10% 2%, 18% 0, 27% 2%, 36% 0, 45% 2%, 55% 0, 64% 2%, 73% 0, 82% 2%, 91% 0, 100% 3%, 98% 50%, 100% 97%, 92% 100%, 80% 98%, 68% 100%, 55% 98%, 42% 100%, 30% 98%, 18% 100%, 6% 98%, 0 100%, 2% 50%);
+  padding: 14px 16px 10px;
 }
-.zukan__banner::before {
-  /* テープ */
-  content: '';
+.zukan__close {
   position: absolute;
-  top: -8px;
-  left: 14%;
-  width: 62px;
-  height: 18px;
-  background: rgba(170, 205, 220, 0.75);
-  transform: rotate(-4deg);
+  right: 14px;
+  top: 14px;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: #8a5a32;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
 }
 .zukan__title {
-  margin: 0;
+  margin: 2px 0 10px;
   text-align: center;
-  font-size: 30px;
+}
+.zukan__title span {
+  display: inline-block;
+  padding: 7px 30px;
+  font-size: 22px;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  color: #6b4a2b;
+  letter-spacing: 0.08em;
+  color: #fff;
+  background: #e8782f;
+  clip-path: polygon(0 0, 100% 0, 94% 50%, 100% 100%, 0 100%, 6% 50%);
+  text-shadow: 0 2px 0 #b5531a;
 }
 .zukan__progress {
-  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: #fff;
+  border: 2.5px solid #4a2f18;
+  box-shadow: 3px 3px 0 #4a2f18;
+}
+.zukan__ring {
+  --p: 0;
+  position: relative;
+  flex: none;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(#e8782f calc(var(--p) * 1%), #f6e3cc 0);
+}
+.zukan__ring::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: #fff;
+}
+.zukan__ring b {
+  position: relative;
+  font-size: 18px;
+  font-weight: 800;
+  color: #e8782f;
+}
+.zukan__ring small {
+  font-size: 11px;
+}
+.zukan__pt {
+  flex: 1;
+  min-width: 0;
+}
+.zukan__l1 {
+  font-weight: 800;
+  font-size: 15px;
+}
+.zukan__l1 span {
+  margin-left: 6px;
   font-size: 12px;
-  color: #7a6450;
-  text-align: center;
+  font-weight: 500;
+  opacity: 0.8;
 }
 .zukan__bar {
-  margin-top: 6px;
-  height: 8px;
-  border-radius: 4px;
-  background: #e4ddcc;
+  height: 10px;
+  margin: 6px 0 4px;
+  border-radius: 99px;
   overflow: hidden;
+  background: #f6e3cc;
 }
 .zukan__bar i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #9fd3b5, #6cbf93);
+  border-radius: 99px;
+  background: repeating-linear-gradient(-45deg, #ffb04f 0 8px, #ff9a2e 8px 16px);
 }
-.zukan__close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  box-sizing: border-box;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-  color: #6b4a2b;
-  font-size: 20px;
-  line-height: 1;
+.zukan__next {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.75;
 }
 .zukan__note {
-  margin: 16px 0;
-  font-size: 14px;
-  color: #7a6450;
+  margin: 24px 16px;
   text-align: center;
+  font-weight: 500;
 }
 .zukan__tabs {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   overflow-x: auto;
-  padding: 2px 0 6px;
+  padding: 4px 16px 10px;
+  scrollbar-width: none;
+}
+.zukan__tabs::-webkit-scrollbar {
+  display: none;
 }
 .zukan__tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   flex: none;
-  padding: 6px 12px;
-  border: 1px solid #d8c9ad;
-  border-radius: 999px;
-  background: #fbf6ea;
-  color: #7a6450;
+  height: 36px;
+  padding: 0 12px 0 6px;
+  border-radius: 99px;
+  border: 2px solid #d9b48f;
+  background: #fff;
+  color: #8a5a32;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
+}
+.zukan__tab img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
 }
 .zukan__tab--on {
-  border-color: #6cbf93;
-  background: #6cbf93;
+  background: #8a5a32;
+  border-color: #8a5a32;
   color: #fff;
 }
 .zukan__summary {
   display: flex;
-  justify-content: space-between;
-  margin: 8px 4px 10px;
-  font-size: 14px;
-  color: #7a6450;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 18px 8px;
+  font-weight: 800;
 }
 .zukan__summary b {
-  color: #c2652a;
+  font-size: 20px;
+  color: #e8782f;
+}
+.zukan__summary small {
+  font-size: 13px;
+  opacity: 0.7;
 }
 .zukan__grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 12px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px 10px;
   margin: 0;
-  padding: 0;
+  padding: 4px 14px 8px;
   list-style: none;
 }
 .zukan__grid > li {
-  display: flex;
   min-width: 0;
 }
 .zukan__card {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  box-sizing: border-box;
-  min-width: 0;
-  padding: 10px 10px 14px;
-  border: 0;
-  border-radius: 4px;
-  background: #fffdf7;
-  box-shadow: 0 3px 8px rgba(90, 60, 30, 0.18);
+  display: block;
+  width: 100%;
+  border: 2.5px solid #4a2f18;
+  border-radius: 12px;
+  padding: 4px 4px 6px;
   text-align: center;
-  font: inherit;
-  color: inherit;
+  color: #4a2f18;
+  box-shadow: 3px 3px 0 #4a2f18;
 }
-.zukan__card:nth-child(even) {
-  transform: rotate(1deg);
-}
-.zukan__card:nth-child(odd) {
-  transform: rotate(-1deg);
-}
-.zukan__card--gold {
-  box-shadow: 0 0 0 2px #f2c94c, 0 3px 8px rgba(242, 180, 0, 0.3);
+.zukan__card--visited {
+  /* 金属はグラデーションでなく、平らな地＋くっきりした光の帯 2 本＋右下の濃い縁（アニメ塗り。2026-11-12 オーナー「AI っぽい」→ 案1 改） */
+  --m: #d98a4e;
+  --hi: #f3b685;
+  --lo: #a65a28;
+  background: linear-gradient(118deg, var(--m) 0 58%, var(--hi) 58% 66%, var(--m) 66% 71%, var(--hi) 71% 74%, var(--m) 74%);
+  box-shadow: inset -4px -4px 0 var(--lo), 3px 3px 0 #4a2f18;
 }
 .zukan__card--silver {
-  box-shadow: 0 0 0 2px #c9d3e2, 0 3px 8px rgba(90, 60, 30, 0.18);
+  --m: #c3cdd8;
+  --hi: #eef3f8;
+  --lo: #8d9cad;
 }
-.zukan__name {
+.zukan__card--gold {
+  --m: #f5c330;
+  --hi: #ffe68a;
+  --lo: #c98a00;
+}
+.zukan__card--unknown {
+  background: #b9a6e8;
+}
+.zukan__no {
   display: block;
-  min-height: 2.6em;
-  font-size: 14px;
+  padding-left: 2px;
+  text-align: left;
+  font-size: 9px;
   font-weight: 800;
-  line-height: 1.3;
-  color: #4a3b2c;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  letter-spacing: 0.06em;
+  color: #4a2f18;
 }
-.zukan__polaroid {
-  display: block;
+.zukan__art {
   position: relative;
-  aspect-ratio: 1 / 1;
-  margin-top: 4px;
-  padding: 6px;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  display: block;
+  aspect-ratio: 1;
   overflow: hidden;
+  margin-top: 3px;
+  border-radius: 8px;
+  background: #fffaf0;
+  border: 2px solid #4a2f18;
 }
-.zukan__polaroid img {
+.zukan__art img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 2px;
 }
-.zukan__polaroid img.zukan__model {
+.zukan__art img.zukan__model {
   object-fit: contain;
-  background: #f3efe6;
 }
-.zukan__polaroid--blur img {
-  filter: blur(5px) grayscale(0.6) brightness(0.92);
-  transform: scale(1.1);
+.zukan__card--unknown .zukan__art {
+  background: #a08bd8;
 }
-.zukan__stamp {
+.zukan__card--unknown .zukan__art img {
+  filter: brightness(0) opacity(0.22);
+}
+.zukan__q {
   position: absolute;
-  top: 44px;
-  right: 6px;
-  padding: 2px 6px;
-  border: 2px solid #5fae85;
-  border-radius: 4px;
-  color: #3f9a6c;
-  font-size: 11px;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
   font-weight: 800;
-  transform: rotate(-12deg);
-  background: rgba(255, 253, 247, 0.85);
+  color: #fff;
+  text-shadow: 0 2px 0 #6f5aa8;
 }
-.zukan__chip {
-  align-self: center;
-  margin-top: 8px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: #f6e7b0;
+.zukan__name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 29px;
+  margin-top: 5px;
+  padding: 0 4px;
+  border: 2px solid #4a2f18;
+  border-radius: 6px;
+  overflow: hidden;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.25;
+  background: #fff;
+  color: #4a2f18;
+}
+.zukan__card--unknown .zukan__name {
+  border-color: transparent;
+  background: none;
+  color: #fff;
+}
+.zukan__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2px;
+  margin-top: 3px;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #4a2f18;
+}
+.zukan__stars {
+  font-size: 10px;
+  letter-spacing: -1px;
+  color: #e0560f;
+}
+.zukan__stars.zukan__stars--none {
+  font-size: 9px;
+  letter-spacing: 0;
   color: #6b4a2b;
-  font-size: 12px;
-  font-weight: 700;
 }
-.zukan__chip--hint {
-  background: #f7d9d0;
+.zukan__cnt {
+  padding: 1px 5px;
+  border-radius: 99px;
+  background: #4a2f18;
+  color: #fff;
 }
 .zukan__hint {
-  margin-top: 6px;
-  font-size: 11px;
-  line-height: 1.4;
-  color: #7a6450;
+  display: block;
+  width: 100%;
+  margin-top: 3px;
   overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #fff;
+  opacity: 0.9;
 }
 .zukan__pager {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 16px;
-  margin-top: 16px;
-  font-size: 14px;
-  color: #7a6450;
+  gap: 18px;
+  padding: 8px 0 24px;
+  font-weight: 800;
 }
 .zukan__pager button {
   width: 40px;
   height: 40px;
   border: 0;
   border-radius: 50%;
-  background: #fffdf7;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-  font-size: 20px;
-  color: #6b4a2b;
+  background: #8a5a32;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
 }
 .zukan__pager button:disabled {
   opacity: 0.35;
 }
-.explore-sheet__zukan {
-  display: block;
-  width: 100%;
-  margin-top: 10px;
-  padding: 10px;
-  border: 2px solid #6cbf93;
-  border-radius: 999px;
-  background: #fff;
-  color: #3f9a6c;
-  font-weight: 700;
-}
-.zukan__next { display: block; margin-top: 2px; color: #9a8570; }
 
-/* ---- 図鑑カード詳細（手帳風・2026-11-10）。後で入れる枠は点線 ---- */
+/* ---------- 詳細 ---------- */
 .zd {
   position: fixed;
   inset: 0;
   z-index: 31;
   overflow-y: auto;
-  padding: calc(10px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom));
-  background-color: #f3e9d6;
-  color: #4a3b2c;
+  padding: env(safe-area-inset-top) 0 calc(26px + env(safe-area-inset-bottom));
+  color: #5a3a1e;
+  background: #fff6e4 repeating-linear-gradient(-45deg, transparent 0 14px, rgba(255, 200, 140, 0.12) 14px 28px);
 }
 .zd__bar {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
-}
-.zd__bar h2 {
-  margin: 0;
-  font-size: 18px;
-  color: #6b4a2b;
+  padding: 14px 16px 6px;
+  font-weight: 800;
 }
 .zd__back {
-  padding: 0; /* 共通の button の余白で中身が潰れる（iPhone） */
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border: 0;
   border-radius: 50%;
-  background: #fffdf7;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-  font-size: 18px;
-  color: #6b4a2b;
-}
-.zd__paper {
-  padding: 16px 14px 20px;
-  background: #fbf6ea;
-  box-shadow: 0 3px 10px rgba(90, 60, 30, 0.2);
-  border-radius: 4px;
-}
-.zd__title {
-  text-align: center;
-  font-size: 22px;
+  background: #8a5a32;
+  color: #fff;
+  font-size: 24px;
   font-weight: 800;
-  color: #6b4a2b;
-  padding: 6px 4px 12px;
+  line-height: 1;
 }
-.zd__photo {
+.zd__hero {
+  --m: #d98a4e;
+  --hi: #f3b685;
+  --lo: #a65a28;
   position: relative;
-  margin: 8px auto 4px;
-  width: 78%;
-  aspect-ratio: 1 / 1;
-  padding: 8px 8px 22px;
-  background: #fff;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
-  transform: rotate(-1.5deg);
+  margin: 4px 18px 0;
+  padding: 12px 12px 14px;
+  border: 3px solid #4a2f18;
+  border-radius: 22px;
+  background: linear-gradient(118deg, var(--m) 0 60%, var(--hi) 60% 67%, var(--m) 67% 72%, var(--hi) 72% 75%, var(--m) 75%);
+  box-shadow: inset -6px -6px 0 var(--lo), 5px 5px 0 #4a2f18;
 }
-.zd__photo img {
+.zd__hero--silver {
+  --m: #c3cdd8;
+  --hi: #eef3f8;
+  --lo: #8d9cad;
+}
+.zd__hero--gold {
+  --m: #f5c330;
+  --hi: #ffe68a;
+  --lo: #c98a00;
+}
+.zd__art {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #fffaf0;
+  border: 2.5px solid #4a2f18;
+}
+.zd__art img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 2px;
 }
-.zd__photo img.zd__model {
+.zd__art img.zd__model {
   object-fit: contain;
-  background: #f3efe6;
-}
-.zd__photo--blur img {
-  filter: blur(6px) grayscale(0.6) brightness(0.92);
-  transform: scale(1.1);
-}
-.zd__tape {
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  width: 70px;
-  height: 18px;
-  margin-left: -35px;
-  background: rgba(170, 205, 220, 0.75);
-  transform: rotate(3deg);
 }
 .zd__label {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 4px;
+  left: 8px;
+  bottom: 8px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 10px;
+  font-weight: 800;
+}
+.zd__name {
+  margin: 10px 0 8px;
+  padding: 6px;
+  border: 2.5px solid #4a2f18;
+  border-radius: 12px;
+  background: #fff;
+  color: #4a2f18;
   text-align: center;
-  font-size: 11px;
-  color: #8a6d4b;
-}
-.zd__stamp {
-  position: relative;
-  width: 132px;
-  margin: 10px 0 0 auto;
-  padding: 6px 8px;
-  border: 3px solid #c2652a;
-  border-radius: 6px;
-  color: #c2652a;
-  text-align: center;
-  transform: rotate(-8deg);
-  opacity: 0.9;
-}
-.zd__stamp b {
-  display: block;
-  font-size: 14px;
-}
-.zd__stamp span {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 800;
 }
 .zd__chips {
   display: flex;
   justify-content: center;
-  gap: 8px;
-  margin: 12px 0 6px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 .zd__chip {
-  padding: 3px 12px;
-  border-radius: 999px;
-  background: #f6e7b0;
-  color: #6b4a2b;
-  font-size: 12px;
-  font-weight: 700;
-}
-.zd__chip--blue {
-  background: #d6e6f7;
-  color: #2f62c0;
-}
-.zd__catch {
-  margin: 6px 4px 12px;
-  font-size: 13px;
-  line-height: 1.6;
-  text-align: center;
-  color: #7a6450;
-}
-.zd__record {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  margin: 10px 0;
-  text-align: center;
-  font-size: 11px;
-  color: #7a6450;
-}
-.zd__record b {
-  display: block;
-  font-size: 14px;
-  color: #4a3b2c;
-}
-.zd__box {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #fffdf7;
-  font-size: 13px;
-}
-.zd__box--dashed {
-  border: 2px dashed #cbb896;
-  background: transparent;
-}
-.zd__box-title {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 26px;
+  padding: 0 10px;
+  border: 2px solid #4a2f18;
+  border-radius: 99px;
+  background: #fff;
+  color: #4a2f18;
   font-size: 12px;
   font-weight: 800;
-  color: #8a6d4b;
-  margin-bottom: 4px;
 }
-.zd__box p {
-  margin: 0;
-  color: #9a8570;
+.zd__chip img {
+  width: 20px;
+  height: 20px;
+  margin-left: -5px;
+}
+.zd__chip--tier {
+  background: #4a2f18;
+  color: #ffe68a;
+}
+.zd__catch {
+  margin: 10px 4px 0;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #4a2f18;
+}
+.zd__stamp {
+  position: absolute;
+  right: -6px;
+  top: 18px;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  transform: rotate(-14deg);
+  border: 3px solid #e2452f;
+  color: #e2452f;
+  background: #fffd;
+  font-weight: 800;
+}
+.zd__stamp b {
+  font-size: 14px;
+}
+.zd__stamp span {
+  font-size: 10px;
+}
+.zd__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 18px 18px 0;
+}
+.zd__stats div {
+  padding: 10px 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  background: #fff;
+  border: 2.5px solid #4a2f18;
+  border-radius: 16px;
+  box-shadow: 3px 3px 0 #4a2f18;
+}
+.zd__stats b {
+  display: block;
+  font-size: 19px;
+  font-weight: 800;
+  color: #e8782f;
+}
+.zd__stats small {
+  font-size: 11px;
 }
 .zd__locate {
   display: block;
-  width: 100%;
-  margin-top: 16px;
-  padding: 12px;
-  border: 0;
-  border-radius: 999px;
-  background: #6cbf93;
+  width: calc(100% - 36px);
+  height: 52px;
+  margin: 18px auto 0;
+  border: 2.5px solid #8a5a32;
+  border-radius: 99px;
+  background: #e8782f;
   color: #fff;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
-}
-.zd__note {
-  margin: 14px 0 0;
-  text-align: center;
-  font-size: 12px;
-  color: #9a8570;
+  box-shadow: 0 5px 0 #8a5a32;
 }

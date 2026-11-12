@@ -41,6 +41,10 @@ import { nextStatus } from '../map/domain/locationStatus.ts'
 import { syncUntilSettled } from '../towns/infra/townsApi.ts'
 import type { TownNews, TownSync } from '../towns/domain/progress.ts'
 import { TownBanner } from '../towns/ui/TownBanner.tsx'
+import { ReviewEditor } from '../reviews/ui/ReviewEditor.tsx'
+import { loadLatest, loadSummary } from '../reviews/infra/reviewsApi.ts'
+import type { Review } from '../reviews/domain/review.ts'
+import { jstDay } from '../checkin/domain/day.ts'
 
 const SHOPS_ERROR_BANNER_MS = 6000
 const PINS_HIDDEN_KEY = 'mogumo.pinsHidden' // ピンを出さない設定（その端末だけ。読めなくても動く）
@@ -52,6 +56,8 @@ function loadPinsHidden(): boolean {
     return false
   }
 }
+
+const REVIEW_OFFER_MS = 10_000 // チェックインの後に「感想を書く」を出しておく時間
 
 export function MapPage() {
   const { session, signOut } = useAuth()
@@ -86,6 +92,27 @@ export function MapPage() {
   const [checkinError, setCheckinError] = useState<CheckinError | null>(null)
   const [effect, setEffect] = useState<{ coins: 0 | 30 | 40; reveal: string | null; key: number; exp: number; levelUp: number | null } | null>(null)
   const [doneToday, setDoneToday] = useState(false)
+  // チェックインの直後の「感想を書く」: 成功で持ち、演出が終わったら 10 秒出す。新しいチェックインで置き換わる
+  const [reviewOffer, setReviewOffer] = useState<{ checkinId: string; shop: Shop; shown: boolean } | null>(null)
+  // お店のシートの「みんなの感想」。シートを開いたときだけ読み、店が替われば古い返事は捨てる
+  const [sheetReviews, setSheetReviews] = useState<{ shopId: string; summary: { avg: number; count: number } | null; latest: Review[] } | null>(null)
+  const selectedId = selected?.id ?? null
+  useEffect(() => {
+    if (!selectedId) return
+    let alive = true
+    Promise.all([loadSummary(selectedId), loadLatest(selectedId)])
+      .then(([summary, latest]) => alive && setSheetReviews({ shopId: selectedId, summary, latest }))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [selectedId])
+  const [reviewing, setReviewing] = useState<{ checkinId: string; shop: Shop; day: string } | null>(null)
+  useEffect(() => {
+    if (!reviewOffer?.shown) return
+    const t = setTimeout(() => setReviewOffer(null), REVIEW_OFFER_MS)
+    return () => clearTimeout(t)
+  }, [reviewOffer])
   const [record, setRecord] = useState<{ visits: Visits | null; ready: boolean }>({ visits: null, ready: false })
   const [exploreOpen, setExploreOpen] = useState(false)
   const [pickedHint, setPickedHint] = useState<string | null>(null)
@@ -267,6 +294,7 @@ export function MapPage() {
       const before = levelFor(exp).level
       const after = levelFor(exp + gain).level
       setExp(exp + gain)
+      setReviewOffer({ checkinId: result.checkinId, shop: posted, shown: false })
       setEffect({ coins: result.coins, reveal: maskedBefore ? posted.name : null, key: ++effectSeq.current, exp: gain, levelUp: after > before ? after : null })
       if (result.wasHint) hints.markCompleted(posted)
       mapRef.current?.checkin(posted, result.newCells)
@@ -350,6 +378,7 @@ export function MapPage() {
           doneToday={doneToday}
           hint={hints.hintFor(selected)}
           masked={hints.isMasked(selected)}
+          reviews={sheetReviews?.shopId === selected.id ? sheetReviews : null}
           busy={busy}
           error={checkinError}
           onCheckin={() => void checkin()}
@@ -440,8 +469,35 @@ export function MapPage() {
       )}
       {effect && <CheckinEffect key={effect.key} coins={effect.coins} exp={effect.exp} levelUp={effect.levelUp} reveal={effect.reveal} onDone={() => {
             setEffect(null)
+            setReviewOffer((o) => (o ? { ...o, shown: true } : o))
             if (!selectedRef.current) mapRef.current?.unfocus() // 演出が終わったらカメラを自分に戻す
           }} />}
+      {!effect && reviewOffer?.shown && (
+        <button
+          type="button"
+          className="review-offer"
+          aria-label="感想を書く"
+          onClick={() => {
+            setReviewing({ checkinId: reviewOffer.checkinId, shop: reviewOffer.shop, day: jstDay(new Date()) })
+            setReviewOffer(null)
+          }}
+        >
+          ✎ 感想を書く
+        </button>
+      )}
+      {reviewing && (
+        <ReviewEditor
+          shopName={reviewing.shop.name}
+          shopId={reviewing.shop.id}
+          checkinId={reviewing.checkinId}
+          visitDay={reviewing.day}
+          existing={null}
+          existingPhotoUrl={null}
+          onSaved={() => setReviewing(null)}
+          onDeleted={() => setReviewing(null)}
+          onClose={() => setReviewing(null)}
+        />
+      )}
       <div className="map-overlay">
         <LocationOverlay status={status} onRetry={retry} onReload={() => window.location.reload()} />
         {shopsError && <p className="location-banner">お店を読み込めませんでした</p>}

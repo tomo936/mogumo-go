@@ -5,6 +5,7 @@ import { AuthContext } from '../auth/AuthContext.ts'
 import type { LatLng } from '../map/domain/geo.ts'
 import type { LocationEvent } from '../map/domain/locationStatus.ts'
 import type { Shop } from '../shops/domain/shop.ts'
+import { EFFECT_MS } from '../checkin/ui/CheckinEffect.tsx'
 import { MapPage } from './MapPage.tsx'
 
 vi.mock('../checkin/ui/confetti.ts', () => ({ startConfetti: () => () => {} }))
@@ -17,6 +18,14 @@ const expressCalls: string[] = []
 const unfocusCalls: number[] = []
 const postCheckin = vi.fn()
 vi.mock('../checkin/infra/checkinApi.ts', () => ({ postCheckin: (...a: unknown[]) => postCheckin(...a), loadProgress: () => Promise.resolve({ visitsByShop: new Map() }) }))
+const loadSummary = vi.fn(async (_id: string): Promise<{ avg: number; count: number } | null> => null)
+const loadLatest = vi.fn(async (_id: string) => [] as unknown[])
+vi.mock('../reviews/infra/reviewsApi.ts', () => ({
+  loadSummary: (id: string) => loadSummary(id),
+  loadLatest: (id: string) => loadLatest(id),
+  saveReview: async () => { throw new Error('x') },
+  deleteReview: async () => {},
+}))
 vi.mock('../mypage/infra/coins.ts', () => ({ loadCoins: () => Promise.resolve(420) }))
 const syncMissions = vi.fn()
 vi.mock('../missions/infra/missionsApi.ts', () => ({ syncMissions: (...a: unknown[]) => syncMissions(...a) }))
@@ -473,4 +482,62 @@ test('画面を離れたら、町の呼び直しは止まる（alive が false�
   expect(opts.alive()).toBe(true)
   unmount()
   expect(opts.alive()).toBe(false)
+})
+
+// ---- チェックインの直後の「感想を書く」（10 秒） ----
+test('演出が終わると「感想を書く」が出て、10 秒で消える', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  postCheckin.mockReset()
+  postCheckin.mockResolvedValue({ ok: true, checkinId: 'c1', coins: 30, newCells: [] })
+  renderPage()
+  act(() => last().position(here))
+  act(() => last().select(shop))
+  await user.click(screen.getByRole('button', { name: 'チェックイン' }))
+  await screen.findByText('チェックイン完了') // 演出が出てから時間を進める
+  expect(screen.queryByRole('button', { name: '感想を書く' })).not.toBeInTheDocument()
+  act(() => { vi.advanceTimersByTime(EFFECT_MS + 50) })
+  expect(screen.getByRole('button', { name: '感想を書く' })).toBeInTheDocument()
+  act(() => { vi.advanceTimersByTime(10_000) })
+  expect(screen.queryByRole('button', { name: '感想を書く' })).not.toBeInTheDocument()
+})
+
+test('押すとエディターがそのお店で開く。出ている間に別のチェックインをしたら新しい方になる', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  postCheckin.mockReset()
+  postCheckin.mockResolvedValueOnce({ ok: true, checkinId: 'c1', coins: 30, newCells: [] })
+  postCheckin.mockResolvedValueOnce({ ok: true, checkinId: 'c2', coins: 30, newCells: [] })
+  renderPage()
+  act(() => last().position(here))
+  act(() => last().select(shop))
+  await user.click(screen.getByRole('button', { name: 'チェックイン' }))
+  await screen.findByText('チェックイン完了') // 演出が出てから時間を進める
+  act(() => { vi.advanceTimersByTime(EFFECT_MS + 50) })
+  expect(screen.getByRole('button', { name: '感想を書く' })).toBeInTheDocument()
+  const other: Shop = { ...shop, id: 'hp:J2', name: 'カフェもぐ' }
+  act(() => last().select(other))
+  await user.click(screen.getByRole('button', { name: 'チェックイン' }))
+  await screen.findByText('チェックイン完了') // 演出が出てから時間を進める
+  act(() => { vi.advanceTimersByTime(EFFECT_MS + 50) })
+  await user.click(screen.getByRole('button', { name: '感想を書く' }))
+  expect(screen.getByRole('dialog', { name: '感想を書く' })).toHaveTextContent('カフェもぐ')
+})
+
+test('シートを開くとみんなの感想を読む。店が替われば古い返事は捨てる', async () => {
+  let slow: (v: { avg: number; count: number }) => void = () => {}
+  loadSummary.mockReset()
+  loadSummary.mockImplementation((id: string) => (id === 'hp:J1' ? new Promise((r) => { slow = r }) : Promise.resolve({ avg: 3.5, count: 2 })))
+  loadLatest.mockReset()
+  loadLatest.mockResolvedValue([])
+  renderPage()
+  act(() => last().position(here))
+  act(() => last().select(shop))
+  expect(loadSummary).toHaveBeenCalledWith('hp:J1')
+  const other: Shop = { ...shop, id: 'hp:J2', name: 'カフェもぐ' }
+  act(() => last().select(other))
+  await userEvent.click(screen.getByRole('button', { name: 'くわしく見る' }))
+  expect(await screen.findByText('みんなの感想 ★3.5（2件）')).toBeInTheDocument()
+  await act(async () => { slow({ avg: 1, count: 1 }) })
+  expect(screen.queryByText('みんなの感想 ★1.0（1件）')).not.toBeInTheDocument()
 })
