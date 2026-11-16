@@ -58,7 +58,7 @@ function glowTexture(): THREE.Texture {
 }
 
 // お店の足元に置く光のたまり（地面に平らな丸。足し算で明るくする）
-export const GLOW_SCALE = 2.4 // お店の幅の何倍の丸か
+export const GLOW_SCALE = 3.0 // お店の幅の何倍の丸か
 export function glowMesh(count: number): THREE.InstancedMesh {
   const geo = new THREE.PlaneGeometry(1, 1)
   geo.rotateX(-Math.PI / 2)
@@ -66,7 +66,7 @@ export function glowMesh(count: number): THREE.InstancedMesh {
     map: glowTexture(),
     color: '#ffb260',
     transparent: true,
-    opacity: 0.85,
+    opacity: 1,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   })
