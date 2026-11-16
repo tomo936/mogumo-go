@@ -377,6 +377,17 @@ test('地図の店とホットペッパーの同じ店は1軒にまとまり、h
   expect(world.shopsNear().map((s) => s.id)).toEqual(['hp:J1'])
 })
 
+test('読み直しで地図のお店を置き換えない: 前に読んだお店は、画面の外のタイルに移っても残す（回すたびにお店が減っていた。2026-11-16 オーナー「お店の数激減」）', async () => {
+  tiles = { transportation: [roadFeature], building: [], poi: [poi(7, 'カフェ花', 0, 20)] }
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([])) })
+  world.onPosition(home)
+  await flush()
+  tiles = { transportation: [roadFeature], building: [], poi: [poi(8, 'カフェ月', 0, 40)] } // 回して、今見えているタイルは別の所だけ
+  dataHandler!({ sourceId: 'openmaptiles', dataType: 'source', tile: {} })
+  idleHandler!()
+  expect(world.shopsNear().map((s) => s.id).sort()).toEqual(['osm:7', 'osm:8'])
+})
+
 test('ホットペッパーが失敗しても地図の店は出て、onShopsError は1回', async () => {
   tiles = { transportation: [roadFeature], building: [], poi: [poi(7, 'カフェ花', 0, 20)] }
   const { world, onShopsError } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.reject(new Error('x'))) })

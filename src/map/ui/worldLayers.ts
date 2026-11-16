@@ -205,8 +205,17 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       extractedAt = p
       tilesArrived = false
       const lm: Landmark[] = []
-      mapShops = extractMapShops(map, p, SHOP_RADIUS_M, lm)
-      landmarks = lm
+      const found = extractMapShops(map, p, SHOP_RADIUS_M, lm)
+      // 読めるのは今の画面に入っているタイルの分だけなので、置き換えずに足していく（前に読んだお店は画面の外に移っても残す）。
+      // 遠くなったお店・駅の点だけ外す（2026-11-16 オーナー「お店の数激減」: 置き換えていたので回すたびに減っていた）
+      const keep = SHOP_RADIUS_M * 1.5
+      const byId = new Map(mapShops.filter((m) => distanceMeters(p, m) <= keep).map((m) => [m.id, m]))
+      for (const m of found) byId.set(m.id, m)
+      mapShops = [...byId.values()]
+      const lmKey = (m: Landmark) => `${m.kind}:${m.name}@${m.lat.toFixed(5)},${m.lng.toFixed(5)}`
+      const lmById = new Map(landmarks.filter((m) => distanceMeters(p, m) <= keep).map((m) => [lmKey(m), m]))
+      for (const m of lm) lmById.set(lmKey(m), m)
+      landmarks = [...lmById.values()]
       shops = mergeShops(mapShops, hpShops)
       if (tilesSeen) ready.map = true
       // 新しく読めた駅の点があれば、それを含む輪郭の店と施設を置き直す（古い点で計算したままだと駅にならない）
