@@ -648,7 +648,9 @@ export function MapPage() {
       )}
       {settingsOpen && (
         <Settings
+          userId={userId ?? ''}
           email={session?.user.email ?? null}
+          onDeleted={() => void signOut()} // 退会できた: ログアウトするとログイン画面に戻る
           pinsHidden={pinsHidden}
           onTogglePins={togglePins}
           onSignOut={() => void signOut()}

@@ -5,11 +5,15 @@ import { HomePage } from '../setup/ui/HomePage.tsx'
 import { NamePage } from '../setup/ui/NamePage.tsx'
 import { RedirectIfSetupDone, RequireSetupDone, SetupStatusLayout } from '../setup/ui/SetupGate.tsx'
 import { LoginPage } from './LoginPage.tsx'
+import { LegalPage } from '../legal/ui/LegalPage.tsx'
 import { MapPage } from './MapPage.tsx'
 import { RequireAuth } from './RequireAuth.tsx'
 
 export const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
+  // ログインしていなくても読める（ログイン画面からつなぐ）
+  { path: '/privacy', element: <LegalPage kind="privacy" /> },
+  { path: '/terms', element: <LegalPage kind="terms" /> },
   {
     element: <RequireAuth />,
     children: [

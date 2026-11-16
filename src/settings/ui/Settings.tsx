@@ -1,14 +1,22 @@
-// 設定（全画面）。仕様: docs/superpowers/specs/2026-11-10-record-pins-badges-mypage-settings-design.md（確定・設定の項目）
-// まだ作っていない項目（お知らせ・軽量モード・規約など）は「準備中」で押せない見た目にする。
+// 設定（全画面）。仕様: docs/superpowers/specs/2026-11-10-record-pins-badges-mypage-settings-design.md、
+// 項目の整理（2026-11-17）: docs/superpowers/specs/2026-11-17-settings-legal-contact-design.md。準備中の項目は置かない。
 import { useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import './settings.css'
 import { Icon } from '../../ui/Icon.tsx'
-import { APP_VERSION, CONTACT_FORM_URL } from '../config.ts'
+import { APP_VERSION } from '../config.ts'
 import { sound } from '../../sound/infra/sound.ts'
+import { LegalScreen } from '../../legal/ui/LegalScreen.tsx'
+import type { LegalKind } from '../../legal/ui/LegalScreen.tsx'
+import { ContactForm } from '../../contact/ui/ContactForm.tsx'
+import { sendInquiry } from '../../contact/infra/contactApi.ts'
+import { DeleteAccount } from '../../account/ui/DeleteAccount.tsx'
+import { deleteAccount } from '../../account/infra/deleteAccount.ts'
 
 type Props = {
+  userId: string
   email: string | null
+  onDeleted: () => void // 退会できた（ログアウトしてログイン画面へ）
   pinsHidden: boolean
   onTogglePins: () => void
   onSignOut: () => void
@@ -16,38 +24,38 @@ type Props = {
   onClose: () => void
 }
 
-const Soon = () => <span className="st__soon">準備中</span>
-
-function Group({ title, soon, children }: { title: string; soon?: boolean; children: ReactNode }) {
+function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="st__group" aria-label={title}>
-      <h3>{title}{soon && <Soon />}</h3>
-      <div className={soon ? 'st__box is-soon' : 'st__box'}>{children}</div>
+      <h3>{title}</h3>
+      <div className="st__box">{children}</div>
     </section>
   )
 }
 
-function SoonRow({ label, sub }: { label: string; sub?: string }) {
+function Switch({ label, on, onChange }: { label: string; on: boolean; onChange: () => void }) {
   return (
-    <div className="st__row is-soon" aria-disabled="true">
-      <span>{label}{sub && <small>{sub}</small>}</span>
-      <Soon />
+    <div className="st__row">
+      <span>{label}</span>
+      <button type="button" role="switch" aria-checked={on} aria-label={label} className={on ? 'st__switch is-on' : 'st__switch'} onClick={onChange} />
     </div>
   )
 }
 
-function Switch({ label, on, onChange, disabled, sub }: { label: string; on: boolean; onChange?: () => void; disabled?: boolean; sub?: string }) {
+function LinkRow({ label, sub, onClick, warn }: { label: string; sub?: string; onClick: () => void; warn?: boolean }) {
   return (
-    <div className={disabled ? 'st__row is-soon' : 'st__row'}>
-      <span>{label}{sub && <small>{sub}</small>}</span>
-      <button type="button" role="switch" aria-checked={on} aria-label={label} className={on ? 'st__switch is-on' : 'st__switch'} disabled={disabled} onClick={onChange} />
-    </div>
+    <button type="button" className="st__row st__link" onClick={onClick}>
+      <span className={warn ? 'st__warn' : undefined}>{label}{sub && <small>{sub}</small>}</span><span aria-hidden="true">›</span>
+    </button>
   )
 }
+
+type Sub = LegalKind | 'contact' | 'delete' | null
 
 export function Settings(p: Props) {
   const [privacyOpen, setPrivacyOpen] = useState(false)
   const [creditsOpen, setCreditsOpen] = useState(false)
+  const [sub, setSub] = useState<Sub>(null)
   const snd = useSyncExternalStore(sound.subscribe, sound.prefs) // BGM・効果音の ON/OFF（A6。端末ごと）
   return (
     <section className="st" aria-label="設定">
@@ -65,34 +73,18 @@ export function Settings(p: Props) {
 
       <Group title="地図">
         <Switch label="お店のピンを出す" on={!p.pinsHidden} onChange={p.onTogglePins} />
-        <Switch label="軽量モード" sub="建物の立体・雲を軽くして電池を長持ち（準備中）" on={false} disabled />
-      </Group>
-
-      <Group title="お知らせ" soon>
-        <Switch label="今日の気配が届いたら知らせる" sub="ホーム画面に追加したときだけ使えます" on={false} disabled />
       </Group>
 
       <Group title="アカウント">
         <div className="st__row">
           <span><small>Google でログイン中</small>{p.email ?? '—'}</span>
         </div>
-        <button type="button" className="st__row st__link" onClick={p.onSignOut}>
-          <span className="st__warn">ログアウト</span><span aria-hidden="true">›</span>
-        </button>
+        <LinkRow label="ログアウト" warn onClick={p.onSignOut} />
       </Group>
 
       <Group title="サポート">
-        <button type="button" className="st__row st__link" onClick={p.onGuide}>
-          <span>遊び方をもう一度見る<small>ポコタンが案内します</small></span><span aria-hidden="true">›</span>
-        </button>
-        <SoonRow label="よくある質問" />
-        {CONTACT_FORM_URL ? (
-          <a className="st__row st__link" href={CONTACT_FORM_URL} target="_blank" rel="noopener noreferrer">
-            <span>お問い合わせ・不具合の報告<small>フォームが開きます</small></span><span aria-hidden="true">›</span>
-          </a>
-        ) : (
-          <SoonRow label="お問い合わせ・不具合の報告" sub="フォームを準備しています" />
-        )}
+        <LinkRow label="遊び方をもう一度見る" sub="ポコタンが案内します" onClick={p.onGuide} />
+        <LinkRow label="お問い合わせ・不具合の報告" onClick={() => setSub('contact')} />
       </Group>
 
       <Group title="プライバシー">
@@ -104,11 +96,11 @@ export function Settings(p: Props) {
             現在地は、お店までの距離と、霧を晴らすことにだけ使います。自宅の場所はこの端末の中だけに保存し、サーバーには送りません。
           </p>
         )}
-        <SoonRow label="プライバシーポリシー" />
+        <LinkRow label="プライバシーポリシー" onClick={() => setSub('privacy')} />
       </Group>
 
       <Group title="このアプリについて">
-        <SoonRow label="利用規約" />
+        <LinkRow label="利用規約" onClick={() => setSub('terms')} />
         <button type="button" className="st__row st__link" aria-expanded={creditsOpen} onClick={() => setCreditsOpen((v) => !v)}>
           <span>出典・クレジット</span><span aria-hidden="true">{creditsOpen ? '⌃' : '›'}</span>
         </button>
@@ -130,9 +122,19 @@ export function Settings(p: Props) {
         <div className="st__row"><span>バージョン</span><span className="st__value">{`${APP_VERSION}（${__BUILD_ID__}）`}</span></div>
       </Group>
 
-      <div className="st__box is-soon st__last">
-        <div className="st__row is-soon" aria-disabled="true"><span className="st__warn">データを消してやめる（退会）</span><Soon /></div>
+      <div className="st__box st__last">
+        <LinkRow label="データを消してやめる（退会）" warn onClick={() => setSub('delete')} />
       </div>
+
+      {(sub === 'privacy' || sub === 'terms') && <LegalScreen kind={sub} onClose={() => setSub(null)} />}
+      {sub === 'contact' && (
+        <ContactForm
+          email={p.email}
+          send={(kind, body) => sendInquiry(kind, body, `${APP_VERSION}（${__BUILD_ID__}）`)}
+          onClose={() => setSub(null)}
+        />
+      )}
+      {sub === 'delete' && <DeleteAccount remove={() => deleteAccount(p.userId)} onDeleted={p.onDeleted} onClose={() => setSub(null)} />}
     </section>
   )
 }
