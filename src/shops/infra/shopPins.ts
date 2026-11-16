@@ -12,7 +12,7 @@ import type { PointFeature } from 'supercluster'
 import mysteryPin from '../../assets/pins/mystery.png'
 import { pinFeatures } from '../domain/pinFeatures.ts'
 import type { PinFeature } from '../domain/pinFeatures.ts'
-import { CLUSTER_MIN_POINTS, clusterScale, clusterStage } from '../domain/cluster.ts'
+import { CLUSTER_MIN_POINTS, clusterScale, clusterStage, FACILITY_CLUSTER_UNTIL_ZOOM } from '../domain/cluster.ts'
 import type { ClusterFeature } from '../domain/cluster.ts'
 import { createClusterImages } from './shopClusters.ts'
 import { LIFT_TIERS } from '../domain/pinLift.ts'
@@ -130,7 +130,9 @@ export function pinLayerFeatures(
         acc.lt = Math.max(acc.lt, p.lt)
       },
     })
-    index.load(clusterInput as unknown as PointFeature<ClusterFeature['properties']>[])
+    // 施設・駅は倍率 17 から前の表記（HTML のピンの列）なので入れない
+    const input = zoom >= FACILITY_CLUSTER_UNTIL_ZOOM ? clusterInput.filter((f) => !f.properties.fac) : clusterInput
+    index.load(input as unknown as PointFeature<ClusterFeature['properties']>[])
     for (const f of index.getClusters([-180, -85, 180, 85], stage.zoom)) {
       const [lng, lat] = f.geometry.coordinates
       const p = f.properties as Record<string, unknown>

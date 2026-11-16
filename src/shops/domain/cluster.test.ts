@@ -29,6 +29,10 @@ describe('clusterFeatures', () => {
   const single = (id: string, model = 'ramen', sizeM = 14) => ({ id, model, lat: 35, lng: 139, shopIds: [id], sizeM })
   const shop = (id: string, kind = 'cafe') => ({ id, kind, lat: 35.001, lng: 139.001 })
   const bld = (id: string, shops: ReturnType<typeof shop>[], topM = 12) => ({ id, lat: 35.002, lng: 139.002, topM, shops })
+  it('施設・駅の点には fac の印を付ける（倍率 17 からはまとめに入れないため）', () => {
+    const f = clusterFeatures([], [{ ...bld('fac:1', [shop('x'), shop('y'), shop('z')]), facility: true }, bld('b', [shop('p'), shop('q')])], new Set(), new Set(), new Set())
+    expect(f.map((x) => [x.properties.id, x.properties.fac ?? 0])).toEqual([['fac:1', 1], ['b', 0]])
+  })
   it('1 軒の店は n=1。ビル・施設は中のお店の数を持った 1 つの点（中身が分かれない）。霧の中・気配のお店は入れない', () => {
     const f = clusterFeatures(
       [single('hp:1'), single('osm:fog'), single('hp:hint')],

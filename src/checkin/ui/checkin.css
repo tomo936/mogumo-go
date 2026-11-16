@@ -199,9 +199,12 @@
 .pins-off .bldg-pins {
   visibility: hidden;
 }
-/* 引き（倍率 17 未満）は、ビルの並べたピンと施設の「6/6」を隠し、名前の札だけ残す（中のお店はまとめのピンに入る）。2026-11-16 */
-.pins-far .bldg-pin,
-.pins-far .bldg-pin__more {
+/* 引き（倍率 17.7 未満）は、ビルの並べたピンを隠す（中のお店はまとめのピンに入る）。
+   施設・駅の「6/6」とピンは 17 未満だけ隠し、名前の札は残す（17〜17.7 は前の表記。2026-11-16 オーナー） */
+.pins-far .bldg-pins:not(.bldg-pins--facility) .bldg-pin,
+.pins-far .bldg-pins:not(.bldg-pins--facility) .bldg-pin__more,
+.pins-far-big .bldg-pin,
+.pins-far-big .bldg-pin__more {
   visibility: hidden;
 }
 

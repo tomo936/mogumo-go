@@ -37,7 +37,7 @@ import type { Fix } from '../domain/smoothing.ts'
 export type MapViewHandle = {
   checkin(shop: Shop, newCells: Cell[]): void
   addTown(town: ClearedTown): void // 今クリアした町の霧を、今いる場所から波で晴らす
-  unfocus(): void // シートを閉じたとき。カメラはその場所のまま（自分に戻すのは resetNorth）
+  unfocus(): void // シートを閉じたとき。お店・気配を押して寄せていたら自分に戻る（まとめのピンで寄せた分はそのまま）
   isCheckedToday(shop: Shop): boolean
   visitsFor(shop: Shop): Visits | null // わたしの記録（読み込み前・0回は null）
   progressReady(): boolean // 保存済みの記録を読み終えたか
@@ -111,6 +111,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   // お店の板を開いている間は、カメラをそのお店に向けて、自分への追いかけを止める
   const focusRef = useRef<{ lat: number; lng: number } | null>(null)
   const resetNorthRef = useRef<() => void>(() => {})
+  const sheetFocusRef = useRef(false) // お店・ビル・気配を押して寄せた（シートを閉じたら自分に戻る。2026-11-16 オーナー「前と同じ動き」）
   const unfocusRef = useRef<() => void>(() => {})
   const tapRef = useRef<(ids: string[] | null) => void>(() => {})
   const focusAtRef = useRef<(p: LatLng) => void>(() => {})
@@ -317,6 +318,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       const cluster = ids?.[0]?.startsWith('cluster:') ? ids[0].slice(8).split(',').map(Number) : null
       if (cluster && cluster.length === 2 && cluster.every(Number.isFinite)) {
         focusRef.current = { lat: cluster[1], lng: cluster[0] }
+        sheetFocusRef.current = false
         map.easeTo({ center: [cluster[0], cluster[1]], zoom: Math.min(CLUSTER_UNTIL_ZOOM + 0.05, MAX_ZOOM), duration: 600 })
         return
       }
@@ -335,6 +337,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       if (at) {
         const zoom = focusRef.current ? map.getZoom() : Math.min(map.getZoom() + TAP_ZOOM_STEP, MAX_ZOOM)
         focusRef.current = { lat: at.lat, lng: at.lng }
+        sheetFocusRef.current = true
         s.world?.focus(found.map((sh) => sh.id)) // 選んだ建物は遠くても詳しい模型に
         map.easeTo({ center: [at.lng, at.lat], zoom, duration: 500 })
       }
@@ -343,18 +346,25 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     focusAtRef.current = (p) => {
       const zoom = focusRef.current ? map.getZoom() : Math.min(map.getZoom() + TAP_ZOOM_STEP, MAX_ZOOM)
       focusRef.current = { lat: p.lat, lng: p.lng }
+      sheetFocusRef.current = true
       map.easeTo({ center: [p.lng, p.lat], zoom, duration: 500 })
     }
-    // シート・一覧を閉じた: 選んだ建物の詳しい模型だけ戻す。カメラはその場所にとどめる
-    // （勝手に自分へ戻さない。戻すのは右上の方位磁針。2026-11-16 オーナー「シートを閉じてもカメラは維持」）
+    // シート・一覧を閉じた: お店・気配を押して寄せていたら、カメラを自分に戻して追いかけを再開する（前と同じ動き。2026-11-16 オーナー）。
+    // まとめのピンで寄せただけなら、その場所にとどめる（戻すのは右上の方位磁針）
     unfocusRef.current = () => {
       s.world?.focus(null)
+      if (!focusRef.current || !sheetFocusRef.current) return
+      focusRef.current = null
+      sheetFocusRef.current = false
+      s.shown = null
+      if (s.current) map.easeTo({ center: [s.current.lng, s.current.lat], duration: 500 })
     }
     // 右上の方位磁針: 北を上にし、寄せていた場所から自分の場所へ戻って追いかけを再開する
     resetNorthRef.current = () => {
       if (focusRef.current) {
         focusRef.current = null
-          s.shown = null
+        sheetFocusRef.current = false
+        s.shown = null
         s.world?.focus(null)
         if (s.current) {
           map.easeTo({ center: [s.current.lng, s.current.lat], bearing: 0, duration: 500 })
