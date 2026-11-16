@@ -61,17 +61,20 @@
   color: #c0392b;
   font-size: 13px;
 }
+/* 「地図で見る」: 図鑑の詳細（.zd__locate）と同じ見た目（2026-11-17 オーナー「見た目合わせよう」） */
 .shop-sheet__locate {
   display: block;
   width: 100%;
-  margin-top: 10px;
-  padding: 10px;
-  border: 2px solid #4aa8ff;
-  border-radius: 999px;
-  background: #fff;
-  color: #2f7fd0;
-  font-size: 15px;
-  font-weight: 700;
+  height: 52px;
+  margin-top: 12px;
+  margin-bottom: 5px; /* 下の影のぶん */
+  border: 2.5px solid #8a5a32;
+  border-radius: 99px;
+  background: #e8782f;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 5px 0 #8a5a32;
 }
 .shop-sheet__go {
   display: block;
