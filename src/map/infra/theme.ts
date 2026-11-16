@@ -112,5 +112,14 @@ export function themeStyle(style: StyleSpecification, theme: MapTheme): StyleSpe
       } as LayerSpecification)
     }
   }
+  // お店（地図のデータの poi）を読むための、見えない層。MapLibre は地図の絵が使っている層しか querySourceFeatures で返さないので、
+  // 今の positron（OpenFreeMap が配る絵）には poi を使う層が無く、地図のお店が 0 軒になっていた（2026-11-16 実測）。
+  // 見えない丸（大きさ 0・透明）で poi を「使っている」ことにする
+  if ('openmaptiles' in next.sources && !next.layers.some((l) => (l as AnyLayer)['source-layer'] === 'poi')) {
+    next.layers.push({
+      id: 'mogumo-poi-keep', type: 'circle', source: 'openmaptiles', 'source-layer': 'poi',
+      paint: { 'circle-radius': 0, 'circle-opacity': 0, 'circle-stroke-width': 0 },
+    } as LayerSpecification)
+  }
   return next
 }

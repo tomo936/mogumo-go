@@ -126,3 +126,13 @@ test('イラスト調: 細い道の下に、茶色のふちの線を足す（太
   expect(layer(s, 'highway_minor_casing_illust').paint?.['line-color']).toBe(illust.roadCasing)
   expect(layer(s, 'highway_minor_casing_illust').paint?.['line-width']).toEqual(['interpolate', ['exponential', 1.2], ['zoom'], 13, 2.9, 20, 29])
 })
+
+test('お店（poi）を読めるように、見えない poi の層を足す（地図の絵が使わない層は MapLibre から読めない。2026-11-16 実測: 地図のお店が 0 軒）', () => {
+  const style: StyleSpecification = { version: 8, sources: { openmaptiles: { type: 'vector', url: 'x' } }, layers: [{ id: 'building', type: 'fill', source: 'openmaptiles', 'source-layer': 'building' }] }
+  const out = themeStyle(style, theme)
+  const keep = out.layers.find((l) => (l as { 'source-layer'?: string })['source-layer'] === 'poi') as { type: string; source: string; paint: Record<string, unknown> } | undefined
+  expect(keep).toBeDefined()
+  expect(keep!.source).toBe('openmaptiles')
+  expect(keep!.paint['circle-opacity']).toBe(0)
+  expect(keep!.paint['circle-radius']).toBe(0)
+})

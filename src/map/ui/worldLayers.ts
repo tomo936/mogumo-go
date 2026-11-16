@@ -201,7 +201,9 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     if (!map.areTilesLoaded()) extractedAt = null // 読めなかった回があれば、読めたあとの最初の更新で必ず読み直す
     // 地図のお店の読み直し（取り出しと合体は重い）は、まだ読んでいない・前回から MAP_SHOPS_REEXTRACT_M 以上動いたときだけ（idle は回転のたびに来る）。
     // 見える・見えないの計算は SHOP_REFRESH_M ごとに別でやる
+    let freshTiles = false
     if (map.areTilesLoaded() && (!extractedAt || tilesArrived || distanceMeters(extractedAt, p) >= MAP_SHOPS_REEXTRACT_M)) {
+      freshTiles = true
       extractedAt = p
       tilesArrived = false
       const lm: Landmark[] = []
@@ -218,6 +220,14 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       landmarks = [...lmById.values()]
       shops = mergeShops(mapShops, hpShops)
       if (tilesSeen) ready.map = true
+      // 建物に乗らずに置いたお店は、そこの地図がまだ届いていなかっただけかもしれないので、新しいタイルで置き直す
+      // （読めるのは今の画面のタイルだけ。古い置き方を覚えたままで、施設・ビルの数が減っていた。2026-11-16 オーナー「コルティが 6 から 2」）
+      for (const [id, hit] of placed) {
+        if (!hit.bldg && !hit.facility) {
+          placed.delete(id)
+          shownKey = null
+        }
+      }
       // 新しく読めた駅の点があれば、それを含む輪郭の店と施設を置き直す（古い点で計算したままだと駅にならない）
       for (const m of lm) {
         const k = `${m.name}@${m.lat.toFixed(5)},${m.lng.toFixed(5)}`
@@ -241,7 +251,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     } else {
       const queue = shownVisible.filter((s) => !placed.has(s.id))
       // 地図から取り出した道路・建物は、列を計算し終えるまで使い回す（動いたら作り直す）
-      work = work && distanceMeters(work.p, p) < SHOP_REFRESH_M ? { ...work, queue } : { p, frame: localFrame(p), area: null, queue }
+      // 新しいタイルが届いたら、道路・建物も読み直す（古いのを使うと、後から届いた所のお店が建物なしで置かれていた）
+      work = work && !freshTiles && distanceMeters(work.p, p) < SHOP_REFRESH_M ? { ...work, queue } : { p, frame: localFrame(p), area: null, queue }
     }
     placeSome()
     showShops(p)
