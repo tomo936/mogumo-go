@@ -4,7 +4,7 @@ import { expect, test, vi } from 'vitest'
 import { Settings } from './Settings.tsx'
 
 const show = (o: Partial<Parameters<typeof Settings>[0]> = {}) => {
-  const p = { email: 'mogu@example.com', pinsHidden: false, onTogglePins: vi.fn(), onSignOut: vi.fn(), onGuide: vi.fn(), onClose: vi.fn(), ...o }
+  const p = { userId: 'u1', email: 'mogu@example.com', onDeleted: vi.fn(), pinsHidden: false, onTogglePins: vi.fn(), onSignOut: vi.fn(), onGuide: vi.fn(), onClose: vi.fn(), ...o }
   render(<Settings {...p} />)
   return p
 }
@@ -30,10 +30,31 @@ test('遊び方をもう一度見るで onGuide（ポコタンの案内）', asy
   expect(p.onGuide).toHaveBeenCalled()
 })
 
-test('お問い合わせはフォームの URL が無いあいだ準備中', () => {
+test('準備中の項目は置かない（軽量モード・通知・よくある質問）', () => {
   show()
-  expect(screen.getByText('お問い合わせ・不具合の報告').closest('[aria-disabled="true"]')).not.toBeNull()
-  expect(screen.queryByRole('link', { name: /お問い合わせ/ })).not.toBeInTheDocument()
+  expect(screen.queryByText('準備中')).toBeNull()
+  expect(screen.queryByText(/軽量モード/)).toBeNull()
+  expect(screen.queryByText(/よくある質問/)).toBeNull()
+  expect(screen.queryByText(/気配が届いたら知らせる/)).toBeNull()
+})
+
+test('プライバシーポリシー・利用規約・お問い合わせ・退会の画面が開き、戻れる', async () => {
+  show()
+  await userEvent.click(screen.getByRole('button', { name: 'プライバシーポリシー' }))
+  expect(screen.getByRole('region', { name: 'プライバシーポリシー' })).toHaveTextContent('自宅の場所は、お使いの端末の中だけに保存し')
+  await userEvent.click(screen.getAllByRole('button', { name: '戻る' }).at(-1)!)
+  expect(screen.queryByRole('region', { name: 'プライバシーポリシー' })).toBeNull()
+
+  await userEvent.click(screen.getByRole('button', { name: '利用規約' }))
+  expect(screen.getByRole('region', { name: '利用規約' })).toHaveTextContent('第1条')
+  await userEvent.click(screen.getAllByRole('button', { name: '戻る' }).at(-1)!)
+
+  await userEvent.click(screen.getByRole('button', { name: 'お問い合わせ・不具合の報告' }))
+  expect(screen.getByRole('region', { name: 'お問い合わせ' })).toBeInTheDocument()
+  await userEvent.click(screen.getAllByRole('button', { name: '戻る' }).at(-1)!)
+
+  await userEvent.click(screen.getByRole('button', { name: 'データを消してやめる（退会）' }))
+  expect(screen.getByRole('region', { name: 'データを消してやめる' })).toBeInTheDocument()
 })
 
 test('ホットペッパーの表示（リンク）とバージョンがある', () => {
@@ -56,9 +77,8 @@ test('位置情報の使い方を押すと説明が開く、出典も開く', as
   expect(screen.getByRole('link', { name: 'name-suggestion-index' })).toHaveAttribute('href', 'https://github.com/osmlab/name-suggestion-index')
 })
 
-test('準備中のスイッチは押せない、戻るで閉じる', async () => {
+test('戻るで閉じる', async () => {
   const p = show()
-  expect(screen.getByRole('switch', { name: '軽量モード' })).toBeDisabled()
   await userEvent.click(screen.getByRole('button', { name: '戻る' }))
   expect(p.onClose).toHaveBeenCalled()
 })

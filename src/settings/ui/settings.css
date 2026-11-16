@@ -61,6 +61,7 @@
   padding: 11px 14px;
   border: 0;
   border-top: 1px solid #f0e6d4;
+  border-radius: 0; /* ボタンの行に全体の丸み（index.css の button）が付かないように */
   background: none;
   font-size: 14px;
   font-weight: 700;
@@ -152,4 +153,9 @@
 }
 .st__last {
   margin-top: 18px;
+}
+
+/* 設定から開く全画面（規約・お問い合わせ・退会）は設定の上に重ねる */
+.st--sub {
+  z-index: 31;
 }
