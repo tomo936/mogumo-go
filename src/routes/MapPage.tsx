@@ -86,6 +86,7 @@ export function MapPage() {
   }
 
   const mapRef = useRef<MapViewHandle>(null)
+  const [exploring, setExploring] = useState(false) // 見て回るモード（ピンを押して寄った）。左上のキャラの丸で自分に戻る
   const subscribeBearing = useCallback((cb: (b: number) => void) => mapRef.current?.subscribeBearing(cb) ?? (() => {}), [])
   const [selected, setSelected] = useState<Shop | null>(null)
   const [building, setBuilding] = useState<{ shops: Shop[]; checked: ReadonlySet<string>; title: string | null } | null>(null)
@@ -385,6 +386,7 @@ export function MapPage() {
         onSelectBuilding={selectBuilding}
         onPosition={setMe}
         onHintTap={pickHint}
+        onExploring={setExploring}
         pinsHidden={pinsHidden}
         paused={recordTab !== null || zukanOpen || myPageOpen || settingsOpen}
       />
@@ -557,6 +559,8 @@ export function MapPage() {
           onSoon={(name) => setSoonName(name)}
           subscribeBearing={subscribeBearing}
           onCompass={() => mapRef.current?.resetNorth()}
+          exploring={exploring}
+          onReturn={() => mapRef.current?.returnToMe()}
         />
         {soonName && <p className="hud-soon" role="status">{`${soonName}は準備中です`}</p>}
       </div>
