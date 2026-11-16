@@ -6,9 +6,9 @@ test('id が重複しない', () => {
   expect(new Set(CATALOG.map((d) => d.id)).size).toBe(CATALOG.length)
 })
 
-test('ジャンルは 18種類 × 5段 = 90 個、★1〜5 と回数 1・3・10・30・50', () => {
+test('ジャンルは 19種類 × 5段 = 95 個、★1〜5 と回数 1・3・10・30・50', () => {
   const genre = CATALOG.filter((d) => d.group === 'genre')
-  expect(genre).toHaveLength(90)
+  expect(genre).toHaveLength(95)
   const ramen = genre.filter((d) => d.id.startsWith('genre_ramen_'))
   expect(ramen.map((d) => [d.stars, d.need, d.name])).toEqual([
     [1, 1, 'はじめてのラーメン'], [2, 3, 'ラーメン好き'], [3, 10, 'ラーメン通'], [4, 30, 'ラーメン名人'], [5, 50, 'ラーメンマスター'],

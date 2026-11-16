@@ -25,7 +25,7 @@ export const cardNo = (indexInKind: number): string => `No.${String(indexInKind 
 
 // ジャンルの並び（図鑑のページの順）
 export const KIND_ORDER: ShopKind[] = [
-  'ramen', 'sushi', 'soba', 'washoku', 'izakaya', 'chinese', 'yakiniku', 'western', 'curry',
+  'ramen', 'sushi', 'soba', 'washoku', 'izakaya', 'bar', 'chinese', 'yakiniku', 'western', 'curry',
   'cafe', 'cake', 'bakery', 'donburi', 'burger', 'ethnic', 'okonomiyaki', 'takoyaki', 'mystery',
 ]
 

@@ -4,6 +4,7 @@ export type ShopKind =
   | 'soba'
   | 'washoku'
   | 'izakaya'
+  | 'bar'
   | 'chinese'
   | 'yakiniku'
   | 'western'

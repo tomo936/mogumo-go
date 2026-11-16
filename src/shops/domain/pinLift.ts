@@ -9,6 +9,7 @@ export const HEIGHT_RATIO: Record<ShopKind, number> = {
   chinese: 0.71,
   soba: 0.72,
   izakaya: 0.73,
+  bar: 0.81, // bar.glb: 高さ 2.05 ÷ 横幅 2.52（2026-11-16）
   cafe: 0.75,
   donburi: 0.76,
   okonomiyaki: 0.79,

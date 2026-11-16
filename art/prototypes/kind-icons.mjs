@@ -4,7 +4,10 @@
 import { execFileSync } from 'child_process'
 import { mkdirSync } from 'fs'
 
-const KINDS = 'ramen sushi soba washoku izakaya chinese yakiniku western curry cafe sweets bakery other donburi burger ethnic okonomiyaki takoyaki'.split(' ')
+const ALL = 'ramen sushi soba washoku izakaya bar chinese yakiniku western curry cafe sweets bakery other donburi burger ethnic okonomiyaki takoyaki'.split(' ')
+// 引数に種類名を渡すと、その種類だけ作り直す（例: node art/prototypes/kind-icons.mjs bar）。渡さなければ全部
+const ONLY = process.argv.slice(2)
+const KINDS = ONLY.length ? ALL.filter((k) => ONLY.includes(k)) : ALL
 const OUT = 96
 const ALPHA = 16
 const raw = (f) => execFileSync('ffmpeg', ['-v', 'error', '-i', f, '-f', 'rawvideo', '-pix_fmt', 'rgba', '-'], { maxBuffer: 1 << 30 })

@@ -143,7 +143,7 @@ test('seriesOf: ジャンルは種類ごとに1つ。顔は取れたいちばん
   expect(ramen.next?.def.id).toBe('genre_ramen_3')
   const sushi = series.find((x) => x.face.def.series === 'genre_sushi')!
   expect(sushi.face.def.id).toBe('genre_sushi_1')
-  expect(series.filter((x) => x.face.def.group === 'genre')).toHaveLength(18)
+  expect(series.filter((x) => x.face.def.group === 'genre')).toHaveLength(19)
 })
 
 test('つづけて: 月またぎ・年またぎも続いて数える', () => {
