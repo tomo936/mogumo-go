@@ -31,6 +31,7 @@ import { createShopPins } from '../../shops/infra/shopPins.ts'
 import type { HintPin } from '../../shops/infra/shopPins.ts'
 import { clusterFeatures } from '../../shops/domain/cluster.ts'
 import { createShopLayer } from '../../shops/infra/shopLayer.ts'
+import { createGlowLayer } from '../../daynight/infra/glowLayer.ts'
 import type { PlacedShop } from '../../shops/infra/shopLayer.ts'
 import { retainNear } from '../../shops/domain/retain.ts'
 import { distanceMeters, localFrame } from '../domain/geo.ts'
@@ -114,6 +115,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const fogLayer = createFogLayer()
   const shopLayer = createShopLayer('shops-3d') // 晴れた所の店（雲と奥行きを比べる）
   const fogShopLayer = createShopLayer('shops-3d-fog') // 霧の中の近い店（今までどおり雲の上に描く）
+  const glowLayer = createGlowLayer() // 夜のお店の足元の光（A14。晴れた所のお店だけ）
   const facilityLayer = createFacilityLayer()
   const shopPins = createShopPins(map) // 1軒の店のピン（symbol レイヤー）
   const buildingPins = createBuildingPins(map, (ids) => deps.onPinTap(ids))
@@ -426,6 +428,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     shownBuildings = blds
     shownFacilities = facs
     shopLayer.setShops(drawn.filter((s) => !inFog.has(s.id)))
+    glowLayer.setShops(drawn.filter((s) => !inFog.has(s.id)))
     fogShopLayer.setShops(drawn.filter((s) => inFog.has(s.id)))
     facilityLayer.setFacilities(facs)
     updateMarks()
@@ -635,6 +638,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       if (!fogCenter) {
         const below = PLAYER_LAYERS.find((id) => map.getLayer(id))
         // 下から 大型施設 → お店 → 霧 → 霧の中の近い店。霧はお店の奥行きと比べて描くので、お店より後
+        glowLayer.attach(map, below) // 地面の光は 3D より下
         map.addLayer(facilityLayer, below)
         map.addLayer(shopLayer, below)
         map.addLayer(fogLayer, below)
@@ -699,6 +703,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     progressReady: () => ready.progress,
     dispose() {
       disposed = true
+      glowLayer.detach()
       if (frameId !== null) cancelAnimationFrame(frameId)
       stopUserMove()
       shopPins.dispose()
