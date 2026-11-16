@@ -47,6 +47,7 @@ import { NearbyList } from '../nearby/ui/NearbyList.tsx'
 import { LoginBonus } from '../loginbonus/ui/LoginBonus.tsx'
 import { Guide } from '../guide/ui/Guide.tsx'
 import { guideSeen, markGuideSeen } from '../guide/infra/seen.ts'
+import { preloadPoko } from '../guide/infra/poko.ts'
 import { claimLoginBonus } from '../loginbonus/infra/loginBonusApi.ts'
 import type { Claim } from '../loginbonus/domain/loginBonus.ts'
 import { ReviewEditor } from '../reviews/ui/ReviewEditor.tsx'
@@ -302,6 +303,7 @@ export function MapPage() {
   useEffect(() => {
     if (!entered || !userId || tour !== 'wait') return
     if (guideSeen(userId)) return setTour('done')
+    preloadPoko() // 空から降りているあいだに、ポコタンを読み始めておく
     const t = setTimeout(() => setTour('open'), LOGIN_BONUS_DELAY_MS)
     return () => clearTimeout(t)
   }, [entered, userId, tour])
@@ -310,7 +312,6 @@ export function MapPage() {
     if (userId) markGuideSeen(userId)
     setTour('done')
   }, [userId])
-  const meOnScreen = useCallback(() => mapRef.current?.meOnScreen() ?? null, [])
   // ログインボーナス（A4）: 地図へ入ったら今日の分を受け取り、空から降りる演出（または案内）が終わったころに画面を出す
   useEffect(() => {
     if (!entered || !userId || tour !== 'done') return
@@ -541,7 +542,7 @@ export function MapPage() {
           onClose={() => setZukanOpen(false)}
         />
       )}
-      {tour === 'open' && <Guide meOnScreen={meOnScreen} onClose={closeGuide} />}
+      {tour === 'open' && <Guide onClose={closeGuide} />}
       {loginBonus && <LoginBonus claim={loginBonus} onClose={() => setLoginBonus(null)} />}
       {nearbyInput && (
         <NearbyList

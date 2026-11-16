@@ -1,18 +1,28 @@
 import { describe, expect, it } from 'vitest'
-import { GUIDE_PAGES, guideKey, holeAround, onTap, shownChars, unionRect } from './guide.ts'
+import { GUIDE_PAGES, guideKey, holeAround, mouthAt, onTap, shownChars, unionRect } from './guide.ts'
 
 describe('ポコタンの案内の決まり', () => {
   it('9 ページで、最初はナビゲーターのあいさつ、どの文も「ポコ」で終わる', () => {
     expect(GUIDE_PAGES).toHaveLength(9)
     expect(GUIDE_PAGES[0].text.startsWith('ナビゲーターのポコタンポコ！')).toBe(true)
     for (const p of GUIDE_PAGES) expect(p.text).toMatch(/ポコ[！〜]*$/)
-    expect(GUIDE_PAGES.map((p) => p.target)).toEqual(['none', 'me', 'me', 'me', 'none', 'hint', 'menu', 'player', 'none'])
+    expect(GUIDE_PAGES.map((p) => p.target)).toEqual(['none', 'none', 'none', 'none', 'none', 'hint', 'menu', 'player', 'none'])
   })
 
-  it('字は 40ms に 1 字ずつ出て、文の長さで止まる', () => {
+  it('字は 45ms に 1 字ずつ、区切りの字のあとは少し間を置いて出る', () => {
     expect(shownChars('あいう', 0)).toBe(0)
-    expect(shownChars('あいう', 80)).toBe(2)
+    expect(shownChars('あいう', 90)).toBe(2)
     expect(shownChars('あいう', 10_000)).toBe(3)
+    expect(shownChars('あ。い', 135)).toBe(2) // 「。」のあとは待つ
+    expect(shownChars('あ。い', 90 + 260 + 45)).toBe(3)
+  })
+
+  it('口は字が出ている間だけ動き、区切りと出きったあとは閉じる', () => {
+    expect(mouthAt('あいうえお', 0)).toBe(0)
+    expect(mouthAt('あいうえお', 5)).toBe(0)
+    expect(mouthAt('あ、いうえ', 2)).toBe(0)
+    const opens = [1, 2, 3, 4].map((n) => mouthAt('あいうえおか', n))
+    expect(new Set(opens).size).toBe(2) // 開いたり閉じかけたり
   })
 
   it('タップ: 途中なら全部出す、出きっていれば次へ、最後なら閉じる', () => {
