@@ -32,14 +32,15 @@ export const THEMES = {
       majorRoadScale: 1.25,
     },
   },
-  // D の夜（A14 試作 2026-11-17）: 紺の地面・青紫の建物・道は暗め、大きい道は街灯の暖かい色
+  // D の夜（A14 試作 2026-11-17）: 紺の地面・青紫の建物。道は紺の仲間で少し明るいだけ（黄色は浮くのでやめた。オーナー）。
+  // お店の明かりが引き立つよう、地面と建物は 1 段暗く
   illustNight: {
-    ground: '#2b3358', residential: '#303a62', park: '#2c5248', wood: '#26493f', water: '#1d3a6e', waterLine: '#3a66a8',
-    building: '#454b78', buildingLine: '#171a33', road: '#56608f', roadCasing: '#171a33', path: '#424c7c', rail: '#6a6f96', majorRoad: '#b39a62', majorRoadCasing: '#171a33',
+    ground: '#222949', residential: '#262e52', park: '#22443c', wood: '#1e3c34', water: '#172f5c', waterLine: '#30578f',
+    building: '#383e66', buildingLine: '#12152b', road: '#454e7a', roadCasing: '#12152b', path: '#363f6a', rail: '#585d84', majorRoad: '#525b8a', majorRoadCasing: '#12152b',
     label: '#e8e4ff', labelHalo: '#1c2040', showPlaceLabels: false, showRoadLabels: false,
     illust: {
-      buildingFills: ['#434a78', '#4a5182', '#51588c', '#585f96'],
-      buildingShadow: 'rgba(8, 8, 28, 0.45)',
+      buildingFills: ['#363c66', '#3c426f', '#424878', '#484f81'],
+      buildingShadow: 'rgba(6, 6, 22, 0.5)',
       roadScale: 1.5,
       majorRoadScale: 1.25,
     },
