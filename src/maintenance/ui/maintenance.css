@@ -1,0 +1,66 @@
+/* メンテナンスの画面（A8）。色は案内（ポコタン）の窓と同じ手帳風 */
+.maint {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: calc(env(safe-area-inset-top) + 24px) 20px calc(env(safe-area-inset-bottom) + 24px);
+  background: linear-gradient(#bfe3f5, #fdf6e8);
+  box-sizing: border-box;
+}
+.maint__poko {
+  width: min(52vw, 220px);
+  margin-bottom: -28px;
+}
+.maint__box {
+  width: 100%;
+  max-width: 420px;
+  box-sizing: border-box;
+  background: #fffaf0;
+  border: 4px solid #8a5a32;
+  border-radius: 22px;
+  box-shadow: 0 6px 0 #8a5a32;
+  padding: 22px 18px;
+  text-align: center;
+  color: #4a3320;
+}
+.maint__box h1 {
+  margin: 0 0 10px;
+  font-size: 20px;
+  font-weight: 800;
+}
+.maint__msg {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.maint__ends {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #e8782f;
+}
+.maint__sub {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: #7a5a3a;
+}
+.maint__retry {
+  background: #e8782f;
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+  border: 3px solid #8a5a32;
+  border-radius: 99px;
+  padding: 10px 22px;
+  box-shadow: 0 3px 0 #8a5a32;
+}
+.maint__retry:disabled {
+  opacity: 0.6;
+}
