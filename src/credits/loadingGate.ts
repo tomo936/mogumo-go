@@ -3,6 +3,7 @@
 type State = 'idle' | 'waiting' | 'done'
 let state: State = 'idle'
 const subs = new Set<() => void>()
+const enterSubs = new Set<() => void>() // タイトルを閉じて地図へ入った（空から降りる演出の合図）
 const set = (next: State) => {
   state = next
   for (const cb of subs) cb()
@@ -15,6 +16,11 @@ export const loading = {
   subscribe: (cb: () => void) => {
     subs.add(cb)
     return () => { subs.delete(cb) }
+  },
+  enter: () => { for (const cb of enterSubs) cb() },
+  onEnter: (cb: () => void) => {
+    enterSubs.add(cb)
+    return () => { enterSubs.delete(cb) }
   },
   reset: () => set('idle'), // テスト用
 }

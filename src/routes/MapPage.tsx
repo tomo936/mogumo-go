@@ -109,6 +109,8 @@ export function MapPage() {
     loading.start()
     void mapRef.current?.whenShopsReady().then(() => loading.done())
   }, [])
+  // タイトルを閉じて地図へ入ったら、カメラを空から降ろす（2026-11-16 オーナー「空から来たような感じ」）
+  useEffect(() => loading.onEnter(() => mapRef.current?.intro()), [])
   useEffect(() => {
     let alive = true
     void mapRef.current?.whenShopsReady().then(() => alive && syncOsm())

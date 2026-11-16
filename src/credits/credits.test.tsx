@@ -35,6 +35,21 @@ test('「タップしてスタート」はすぐ出る。押すと、お店を�
   expect(screen.queryByRole('button')).not.toBeInTheDocument()
 })
 
+test('タイトルを閉じると、雲が左右に開く演出を出して地図へ（カメラが空から降りる合図 loading.onEnter も出す）。演出が終わったら消える（2026-11-16 オーナー「空から来たような感じ」）', () => {
+  const entered = vi.fn()
+  const stop = loading.onEnter(entered)
+  loading.start()
+  loading.done()
+  render(<Splash />)
+  act(() => screen.getByRole('button', { name: /タップしてスタート/ }).click())
+  expect(entered).toHaveBeenCalledTimes(1)
+  const intro = screen.getByTestId('sky-intro')
+  expect(screen.queryByText('地名検索: 国土地理院')).not.toBeInTheDocument()
+  act(() => { intro.dispatchEvent(new Event('animationend', { bubbles: true })) })
+  expect(screen.queryByTestId('sky-intro')).not.toBeInTheDocument()
+  stop()
+})
+
 test('もうそろっていれば、押したらすぐメインへ', () => {
   loading.start()
   loading.done()
