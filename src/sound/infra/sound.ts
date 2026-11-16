@@ -8,9 +8,9 @@ const urls = import.meta.glob('../../assets/sound/*.m4a', { eager: true, query: 
 import dayBgmUrl from '../../assets/sound/bgm/day.m4a?url'
 
 const KEY = 'mogumo.sound'
-const BGM_VOLUME = 0.5
+const BGM_VOLUME = 0.3
 const BGM_FADE_S = 3
-const SFX_VOLUME = 0.8
+const SFX_VOLUME = 0.6
 
 let ctx: AudioContext | null = null
 let sfxOut: GainNode | null = null
