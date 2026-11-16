@@ -58,3 +58,4 @@
 - 2026-11-12 Claude Code: メニューアイコン 8 点とグルメコインを地図の画面に反映（src/assets/ui/*.webp、変換は art/ui/convert-ui.sh、MapHud・CoinIcon）。
 - 2026-11-16 ブランディング素材のうちローディングアニメ（WebM・PNG 連番）を受領（art/loading/）、アプリ用 WebP を作ってタイトル画面に反映。アイコン・スプラッシュ・WebP・ロゴ単体のファイルは受け取り待ち。返信 handoff/to-shiro/2026-11-16-branding-received.md
 - 2026-11-16 ブランディング素材の再送（zip）を受領: アプリアイコン（public/ に縮小して反映）・スプラッシュ（art/branding/ に保管）・ローディング本命 WebP（art/loading/）。返信 handoff/to-shiro/2026-11-16-branding-received.md（完了）
+- 2026-11-16 バー（ジャンル追加）・ガチャのキャラ原画 30 枚・ログインボーナスのパネルを受領（art/pins/frames/pin-bar.png・art/pins/icons/bar.png・art/reference/shops/bar-v1.png・art/gacha/chars/・art/ui/login-bonus-panel.png）。返信 handoff/to-shiro/2026-11-16-bar-gacha-loginbonus-received.md（対応中。着手の順番はオーナー待ち）
