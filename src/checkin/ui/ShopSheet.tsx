@@ -378,7 +378,7 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
           <div className="shop-sheet__actions">
             {button}
             <button type="button" className="shop-sheet__review" aria-label="感想を書く" onClick={onReview}>
-              <span aria-hidden="true">✎</span>感想
+              感想
             </button>
           </div>
         ) : (
