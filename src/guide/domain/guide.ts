@@ -18,27 +18,11 @@ export const GUIDE_PAGES: GuidePage[] = [
   { text: '準備ばっちりポコ！ まずはこの町のクリアを目指して、出発ポコ！', target: 'none' },
 ]
 
-export const CHAR_MS = 45 // 1 字を出す間
-export const PAUSE_MS = 260 // 「、」「。」「！」などのあとの間（口を閉じる）
+export const CHAR_MS = 40 // 1 字を出す間（一定。口の動きに合わせて変えない。2026-11-17 オーナー）
 const PAUSE = /[、。！？!?〜\s]/
 
-// i 字目（0 から）が出る時刻。区切りの字のあとは少し間を置く
-function charTimes(text: string): number[] {
-  const out: number[] = []
-  let t = 0
-  for (const ch of text) {
-    t += CHAR_MS
-    out.push(t)
-    if (PAUSE.test(ch)) t += PAUSE_MS
-  }
-  return out
-}
-
 export function shownChars(text: string, elapsedMs: number): number {
-  const ts = charTimes(text)
-  let n = 0
-  while (n < ts.length && ts[n] <= elapsedMs) n++
-  return n
+  return Math.min(text.length, Math.floor(elapsedMs / CHAR_MS))
 }
 
 // 口の開き（0〜1）。字が出ている間だけ、2 字ごとに開け閉めする。区切りの字・出きったあとは閉じる
