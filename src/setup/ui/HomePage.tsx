@@ -10,6 +10,8 @@ import { saveHome } from '../infra/homeStore.ts'
 import { profileRepo } from '../infra/profileRepo.ts'
 import { HomePickerMap } from './HomePickerMap.tsx'
 import { useSetupStatus } from './SetupStatusContext.ts'
+import { Icon } from '../../ui/Icon.tsx'
+import { HOME_CLEAR_RADIUS_M } from '../../fog/config.ts'
 import '../../map/ui/map.css'
 import './setup.css'
 
@@ -72,13 +74,18 @@ export function HomePage() {
   }
 
   return (
-    <main className="setup-page setup-home">
-      {!status.hasProfile && (
-        <button type="button" className="setup-back" onClick={() => navigate('/setup/character')}>戻る</button>
-      )}
+    <main className="setup-page setup-home hs">
+      <header className="hs__bar">
+        {!status.hasProfile && (
+          <button type="button" className="hs__back" aria-label="戻る" onClick={() => navigate('/setup/character')}>
+            <Icon name="back" size={20} />
+          </button>
+        )}
+        {!status.hasProfile && <span className="hs__step">3 / 3</span>}
+      </header>
       <h1>自宅の場所を決めよう</h1>
-      <p className="setup-note">地図を動かして、家の印を自宅に合わせてください。自宅の場所はこのスマホの中だけに保存します</p>
-      <div className="setup-map">
+      <p className="hs__lead">地図を動かして、家の印を自宅に合わせてね</p>
+      <div className="setup-map hs__map">
         {locate.start && <HomePickerMap start={locate.start} recenter={recenter} onCenterChange={onCenterChange} />}
         <LocationOverlay
           status={locate.status}
@@ -88,14 +95,27 @@ export function HomePage() {
           }}
           onReload={() => window.location.reload()}
         />
+        {locate.start && (
+          <button type="button" className="hs__here" onClick={() => setRecenter((n) => n + 1)}>
+            <Icon name="compass" size={18} />
+            現在地へ
+          </button>
+        )}
       </div>
+      <ul className="hs__notes">
+        <li>
+          <Icon name="lock" size={18} />
+          <span>自宅の場所はこのスマホの中だけに保存します。サーバーには送りません</span>
+        </li>
+        <li>
+          <Icon name="cloud" size={18} />
+          <span>{`自宅のまわり ${HOME_CLEAR_RADIUS_M}m は、はじめから霧が晴れています。あとからマイページで変えられます`}</span>
+        </li>
+      </ul>
       {failed && <p className="setup-error" role="alert">保存できませんでした。もう一度お試しください</p>}
-      <div className="setup-actions">
-        <button type="button" onClick={() => setRecenter((n) => n + 1)} disabled={!locate.start}>現在地へ</button>
-        <button type="button" onClick={() => void confirm()} disabled={!locate.start || saving}>
-          {saving ? '保存しています…' : 'ここを自宅にする'}
-        </button>
-      </div>
+      <button type="button" className="hs__ok" onClick={() => void confirm()} disabled={!locate.start || saving}>
+        {saving ? '保存しています…' : 'ここを自宅にする'}
+      </button>
     </main>
   )
 }
