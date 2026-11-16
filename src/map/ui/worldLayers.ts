@@ -158,6 +158,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   let disposed = false
   // お店の読み込みがそろったか: ホットペッパー（使えない環境では不要）・地図のお店の取り出し・進み具合
   const ready = { hp: !deps.shopsEnabled, map: false, progress: false, fired: false }
+  const PLACE_BUDGET_BEFORE_READY_MS = 40
   const checkReady = () => {
     // 見えるお店を置き終わるまで待つ（置いている途中で地図を出すと、お店が少しずつ増えて「出ていない」ように見える。2026-11-16 オーナー）
     if (ready.fired || disposed || !ready.hp || !ready.map || !ready.progress || work) return
@@ -192,6 +193,9 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   // 前に読んだあと、地図のタイルが新しく届いたか。地図のお店は読み込み済みのタイルからしか取れないので、
   // 回したり動かしたりして後から届いたタイルの分も、次の idle で読み直す（2026-11-16 オーナー「たまにお店が全部出ない」）
   let tilesArrived = false
+  // 地図のタイルが 1 枚でも届いたか。届く前でも areTilesLoaded は true を返すことがあり、そこで読むと地図のお店が 0 軒のまま
+  // 「そろった」になっていた（2026-11-16 実測: 起動 0.25 秒で 0 軒のまま onShopsReady）
+  let tilesSeen = false
   const refreshShops = (p: LatLng) => {
     refreshedAt = p
     if (!map.areTilesLoaded()) extractedAt = null // 読めなかった回があれば、読めたあとの最初の更新で必ず読み直す
@@ -204,7 +208,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       mapShops = extractMapShops(map, p, SHOP_RADIUS_M, lm)
       landmarks = lm
       shops = mergeShops(mapShops, hpShops)
-      ready.map = true
+      if (tilesSeen) ready.map = true
       // 新しく読めた駅の点があれば、それを含む輪郭の店と施設を置き直す（古い点で計算したままだと駅にならない）
       for (const m of lm) {
         const k = `${m.name}@${m.lat.toFixed(5)},${m.lng.toFixed(5)}`
@@ -243,7 +247,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     while (work.queue.length) {
       const shop = work.queue.shift()!
       if (!placed.has(shop.id)) placeOne(shop, work)
-      if (performance.now() - t0 >= PLACE_BUDGET_MS) break
+      // そろうまではタイトル画面が地図を隠しているので、1 コマで多めに計算して早く終える（2026-11-16）
+      if (performance.now() - t0 >= (ready.fired ? PLACE_BUDGET_MS : PLACE_BUDGET_BEFORE_READY_MS)) break
     }
     if (!work.queue.length) work = null
   }
@@ -513,7 +518,10 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   }
   map.on('idle', onIdle)
   const onData = (e: { sourceId?: string; dataType?: string; tile?: unknown }) => {
-    if (e.dataType === 'source' && e.sourceId === MAP_SOURCE && e.tile) tilesArrived = true
+    if (e.dataType === 'source' && e.sourceId === MAP_SOURCE && e.tile) {
+      tilesArrived = true
+      tilesSeen = true
+    }
   }
   map.on('data', onData)
   // カメラが動き終わったら、詳しい模型を選び直す（ついて歩くときは毎コマ来るので、真ん中が動いた・拡大の境を越えたときだけ）
