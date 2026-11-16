@@ -76,8 +76,10 @@ const TAP_MAX_MOVE_PX = 10
 const TAP_MAX_MS = 300
 const POSITION_EVERY_MS = 250
 const TAP_ZOOM_STEP = 0.6
-const INTRO_RISE_ZOOM = 2.5 // 地図へ入る演出: いつもよりどれだけ高い所から始めるか
-const INTRO_MS = 1800
+const INTRO_RISE_ZOOM = 3 // 地図へ入る演出: いつもよりどれだけ高い所から始めるか（霧の雲の海の上空）
+const INTRO_MS = 2400
+const INTRO_MAX_STEP_MS = 40 // 重いコマでも、1 コマで進めるのはここまで（途中が飛ばないように）
+const INTRO_HOLD_MS = 350 // タイトルの絵が消えるあいだ、高い所で待つ
 const CHECKIN_WAVE_DELAY_MS = 900 // 紙吹雪のあと、霧の波が走り出すまで
 
 // 地図・カメラ・位置は MapLibre と ref だけで持ち、React の再描画を起こさない。
@@ -378,15 +380,37 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       }
       map.easeTo({ bearing: 0, duration: 400 })
     }
-    // 地図へ入る演出: 2.5 段高い所から、ほぼ真上に見下ろした状態で始め、1.8 秒でいつもの高さ・角度へ降りる。
-    // 降りているあいだはズーム中なので、自分を追いかける毎コマの移動（jumpTo）は止まっている（shouldMoveCamera）
+    // 地図へ入る演出: 3 段高い所（霧の雲の海の上空）から真上に見下ろした状態で始め、2.4 秒でいつもの高さ・角度へ降りる。
+    // 高い所は描く量が多く、最初のコマが重い。MapLibre の easeTo は時間で進むので、重いコマのあいだに終わってしまい
+    // 降りる途中が見えなかった（2026-11-16 実測: 1 コマ目で 4.7 秒 → いきなり到着）。そこで自分で 1 コマずつ進め、
+    // 1 コマで進むのは最大 INTRO_MAX_STEP_MS 分にする。高い所へは、タイトルの絵が消えるあいだ（INTRO_HOLD_MS）に移っておく。
+    // 指で触ったら、すぐいつもの高さ・角度にする
     introRef.current = () => {
       const zoom = map.getZoom()
       const from = Math.max(13, zoom - INTRO_RISE_ZOOM)
       map.setMinZoom(from)
       map.jumpTo({ zoom: from, pitch: 0, ...(s.current ? { center: [s.current.lng, s.current.lat] as [number, number] } : {}) })
-      map.easeTo({ zoom, pitch: PITCH, duration: INTRO_MS, easing: (t) => 1 - (1 - t) ** 3 })
-      map.once('moveend', () => map.setMinZoom(MIN_ZOOM))
+      const ease = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2)
+      let progress = 0
+      let prev = 0
+      const finish = () => {
+        progress = 1
+        map.jumpTo({ zoom, pitch: PITCH })
+        map.setMinZoom(MIN_ZOOM)
+        container.removeEventListener('pointerdown', finish)
+      }
+      container.addEventListener('pointerdown', finish)
+      const step = (now: number) => {
+        if (progress >= 1) return
+        const dt = prev ? Math.min(now - prev, INTRO_MAX_STEP_MS) : 0
+        prev = now
+        progress = Math.min(1, progress + dt / INTRO_MS)
+        if (progress >= 1) return finish()
+        const e = ease(progress)
+        map.jumpTo({ zoom: from + (zoom - from) * e, pitch: PITCH * e })
+        requestAnimationFrame(step)
+      }
+      setTimeout(() => requestAnimationFrame(step), INTRO_HOLD_MS)
     }
     // 毎コマ、表示位置を目標へ寄せてカメラを動かす
     const loop = { frame: 0, prevTime: performance.now(), positionAt: 0 }
