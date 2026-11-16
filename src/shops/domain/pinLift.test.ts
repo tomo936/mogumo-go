@@ -21,9 +21,9 @@ test('liftM は 大きさ × 比 + 少し', () => {
   expect(liftM('mystery', 14)).toBeLessThan(liftM('ramen', 18))
 })
 
-test('縮めて表示する種類（バー）は、模型が縮む分だけピンも低い（A17。バーは体積が大きく見えたので 88%）', () => {
-  expect(MODEL_SCALE.bar).toBeCloseTo(0.88, 2)
-  expect(liftM('bar', 16, 0)).toBeCloseTo(16 * 0.88 * HEIGHT_RATIO.bar, 5)
+test('縮めて表示する種類（バー）は、模型が縮む分だけピンも低い（A17。バーは体積が大きく見えたので 78%）', () => {
+  expect(MODEL_SCALE.bar).toBeCloseTo(0.78, 2)
+  expect(liftM('bar', 16, 0)).toBeCloseTo(16 * 0.78 * HEIGHT_RATIO.bar, 5)
   expect(liftM('izakaya', 16, 0)).toBeCloseTo(16 * HEIGHT_RATIO.izakaya, 5) // ほかの種類は変えない
 })
 
