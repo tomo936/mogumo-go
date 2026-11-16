@@ -5,7 +5,7 @@ export const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron'
 export const MAP_THEME: 'sky' | 'mint' | 'pop' | 'illust' = 'illust' // イラスト調（2026-11-10 オーナー）。前は pop
 export const PITCH = 55
 export const MIN_ZOOM = 16
-export const MAX_ZOOM = 18
+export const MAX_ZOOM = 20 // 2026-11-16 オーナー「もっとズームできるように」（A13）。地図のタイルは 14 までなので、それより上は拡大表示
 export const INITIAL_ZOOM = 17
 export const CIRCLE_RADIUS_M = 50
 // 足元の範囲の波紋（A2、2026-11-12 オーナー「案1」）。波の色・1 周の時間・本数。塗りは範囲の目印として残す

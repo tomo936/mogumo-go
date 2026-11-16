@@ -18,7 +18,7 @@ import { mergeShops } from '../../shops/domain/merge.ts'
 import { placeShop } from '../../shops/domain/placement.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
 import { modelPlace, visibleShops } from '../../shops/domain/visibility.ts'
-import { extractFeatures, featuresNear, NEAR_M } from '../../shops/infra/mapFeatures.ts'
+import { extractFeatures, featuresNear, NEAR_M, SOURCE as MAP_SOURCE } from '../../shops/infra/mapFeatures.ts'
 import type { AreaFeatures } from '../../shops/infra/mapFeatures.ts'
 import { extractMapShops } from '../../shops/infra/mapShops.ts'
 import type { Landmark } from '../../shops/infra/mapShops.ts'
@@ -188,13 +188,17 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   let cameraAt: LatLng | null = null // 詳しい模型を選んだときのカメラの真ん中（拡大していないときは null）
   let refreshedAt: LatLng | null = null
   let extractedAt: LatLng | null = null
+  // 前に読んだあと、地図のタイルが新しく届いたか。地図のお店は読み込み済みのタイルからしか取れないので、
+  // 回したり動かしたりして後から届いたタイルの分も、次の idle で読み直す（2026-11-16 オーナー「たまにお店が全部出ない」）
+  let tilesArrived = false
   const refreshShops = (p: LatLng) => {
     refreshedAt = p
     if (!map.areTilesLoaded()) extractedAt = null // 読めなかった回があれば、読めたあとの最初の更新で必ず読み直す
     // 地図のお店の読み直し（取り出しと合体は重い）は、まだ読んでいない・前回から MAP_SHOPS_REEXTRACT_M 以上動いたときだけ（idle は回転のたびに来る）。
     // 見える・見えないの計算は SHOP_REFRESH_M ごとに別でやる
-    if (map.areTilesLoaded() && (!extractedAt || distanceMeters(extractedAt, p) >= MAP_SHOPS_REEXTRACT_M)) {
+    if (map.areTilesLoaded() && (!extractedAt || tilesArrived || distanceMeters(extractedAt, p) >= MAP_SHOPS_REEXTRACT_M)) {
       extractedAt = p
+      tilesArrived = false
       const lm: Landmark[] = []
       mapShops = extractMapShops(map, p, SHOP_RADIUS_M, lm)
       landmarks = lm
@@ -506,6 +510,10 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     if (areaNow()) refreshShops(areaNow()!)
   }
   map.on('idle', onIdle)
+  const onData = (e: { sourceId?: string; dataType?: string; tile?: unknown }) => {
+    if (e.dataType === 'source' && e.sourceId === MAP_SOURCE && e.tile) tilesArrived = true
+  }
+  map.on('data', onData)
   // カメラが動き終わったら、詳しい模型を選び直す（ついて歩くときは毎コマ来るので、真ん中が動いた・拡大の境を越えたときだけ）
   const cameraCenter = (): LatLng | null => {
     if (map.getZoom() < LOD_CAMERA_MIN_ZOOM) return null
@@ -653,6 +661,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       buildingPins.dispose()
       debugOverlay?.dispose()
       map.off('idle', onIdle)
+      map.off('data', onData)
       map.off('moveend', onMoveEnd)
       for (const id of [fogLayer.id, facilityLayer.id, shopLayer.id, fogShopLayer.id]) if (map.getLayer(id)) map.removeLayer(id)
     },
