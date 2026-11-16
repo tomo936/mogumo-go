@@ -8,7 +8,8 @@ import './map.css'
 import {
   CIRCLE_RADIUS_M, RIPPLE_COLOR, RIPPLE_COUNT, RIPPLE_FILL_COLOR, RIPPLE_FILL_OPACITY, RIPPLE_PERIOD_MS, FIRST_FIX_TIMEOUT_MS, INITIAL_ZOOM, MAP_THEME, MAX_ZOOM, MIN_ZOOM, PITCH, STYLE_URL,
 } from '../config.ts'
-import { themeStyle } from '../infra/theme.ts'
+import { recolor, themeStyle } from '../infra/theme.ts'
+import { onPhase } from '../../daynight/infra/phase.ts'
 import { currentTheme } from '../infra/themes.ts'
 import { isFakeWalkEnabled, startFakeWalk } from '../infra/fakeWalk.ts'
 import { circlePolygon, distanceMeters, metersPerPixel } from '../domain/geo.ts'
@@ -198,6 +199,11 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     })
     map.touchZoomRotate.disableRotation()
     mapRef.current = map
+    // 昼と夜が切り替わったら、地図を作り直さずに色だけ替える（A14）
+    const stopPhase = onPhase(() => {
+      if (map.isStyleLoaded()) recolor(map, currentTheme(window.location.search, MAP_THEME))
+      map.triggerRepaint() // 雲・3D の光も描き直す
+    })
     // カメラが止まったら、自分から離れた所を見ているか世界に伝える（雲をそこのまわりに置くため）
     map.on('moveend', () => {
       const c = map.getCenter()
@@ -479,6 +485,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       avatarModelRef.current = null
       s.world?.dispose()
       mapRef.current = null
+      stopPhase()
       map.remove()
     }
   }, [home])

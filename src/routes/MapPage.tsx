@@ -48,6 +48,7 @@ import { LoginBonus } from '../loginbonus/ui/LoginBonus.tsx'
 import { Guide } from '../guide/ui/Guide.tsx'
 import { guideSeen, markGuideSeen } from '../guide/infra/seen.ts'
 import { preloadPoko } from '../guide/infra/poko.ts'
+import { setPlace } from '../daynight/infra/phase.ts'
 import { claimLoginBonus } from '../loginbonus/infra/loginBonusApi.ts'
 import type { Claim } from '../loginbonus/domain/loginBonus.ts'
 import { ReviewEditor } from '../reviews/ui/ReviewEditor.tsx'
@@ -76,6 +77,9 @@ export function MapPage() {
   const { session, signOut } = useAuth()
   const userId = session?.user.id
   const home = useMemo(() => (userId ? loadHome(userId) : null), [userId])
+  useEffect(() => {
+    if (home) setPlace(home) // 現在地が分かるまでは自宅の日の入り・日の出で昼と夜を決める（A14）
+  }, [home])
   const [shopsError, setShopsError] = useState(false)
   // 帯は数秒で消える
   useEffect(() => {
@@ -459,7 +463,10 @@ export function MapPage() {
           if (shops) sound.play('tap')
           selectBuilding(shops, title)
         }}
-        onPosition={setMe}
+        onPosition={(p) => {
+          setMe(p)
+          setPlace(p) // 昼と夜（A14）は今いる場所の日の入り・日の出で決める
+        }}
         onHintTap={(id) => {
           sound.play('tap')
           pickHint(id)
