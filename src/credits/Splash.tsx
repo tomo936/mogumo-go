@@ -4,6 +4,7 @@ import './credits.css'
 import { loading } from './loadingGate.ts'
 import titleArt from '../assets/ui/title.webp'
 import pancakeArt from '../assets/ui/loading-pancake.webp'
+import logoArt from '../assets/ui/logo.webp'
 
 const MAX_WAIT_MS = 8000 // お店がそろわなくても、ここで「タップしてスタート」を出す
 
@@ -27,8 +28,8 @@ export function Splash() {
       style={{ '--splash-art': `url(${titleArt})` } as React.CSSProperties}
       onClick={() => !waiting && setOpen(false)}
     >
-      {/* ロゴ（ミシェーラの固定版ロゴのファイルが届いたら差し替える） */}
-      <span className="splash-title">もぐもGO</span>
+      {/* ロゴ（オーナー 2026-11-16。art/branding/logo.png → src/assets/ui/logo.webp 幅 720px） */}
+      <img className="splash-logo" src={logoArt} alt="もぐもGO" />
       {waiting ? (
         <span className="splash-loading" role="status">
           <img src={pancakeArt} alt="" />

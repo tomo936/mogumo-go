@@ -13,18 +13,15 @@
   font-family: 'M PLUS Rounded 1c', system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
-/* ロゴ: 上の空の所（ビルと木の間） */
-.splash-title {
+/* ロゴ: 上の空の所（ビルと木の間）。少し影を付けて空から浮かせる */
+.splash-logo {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: calc(9vh + env(safe-area-inset-top));
-  text-align: center;
-  font-size: 46px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: 0.04em;
-  text-shadow: 0 0 2px #7a4a26, 0 0 2px #7a4a26, 0 3px 0 #7a4a26, 0 4px 10px rgba(0, 0, 0, 0.25);
+  left: 50%;
+  top: calc(8vh + env(safe-area-inset-top));
+  width: min(84vw, 420px);
+  height: auto;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.18));
 }
 /* 「タップしてスタート」: 丸い字、ふわっとチカチカ（2026-11-16 オーナー） */
 .splash-start {
