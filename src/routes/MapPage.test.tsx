@@ -11,6 +11,7 @@ import { MapPage } from './MapPage.tsx'
 
 vi.mock('../checkin/ui/confetti.ts', () => ({ startConfetti: () => () => {} }))
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }))
+vi.mock('../guide/infra/poko.ts', () => ({ mountPoko: () => Promise.reject(new Error('jsdom')) }))
 const mounts: ((e: LocationEvent) => void)[] = []
 const shopErrors: (() => void)[] = []
 const handlers: { select: (s: Shop | null) => void; building: (s: Shop[] | null) => void; position: (p: LatLng) => void }[] = []
@@ -583,6 +584,7 @@ test('地図へ入ると今日の分を受け取り、少しあとに受け取�
   vi.useFakeTimers({ shouldAdvanceTime: true })
   claimLoginBonus.mockReset()
   claimLoginBonus.mockResolvedValueOnce({ stampNo: 2, coins: 10, claimedNow: true })
+  localStorage.setItem('mogumo.tutorial.u1', '1') // ポコタンの案内は見たことにする
   render(
     <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
@@ -597,10 +599,34 @@ test('地図へ入ると今日の分を受け取り、少しあとに受け取�
   vi.useRealTimers()
 })
 
+test('初めての人は、空から降りたあとにポコタンの案内が出て、閉じてからログインボーナス。2 回目は出ない', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  claimLoginBonus.mockReset()
+  claimLoginBonus.mockResolvedValue({ stampNo: 1, coins: 10, claimedNow: true })
+  render(
+    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+      <MapPage />
+    </AuthContext.Provider>,
+  )
+  await act(async () => { loading.enter() })
+  expect(claimLoginBonus).not.toHaveBeenCalled() // 案内が終わるまで受け取らない
+  await act(async () => { vi.advanceTimersByTime(3300) })
+  expect(screen.getByRole('dialog', { name: 'ポコタンの案内' })).toBeInTheDocument()
+  await act(async () => { screen.getByRole('button', { name: 'スキップ' }).click() })
+  expect(screen.queryByRole('dialog', { name: 'ポコタンの案内' })).not.toBeInTheDocument()
+  expect(localStorage.getItem('mogumo.tutorial.u1')).toBe('1')
+  expect(claimLoginBonus).toHaveBeenCalledTimes(1)
+  await act(async () => { vi.advanceTimersByTime(500) })
+  expect(screen.getByRole('dialog', { name: 'ログインボーナス' })).toBeInTheDocument() // 案内の後は待たずに出す
+  claimLoginBonus.mockReset()
+  vi.useRealTimers()
+})
+
 test('ログインボーナスは受け取り済み（claimedNow が false）なら画面を出さない', async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
   claimLoginBonus.mockReset()
   claimLoginBonus.mockResolvedValueOnce({ stampNo: 2, coins: 0, claimedNow: false })
+  localStorage.setItem('mogumo.tutorial.u1', '1')
   render(
     <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />

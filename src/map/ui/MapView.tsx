@@ -51,6 +51,7 @@ export type MapViewHandle = {
   subscribeBearing(cb: (bearingDeg: number) => void): () => void // 地図の回転（北 0・時計回り）が変わるたびに呼ぶ。方位磁針用。返り値で止める
   intro(): void // 地図へ入るときの演出: 高い所の真上から、いつもの高さと角度へ降りてくる（2026-11-16 オーナー）
   resetNorth(): void // 北を上に戻し、自分の場所に戻る（右上の方位磁針。2026-11-16 オーナー「1 で」）
+  meOnScreen(): { x: number; y: number } | null // 自分の場所が画面のどこか（ポコタンの案内で丸く抜く。位置がまだ無ければ null）
 }
 
 // 気配の「？」のピン（達成済みは出さない）。ほかのピンと同じ層に描く（2026-11-16 前後関係の直し）
@@ -117,6 +118,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   const focusRef = useRef<{ lat: number; lng: number } | null>(null)
   const resetNorthRef = useRef<() => void>(() => {})
   const introRef = useRef<() => void>(() => {})
+  const meOnScreenRef = useRef<() => { x: number; y: number } | null>(() => null)
   const sheetFocusRef = useRef(false) // お店・ビル・気配を押して寄せた（シートを閉じたら自分に戻る。2026-11-16 オーナー「前と同じ動き」）
   const unfocusRef = useRef<() => void>(() => {})
   const tapRef = useRef<(ids: string[] | null) => void>(() => {})
@@ -156,6 +158,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     },
     resetNorth: () => resetNorthRef.current(),
     intro: () => introRef.current(),
+    meOnScreen: () => meOnScreenRef.current(),
     checkin: (shop, newCells) => {
       const t = setTimeout(() => {
         checkinTimers.current.delete(t)
@@ -367,6 +370,12 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       sheetFocusRef.current = false
       s.shown = null
       if (s.current) map.easeTo({ center: [s.current.lng, s.current.lat], duration: 500 })
+    }
+    meOnScreenRef.current = () => {
+      if (!s.current) return null
+      const pt = map.project([s.current.lng, s.current.lat])
+      const box = map.getContainer().getBoundingClientRect()
+      return { x: box.left + pt.x, y: box.top + pt.y }
     }
     // 右上の方位磁針: 北を上にし、寄せていた場所から自分の場所へ戻って追いかけを再開する
     resetNorthRef.current = () => {

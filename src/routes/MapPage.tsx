@@ -45,6 +45,8 @@ import { TownBanner } from '../towns/ui/TownBanner.tsx'
 import { sound } from '../sound/infra/sound.ts'
 import { NearbyList } from '../nearby/ui/NearbyList.tsx'
 import { LoginBonus } from '../loginbonus/ui/LoginBonus.tsx'
+import { Guide } from '../guide/ui/Guide.tsx'
+import { guideSeen, markGuideSeen } from '../guide/infra/seen.ts'
 import { claimLoginBonus } from '../loginbonus/infra/loginBonusApi.ts'
 import type { Claim } from '../loginbonus/domain/loginBonus.ts'
 import { ReviewEditor } from '../reviews/ui/ReviewEditor.tsx'
@@ -119,6 +121,8 @@ export function MapPage() {
   // ログインボーナス（A4）の受け取り画面と、地図へ入ったか
   const [entered, setEntered] = useState(false)
   const [loginBonus, setLoginBonus] = useState<Claim | null>(null)
+  // ポコタンの案内（A5）: 初めての人は空から降りたあとに出す。ログインボーナスは案内が終わってから
+  const [tour, setTour] = useState<'wait' | 'open' | 'done'>('wait')
   // タイトルを閉じて地図へ入ったら、カメラを空から降ろす（2026-11-16 オーナー「空から来たような感じ」）
   useEffect(
     () =>
@@ -293,21 +297,35 @@ export function MapPage() {
       .catch(() => {})
     loadCoins().then(setCoins).catch(() => {})
   }, [])
-  // ログインボーナス（A4）: 地図へ入ったら今日の分を受け取り、空から降りる演出が終わったころに画面を出す
+  // ポコタンの案内（A5）: まだ見ていなければ、空から降りる演出が終わったころに出す
+  const guideShown = useRef(false) // 案内を出した後のログインボーナスは、待たずに出す
   useEffect(() => {
-    if (!entered || !userId) return
+    if (!entered || !userId || tour !== 'wait') return
+    if (guideSeen(userId)) return setTour('done')
+    const t = setTimeout(() => setTour('open'), LOGIN_BONUS_DELAY_MS)
+    return () => clearTimeout(t)
+  }, [entered, userId, tour])
+  const closeGuide = useCallback(() => {
+    guideShown.current = true
+    if (userId) markGuideSeen(userId)
+    setTour('done')
+  }, [userId])
+  const meOnScreen = useCallback(() => mapRef.current?.meOnScreen() ?? null, [])
+  // ログインボーナス（A4）: 地図へ入ったら今日の分を受け取り、空から降りる演出（または案内）が終わったころに画面を出す
+  useEffect(() => {
+    if (!entered || !userId || tour !== 'done') return
     let alive = true
     let timer: ReturnType<typeof setTimeout> | undefined
     void claimLoginBonus().then((c) => {
       if (!alive || !c?.claimedNow) return
       refreshStats() // コインの数字を読み直す
-      timer = setTimeout(() => alive && setLoginBonus(c), LOGIN_BONUS_DELAY_MS)
+      timer = setTimeout(() => alive && setLoginBonus(c), guideShown.current ? 400 : LOGIN_BONUS_DELAY_MS)
     })
     return () => {
       alive = false
       clearTimeout(timer)
     }
-  }, [entered, userId, refreshStats])
+  }, [entered, userId, tour, refreshStats])
   const [soonName, setSoonName] = useState<string | null>(null) // まだ作っていない画面の名前（短く出す）
   useEffect(() => {
     if (!userId) return
@@ -523,6 +541,7 @@ export function MapPage() {
           onClose={() => setZukanOpen(false)}
         />
       )}
+      {tour === 'open' && <Guide meOnScreen={meOnScreen} onClose={closeGuide} />}
       {loginBonus && <LoginBonus claim={loginBonus} onClose={() => setLoginBonus(null)} />}
       {nearbyInput && (
         <NearbyList
@@ -572,6 +591,10 @@ export function MapPage() {
           pinsHidden={pinsHidden}
           onTogglePins={togglePins}
           onSignOut={() => void signOut()}
+          onGuide={() => {
+            setSettingsOpen(false) // 地図に戻って、ポコタンの案内を最初から
+            setTour('open')
+          }}
           onClose={() => setSettingsOpen(false)}
         />
       )}

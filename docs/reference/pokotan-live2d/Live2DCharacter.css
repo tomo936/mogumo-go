@@ -1,0 +1,53 @@
+.live2d-stage {
+  position: relative;
+  width: 100%;
+  height: clamp(220px, 42dvh, 420px);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.live2d-stage--clickable {
+  cursor: pointer;
+}
+
+.live2d-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.status-effect {
+  position: absolute;
+  /* left/top are set from JS each frame, anchored to a real point on the
+     model (see STATUS_EFFECT_ANCHOR in Live2DCharacter.jsx) instead of a
+     fixed percentage, so it stays next to the head across growth stages
+     and screen sizes. */
+  top: 50%;
+  left: 50%;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: status-float 1.6s ease-in-out infinite;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+}
+
+.status-effect img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+@keyframes status-float {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+}
