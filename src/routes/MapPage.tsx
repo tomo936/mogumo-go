@@ -43,6 +43,7 @@ import { syncUntilSettled } from '../towns/infra/townsApi.ts'
 import type { TownNews, TownSync } from '../towns/domain/progress.ts'
 import { TownBanner } from '../towns/ui/TownBanner.tsx'
 import { sound } from '../sound/infra/sound.ts'
+import { NearbyList } from '../nearby/ui/NearbyList.tsx'
 import { ReviewEditor } from '../reviews/ui/ReviewEditor.tsx'
 import { loadLatest, loadMine, loadSummary, photoUrls } from '../reviews/infra/reviewsApi.ts'
 import { targetCheckin } from '../reviews/domain/review.ts'
@@ -126,6 +127,7 @@ export function MapPage() {
       alive = false
     }
   }, [syncOsm])
+  const [nearbyInput, setNearbyInput] = useState<{ shops: readonly Shop[]; cleared: ReadonlySet<string>; checked: ReadonlySet<string> } | null>(null) // 近くのお店の一覧（A11）。開いている間だけ
   const [zukanInput, setZukanInput] = useState<{ mapShops: readonly Shop[]; cleared: ReadonlySet<string> } | null>(null)
   // 「？」のヒントは今いる場所から（図鑑を開いている間も位置は受け取り続けるので、歩けば測り直す）。まだ無ければ自宅から
   const hintOrigin = useMemo<HintOrigin | null>(() => (me ? { pos: me, from: 'here' } : home ? { pos: home, from: 'home' } : null), [me, home])
@@ -373,6 +375,11 @@ export function MapPage() {
     return m
   }, [me, hints.positions])
   const pickedHintData = pickedHint ? (hints.set?.hints.find((h) => h.id === pickedHint) ?? null) : null
+  // 正体がまだ伏せられている気配の店（一覧に出すと名前が分かってしまうので出さない）
+  const maskedShopIds = useMemo<ReadonlySet<string>>(
+    () => new Set((hints.set?.hints ?? []).filter((h) => !h.completed && !hints.revealed.has(h.id)).map((h) => h.shopId)),
+    [hints.set, hints.revealed],
+  )
   const noHints = exploreOpen && hints.status === 'ready' && hints.set !== null && hints.set.hints.length === 0
   const guide = (() => {
     if (!noHints || !me) return []
@@ -492,6 +499,21 @@ export function MapPage() {
           onClose={() => setZukanOpen(false)}
         />
       )}
+      {nearbyInput && (
+        <NearbyList
+          shops={nearbyInput.shops}
+          me={me}
+          cleared={nearbyInput.cleared}
+          checked={nearbyInput.checked}
+          hiddenIds={maskedShopIds}
+          onPick={(shop) => {
+            setNearbyInput(null)
+            mapRef.current?.focusAt(shop) // お店を押したときと同じ寄せ。シートを閉じたら自分に戻る
+            select(shop)
+          }}
+          onClose={() => setNearbyInput(null)}
+        />
+      )}
       {recordTab && <Record home={home} initialTab={recordTab} onTownSync={onTownSync} onClose={() => setRecordTab(null)} />}
       {myPageOpen && userId && (
         <MyPage
@@ -564,6 +586,11 @@ export function MapPage() {
             setZukanInput({ mapShops: inp?.shops ?? [], cleared: inp?.cleared ?? new Set() })
             syncOsm()
             setZukanOpen(true)
+          }}
+          onNearby={() => {
+            closeExplore()
+            const inp = mapRef.current?.hintInputs()
+            setNearbyInput({ shops: inp?.shops ?? [], cleared: inp?.cleared ?? new Set(), checked: inp?.checked ?? new Set() })
           }}
           onRecord={() => {
             closeExplore()

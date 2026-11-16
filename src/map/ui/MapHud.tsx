@@ -1,5 +1,6 @@
 // 地図の上に重ねる部品: 左上のキャラ札（Lv）、上の真ん中の気配、下の真ん中のメニュー（扇で5つ）。
 // 2026-11-10 オーナー決定の配置。メニュー・気配の絵はミシェーラの完成形（2026-11-12、丸と枠まで絵に入っている）。
+import { Icon } from '../../ui/Icon.tsx'
 import { useEffect, useRef, useState } from 'react'
 import { fanPositions } from '../domain/menuFan.ts'
 import { CoinIcon } from '../../ui/CoinIcon.tsx'
@@ -27,6 +28,7 @@ type Props = {
   hintOpen: boolean
   onHintTap: () => void
   onZukan: () => void
+  onNearby: () => void // 右上の方位磁針の下: 近くのお店の一覧（A11）
   onRecord: () => void
   onMyPage: () => void
   onSettings: () => void
@@ -65,6 +67,11 @@ export function MapHud(p: Props) {
       )}
 
       <Compass subscribe={p.subscribeBearing} onTap={p.onCompass} />
+
+      {/* 近くのお店の一覧。絵は仮（線のアイコン）。ミシェーラの丸ボタンの絵ができたら差し替える */}
+      <button type="button" className="hud-nearby" aria-label="近くのお店" onClick={p.onNearby}>
+        <Icon name="store" size={26} />
+      </button>
 
       <button type="button" className="hud-hint" aria-label="気配" aria-expanded={p.hintOpen} onClick={p.onHintTap}>
         <img src={art('kehai-cloud')} alt="" />

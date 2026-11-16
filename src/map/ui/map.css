@@ -304,3 +304,22 @@
   pointer-events: none;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.18));
 }
+
+/* 近くのお店の一覧のボタン（方位磁針の下）。絵は仮 */
+.hud-nearby {
+  position: absolute;
+  right: 18px;
+  top: 82px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #e8883a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+  color: #fff;
+}
