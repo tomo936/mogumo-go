@@ -7,7 +7,7 @@ import type { GeoJSONSource } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import '../../map/infra/maplibreWorker.ts' // 地図の作業用プログラムの読み込み先（アプリ本体と同じ設定）
 import { MAP_THEME, STYLE_URL } from '../../map/config.ts'
-import { THEMES, pickTheme } from '../../map/infra/themes.ts'
+import { currentTheme } from '../../map/infra/themes.ts'
 import { themeStyle } from '../../map/infra/theme.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
 import { clearedFromHome } from '../../fog/domain/clearing.ts'
@@ -64,7 +64,7 @@ export function RecordMap({ cells, towns, t, home, pins, wave = true, outlines =
     const view = viewOf(cells, home)
     const center = focus ? focus.center : view.center
     const radiusM = view.radiusM
-    const theme = THEMES[pickTheme(window.location.search, MAP_THEME)]
+    const theme = currentTheme(window.location.search, MAP_THEME) // 夜は夜の色（A14）
     const map = new MapLibreMap({
       container,
       style: STYLE_URL,

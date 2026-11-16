@@ -9,8 +9,7 @@ import {
   CIRCLE_RADIUS_M, RIPPLE_COLOR, RIPPLE_COUNT, RIPPLE_FILL_COLOR, RIPPLE_FILL_OPACITY, RIPPLE_PERIOD_MS, FIRST_FIX_TIMEOUT_MS, INITIAL_ZOOM, MAP_THEME, MAX_ZOOM, MIN_ZOOM, PITCH, STYLE_URL,
 } from '../config.ts'
 import { themeStyle } from '../infra/theme.ts'
-import { pickTheme, THEMES } from '../infra/themes.ts'
-import { isNight } from '../../daynight/infra/phase.ts'
+import { currentTheme } from '../infra/themes.ts'
 import { isFakeWalkEnabled, startFakeWalk } from '../infra/fakeWalk.ts'
 import { circlePolygon, distanceMeters, metersPerPixel } from '../domain/geo.ts'
 import { ripplesAt } from '../domain/ripple.ts'
@@ -177,7 +176,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   useEffect(() => {
     const container = containerRef.current!
     // 色の案は標準（MAP_THEME）。見比べたいときだけ URL の ?theme= で選ぶ
-    const theme = isNight() && MAP_THEME === 'illust' ? THEMES.illustNight : THEMES[pickTheme(window.location.search, MAP_THEME)] // 夜は夜の色（A14）
+    const theme = currentTheme(window.location.search, MAP_THEME) // 夜は夜の色（A14）
     container.style.visibility = 'hidden' // 最初の位置が取れるまで地図は見せない
     const map = new MapLibreMap({
       container,

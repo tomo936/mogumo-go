@@ -1,4 +1,5 @@
 import type { MapTheme } from './theme.ts'
+import { isNight } from '../../daynight/infra/phase.ts'
 
 // 世界観「明るい昼のグルメ」（青空色＋パステル、白基調）に沿った3案。標準は config.ts の MAP_THEME
 export const THEMES = {
@@ -53,4 +54,10 @@ export type ThemeName = keyof typeof THEMES
 export function pickTheme(search: string, fallback: ThemeName): ThemeName {
   const name = new URLSearchParams(search).get('theme')
   return name !== null && Object.hasOwn(THEMES, name) ? (name as ThemeName) : fallback
+}
+
+// 今の色: 夜はイラスト調の夜の色（A14。メインの地図・記録・ワールドマップで共通）。昼は標準か ?theme= の案
+export function currentTheme(search: string, fallback: ThemeName): MapTheme {
+  if (isNight() && fallback === 'illust') return THEMES.illustNight
+  return THEMES[pickTheme(search, fallback)]
 }
