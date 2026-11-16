@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { GUIDE_PAGES, guideKey, holeAround, onTap, shownChars } from './guide.ts'
+import { GUIDE_PAGES, guideKey, holeAround, onTap, shownChars, unionRect } from './guide.ts'
 
 describe('ポコタンの案内の決まり', () => {
-  it('6 ページで、最初はナビゲーターのあいさつ、どの文も「ポコ」で終わる', () => {
-    expect(GUIDE_PAGES).toHaveLength(6)
+  it('9 ページで、最初はナビゲーターのあいさつ、どの文も「ポコ」で終わる', () => {
+    expect(GUIDE_PAGES).toHaveLength(9)
     expect(GUIDE_PAGES[0].text.startsWith('ナビゲーターのポコタンポコ！')).toBe(true)
     for (const p of GUIDE_PAGES) expect(p.text).toMatch(/ポコ[！〜]*$/)
-    expect(GUIDE_PAGES.map((p) => p.target)).toEqual(['none', 'me', 'me', 'hint', 'menu', 'none'])
+    expect(GUIDE_PAGES.map((p) => p.target)).toEqual(['none', 'me', 'me', 'me', 'none', 'hint', 'menu', 'player', 'none'])
   })
 
   it('字は 40ms に 1 字ずつ出て、文の長さで止まる', () => {
@@ -23,6 +23,19 @@ describe('ポコタンの案内の決まり', () => {
 
   it('見たかどうかは人ごとの鍵', () => {
     expect(guideKey('u1')).toBe('mogumo.tutorial.u1')
+  })
+
+  it('霧はチェックインで晴れる・目標は町のクリア・ガチャでキャラを変えられる、を言う', () => {
+    const all = GUIDE_PAGES.map((p) => p.text).join('')
+    expect(all).toContain('チェックインすると、まわりの霧がパーッと晴れる')
+    expect(all).toContain('目指すのは町のクリア')
+    expect(all).toContain('ガチャ')
+    expect(all).not.toContain('歩くと晴れ')
+  })
+
+  it('いくつかの部品をまとめて囲む', () => {
+    expect(unionRect([])).toBeNull()
+    expect(unionRect([{ left: 10, top: 10, width: 50, height: 50 }, { left: 70, top: 20, width: 40, height: 20 }])).toEqual({ left: 10, top: 10, width: 100, height: 50 })
   })
 
   it('抜く丸は部品の真ん中に、部品より少し大きく', () => {

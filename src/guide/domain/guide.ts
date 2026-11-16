@@ -1,17 +1,20 @@
 // ポコタンの案内（A5）の決まり。設計 docs/superpowers/specs/2026-11-17-pokotan-guide-design.md
 // ページの一覧・字の出し方・タップで何が起きるか・抜く丸の大きさ。画面は ui/Guide.tsx。
 
-// どこを明るく抜くか: none = 抜かない、me = 自分のまわり、hint = 上の「？」の雲、menu = 下の丸いボタン
-export type GuideTarget = 'none' | 'me' | 'hint' | 'menu'
+// どこを明るく抜くか: none = 抜かない、me = 自分のまわり、hint = 上の「？」の雲、menu = 下の丸いボタン、player = 左上のキャラとコイン
+export type GuideTarget = 'none' | 'me' | 'hint' | 'menu' | 'player'
 export type GuidePage = { text: string; target: GuideTarget }
 
 export const GUIDE_PAGES: GuidePage[] = [
   { text: 'ナビゲーターのポコタンポコ！ この町のおいしいお店、いっしょに探しに行くポコ！', target: 'none' },
-  { text: 'まわりのもこもこは霧だポコ。歩くと晴れて、隠れたお店が見えてくるポコ！', target: 'me' },
-  { text: '建物をタップするとお店がわかるポコ。50m まで近づいたらチェックインできるポコ！', target: 'me' },
-  { text: '上の「？」の雲には、今日の気配が入ってるポコ。気になるお店を探しに行くポコ〜！', target: 'hint' },
-  { text: '下の丸からは、図鑑や記録が見られるポコ。行ったお店がどんどんたまるポコ！', target: 'menu' },
-  { text: '準備ばっちりだポコ！ さあ、出発ポコ！', target: 'none' },
+  { text: 'まわりのもこもこは霧ポコ。霧の中のお店は、すぐ近くまで行かないと見えないポコ！', target: 'me' },
+  { text: 'お店に着いたら、建物をタップしてチェックインするポコ！ 50m 以内ならできるポコ！', target: 'me' },
+  { text: 'チェックインすると、まわりの霧がパーッと晴れるポコ！ 晴れた場所のお店は、ぜんぶ見えるようになるポコ！', target: 'me' },
+  { text: '目指すのは町のクリアポコ！ 町のお店の半分に行くと、町じゅうの霧がいっぺんに晴れるポコ！', target: 'none' },
+  { text: '上の「？」の雲を押すと、霧の中にかくれたお店の気配がわかるポコ。探しに行ってみるポコ〜！', target: 'hint' },
+  { text: '下の丸いボタンからは、図鑑や記録が見られるポコ。行ったお店がどんどんたまっていくポコ！', target: 'menu' },
+  { text: 'たまったグルメコインでガチャを引くと、新しいキャラが仲間になるポコ！ 左上から、お気に入りのキャラに変えられるポコ〜！', target: 'player' },
+  { text: '準備ばっちりポコ！ まずはこの町のクリアを目指して、出発ポコ！', target: 'none' },
 ]
 
 export const CHAR_MS = 40 // 1 字を出す間
@@ -32,6 +35,16 @@ export function guideKey(userId: string): string {
 
 export type Rect = { left: number; top: number; width: number; height: number }
 export type Hole = { cx: number; cy: number; r: number }
+
+// いくつかの部品をまとめて囲む四角
+export function unionRect(rs: Rect[]): Rect | null {
+  if (rs.length === 0) return null
+  const l = Math.min(...rs.map((r) => r.left))
+  const t = Math.min(...rs.map((r) => r.top))
+  const R = Math.max(...rs.map((r) => r.left + r.width))
+  const B = Math.max(...rs.map((r) => r.top + r.height))
+  return { left: l, top: t, width: R - l, height: B - t }
+}
 
 export function holeAround(r: Rect, pad: number): Hole {
   return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, r: Math.max(r.width, r.height) / 2 + pad }
