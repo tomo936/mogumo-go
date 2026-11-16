@@ -3,6 +3,7 @@ import { modelPlace, visibleShops } from './visibility.ts'
 import { distanceMeters } from '../../map/domain/geo.ts'
 import { clearedFromHome } from '../../fog/domain/clearing.ts'
 import type { Shop } from './shop.ts'
+import { cellKey, cellOf } from '../../fog/domain/grid.ts'
 
 const me = { lat: 35, lng: 139 }
 const M = 1 / 111_000 // 緯度1mぶんの度数（ほぼ）
@@ -35,6 +36,17 @@ describe('visibleShops', () => {
     expect(distanceMeters(me, edge)).toBeLessThanOrEqual(50)
     expect(distanceMeters(me, edge)).toBeGreaterThan(49.999)
     expect(visibleShops([edge], me, new Set<string>()).map((s) => s.id)).toEqual(['edge'])
+  })
+
+  it('離れた場所を見ているとき（area）: そこの晴れた店は出る。霧の中の店は、見ている場所ではなく自分（me）の 50m 以内だけ（仕様 S1）', () => {
+    const area = { lat: me.lat + 3000 * M, lng: me.lng }
+    const there = (id: string, northM: number) => ({ ...shop(id, 0), lat: area.lat + northM * M })
+    const cleared = new Set([cellKey(cellOf(there('clear', 50)))]) // 晴れは「clear」の店のマスだけ
+    const r = visibleShops([there('clear', 50), there('fog', 600 /* 霧・見ている場所から 600m */), there('fogNearView', 30), shop('fogNearMe', 30)], area, cleared, me)
+    expect(r.map((s) => s.id)).toContain('clear')
+    expect(r.map((s) => s.id)).not.toContain('fog')
+    expect(r.map((s) => s.id)).not.toContain('fogNearView') // 見ている場所の近くでも、霧の中の店はのぞけない
+    expect(r.map((s) => s.id)).not.toContain('fogNearMe') // 自分の近くの霧の店でも、見ている場所から 1km より遠ければ出さない
   })
 
   it('晴れた 900m の店は出る', () => {

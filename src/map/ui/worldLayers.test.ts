@@ -209,6 +209,17 @@ test('カメラが自分から離れた場所を見ている（図鑑の「地�
   expect(fogLayer.setClumps.mock.lastCall![0]).toEqual(home)
 })
 
+test('離れた場所を見ているときは、そこのまわりのお店を読む（ホットペッパーもそこで取る）', async () => {
+  const far = north(3000)
+  const { world, fetchHotpepper } = setup()
+  world.onPosition(home)
+  await flush()
+  expect(fetchHotpepper).toHaveBeenCalledTimes(1)
+  world.setView(far)
+  expect(fetchHotpepper).toHaveBeenCalledTimes(2)
+  expect(fetchHotpepper.mock.lastCall![0]).toEqual(far)
+})
+
 test('取得中は2本目を投げない', async () => {
   let resolve: (s: Shop[]) => void = () => {}
   const { world, fetchHotpepper } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => new Promise<Shop[]>((r) => { resolve = r })) })
