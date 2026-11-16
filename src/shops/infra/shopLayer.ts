@@ -9,7 +9,7 @@ import { threeLayer } from '../../lib/threeLayer.ts'
 import { pickShop } from './pickShop.ts'
 import { MODEL_SCALE } from '../config.ts'
 import { isNight, onPhase } from '../../daynight/infra/phase.ts'
-import { GLOW_SCALE, glowMesh, lightUp, makeLights } from '../../daynight/infra/nightLook.ts'
+import { lightUp, makeLights } from '../../daynight/infra/nightLook.ts'
 
 // 地図に置く建物1つ。1軒の店は model がその種類・shopIds が [id]。
 // ビル（同じ建物の複数の店）は model 'building'・id 'bldg:<先頭の店 id>'・shopIds に全員
@@ -46,10 +46,6 @@ export function createShopLayer(id: string): CustomLayerInterface & {
     for (const m of meshes) {
       scene?.remove(m)
       m.dispose()
-      if (m.userData.glow) {
-        m.geometry.dispose()
-        ;(m.material as THREE.Material).dispose()
-      }
     }
     meshes = []
   }
@@ -128,20 +124,6 @@ export function createShopLayer(id: string): CustomLayerInterface & {
         meshes.push(inst)
       }
     }
-    // 夜: お店の足元に暖かい光のたまり（A14）
-    const lit = shops.filter((s) => drawnKey(s))
-    if (isNight() && lit.length) {
-      const glow = glowMesh(lit.length)
-      glow.userData.glow = true
-      lit.forEach((s, i) => {
-        const p = frame.to(s)
-        const k = s.sizeM * GLOW_SCALE
-        glow.setMatrixAt(i, m.compose(v.set(p.x, 0.15, -p.y), q.identity(), sc.set(k, 1, k)))
-      })
-      glow.computeBoundingSphere()
-      scene.add(glow)
-      meshes.push(glow)
-    }
     map?.triggerRepaint()
   }
 
@@ -155,7 +137,7 @@ export function createShopLayer(id: string): CustomLayerInterface & {
       stopPhase = onPhase((n) => {
         lights?.apply(n)
         lightUp(allMats(), n)
-        build()
+        map?.triggerRepaint()
       })
       build()
     },
