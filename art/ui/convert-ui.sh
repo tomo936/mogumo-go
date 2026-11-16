@@ -18,3 +18,6 @@ ffmpeg -y -loglevel error -i art/ui/menu/compass.png -vf "crop=388:388:62:62,sca
 ffmpeg -y -loglevel error -i art/ui/title.png -c:v libwebp -quality 80 -compression_level 6 "$out/title.webp"  # タイトル画面（起動時のスプラッシュの背景。852×1846）
 # ローディングのパンケーキ（ミシェーラ 2026-11-14 採用。PNG 連番 art/loading/loading-pancake-regen6-frames.zip を展開した alpha_seq_regen6/ から、幅 128px・30fps のアニメ WebP に）
 # ffmpeg -y -framerate 30 -i alpha_seq_regen6/%03d.png -vf "scale=128:-1:flags=lanczos,format=yuva420p" -c:v libwebp -lossless 0 -quality 60 -loop 0 "$out/loading-pancake.webp"
+# アプリアイコン（ミシェーラ appicon-kuma-v1.png。絵は変えず縮小だけ）→ public/
+for s in 32 192; do ffmpeg -y -loglevel error -i art/branding/appicon-kuma-v1.png -vf "scale=$s:$s:flags=lanczos" public/icon-$s.png; done
+ffmpeg -y -loglevel error -i art/branding/appicon-kuma-v1.png -vf "scale=180:180:flags=lanczos" public/apple-touch-icon.png
