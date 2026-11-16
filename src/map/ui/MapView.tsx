@@ -49,7 +49,8 @@ export type MapViewHandle = {
   bounceHint(hintId: string): void
   express(kind: Expression): void // 3D の男の子の表情（チェックイン・レベルが上がったとき 'happy'）。読めていなければ何もしない
   subscribeBearing(cb: (bearingDeg: number) => void): () => void // 地図の回転（北 0・時計回り）が変わるたびに呼ぶ。方位磁針用。返り値で止める
-  resetNorth(): void // 北を上に戻し、自分の場所に戻る（右上の方位磁針。2026-11-16 オーナー「1 で」）
+  resetNorth(): void // 北を上に戻すだけ（右上の方位磁針。2026-11-16 見て回るモード）
+  returnToMe(): void // 見て回るモードをやめ、自分の場所へ戻って追いかけを再開する（左上のキャラの丸）
 }
 
 // 気配の「？」のピン（達成済みは出さない）。ほかのピンと同じ層に描く（2026-11-16 前後関係の直し）
@@ -66,6 +67,7 @@ type Props = {
   onSelectBuilding: (shops: Shop[] | null, title?: string | null) => void // ビル・施設・駅（同じ建物の複数のお店）が押された。title は施設・駅の名前
   onPosition: (me: LatLng) => void // 1秒に4回まで
   onHintTap: (hintId: string) => void // 気配のピンが押された
+  onExploring?: (exploring: boolean) => void // 見て回るモード（ピンを押して寄った・自分を追いかけていない）に入った／出た
   paused?: boolean // 記録・図鑑など全画面の画面で地図が隠れているあいだ、毎コマの動き（アバター・カメラ・お店の更新）を止めて描かない。位置は受け取り続ける
   pinsHidden?: boolean // 店のピン（1軒・ビル・施設）・名前の札・気配のピンを出さない（2026-11-10 オーナー: 気配のピンも消す）
   ref?: Ref<MapViewHandle>
@@ -79,7 +81,7 @@ const CHECKIN_WAVE_DELAY_MS = 900 // 紙吹雪のあと、霧の波が走り出�
 
 // 地図・カメラ・位置は MapLibre と ref だけで持ち、React の再描画を起こさない。
 // React に上げるのは位置情報の出来事（onStatus）だけ。
-export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, paused = false, pinsHidden = false, ref }: Props) {
+export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, onExploring, paused = false, pinsHidden = false, ref }: Props) {
   const pausedRef = useRef(paused)
   pausedRef.current = paused
   const containerRef = useRef<HTMLDivElement>(null)
@@ -89,6 +91,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   const onSelectBuildingRef = useRef(onSelectBuilding)
   const onPositionRef = useRef(onPosition)
   const onHintTapRef = useRef(onHintTap)
+  const onExploringRef = useRef(onExploring)
   const worldRef = useRef<ReturnType<typeof attachWorld> | null>(null)
   const pinsHiddenRef = useRef(pinsHidden) // 世界ができる前に決まっていた分も、できたときに渡す
   const avatarModelRef = useRef<ReturnType<typeof createAvatarModel> | null>(null)
@@ -105,12 +108,14 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     onSelectBuildingRef.current = onSelectBuilding
     onPositionRef.current = onPosition
     onHintTapRef.current = onHintTap
+    onExploringRef.current = onExploring
   })
   // チェックイン演出: 約0.9秒後に済みの印を付け、新しく晴れるセルを足して波を走らせる（外すときに取り消す）
   const checkinTimers = useRef(new Set<ReturnType<typeof setTimeout>>())
   // お店の板を開いている間は、カメラをそのお店に向けて、自分への追いかけを止める
   const focusRef = useRef<{ lat: number; lng: number } | null>(null)
   const resetNorthRef = useRef<() => void>(() => {})
+  const returnToMeRef = useRef<() => void>(() => {})
   const unfocusRef = useRef<() => void>(() => {})
   const tapRef = useRef<(ids: string[] | null) => void>(() => {})
   const focusAtRef = useRef<(p: LatLng) => void>(() => {})
@@ -148,6 +153,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       return () => { bearingSubs.current.delete(cb) }
     },
     resetNorth: () => resetNorthRef.current(),
+    returnToMe: () => returnToMeRef.current(),
     checkin: (shop, newCells) => {
       const t = setTimeout(() => {
         checkinTimers.current.delete(t)
@@ -190,6 +196,11 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     })
     map.touchZoomRotate.disableRotation()
     mapRef.current = map
+    // 地図を作り直したら、ふだんのモードから（新しい地図は 1 本指で回す設定で始まるため）
+    if (focusRef.current) {
+      focusRef.current = null
+      onExploringRef.current?.(false)
+    }
     map.on('rotate', () => {
       const b = map.getBearing()
       for (const cb of bearingSubs.current) cb(b)
@@ -289,7 +300,8 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       const prevX = pointers.get(e.pointerId)
       if (prevX === undefined) return
       pointers.set(e.pointerId, e.clientX)
-      if (pointers.size === 1) map.setBearing(nextBearing(map.getBearing(), e.clientX - prevX))
+      // 1本指で回すのはふだんだけ。見て回るモードでは 1 本指は地図を動かす（MapLibre の dragPan）
+      if (pointers.size === 1 && !focusRef.current) map.setBearing(nextBearing(map.getBearing(), e.clientX - prevX))
     }
     const onUp = (e: PointerEvent) => {
       const d = downs.get(e.pointerId)
@@ -299,6 +311,23 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > TAP_MAX_MOVE_PX || performance.now() - d.t > TAP_MAX_MS) return
       const rect = container.getBoundingClientRect()
       tapRef.current(s.world.pick({ x: e.clientX - rect.left, y: e.clientY - rect.top }))
+    }
+    // カメラの寄せ先。null 以外のあいだは「見て回るモード」: 自分を追いかけず、1 本指でなぞると地図が動き、
+    // 2 本指でひねると回転・つまむと拡大縮小（2026-11-16 オーナー）。ふだんは 1 本指で回転・ピンチは画面の真ん中で拡大縮小
+    const setFocus = (p: LatLng | null) => {
+      const was = focusRef.current !== null
+      focusRef.current = p
+      if (was === (p !== null)) return
+      if (p) {
+        map.dragPan.enable()
+        map.touchZoomRotate.enableRotation()
+        map.touchZoomRotate.enable()
+      } else {
+        map.dragPan.disable()
+        map.touchZoomRotate.disableRotation()
+        map.touchZoomRotate.enable({ around: 'center' })
+      }
+      onExploringRef.current?.(p !== null)
     }
     // 建物かピンが押された: 1軒ならお店のシート、2軒以上ならビルの一覧。カメラはそのお店（ビルなら先頭の店）へ寄せる
     tapRef.current = (ids) => {
@@ -311,7 +340,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       // まとめのピンを押した: その場所へ寄せ、まとめがなくなる倍率まで寄る。勝手には戻らない（戻すのは右上の方位磁針。2026-11-16 オーナー）
       const cluster = ids?.[0]?.startsWith('cluster:') ? ids[0].slice(8).split(',').map(Number) : null
       if (cluster && cluster.length === 2 && cluster.every(Number.isFinite)) {
-        focusRef.current = { lat: cluster[1], lng: cluster[0] }
+        setFocus({ lat: cluster[1], lng: cluster[0] })
         map.easeTo({ center: [cluster[0], cluster[1]], zoom: Math.min(CLUSTER_UNTIL_ZOOM + 0.05, MAX_ZOOM), duration: 600 })
         return
       }
@@ -329,7 +358,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       const at = found[0]
       if (at) {
         const zoom = focusRef.current ? map.getZoom() : Math.min(map.getZoom() + TAP_ZOOM_STEP, MAX_ZOOM)
-        focusRef.current = { lat: at.lat, lng: at.lng }
+        setFocus({ lat: at.lat, lng: at.lng })
         s.world?.focus(found.map((sh) => sh.id)) // 選んだ建物は遠くても詳しい模型に
         map.easeTo({ center: [at.lng, at.lat], zoom, duration: 500 })
       }
@@ -337,7 +366,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     // 気配を押したとき: カメラをその場所へ寄せる（お店のシートを開くときと同じ動き）
     focusAtRef.current = (p) => {
       const zoom = focusRef.current ? map.getZoom() : Math.min(map.getZoom() + TAP_ZOOM_STEP, MAX_ZOOM)
-      focusRef.current = { lat: p.lat, lng: p.lng }
+      setFocus({ lat: p.lat, lng: p.lng })
       map.easeTo({ center: [p.lng, p.lat], zoom, duration: 500 })
     }
     // シート・一覧を閉じた: 選んだ建物の詳しい模型だけ戻す。カメラはその場所にとどめる
@@ -345,18 +374,17 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     unfocusRef.current = () => {
       s.world?.focus(null)
     }
-    // 右上の方位磁針: 北を上にし、寄せていた場所から自分の場所へ戻って追いかけを再開する
+    // 右上の方位磁針: 北を上にするだけ（見て回っている場所はそのまま。2026-11-16 オーナー）
     resetNorthRef.current = () => {
-      if (focusRef.current) {
-        focusRef.current = null
-          s.shown = null
-        s.world?.focus(null)
-        if (s.current) {
-          map.easeTo({ center: [s.current.lng, s.current.lat], bearing: 0, duration: 500 })
-          return
-        }
-      }
       map.easeTo({ bearing: 0, duration: 400 })
+    }
+    // 左上のキャラの丸: 見て回るモードをやめ、自分の場所へ戻って追いかけを再開する（向きは今のまま）
+    returnToMeRef.current = () => {
+      if (!focusRef.current) return
+      setFocus(null)
+      s.shown = null
+      s.world?.focus(null)
+      if (s.current) map.easeTo({ center: [s.current.lng, s.current.lat], duration: 500 })
     }
     // 毎コマ、表示位置を目標へ寄せてカメラを動かす
     const loop = { frame: 0, prevTime: performance.now(), positionAt: 0 }
