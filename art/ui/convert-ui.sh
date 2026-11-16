@@ -22,3 +22,5 @@ ffmpeg -y -loglevel error -i art/ui/title.png -c:v libwebp -quality 80 -compress
 for s in 32 192; do ffmpeg -y -loglevel error -i art/branding/appicon-kuma-v1.png -vf "scale=$s:$s:flags=lanczos" public/icon-$s.png; done
 ffmpeg -y -loglevel error -i art/branding/appicon-kuma-v1.png -vf "scale=180:180:flags=lanczos" public/apple-touch-icon.png
 python3 -I art/loading/webp-noblend.py "$out/loading-pancake.webp"  # iPhone でコマが重ならないように（上の ffmpeg のあと必ず）
+# ロゴ（オーナー 2026-11-16）: ほぼ透明の点（アルファ 24 未満）を消して、うっすら四角い枠が見えないように。可逆の WebP
+ffmpeg -y -i art/branding/logo.png -vf "format=rgba,scale=720:-1:flags=lanczos,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lt(alpha(X,Y),24),0,alpha(X,Y))'" -c:v libwebp -lossless 1 -compression_level 6 "$out/logo.webp"

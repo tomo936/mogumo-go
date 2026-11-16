@@ -5,14 +5,12 @@ import { loading } from './loadingGate.ts'
 import titleArt from '../assets/ui/title.webp'
 import pancakeArt from '../assets/ui/loading-pancake.webp'
 import logoArt from '../assets/ui/logo.webp'
-import cloudA from '../assets/fog/cloud-01-wide-flat.png'
-import cloudB from '../assets/fog/cloud-03-low-triple.png'
-import cloudC from '../assets/fog/cloud-07-mountain.png'
+const MAX_WAIT_MS = 8000 // お店がそろわなくても、起動からここでメインへ
+const INTRO_FALLBACK_MS = 1500 // 動きが止められている端末で animationend が来なくても、タイトルの絵は消す
 
-const INTRO_FALLBACK_MS = 2500 // 動きが止められている端末で animationend が来なくても、演出の雲は消す
-
-// タイトルを閉じたあとの「空から来た」演出（2026-11-16 オーナー）: 画面いっぱいの雲（霧と同じ雲の絵）が左右に開いて消える。
-// カメラが空から降りるのは地図の側（loading.onEnter → MapView の intro）
+// タイトルを閉じたあとの「空から来た」演出（2026-11-16 オーナー）: タイトルの絵がふわっと消えて、下の地図が見える。
+// 地図は霧の雲の上空から始まって降りてくる（loading.onEnter → MapView の intro）。雲が開けるのは地図の霧そのもの。
+// （最初は雲の絵を左右に開いたが、絵が縦に並んだまま止まって見え、オーナー「雲が変」でやめた）
 function SkyIntro({ onDone }: { onDone: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -25,27 +23,9 @@ function SkyIntro({ onDone }: { onDone: () => void }) {
       clearTimeout(id)
     }
   }, [onDone])
-  const side = (cls: string) => (
-    <div className={`sky-intro__side ${cls}`}>
-      {[cloudA, cloudC, cloudB, cloudA, cloudC, cloudB, cloudA].map((src, i) => (
-        <img key={i} src={src} alt="" className={`sky-intro__cloud sky-intro__cloud--${i}`} />
-      ))}
-    </div>
-  )
-  return (
-    <div ref={ref} className="sky-intro" data-testid="sky-intro" aria-hidden="true">
-      {side('sky-intro__side--l')}
-      {side('sky-intro__side--r')}
-    </div>
-  )
+  return <div ref={ref} className="sky-intro" data-testid="sky-intro" aria-hidden="true" style={{ '--splash-art': `url(${titleArt})` } as React.CSSProperties} />
 }
 
-const MAX_WAIT_MS = 8000 // お店がそろわなくても、起動からここでメインへ
-
-// 起動時のタイトル画面（2026-11-16 オーナー: 絵 art/ui/title.png、上にロゴ、「タップしてスタート」を丸い字でチカチカ。OP はなし）。
-// 押すと、地図がお店を読んでいる間は右下にパンケーキ（ミシェーラのローディング）と「読み込み中」、そろったら（起動から最大 8 秒）メインへ。
-// 地図の出典はここで示す（OSMF Attribution Guidelines：起動時のスプラッシュで可）。あとから見られる場所は設定の「出典・クレジット」。
-// 町の境目は e-Stat の利用規約どおり、出典と「加工して作成」を書く（国が作ったように見せない）
 export function Splash() {
   const [tapped, setTapped] = useState(false)
   const [introDone, setIntroDone] = useState(false)

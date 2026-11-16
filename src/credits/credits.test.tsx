@@ -35,7 +35,7 @@ test('「タップしてスタート」はすぐ出る。押すと、お店を�
   expect(screen.queryByRole('button')).not.toBeInTheDocument()
 })
 
-test('タイトルを閉じると、雲が左右に開く演出を出して地図へ（カメラが空から降りる合図 loading.onEnter も出す）。演出が終わったら消える（2026-11-16 オーナー「空から来たような感じ」）', () => {
+test('タイトルを閉じると、タイトルの絵がふわっと消える演出を出して地図へ（カメラが空から降りる合図 loading.onEnter も出す）。演出が終わったら消える（2026-11-16 オーナー「空から来たような感じ」）', () => {
   const entered = vi.fn()
   const stop = loading.onEnter(entered)
   loading.start()
