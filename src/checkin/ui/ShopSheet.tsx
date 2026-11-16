@@ -231,7 +231,7 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
     </button>
   )
   const button = (
-    <button type="button" className="shop-sheet__go" disabled={doneToday || !inRange || busy} onClick={onCheckin}>
+    <button type="button" className="shop-sheet__go" data-sfx="none" disabled={doneToday || !inRange || busy} onClick={onCheckin}>
       {doneToday ? '今日はチェックイン済み' : busy ? 'チェックイン中…' : inRange ? 'チェックイン' : `あと ${Math.ceil(distanceM - CHECKIN_M)}m 近づくとチェックイン`}
     </button>
   )

@@ -42,6 +42,7 @@ import { nextStatus } from '../map/domain/locationStatus.ts'
 import { syncUntilSettled } from '../towns/infra/townsApi.ts'
 import type { TownNews, TownSync } from '../towns/domain/progress.ts'
 import { TownBanner } from '../towns/ui/TownBanner.tsx'
+import { sound } from '../sound/infra/sound.ts'
 import { ReviewEditor } from '../reviews/ui/ReviewEditor.tsx'
 import { loadLatest, loadMine, loadSummary, photoUrls } from '../reviews/infra/reviewsApi.ts'
 import { targetCheckin } from '../reviews/domain/review.ts'
@@ -110,7 +111,14 @@ export function MapPage() {
     void mapRef.current?.whenShopsReady().then(() => loading.done())
   }, [])
   // タイトルを閉じて地図へ入ったら、カメラを空から降ろす（2026-11-16 オーナー「空から来たような感じ」）
-  useEffect(() => loading.onEnter(() => mapRef.current?.intro()), [])
+  useEffect(
+    () =>
+      loading.onEnter(() => {
+        mapRef.current?.intro()
+        sound.startBgm() // 空から降りるのに合わせて BGM（昼）がふわっと始まる（A6）
+      }),
+    [],
+  )
   useEffect(() => {
     let alive = true
     void mapRef.current?.whenShopsReady().then(() => alive && syncOsm())
@@ -387,12 +395,19 @@ export function MapPage() {
         home={home}
         onShopsError={() => setShopsError(true)}
         onSelectShop={(shop) => {
+          sound.play('tap') // 地図のピンはボタンではないので、ここで「ぽこっ」（A6）
           setBuilding(null) // 地図で別のお店を押したら、ビルの一覧からは外れる
           select(shop)
         }}
-        onSelectBuilding={selectBuilding}
+        onSelectBuilding={(shops, title) => {
+          if (shops) sound.play('tap')
+          selectBuilding(shops, title)
+        }}
         onPosition={setMe}
-        onHintTap={pickHint}
+        onHintTap={(id) => {
+          sound.play('tap')
+          pickHint(id)
+        }}
         pinsHidden={pinsHidden}
         paused={recordTab !== null || zukanOpen || myPageOpen || settingsOpen}
       />
