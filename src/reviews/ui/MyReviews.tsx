@@ -70,14 +70,15 @@ export function MyReviews({ shopId, shopName, load = loadMine, photos = photoUrl
     <div className="zd-box">
       <h3 className="zd-box__title">
         わたしの感想
-        {/* 「書く」= 新しい感想（いちばん新しい訪問の分）。まだ書いていないときだけ見出しの右に出す。
-            書いた感想は、それぞれの丸い ✎ で直す（2026-11-13 オーナー） */}
-        {target && !target.existing && (
-          <button type="button" className="rv-write" aria-label="書く" onClick={writeLatest}>
+        {/* 「書く」= 新しい感想（いちばん新しい訪問の分）。書いた感想は、それぞれの「編集」で直す（2026-11-13 オーナー）。
+            いちばん新しい訪問がもう書いてあるときは、灰色で押せなくして下に理由を出す（感想は訪問 1 回に 1 つ。2026-11-16 オーナー） */}
+        {target && (
+          <button type="button" className="rv-write" aria-label="書く" disabled={!!target.existing} onClick={writeLatest}>
             <span aria-hidden="true">＋</span>書く
           </button>
         )}
       </h3>
+      {target?.existing && <p className="rv-write__note">次に行った日に、新しい感想を書けます</p>}
       {data === 'loading' && <p className="zd-box__note">読み込んでいます…</p>}
       {data === 'error' && <p className="zd-box__note">感想を読み込めませんでした</p>}
       {typeof data === 'object' && first && (

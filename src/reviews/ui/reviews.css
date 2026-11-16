@@ -389,6 +389,10 @@
   font-weight: 800;
   color: #8a5a32;
 }
+/* わたしの感想の写真: カードの右の「編集」の分（左 12px・右 76px）だけずらして、カードの真ん中に（2026-11-16 オーナー） */
+.rv-mine .rv-polaroid {
+  transform: translateX(32px) rotate(-3deg);
+}
 .rv-older .rv-mine {
   padding-top: 10px;
 }
@@ -439,7 +443,7 @@
 }
 .rv-item__photo {
   display: block;
-  margin-top: 6px;
+  margin: 6px auto 0; /* 写真は真ん中に（2026-11-16 オーナー） */
   padding: 0;
   border: 0;
   background: none;
@@ -545,9 +549,24 @@
   font-size: 18px;
   line-height: 1;
 }
-.rv-write:active {
+.rv-write:not(:disabled):active {
   transform: translate(2px, 2px);
   box-shadow: none;
+}
+/* 書けないとき（いちばん新しい訪問はもう書いた）: 灰色で押せない。理由は見出しの下に小さく */
+.rv-write:disabled {
+  border-color: #b9ada0 !important;
+  background: #ddd5cb !important;
+  box-shadow: 2px 2px 0 #b9ada0;
+  color: #fff !important;
+  cursor: default;
+}
+.rv-write__note {
+  margin: -2px 0 4px;
+  color: #8a6a4e;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: right;
 }
 /* 書いた感想は 1 件ずつカード。右上の丸い ✎ で直す */
 .rv-mine {
