@@ -2,7 +2,7 @@
 // 下にセリフの窓、左上に Live2D のポコタン。説明する部品のところだけ丸く明るく抜く。タップで次へ、右上でスキップ。
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import './guide.css'
-import { GUIDE_PAGES, holeAround, onTap, shownChars, unionRect } from '../domain/guide.ts'
+import { GUIDE_PAGES, holeAround, mouthAt, onTap, shownChars, unionRect } from '../domain/guide.ts'
 import type { GuideTarget, Hole } from '../domain/guide.ts'
 import { mountPoko } from '../infra/poko.ts'
 import type { PokoHandle } from '../infra/poko.ts'
@@ -11,25 +11,19 @@ import { sound } from '../../sound/infra/sound.ts'
 import { debugOn } from '../../map/ui/debugOverlay.ts'
 
 type Props = {
-  meOnScreen: () => { x: number; y: number } | null
   onClose: () => void
 }
 
 const SELECTOR: Partial<Record<GuideTarget, string>> = { hint: '.hud-hint', menu: '.hud-toggle', player: '.hud-player, .hud-coins' }
 const STILL_AFTER_MS = 6000 // これまでに Live2D が出なければ、止まった絵にする
-const ME_R: Record<number, number> = { 1: 120, 2: 80 } // 自分のまわりの丸の大きさ（霧のページは広く、お店のページは近く）
 
-function holeFor(target: GuideTarget, page: number, meOnScreen: Props['meOnScreen']): Hole | null {
-  if (target === 'me') {
-    const p = meOnScreen() ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 }
-    return { cx: p.x, cy: p.y, r: ME_R[page] ?? 100 }
-  }
+function holeFor(target: GuideTarget): Hole | null {
   const sel = SELECTOR[target]
   const box = sel ? unionRect([...document.querySelectorAll(sel)].map((el) => el.getBoundingClientRect())) : null
   return box ? holeAround(box, 10) : null
 }
 
-export function Guide({ meOnScreen, onClose }: Props) {
+export function Guide({ onClose }: Props) {
   const [page, setPage] = useState(0)
   const [shown, setShown] = useState(0)
   const [hole, setHole] = useState<Hole | null>(null)
@@ -75,10 +69,10 @@ export function Guide({ meOnScreen, onClose }: Props) {
     return () => clearInterval(id)
   }, [text])
 
-  // 字が出ている間だけ口パク
-  useEffect(() => pokoRef.current?.setTalking(!done), [done, shown])
+  // 字の出方に合わせて口を開け閉めする（区切りと出きったあとは閉じる）
+  useEffect(() => pokoRef.current?.setMouth(mouthAt(text, shown)), [text, shown])
 
-  useLayoutEffect(() => setHole(holeFor(target, page, meOnScreen)), [target, page, meOnScreen])
+  useLayoutEffect(() => setHole(holeFor(target)), [target])
 
   const tap = () => {
     sound.play('tap') // 進むたびに「ぽこっ」（窓は button ではないので、ここで鳴らす）

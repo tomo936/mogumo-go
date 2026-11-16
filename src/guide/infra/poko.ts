@@ -1,5 +1,6 @@
 // ポコタンを Live2D で描く（A5）。案内を開いたときだけ Cubism Core（public/live2d/core/）と Framework（src/vendor/）を読む。
-// 動き: 呼吸のゆらゆら・物理（毛としっぽ）・まばたき。setTalking(true) の間だけ口パク。
+// 動き: 呼吸のゆらゆら・物理（毛としっぽ）・まばたき。口は setMouth で字の出方に合わせて開け閉めする。
+// 案内を出しそうなときは preloadPoko() で先に読み始めておく（出るまでの待ちを短くする）。
 // 参考: docs/reference/pokotan-live2d/（ぽこポケの PokoModel.js・Live2DCharacter.jsx）。
 import type * as L2D from '../../vendor/live2d-framework/live2d-framework.js'
 
@@ -22,6 +23,21 @@ function loadCore(): Promise<void> {
   return corePromise
 }
 
+// ファイルは 1 回だけ取りに行き、中身を覚えておく（先読みと本番で同じものを使う）
+const files = new Map<string, Promise<ArrayBuffer>>()
+function getFile(url: string): Promise<ArrayBuffer> {
+  let f = files.get(url)
+  if (!f) {
+    f = fetch(url).then((r) => {
+      if (!r.ok) throw new Error(`${url} ${r.status}`)
+      return r.arrayBuffer()
+    })
+    f.catch(() => files.delete(url))
+    files.set(url, f)
+  }
+  return f
+}
+
 let started = false
 async function loadRuntime(): Promise<Runtime> {
   await loadCore()
@@ -41,17 +57,17 @@ async function loadRuntime(): Promise<Runtime> {
 const BLINK_MIN_S = 2
 const BLINK_MAX_S = 5
 const BLINK_S = 0.2
-const MOUTH_HZ = 4.5 // 口パクの速さ（1 秒に開く回数）
+const MOUTH_SPEED = 18 // 口が目標の開きに近づく速さ（1 秒あたり。大きいほど速い）
 
 function makeModelClass(rt: Runtime) {
   const id = (name: string) => rt.CubismFramework.getIdManager().getId(rt.CubismDefaultParameterId[name])
   return class PokoModel extends rt.CubismUserModel {
-    talking = false
+    mouthTarget = 0
+    private mouthNow = 0
     private gl: WebGLRenderingContext | WebGL2RenderingContext
     private breath: L2D.CubismBreath | null = null
     private blinkLeft = BLINK_MIN_S + Math.random() * (BLINK_MAX_S - BLINK_MIN_S)
     private blinkT = -1 // まばたき中の経過（-1 = していない）
-    private talkT = 0
     private eyeL = id('ParamEyeLOpen')
     private eyeR = id('ParamEyeROpen')
     private mouth = id('ParamMouthOpenY')
@@ -62,7 +78,7 @@ function makeModelClass(rt: Runtime) {
     }
 
     async load(dir: string, file: string, width: number, height: number) {
-      const get = async (f: string) => (await fetch(`${dir}${f}`)).arrayBuffer()
+      const get = (f: string) => getFile(`${dir}${f}`)
       const sb = await get(file)
       const setting = new rt.CubismModelSettingJson(sb, sb.byteLength)
       this.loadModel(await get(setting.getModelFileName()))
@@ -132,14 +148,9 @@ function makeModelClass(rt: Runtime) {
       } else if ((this.blinkLeft -= dt) <= 0) this.blinkT = 0
       m.setParameterValueById(this.eyeL, Math.max(0, Math.min(1, eye)))
       m.setParameterValueById(this.eyeR, Math.max(0, Math.min(1, eye)))
-      // 口パク（しゃべっている間だけ。揺れは止めない）
-      if (this.talking) {
-        this.talkT += dt
-        m.setParameterValueById(this.mouth, Math.max(0, Math.sin(this.talkT * Math.PI * 2 * MOUTH_HZ)))
-      } else {
-        this.talkT = 0
-        m.setParameterValueById(this.mouth, 0)
-      }
+      // 口（字の出方に合わせた目標へ、なめらかに近づける。揺れは止めない）
+      this.mouthNow += (this.mouthTarget - this.mouthNow) * Math.min(1, dt * MOUTH_SPEED)
+      m.setParameterValueById(this.mouth, this.mouthNow)
       m.update()
     }
 
@@ -153,7 +164,23 @@ function makeModelClass(rt: Runtime) {
   }
 }
 
-export type PokoHandle = { setTalking(on: boolean): void; dispose(): void }
+export type PokoHandle = { setMouth(open: number): void; dispose(): void }
+
+const MODEL_DIR = `${BASE}poko/`
+const MODEL_FILE = 'poko.model3.json'
+
+// 先読み: Core・Framework・モデルのファイル・絵を読み始めておく（失敗しても何もしない。本番でもう一度試す）
+export function preloadPoko() {
+  void loadRuntime().catch(() => {})
+  void getFile(`${MODEL_DIR}${MODEL_FILE}`)
+    .then((b) => {
+      const j = JSON.parse(new TextDecoder().decode(b)) as { FileReferences?: { Moc?: string; Physics?: string; Textures?: string[] } }
+      const r = j.FileReferences ?? {}
+      for (const f of [r.Moc, r.Physics]) if (f) void getFile(`${MODEL_DIR}${f}`).catch(() => {})
+      for (const t of r.Textures ?? []) new Image().src = `${MODEL_DIR}${t}`
+    })
+    .catch(() => {})
+}
 
 // canvas にポコタンを出す。読めなければ reject（画面は静止画に切り替える）
 // stage: どこまで進んだか（?debug で画面に出す。実機で止まる場所を見るため）
@@ -173,7 +200,7 @@ export async function mountPoko(canvas: HTMLCanvasElement, stage: (s: string) =>
   stage(`model ${canvas.width}x${canvas.height}`)
   const Poko = makeModelClass(rt)
   const model = new Poko(gl)
-  await model.load(`${BASE}poko/`, 'poko.model3.json', canvas.width, canvas.height)
+  await model.load(MODEL_DIR, MODEL_FILE, canvas.width, canvas.height)
 
   stage('draw')
   let alive = true
@@ -197,7 +224,7 @@ export async function mountPoko(canvas: HTMLCanvasElement, stage: (s: string) =>
   }
   raf = requestAnimationFrame(frame)
   return {
-    setTalking: (on) => void (model.talking = on),
+    setMouth: (open) => void (model.mouthTarget = open),
     dispose: () => {
       alive = false
       cancelAnimationFrame(raf)

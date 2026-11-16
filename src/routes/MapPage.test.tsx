@@ -11,7 +11,7 @@ import { MapPage } from './MapPage.tsx'
 
 vi.mock('../checkin/ui/confetti.ts', () => ({ startConfetti: () => () => {} }))
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }))
-vi.mock('../guide/infra/poko.ts', () => ({ mountPoko: () => Promise.reject(new Error('jsdom')) }))
+vi.mock('../guide/infra/poko.ts', () => ({ mountPoko: () => Promise.reject(new Error('jsdom')), preloadPoko: () => {} }))
 const mounts: ((e: LocationEvent) => void)[] = []
 const shopErrors: (() => void)[] = []
 const handlers: { select: (s: Shop | null) => void; building: (s: Shop[] | null) => void; position: (p: LatLng) => void }[] = []
