@@ -29,6 +29,8 @@ type Props = {
   onHintTap: () => void
   onZukan: () => void
   onNearby: () => void // 右上の方位磁針の下: 近くのお店の一覧（A11）
+  onInbox: () => void // 近くのお店の下: お知らせ・プレゼント（A7）
+  inboxDot: boolean // 未読のお知らせか受け取っていないプレゼントがある
   onRecord: () => void
   onMyPage: () => void
   onSettings: () => void
@@ -71,6 +73,12 @@ export function MapHud(p: Props) {
       {/* 近くのお店の一覧。絵は仮（線のアイコン）。ミシェーラの丸ボタンの絵ができたら差し替える */}
       <button type="button" className="hud-nearby" aria-label="近くのお店" onClick={p.onNearby}>
         <Icon name="store" size={26} />
+      </button>
+
+      {/* お知らせ・プレゼント（A7）。赤い点 = 未読か受け取っていないものがある */}
+      <button type="button" className="hud-inbox" aria-label={p.inboxDot ? 'お知らせ・プレゼント（新着あり）' : 'お知らせ・プレゼント'} onClick={p.onInbox}>
+        <Icon name="mail" size={24} />
+        {p.inboxDot && <i className="hud-inbox__dot" aria-hidden="true" />}
       </button>
 
       <button type="button" className="hud-hint" aria-label="気配" aria-expanded={p.hintOpen} onClick={p.onHintTap}>
