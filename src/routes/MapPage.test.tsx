@@ -1,3 +1,4 @@
+import { loading } from '../credits/loadingGate.ts'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
@@ -64,6 +65,7 @@ beforeEach(() => {
   expressCalls.length = 0
 })
 const northCalls: number[] = []
+const introCalls: number[] = []
 vi.mock('../map/ui/MapView.tsx', async () => {
   const { useEffect, useImperativeHandle } = await import('react')
   return {
@@ -79,7 +81,7 @@ vi.mock('../map/ui/MapView.tsx', async () => {
       useEffect(() => { handlers.push({ select: onSelectShop, building: onSelectBuilding, position: onPosition }) }, [onSelectShop, onSelectBuilding, onPosition])
       useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, addTown: (town: { id: string }) => { addTownCalls.push(town.id) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false, visitsFor: () => visitsNow, progressReady: () => true, checked: () => new Set<string>(),
         hintInputs: () => ({ shops: mapShopsNow, near: mapShopsNow, cleared: new Set<string>(), checked: new Set<string>() }),
-        whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, express: (k: string) => { expressCalls.push(k) }, subscribeBearing: () => () => {}, resetNorth: () => { northCalls.push(1) }, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
+        whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, express: (k: string) => { expressCalls.push(k) }, subscribeBearing: () => () => {}, resetNorth: () => { northCalls.push(1) }, intro: () => { introCalls.push(1) }, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
       }), [])
       return <div data-testid="map-view" data-pins-hidden={String(pinsHidden)} data-paused={String(!!paused)} />
     },
@@ -362,6 +364,13 @@ test('右上は方位磁針: 押すと北を上に戻す。ピンを出さない
   await userEvent.click(screen.getByRole('button', { name: '北を上にして自分の場所に戻る' }))
   expect(northCalls.length).toBe(before + 1)
   localStorage.removeItem('mogumo.pinsHidden')
+})
+
+test('タイトルを閉じて地図に入ったら、カメラを空から降ろす（intro）', async () => {
+  renderPage()
+  const before = introCalls.length
+  act(() => loading.enter())
+  expect(introCalls.length).toBe(before + 1)
 })
 
 test('設定など全画面の画面を開いているあいだは、後ろの地図を止める', async () => {

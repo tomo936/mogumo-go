@@ -49,6 +49,7 @@ export type MapViewHandle = {
   bounceHint(hintId: string): void
   express(kind: Expression): void // 3D の男の子の表情（チェックイン・レベルが上がったとき 'happy'）。読めていなければ何もしない
   subscribeBearing(cb: (bearingDeg: number) => void): () => void // 地図の回転（北 0・時計回り）が変わるたびに呼ぶ。方位磁針用。返り値で止める
+  intro(): void // 地図へ入るときの演出: 高い所の真上から、いつもの高さと角度へ降りてくる（2026-11-16 オーナー）
   resetNorth(): void // 北を上に戻し、自分の場所に戻る（右上の方位磁針。2026-11-16 オーナー「1 で」）
 }
 
@@ -75,6 +76,8 @@ const TAP_MAX_MOVE_PX = 10
 const TAP_MAX_MS = 300
 const POSITION_EVERY_MS = 250
 const TAP_ZOOM_STEP = 0.6
+const INTRO_RISE_ZOOM = 2.5 // 地図へ入る演出: いつもよりどれだけ高い所から始めるか
+const INTRO_MS = 1800
 const CHECKIN_WAVE_DELAY_MS = 900 // 紙吹雪のあと、霧の波が走り出すまで
 
 // 地図・カメラ・位置は MapLibre と ref だけで持ち、React の再描画を起こさない。
@@ -111,6 +114,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   // お店の板を開いている間は、カメラをそのお店に向けて、自分への追いかけを止める
   const focusRef = useRef<{ lat: number; lng: number } | null>(null)
   const resetNorthRef = useRef<() => void>(() => {})
+  const introRef = useRef<() => void>(() => {})
   const sheetFocusRef = useRef(false) // お店・ビル・気配を押して寄せた（シートを閉じたら自分に戻る。2026-11-16 オーナー「前と同じ動き」）
   const unfocusRef = useRef<() => void>(() => {})
   const tapRef = useRef<(ids: string[] | null) => void>(() => {})
@@ -149,6 +153,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       return () => { bearingSubs.current.delete(cb) }
     },
     resetNorth: () => resetNorthRef.current(),
+    intro: () => introRef.current(),
     checkin: (shop, newCells) => {
       const t = setTimeout(() => {
         checkinTimers.current.delete(t)
@@ -372,6 +377,16 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         }
       }
       map.easeTo({ bearing: 0, duration: 400 })
+    }
+    // 地図へ入る演出: 2.5 段高い所から、ほぼ真上に見下ろした状態で始め、1.8 秒でいつもの高さ・角度へ降りる。
+    // 降りているあいだはズーム中なので、自分を追いかける毎コマの移動（jumpTo）は止まっている（shouldMoveCamera）
+    introRef.current = () => {
+      const zoom = map.getZoom()
+      const from = Math.max(13, zoom - INTRO_RISE_ZOOM)
+      map.setMinZoom(from)
+      map.jumpTo({ zoom: from, pitch: 0, ...(s.current ? { center: [s.current.lng, s.current.lat] as [number, number] } : {}) })
+      map.easeTo({ zoom, pitch: PITCH, duration: INTRO_MS, easing: (t) => 1 - (1 - t) ** 3 })
+      map.once('moveend', () => map.setMinZoom(MIN_ZOOM))
     }
     // 毎コマ、表示位置を目標へ寄せてカメラを動かす
     const loop = { frame: 0, prevTime: performance.now(), positionAt: 0 }

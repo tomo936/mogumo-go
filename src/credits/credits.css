@@ -115,3 +115,58 @@
   margin: 0 0 8px;
   font-size: 16px;
 }
+
+/* 「空から来た」演出: 画面いっぱいの雲が左右に開く（2026-11-16 オーナー）。雲の絵は霧と同じ（src/assets/fog/） */
+.sky-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  pointer-events: none;
+  animation: sky-intro-hold 1.15s linear forwards; /* 終わりの合図用（いちばん最後に終わる） */
+}
+@keyframes sky-intro-hold {
+  from { opacity: 1; }
+  to { opacity: 1; }
+}
+.sky-intro__side {
+  position: absolute;
+  top: -8%;
+  bottom: -8%;
+  width: 58%;
+  background: #f7fbff;
+  animation: 0.95s cubic-bezier(0.5, 0, 0.75, 0) 0.15s forwards;
+}
+.sky-intro__side--l {
+  left: 0;
+  animation-name: sky-open-l;
+}
+.sky-intro__side--r {
+  right: 0;
+  animation-name: sky-open-r;
+}
+@keyframes sky-open-l {
+  to { transform: translateX(-135%); opacity: 0.6; }
+}
+@keyframes sky-open-r {
+  to { transform: translateX(135%); opacity: 0.6; }
+}
+/* 開く側のふちを、もこもこの雲で縁どる */
+.sky-intro__cloud {
+  position: absolute;
+  width: 78vw;
+  max-width: 420px;
+  height: auto;
+}
+.sky-intro__side--l .sky-intro__cloud { right: -34vw; }
+.sky-intro__side--r .sky-intro__cloud { left: -34vw; transform: scaleX(-1); }
+.sky-intro__cloud--0 { top: -6%; }
+.sky-intro__cloud--1 { top: 9%; }
+.sky-intro__cloud--2 { top: 24%; }
+.sky-intro__cloud--3 { top: 39%; }
+.sky-intro__cloud--4 { top: 54%; }
+.sky-intro__cloud--5 { top: 69%; }
+.sky-intro__cloud--6 { top: 84%; }
+.sky-intro__side--r .sky-intro__cloud--1,
+.sky-intro__side--r .sky-intro__cloud--3,
+.sky-intro__side--r .sky-intro__cloud--5 { margin-top: 5vh; }
