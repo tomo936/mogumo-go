@@ -64,25 +64,22 @@ beforeEach(() => {
   expressCalls.length = 0
 })
 const northCalls: number[] = []
-const returnCalls: number[] = []
-let setExploringNow: ((on: boolean) => void) | undefined
 vi.mock('../map/ui/MapView.tsx', async () => {
   const { useEffect, useImperativeHandle } = await import('react')
   return {
-    MapView: ({ pinsHidden, paused, onStatus, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, onExploring, ref }: {
+    MapView: ({ pinsHidden, paused, onStatus, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, ref }: {
       onStatus: (e: LocationEvent) => void; onShopsError: () => void
       onSelectShop: (s: Shop | null) => void; onSelectBuilding: (s: Shop[] | null) => void; onPosition: (p: LatLng) => void
-      onHintTap: (id: string) => void; onExploring?: (on: boolean) => void; pinsHidden?: boolean; paused?: boolean
+      onHintTap: (id: string) => void; pinsHidden?: boolean; paused?: boolean
       ref?: React.Ref<{ checkin(shop: Shop, cells: unknown[]): void; addTown(town: { id: string }): void }>
     }) => {
       useEffect(() => { mounts.push(onStatus) }, [onStatus])
-      setExploringNow = onExploring
       useEffect(() => { shopErrors.push(onShopsError) }, [onShopsError])
       useEffect(() => { hintTaps.push(onHintTap) }, [onHintTap])
       useEffect(() => { handlers.push({ select: onSelectShop, building: onSelectBuilding, position: onPosition }) }, [onSelectShop, onSelectBuilding, onPosition])
       useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, addTown: (town: { id: string }) => { addTownCalls.push(town.id) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false, visitsFor: () => visitsNow, progressReady: () => true, checked: () => new Set<string>(),
         hintInputs: () => ({ shops: mapShopsNow, near: mapShopsNow, cleared: new Set<string>(), checked: new Set<string>() }),
-        whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, express: (k: string) => { expressCalls.push(k) }, subscribeBearing: () => () => {}, resetNorth: () => { northCalls.push(1) }, returnToMe: () => { returnCalls.push(1) }, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
+        whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, express: (k: string) => { expressCalls.push(k) }, subscribeBearing: () => () => {}, resetNorth: () => { northCalls.push(1) }, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
       }), [])
       return <div data-testid="map-view" data-pins-hidden={String(pinsHidden)} data-paused={String(!!paused)} />
     },
@@ -362,20 +359,9 @@ test('右上は方位磁針: 押すと北を上に戻す。ピンを出さない
   expect(screen.getByTestId('map-view')).toHaveAttribute('data-pins-hidden', 'true')
   expect(screen.queryByRole('button', { name: 'ピンを隠す' })).not.toBeInTheDocument()
   const before = northCalls.length
-  await userEvent.click(screen.getByRole('button', { name: '北を上にする' }))
+  await userEvent.click(screen.getByRole('button', { name: '北を上にして自分の場所に戻る' }))
   expect(northCalls.length).toBe(before + 1)
   localStorage.removeItem('mogumo.pinsHidden')
-})
-
-test('見て回るモードのあいだだけ、左上のキャラの丸が「自分に戻る」ボタンになる', async () => {
-  renderPage()
-  expect(screen.queryByRole('button', { name: /自分の場所に戻る/ })).not.toBeInTheDocument()
-  act(() => setExploringNow?.(true))
-  const before = returnCalls.length
-  await userEvent.click(screen.getByRole('button', { name: /自分の場所に戻る/ }))
-  expect(returnCalls.length).toBe(before + 1)
-  act(() => setExploringNow?.(false))
-  expect(screen.queryByRole('button', { name: /自分の場所に戻る/ })).not.toBeInTheDocument()
 })
 
 test('設定など全画面の画面を開いているあいだは、後ろの地図を止める', async () => {

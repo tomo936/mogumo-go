@@ -33,8 +33,6 @@ type Props = {
   onSoon: (name: string) => void
   subscribeBearing: (cb: (bearingDeg: number) => void) => () => void // 地図の回転を受け取る（方位磁針）
   onCompass: () => void // 方位磁針を押した: 北を上に戻す
-  exploring: boolean // 見て回るモード（ピンを押して寄った）。キャラの丸に「自分に戻る」の印を出し、押せるようにする
-  onReturn: () => void // キャラの丸を押した（見て回るモードのときだけ）: 自分の場所に戻る
 }
 
 export function MapHud(p: Props) {
@@ -49,27 +47,15 @@ export function MapHud(p: Props) {
   const spots = fanPositions(items.length, 0, 0, FAN_RADIUS)
   return (
     <>
-      {(() => {
-        const label = `${p.nickname ?? 'あなた'} Lv ${p.level} 次のレベルまであと${Math.max(0, p.expSpan - p.expInto)}軒`
-        const style = { '--exp': `${Math.min(100, Math.max(0, (p.expInto / Math.max(1, p.expSpan)) * 100))}%` } as React.CSSProperties
-        const inner = (
-          <>
-            <img src={characterUrl(p.starterId)} alt="" />
-            <span className="hud-player__lv">{`Lv ${p.level}`}</span>
-          </>
-        )
-        // 見て回るモードのあいだは、キャラの丸が「自分に戻る」ボタン（右下に印。2026-11-16 オーナーの絵）
-        return p.exploring ? (
-          <button type="button" className="hud-player hud-player--return" aria-label={`自分の場所に戻る（${label}）`} style={style} onClick={p.onReturn}>
-            {inner}
-            <img className="hud-player__return" src={art('return-badge')} alt="" />
-          </button>
-        ) : (
-          <div className="hud-player" role="img" aria-label={label} style={style}>
-            {inner}
-          </div>
-        )
-      })()}
+      <div
+        className="hud-player"
+        role="img"
+        aria-label={`${p.nickname ?? 'あなた'} Lv ${p.level} 次のレベルまであと${Math.max(0, p.expSpan - p.expInto)}軒`}
+        style={{ '--exp': `${Math.min(100, Math.max(0, (p.expInto / Math.max(1, p.expSpan)) * 100))}%` } as React.CSSProperties}
+      >
+        <img src={characterUrl(p.starterId)} alt="" />
+        <span className="hud-player__lv">{`Lv ${p.level}`}</span>
+      </div>
 
       {p.coins !== null && (
         <div className="hud-coins" role="img" aria-label={`コイン ${p.coins}`}>
@@ -129,7 +115,7 @@ function Compass({ subscribe, onTap }: { subscribe: Props['subscribeBearing']; o
     [subscribe],
   )
   return (
-    <button type="button" className="hud-compass" aria-label="北を上にする" onClick={onTap}>
+    <button type="button" className="hud-compass" aria-label="北を上にして自分の場所に戻る" onClick={onTap}>
       <img ref={imgRef} src={art('compass')} alt="" />
     </button>
   )
