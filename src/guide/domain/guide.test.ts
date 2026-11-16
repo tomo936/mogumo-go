@@ -9,12 +9,11 @@ describe('ポコタンの案内の決まり', () => {
     expect(GUIDE_PAGES.map((p) => p.target)).toEqual(['none', 'none', 'none', 'none', 'none', 'hint', 'menu', 'player', 'none'])
   })
 
-  it('字は 45ms に 1 字ずつ、区切りの字のあとは少し間を置いて出る', () => {
+  it('字は 40ms に 1 字ずつ、一定の速さで出る（区切りでも止まらない）', () => {
     expect(shownChars('あいう', 0)).toBe(0)
-    expect(shownChars('あいう', 90)).toBe(2)
+    expect(shownChars('あ。い', 80)).toBe(2)
+    expect(shownChars('あ。い', 120)).toBe(3)
     expect(shownChars('あいう', 10_000)).toBe(3)
-    expect(shownChars('あ。い', 135)).toBe(2) // 「。」のあとは待つ
-    expect(shownChars('あ。い', 90 + 260 + 45)).toBe(3)
   })
 
   it('口は字が出ている間だけ動き、区切りと出きったあとは閉じる', () => {

@@ -303,9 +303,16 @@ export function MapPage() {
   useEffect(() => {
     if (!entered || !userId || tour !== 'wait') return
     if (guideSeen(userId)) return setTour('done')
-    preloadPoko() // 空から降りているあいだに、ポコタンを読み始めておく
-    const t = setTimeout(() => setTour('open'), LOGIN_BONUS_DELAY_MS)
-    return () => clearTimeout(t)
+    // お店がそろってからポコタンを読み始める（お店の読み込みと重ねない。2026-11-17 オーナー「最初にお店が出ない」）。
+    // 案内は、空から降りる演出（3.2 秒）とお店がそろうのの遅いほうのあとに出す
+    let alive = true
+    const ready = mapRef.current?.whenShopsReady() ?? Promise.resolve()
+    void ready.then(() => alive && preloadPoko())
+    const delay = new Promise((r) => setTimeout(r, LOGIN_BONUS_DELAY_MS))
+    void Promise.all([ready, delay]).then(() => alive && setTour('open'))
+    return () => {
+      alive = false
+    }
   }, [entered, userId, tour])
   const closeGuide = useCallback(() => {
     guideShown.current = true
