@@ -32,6 +32,7 @@ import type { HintPin } from '../../shops/infra/shopPins.ts'
 import { clusterFeatures } from '../../shops/domain/cluster.ts'
 import { createShopLayer } from '../../shops/infra/shopLayer.ts'
 import type { PlacedShop } from '../../shops/infra/shopLayer.ts'
+import { retainNear } from '../../shops/domain/retain.ts'
 import { distanceMeters, localFrame } from '../domain/geo.ts'
 import { MAX_ACCURACY_M } from '../config.ts'
 import { watchUserMove } from '../infra/userMove.ts'
@@ -218,11 +219,11 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       // 読めるのは今の画面に入っているタイルの分だけなので、置き換えずに足していく（前に読んだお店は画面の外に移っても残す）。
       // 遠くなったお店・駅の点だけ外す（2026-11-16 オーナー「お店の数激減」: 置き換えていたので回すたびに減っていた）
       const keep = SHOP_RADIUS_M * 1.5
-      const byId = new Map(mapShops.filter((m) => distanceMeters(p, m) <= keep).map((m) => [m.id, m]))
+      const byId = new Map(retainNear(mapShops, [p, last], keep).map((m) => [m.id, m])) // 見ている場所と自分の両方のまわりを残す
       for (const m of found) byId.set(m.id, m)
       mapShops = [...byId.values()]
       const lmKey = (m: Landmark) => `${m.kind}:${m.name}@${m.lat.toFixed(5)},${m.lng.toFixed(5)}`
-      const lmById = new Map(landmarks.filter((m) => distanceMeters(p, m) <= keep).map((m) => [lmKey(m), m]))
+      const lmById = new Map(retainNear(landmarks, [p, last], keep).map((m) => [lmKey(m), m]))
       for (const m of lm) lmById.set(lmKey(m), m)
       landmarks = [...lmById.values()]
       shops = mergeShops(mapShops, hpShops)
@@ -522,7 +523,9 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         fetching = false
         failedAt = null
         if (disposed) return
-        hpShops = list
+        // 前に読んだ分のうち、今の中心（見ている場所）か自分のまわりのものは残す（遠くを見て戻ったとき、自分のまわりの詳細が消えないように）
+        const have = new Set(list.map((h) => h.id))
+        hpShops = [...list, ...retainNear(hpShops, [p, last], SHOP_RADIUS_M * 1.5).filter((h) => !have.has(h.id))]
         ready.hp = true
         shops = mergeShops(mapShops, hpShops)
         if (areaNow()) refreshShops(areaNow()!)
