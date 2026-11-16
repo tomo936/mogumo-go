@@ -57,6 +57,7 @@ const querySourceFeatures = vi.fn((_s: string, o: { sourceLayer: string }) => ti
 let tilesLoaded = true
 let idleHandler: (() => void) | null = null
 let moveEndHandler: (() => void) | null = null
+let dataHandler: ((e: { sourceId?: string; tile?: unknown; dataType?: string }) => void) | null = null
 let zoom = 16 // カメラ（拡大していないので、詳しい模型はふだん自分の位置だけで選ぶ）
 let center: LatLng = { lat: 35.68, lng: 139.76 }
 const fakeMap = () => ({
@@ -68,6 +69,7 @@ const fakeMap = () => ({
   on: vi.fn((e: string, h: () => void) => {
     if (e === 'idle') idleHandler = h
     if (e === 'moveend') moveEndHandler = h
+    if (e === 'data') dataHandler = h as typeof dataHandler
   }),
   off: vi.fn(),
 }) as unknown as MapLibreMap
@@ -90,6 +92,7 @@ beforeEach(() => {
   tilesLoaded = true
   idleHandler = null
   moveEndHandler = null
+  dataHandler = null
   zoom = 16
   center = home
   tiles = { transportation: [roadFeature], building: [] }
@@ -401,6 +404,21 @@ test('同じ位置で idle が2回来ても、poi を読むのは1回だけ', as
   idleHandler!()
   idleHandler!()
   expect(poiReads()).toBe(n)
+})
+
+test('同じ場所でも、地図のタイルが新しく届いたら、次の idle で poi を読み直す（回したあとに届いたタイルのお店を取りこぼさない。2026-11-16 オーナー「たまにお店が全部出ない」）', async () => {
+  const { world } = setup()
+  world.onPosition(home)
+  await flush()
+  const n = poiReads()
+  dataHandler!({ sourceId: 'openmaptiles', dataType: 'source', tile: {} })
+  idleHandler!()
+  expect(poiReads()).toBe(n + 1)
+  idleHandler!() // 新しいタイルが無ければ読まない
+  expect(poiReads()).toBe(n + 1)
+  dataHandler!({ sourceId: 'other', dataType: 'source', tile: {} })
+  idleHandler!()
+  expect(poiReads()).toBe(n + 1)
 })
 
 test('タイル読み込み中は poi を読まず、読めたあとの idle で読む', async () => {
