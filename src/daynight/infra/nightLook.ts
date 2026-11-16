@@ -57,3 +57,42 @@ export function lightUp(mats: THREE.Material[], night: boolean) {
     }
   }
 }
+
+// お店の足元に置く光のたまり（地面に平らな四角に、真ん中ほど明るい丸を計算で描く。足し算で重ねる）。
+// 絵（テクスチャ）は使わない: 地図と描画のしくみを共有しているため、iPhone で地図の側の絵を読んで色つきの点々になった（2026-11-17）
+export const GLOW_SCALE = 3.0 // お店の幅の何倍の大きさか（前と同じ）
+let glowMat: THREE.ShaderMaterial | null = null
+function glowMaterial(): THREE.ShaderMaterial {
+  glowMat ??= new THREE.ShaderMaterial({
+    uniforms: { u_color: { value: new THREE.Color('#ffb260') } },
+    vertexShader: `
+      varying vec2 v_uv;
+      void main() {
+        v_uv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      uniform vec3 u_color;
+      varying vec2 v_uv;
+      void main() {
+        float d = length(v_uv - 0.5) * 2.0;
+        float a = d < 0.35 ? mix(1.0, 0.55, d / 0.35) : mix(0.55, 0.0, (d - 0.35) / 0.65);
+        a = clamp(a, 0.0, 1.0);
+        gl_FragColor = vec4(u_color * a, 1.0);
+      }`,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  })
+  return glowMat
+}
+let glowGeo: THREE.PlaneGeometry | null = null
+export function glowMesh(count: number): THREE.InstancedMesh {
+  if (!glowGeo) {
+    glowGeo = new THREE.PlaneGeometry(1, 1)
+    glowGeo.rotateX(-Math.PI / 2)
+  }
+  const mesh = new THREE.InstancedMesh(glowGeo, glowMaterial(), count)
+  mesh.renderOrder = -1
+  return mesh
+}
