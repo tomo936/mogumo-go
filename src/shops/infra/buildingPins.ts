@@ -10,7 +10,7 @@ import { clusterSpots, pinLayout, pinScale } from '../domain/pins.ts'
 import type { Shop } from '../domain/shop.ts'
 import { projectAt } from '../../lib/threeLayer.ts'
 import { PIN_ICON } from './pinIcons.ts'
-import { BUILDING_CLUSTER_UNTIL_ZOOM, BUILDING_MIN_SHOPS } from '../domain/cluster.ts'
+import { CLUSTER_UNTIL_ZOOM } from '../domain/cluster.ts'
 import { screenScale } from './screenScale.ts'
 import type { PlacedShop } from './shopLayer.ts'
 
@@ -152,8 +152,6 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
   const marker = (b: PinnedBuilding, at: LatLng, fill: (el: HTMLElement) => number, sizeM: number, topM = b.topM): Shown => {
     const outer = document.createElement('div')
     outer.className = 'bldg-pins'
-    // 3 軒以上のビルは、いちばん引いたときまとめのピンに入る（そのとき .pins-far でピンを隠す）。2 軒以下はいつもビルのピン
-    if (b.shops.length >= BUILDING_MIN_SHOPS) outer.classList.add('bldg-pins--clustered')
     const el = document.createElement('div')
     el.className = 'bldg-pins__scale'
     outer.appendChild(el)
@@ -249,9 +247,9 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
   map.on('render', fit) // 3D を描いたあと（そのコマのカメラ）で合わせる
 
   const container = map.getContainer()
-  // いちばん引いたとき（BUILDING_CLUSTER_UNTIL_ZOOM より下）だけビルのピンを隠す（shopClusters のまとめに入る）。名前の札は残す。
-  // それ以外は今までのビルのピン（「6/6」など。2026-11-13 オーナー）
-  const farClass = () => container.classList.toggle(FAR_CLASS, map.getZoom() < BUILDING_CLUSTER_UNTIL_ZOOM)
+  // 引き（倍率 17 未満）は、ビルの並べたピンと施設の「6/6」を隠し、名前の札だけ残す（中のお店は shopClusters のまとめに入る）。
+  // 寄り（17 以上）は今までどおり（2026-11-16 オーナー承認）
+  const farClass = () => container.classList.toggle(FAR_CLASS, map.getZoom() < CLUSTER_UNTIL_ZOOM)
   map.on('zoom', farClass)
   farClass()
 

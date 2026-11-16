@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BADGE_TEXT_FIT, BADGE_WIDEST_TEXT, badgeText, BUILDING_CLUSTER_UNTIL_ZOOM, clusterFeatures, clusterScale, CLUSTER_MIN_POINTS, CLUSTER_UNTIL_ZOOM } from './cluster.ts'
+import { BADGE_TEXT_FIT, BADGE_WIDEST_TEXT, badgeText, clusterFeatures, clusterScale, CLUSTER_MIN_POINTS, CLUSTER_UNTIL_ZOOM } from './cluster.ts'
 
 describe('badgeText', () => {
   it('99 までは数字、100 以上は 99+', () => {
@@ -27,30 +27,27 @@ describe('clusterScale', () => {
 
 describe('clusterFeatures', () => {
   const single = (id: string, model = 'ramen', sizeM = 14) => ({ id, model, lat: 35, lng: 139, shopIds: [id], sizeM })
-  const bld = (id: string, shopIds: string[], topM = 12) => ({ id, lat: 35, lng: 139, shopIds, topM })
-  it('1 軒の店は n=1、ビルは中のお店の数（bld=1）。霧の中・気配のお店は入れない', () => {
+  const shop = (id: string, kind = 'cafe', lat = 35.001) => ({ id, kind, lat, lng: 139.001 })
+  const bld = (id: string, shops: ReturnType<typeof shop>[], topM = 12) => ({ id, topM, shops })
+  it('1 軒の店はそのまま。ビル・施設の中のお店も 1 軒ずつの点（その店の場所と種類）。霧の中・気配のお店は入れない', () => {
     const f = clusterFeatures(
       [single('hp:1'), single('osm:fog'), single('hp:hint')],
-      [bld('bld:1', ['hp:2', 'hp:3', 'hp:4', 'hp:hint2'])],
-      new Set(['osm:fog']),
+      [bld('bld:1', [shop('hp:2', 'sushi'), shop('hp:3'), shop('hp:hint2')]), bld('bld:fog', [shop('hp:9')])],
+      new Set(['osm:fog', 'bld:fog']),
       new Set(['hp:hint', 'hp:hint2']),
       new Set(['hp:2']),
     )
-    expect(f.map((x) => [x.properties.id, x.properties.n, x.properties.done, x.properties.bld])).toEqual([['hp:1', 1, 0, 0], ['bld:1', 3, 1, 1]])
-    expect(f[0].properties.kind).toBe('ramen')
+    expect(f.map((x) => [x.properties.id, x.properties.kind, x.properties.n, x.properties.done])).toEqual([
+      ['hp:1', 'ramen', 1, 0], ['hp:2', 'sushi', 1, 1], ['hp:3', 'cafe', 1, 0],
+    ])
+    expect(f[1].geometry.coordinates).toEqual([139.001, 35.001])
   })
-  it('2 軒以下のビルはまとめに入れない（「2」の札を出さず、今までのビルのピンのまま。気配を除いて数える）', () => {
-    const f = clusterFeatures([], [bld('two', ['a', 'b']), bld('three-with-hint', ['a', 'b', 'c-hint']), bld('three', ['a', 'b', 'c'])], new Set(), new Set(['c-hint']), new Set())
-    expect(f.map((x) => x.properties.id)).toEqual(['three'])
-  })
-  it('ピンを持ち上げる高さの段（模型の高さ）を付ける。ラーメンの 14m は高い模型、カフェの 8m は低い', () => {
-    const f = clusterFeatures([single('a', 'ramen', 14), single('b', 'cafe', 8)], [bld('c', ['x', 'y', 'z'], 20)], new Set(), new Set(), new Set())
+  it('ピンを持ち上げる高さの段（模型の高さ）を付ける。ラーメンの 14m は高い模型、カフェの 8m は低い、ビルの中は屋根の高さ', () => {
+    const f = clusterFeatures([single('a', 'ramen', 14), single('b', 'cafe', 8)], [bld('c', [shop('x')], 20)], new Set(), new Set(), new Set())
     expect(f.map((x) => [x.properties.liftTier, x.properties.lt])).toEqual([['high', 2], ['low', 0], ['high', 2]])
   })
-  it('寄ったら全部（17 から）。複合施設をまとめるのはいちばん引いたときだけ。2 軒からまとめる', () => {
-    expect(CLUSTER_UNTIL_ZOOM).toBe(17) // 倍率 17 から全部のピン（17〜17.5 の細かいまとめはやめた＝オーナー 2026-11-13「3 段目いらなくない？」）
-    expect(BUILDING_CLUSTER_UNTIL_ZOOM).toBeGreaterThan(16)
-    expect(BUILDING_CLUSTER_UNTIL_ZOOM).toBeLessThan(CLUSTER_UNTIL_ZOOM)
-    expect(CLUSTER_MIN_POINTS).toBe(2) // 2026-11-16 オーナー: 近くは全部まとめる（最初の仕様）
+  it('段は 2 つ: 17 から全部のピン、それより引いたらまとめる。2 軒からまとめる', () => {
+    expect(CLUSTER_UNTIL_ZOOM).toBe(17)
+    expect(CLUSTER_MIN_POINTS).toBe(2)
   })
 })
