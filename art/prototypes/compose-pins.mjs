@@ -11,7 +11,7 @@ import { execFileSync } from 'child_process'
 
 // 引数 cluster: まとめのピンの台（その他の絵を 256px で src/assets/pins/cluster-base.png に。2026-11-13）
 const CLUSTER = process.argv[2] === 'cluster'
-const ALL = 'ramen sushi soba washoku izakaya bar chinese yakiniku western curry cafe sweets bakery mystery other donburi burger ethnic okonomiyaki takoyaki home'.split(' ')
+const ALL = 'ramen sushi soba washoku izakaya bar chinese yakiniku western curry cafe sweets bakery mystery other donburi burger ethnic okonomiyaki takoyaki'.split(' ')
 // 引数に種類名を渡すと、その種類だけ作り直す（例: node art/prototypes/compose-pins.mjs bar）。渡さなければ全部
 const ONLY = process.argv.slice(2).filter((a) => a !== 'cluster')
 const KINDS = CLUSTER ? ['other'] : ONLY.length ? ALL.filter((k) => ONLY.includes(k)) : ALL
