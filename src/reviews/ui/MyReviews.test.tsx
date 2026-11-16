@@ -26,8 +26,8 @@ test('新しい訪問の感想が先頭。非公開は「自分だけ」の札�
   expect(screen.getByText('前の感想（1件）')).toBeInTheDocument()
   expect(await screen.findByRole('img', { name: '自分の写真' })).toHaveAttribute('src', 'https://s/me/p.jpg')
   // 「書く」はいつも出す。いちばん新しい訪問はもう書いてあるので押せず、次の訪問で書けると出す
-  expect(screen.queryByRole('button', { name: '書く' })).not.toBeInTheDocument()
-  expect(screen.queryByText(/次に行ったら/)).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '書く' })).toBeDisabled()
+  expect(screen.getByText('次に行った日に、新しい感想を書けます')).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: '2026.11.03 の感想を編集' }))
   expect(screen.getByLabelText('ひとこと')).toHaveValue('感想b')
 })
