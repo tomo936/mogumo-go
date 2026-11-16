@@ -359,7 +359,7 @@ test('右上は方位磁針: 押すと北を上に戻す。ピンを出さない
   expect(screen.getByTestId('map-view')).toHaveAttribute('data-pins-hidden', 'true')
   expect(screen.queryByRole('button', { name: 'ピンを隠す' })).not.toBeInTheDocument()
   const before = northCalls.length
-  await userEvent.click(screen.getByRole('button', { name: '北を上にする' }))
+  await userEvent.click(screen.getByRole('button', { name: '北を上にして自分の場所に戻る' }))
   expect(northCalls.length).toBe(before + 1)
   localStorage.removeItem('mogumo.pinsHidden')
 })

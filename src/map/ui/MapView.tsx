@@ -37,7 +37,7 @@ import type { Fix } from '../domain/smoothing.ts'
 export type MapViewHandle = {
   checkin(shop: Shop, newCells: Cell[]): void
   addTown(town: ClearedTown): void // 今クリアした町の霧を、今いる場所から波で晴らす
-  unfocus(): void
+  unfocus(): void // シートを閉じたとき。カメラはその場所のまま（自分に戻すのは resetNorth）
   isCheckedToday(shop: Shop): boolean
   visitsFor(shop: Shop): Visits | null // わたしの記録（読み込み前・0回は null）
   progressReady(): boolean // 保存済みの記録を読み終えたか
@@ -49,7 +49,7 @@ export type MapViewHandle = {
   bounceHint(hintId: string): void
   express(kind: Expression): void // 3D の男の子の表情（チェックイン・レベルが上がったとき 'happy'）。読めていなければ何もしない
   subscribeBearing(cb: (bearingDeg: number) => void): () => void // 地図の回転（北 0・時計回り）が変わるたびに呼ぶ。方位磁針用。返り値で止める
-  resetNorth(): void // 北を上に戻す
+  resetNorth(): void // 北を上に戻し、自分の場所に戻る（右上の方位磁針。2026-11-16 オーナー「1 で」）
 }
 
 // 気配の「？」のピン（達成済みは出さない）。ほかのピンと同じ層に描く（2026-11-16 前後関係の直し）
@@ -110,7 +110,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   const checkinTimers = useRef(new Set<ReturnType<typeof setTimeout>>())
   // お店の板を開いている間は、カメラをそのお店に向けて、自分への追いかけを止める
   const focusRef = useRef<{ lat: number; lng: number } | null>(null)
-  const clusterFocusRef = useRef(false) // まとめのピンを押して寄せている（指で引いて 17.7 より引いたら自分に戻る）
+  const resetNorthRef = useRef<() => void>(() => {})
   const unfocusRef = useRef<() => void>(() => {})
   const tapRef = useRef<(ids: string[] | null) => void>(() => {})
   const focusAtRef = useRef<(p: LatLng) => void>(() => {})
@@ -147,7 +147,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       cb(mapRef.current?.getBearing() ?? 0)
       return () => { bearingSubs.current.delete(cb) }
     },
-    resetNorth: () => mapRef.current?.easeTo({ bearing: 0, duration: 400 }),
+    resetNorth: () => resetNorthRef.current(),
     checkin: (shop, newCells) => {
       const t = setTimeout(() => {
         checkinTimers.current.delete(t)
@@ -308,11 +308,10 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         onHintTapRef.current(hint)
         return
       }
-      // まとめのピンを押した: その場所へ寄せ、まとめがなくなる倍率まで寄る（自分を追いかけるのは止める。2026-11-16 オーナー「元の仕様」）
+      // まとめのピンを押した: その場所へ寄せ、まとめがなくなる倍率まで寄る。勝手には戻らない（戻すのは右上の方位磁針。2026-11-16 オーナー）
       const cluster = ids?.[0]?.startsWith('cluster:') ? ids[0].slice(8).split(',').map(Number) : null
       if (cluster && cluster.length === 2 && cluster.every(Number.isFinite)) {
         focusRef.current = { lat: cluster[1], lng: cluster[0] }
-        clusterFocusRef.current = true
         map.easeTo({ center: [cluster[0], cluster[1]], zoom: Math.min(CLUSTER_UNTIL_ZOOM + 0.05, MAX_ZOOM), duration: 600 })
         return
       }
@@ -331,7 +330,6 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       if (at) {
         const zoom = focusRef.current ? map.getZoom() : Math.min(map.getZoom() + TAP_ZOOM_STEP, MAX_ZOOM)
         focusRef.current = { lat: at.lat, lng: at.lng }
-        clusterFocusRef.current = false // お店のシートを閉じたら自分に戻る（今までどおり）
         s.world?.focus(found.map((sh) => sh.id)) // 選んだ建物は遠くても詳しい模型に
         map.easeTo({ center: [at.lng, at.lat], zoom, duration: 500 })
       }
@@ -342,20 +340,24 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       focusRef.current = { lat: p.lat, lng: p.lng }
       map.easeTo({ center: [p.lng, p.lat], zoom, duration: 500 })
     }
-    // 板を閉じたら、カメラを自分に戻して追いかけを再開する
+    // シート・一覧を閉じた: 選んだ建物の詳しい模型だけ戻す。カメラはその場所にとどめる
+    // （勝手に自分へ戻さない。戻すのは右上の方位磁針。2026-11-16 オーナー「シートを閉じてもカメラは維持」）
     unfocusRef.current = () => {
-      if (!focusRef.current) return
-      focusRef.current = null
-      clusterFocusRef.current = false
-      s.shown = null
       s.world?.focus(null)
-      if (s.current) map.easeTo({ center: [s.current.lng, s.current.lat], duration: 500 })
     }
-    // まとめのピンで寄せたあと、指で引いて 17.7 より引いたら、自分を追いかけるのに戻る
-    const onZoomEndCluster = () => {
-      if (clusterFocusRef.current && map.getZoom() < CLUSTER_UNTIL_ZOOM) unfocusRef.current()
+    // 右上の方位磁針: 北を上にし、寄せていた場所から自分の場所へ戻って追いかけを再開する
+    resetNorthRef.current = () => {
+      if (focusRef.current) {
+        focusRef.current = null
+          s.shown = null
+        s.world?.focus(null)
+        if (s.current) {
+          map.easeTo({ center: [s.current.lng, s.current.lat], bearing: 0, duration: 500 })
+          return
+        }
+      }
+      map.easeTo({ bearing: 0, duration: 400 })
     }
-    map.on('zoomend', onZoomEndCluster)
     // 毎コマ、表示位置を目標へ寄せてカメラを動かす
     const loop = { frame: 0, prevTime: performance.now(), positionAt: 0 }
     const tick = (now: number) => {
@@ -421,7 +423,6 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       avatarModelRef.current = null
       s.world?.dispose()
       mapRef.current = null
-      map.off('zoomend', onZoomEndCluster)
       map.remove()
     }
   }, [home])

@@ -115,7 +115,7 @@ function Compass({ subscribe, onTap }: { subscribe: Props['subscribeBearing']; o
     [subscribe],
   )
   return (
-    <button type="button" className="hud-compass" aria-label="北を上にする" onClick={onTap}>
+    <button type="button" className="hud-compass" aria-label="北を上にして自分の場所に戻る" onClick={onTap}>
       <img ref={imgRef} src={art('compass')} alt="" />
     </button>
   )
