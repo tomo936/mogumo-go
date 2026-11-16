@@ -254,6 +254,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         },
       })
       worldRef.current = s.world
+      if (s.lastFix) s.world.setAccuracy(s.lastFix.accuracy) // 地図ができる前に届いた測位の誤差も渡す
       if (lastHintsRef.current) {
         s.world.setHintedShops(hintedShopIds(lastHintsRef.current[0], lastHintsRef.current[1]))
         s.world.setHintPins(hintPinsOf(...lastHintsRef.current))
@@ -279,6 +280,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         return
       }
       s.lastFix = fix
+      s.world?.setAccuracy(fix.accuracy)
       s.acceptedAt = Date.now()
       s.target = { lat: fix.lat, lng: fix.lng }
       if (verdict === 'snap' || !s.current) s.current = s.target

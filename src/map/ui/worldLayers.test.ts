@@ -239,6 +239,22 @@ test('離れた場所を見ているときは、そこのまわりのお店を�
   expect(fetchHotpepper.mock.lastCall![0]).toEqual(far)
 })
 
+test('位置が粗いとき（誤差 50m 超）に取ったホットペッパーは、位置が正確になったら 1 回だけ取り直す（開き直すと直る「お店激減」。2026-11-16 オーナー）', async () => {
+  const { world, fetchHotpepper } = setup()
+  world.setAccuracy(800)
+  world.onPosition(home)
+  await flush()
+  expect(fetchHotpepper).toHaveBeenCalledTimes(1)
+  world.setAccuracy(20)
+  world.onPosition(north(200)) // 正しい位置は 200m 北（500m 未満なので、今までは取り直さなかった）
+  await flush()
+  expect(fetchHotpepper).toHaveBeenCalledTimes(2)
+  expect(fetchHotpepper.mock.lastCall![0]).toEqual(north(200))
+  world.onPosition(north(220))
+  await flush()
+  expect(fetchHotpepper).toHaveBeenCalledTimes(2) // 正確な位置で取ったあとは、今までどおり 500m ごと
+})
+
 test('取得中は2本目を投げない', async () => {
   let resolve: (s: Shop[]) => void = () => {}
   const { world, fetchHotpepper } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => new Promise<Shop[]>((r) => { resolve = r })) })

@@ -33,6 +33,7 @@ import { clusterFeatures } from '../../shops/domain/cluster.ts'
 import { createShopLayer } from '../../shops/infra/shopLayer.ts'
 import type { PlacedShop } from '../../shops/infra/shopLayer.ts'
 import { distanceMeters, localFrame } from '../domain/geo.ts'
+import { MAX_ACCURACY_M } from '../config.ts'
 import { watchUserMove } from '../infra/userMove.ts'
 import type { LatLng } from '../domain/geo.ts'
 import { jstDay } from '../../checkin/domain/day.ts'
@@ -85,6 +86,7 @@ type Work = { p: LatLng; frame: ReturnType<typeof localFrame>; area: AreaFeature
 
 type World = {
   onPosition(p: LatLng): void
+  setAccuracy(m: number): void // 最新の測位の誤差（m）。粗い位置で取ったホットペッパーを、正確になったら取り直すため
   shopsNear(): Shop[]
   pick(point: { x: number; y: number }): string[] | null // 押された建物の店の id（ビルなら全員）
   setView(center: LatLng | null): void // カメラが自分から離れて見ている場所（自分を追いかけているときは null）。雲はそこのまわりに置く
@@ -153,6 +155,11 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   let thinShops: Shop[] | null = null
   let thinClearedSize = -1
   let fetchCenter: LatLng | null = null
+  // 起動直後は誤差 2km までの粗い位置でも地図を出すので、その位置を真ん中に半径 1km のホットペッパーを取ると、
+  // 正しい位置が分かったあとも 500m 動くまで取り直さず、片側のお店が抜けていた（2026-11-16 オーナー「開き直したら大丈夫」）。
+  // 粗い位置で取った分は、正確になったら 1 回だけ取り直す
+  let accuracyM = Infinity // まだ分からないときは粗い扱い
+  let fetchedCoarse = false
   let fetching = false
   let failedAt: number | null = null
   let disposed = false
@@ -509,6 +516,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const fetchAround = (p: LatLng) => {
     fetching = true
     fetchCenter = p
+    fetchedCoarse = accuracyM > MAX_ACCURACY_M
     deps.fetchHotpepper(p).then(
       (list) => {
         fetching = false
@@ -531,7 +539,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     deps.shopsEnabled &&
     !fetching &&
     (failedAt === null || Date.now() - failedAt >= SHOP_RETRY_AFTER_FAIL_MS) &&
-    (!fetchCenter || distanceMeters(fetchCenter, p) >= SHOP_REFETCH_M)
+    (!fetchCenter || distanceMeters(fetchCenter, p) >= SHOP_REFETCH_M || (fetchedCoarse && accuracyM <= MAX_ACCURACY_M))
 
   const onIdle = () => {
     if (areaNow()) refreshShops(areaNow()!)
@@ -615,6 +623,9 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   }
 
   return {
+    setAccuracy(m) {
+      accuracyM = m
+    },
     onPosition(p) {
       if (disposed) return
       last = p
