@@ -1,15 +1,24 @@
 import { expect, test, vi } from 'vitest'
 import type { Map as MapLibreMap } from 'maplibre-gl'
-import { iconSizeAt, liftOffsetAt, createShopPins, PIN_LAYER, PIN_LAYER_FOG, PIN_SOURCE } from './shopPins.ts'
+import { iconSizeAt, liftOffsetAt, createShopPins, pinLayerFeatures, PIN_LAYER, PIN_SOURCE } from './shopPins.ts'
+import type { ClusterFeature } from '../domain/cluster.ts'
+import { pinFeatures } from '../domain/pinFeatures.ts'
 
-vi.mock('./checkBadge.ts', () => ({ checkBadgeImage: () => ({ width: 1, height: 1 }) }))
+vi.mock('./checkBadge.ts', () => ({ checkBadgeImage: () => ({ width: 1, height: 1 }), revealBadgeImage: () => ({ width: 1, height: 1 }) }))
+vi.mock('./shopClusters.ts', () => ({ createClusterImages: () => ({ dispose: vi.fn() }) }))
 const me = { lat: 35, lng: 139 }
 const shop = { id: 'a', model: 'ramen', lat: 35, lng: 139 }
 
-function fake() {
+function fake(zoom = 17.5) {
   const setData = vi.fn()
   const images = new Set<string>()
+  const handlers: Record<string, (() => void)[]> = {}
   const map = {
+    zoom,
+    getZoom: () => map.zoom,
+    on: (ev: string, fn: () => void) => { (handlers[ev] ??= []).push(fn) },
+    off: vi.fn(),
+    easeTo: vi.fn(),
     addSource: vi.fn(), addLayer: vi.fn(), removeLayer: vi.fn(), removeSource: vi.fn(), removeImage: vi.fn(),
     getLayer: vi.fn(() => ({})), getSource: vi.fn(() => ({ setData })),
     hasImage: (id: string) => images.has(id),
@@ -17,44 +26,92 @@ function fake() {
     loadImage: vi.fn(() => Promise.resolve({ data: {} })),
     queryRenderedFeatures: vi.fn(() => [] as unknown[]), setLayoutProperty: vi.fn(),
   }
-  return { map, setData, m: map as unknown as MapLibreMap }
+  return { map, setData, handlers, m: map as unknown as MapLibreMap }
 }
+const lastData = (setData: ReturnType<typeof vi.fn>) => (setData.mock.calls.at(-1)?.[0] as { features: { properties: Record<string, unknown> }[] } | undefined)?.features ?? []
 
-test('attach で source・2つの層・18種の絵を登録する（層の位置は引数どおり）', async () => {
+// 経堂のまわりに近いお店を並べる（引きでまとまる近さ）
+const cf = (id: string, dLng: number): ClusterFeature => ({
+  type: 'Feature', geometry: { type: 'Point', coordinates: [139.6363 + dLng, 35.6513] },
+  properties: { id, kind: 'ramen', n: 1, done: id === 'c' ? 1 : 0, ids: id, liftTier: 'mid', lt: id === 'c' ? 2 : 1 },
+})
+const near = [cf('a', 0), cf('b', 0.0001), cf('c', 0.0002)]
+const far = cf('far', 0.05) // 遠く離れた 1 軒
+
+test('attach で source と 1 つの層をいちばん上に入れ、18 種＋気配の絵を登録する', async () => {
   const { map, m } = fake()
   const pins = createShopPins(m)
-  pins.attach('fog', 'me')
+  pins.attach()
   expect(map.addSource).toHaveBeenCalledWith(PIN_SOURCE, expect.objectContaining({ type: 'geojson' }))
-  expect(map.addLayer.mock.calls.map((c) => [(c[0] as { id: string }).id, c[1]])).toEqual([[PIN_LAYER, 'fog'], [PIN_LAYER_FOG, 'me']])
+  expect(map.addLayer.mock.calls.map((c) => [(c[0] as { id: string }).id, c[1]])).toEqual([[PIN_LAYER, undefined]]) // before なし＝いちばん上
   await Promise.resolve()
   await Promise.resolve()
-  expect(map.addImage).toHaveBeenCalledTimes(36) // 18種 × （ふつう・済み）
   expect(map.addImage).toHaveBeenCalledWith('pin-ramen', expect.anything())
   expect(map.addImage).toHaveBeenCalledWith('pin-ramen-done', expect.anything())
-  pins.attach('x', 'y') // 2回目は何もしない
-  expect(map.addLayer).toHaveBeenCalledTimes(2)
+  expect(map.addImage).toHaveBeenCalledWith('hint', expect.anything())
+  expect(map.addImage).toHaveBeenCalledWith('hint-revealed', expect.anything())
+  pins.attach() // 2回目は何もしない
+  expect(map.addLayer).toHaveBeenCalledTimes(1)
 })
 
-test('update は attach 後に source へ流し、attach 前の分は attach で渡る', () => {
-  const { map, setData, m } = fake()
+test('引き（倍率 17 未満）: 近いお店はまとめのピン 1 つ（数と済みと高さの段）、離れた 1 軒はそのお店のピン', () => {
+  const f = pinLayerFeatures(16.5, [], [...near, far], [])
+  const cluster = f.find((x) => x.properties.t === 'cluster')!
+  expect(cluster.properties).toMatchObject({ n: 3, lt: 2 })
+  expect(f.filter((x) => x.properties.t === 'shop').map((x) => x.properties.id)).toEqual(['far'])
+})
+
+test('引きでも、霧の中の近いお店は単独で出す。晴れた所の 1 軒ピン（singles）はまとめ側に任せて出さない', () => {
+  const singles = pinFeatures([shop, { ...shop, id: 'fog1' }], new Set(['fog1']), me)
+  const f = pinLayerFeatures(16.5, singles, [], [])
+  expect(f.map((x) => x.properties.id)).toEqual(['fog1'])
+})
+
+test('寄り（17 以上）: まとめず、1 軒ずつ（晴れた所も霧の中も）', () => {
+  const singles = pinFeatures([shop, { ...shop, id: 'fog1' }], new Set(['fog1']), me)
+  const f = pinLayerFeatures(17.2, singles, near, [])
+  expect(f.map((x) => [x.properties.t, x.properties.id])).toEqual([['shop', 'a'], ['shop', 'fog1']])
+})
+
+test('気配のピンは、どの倍率でも同じ層に単独で入る（正体が分かった印・弾み）', () => {
+  const hints = [{ id: 'h1', lat: 35.65, lng: 139.63, revealed: false }, { id: 'h2', lat: 35.66, lng: 139.64, revealed: true }]
+  for (const z of [16.5, 17.5]) {
+    const f = pinLayerFeatures(z, [], near, hints, new Map([['h1', 1.2]]))
+    expect(f.filter((x) => x.properties.t === 'hint').map((x) => [x.properties.id, x.properties.revealed, x.properties.b])).toEqual([['h1', false, 1.2], ['h2', true, 1]])
+  }
+})
+
+test('引き・寄りをまたぐと作り直す（またがなければ作り直さない）', () => {
+  const { setData, handlers, map, m } = fake(17.5)
   const pins = createShopPins(m)
-  pins.update([shop], new Set(), me)
-  expect(setData).not.toHaveBeenCalled()
   pins.attach()
-  expect((map.addSource.mock.calls[0][1] as { data: { features: unknown[] } }).data.features).toHaveLength(1)
-  pins.update([shop, { ...shop, id: 'b' }], new Set(['b']), me)
-  expect(setData).toHaveBeenCalledTimes(1)
+  pins.setClusterInput(near)
+  const n = setData.mock.calls.length
+  map.zoom = 17.3
+  handlers.zoom.forEach((h) => h())
+  expect(setData.mock.calls.length).toBe(n)
+  map.zoom = 16.6
+  handlers.zoom.forEach((h) => h())
+  expect(setData.mock.calls.length).toBe(n + 1)
+  expect(lastData(setData).some((x) => x.properties.t === 'cluster')).toBe(true)
 })
 
-test('pick は雲の上の層を先に見て、押した周りの箱で探し、無ければ null', () => {
-  const { map, m } = fake()
+test('pick: お店は店の id、気配は hint:<id>、まとめはカメラの中心を動かさずに倍率 17 まで寄って []', () => {
+  const { map, m } = fake(16.5)
   const pins = createShopPins(m)
   expect(pins.pick({ x: 10, y: 10 })).toBeNull() // attach 前
   pins.attach()
   expect(pins.pick({ x: 10, y: 10 })).toBeNull()
-  map.queryRenderedFeatures.mockReturnValueOnce([{ properties: { id: 'a' } }])
+  map.queryRenderedFeatures.mockReturnValueOnce([{ properties: { t: 'shop', id: 'a' } }])
   expect(pins.pick({ x: 10, y: 10 })).toEqual(['a'])
-  expect(map.queryRenderedFeatures).toHaveBeenLastCalledWith([[2, 2], [18, 18]], { layers: [PIN_LAYER_FOG, PIN_LAYER] })
+  expect(map.queryRenderedFeatures).toHaveBeenLastCalledWith([[2, 2], [18, 18]], { layers: [PIN_LAYER] })
+  map.queryRenderedFeatures.mockReturnValueOnce([{ properties: { t: 'hint', id: 'h1' } }])
+  expect(pins.pick({ x: 10, y: 10 })).toEqual(['hint:h1'])
+  map.queryRenderedFeatures.mockReturnValueOnce([{ properties: { t: 'cluster', id: 'cluster:1' } }])
+  expect(pins.pick({ x: 10, y: 10 })).toEqual([])
+  const arg = map.easeTo.mock.calls[0][0] as Record<string, unknown>
+  expect(arg.center).toBeUndefined() // 中心を動かさない（自分を追いかけるカメラに引き戻されない）
+  expect(Number(arg.zoom)).toBeGreaterThanOrEqual(17)
 })
 
 test('dispose で層・source・絵を外す', () => {
@@ -62,7 +119,7 @@ test('dispose で層・source・絵を外す', () => {
   const pins = createShopPins(m)
   pins.attach()
   pins.dispose()
-  expect(map.removeLayer).toHaveBeenCalledTimes(2)
+  expect(map.removeLayer).toHaveBeenCalledWith(PIN_LAYER)
   expect(map.removeSource).toHaveBeenCalledWith(PIN_SOURCE)
 })
 
@@ -75,41 +132,28 @@ test('ピンは屋根の少し上へ: ズーム17.5 で 10m なら約30px、ズ�
   expect(liftOffsetAt(17, 10)[0]).toBe(0) // 真上にだけずらす
 })
 
-test('層に icon-offset と済み用の icon-image が付く', () => {
+test('層: 種類ごとの絵（まとめ・気配・済み）、持ち上げ、重なっても全部、画面の下ほど手前', () => {
   const { map, m } = fake()
   createShopPins(m).attach()
   const layout = (map.addLayer.mock.calls[0][0] as { layout: Record<string, unknown> }).layout
-  expect(layout['icon-offset']).toBeDefined()
-  expect(JSON.stringify(layout['icon-offset'])).toContain('liftTier') // 高さの段で持ち上げを変える
+  expect(JSON.stringify(layout['icon-offset'])).toContain('liftTier')
   expect(JSON.stringify(layout['icon-image'])).toContain('-done')
-  expect(layout['icon-allow-overlap']).toBe(true) // 重なっても全部出す（2026-11-13 オーナー）
+  expect(JSON.stringify(layout['icon-image'])).toContain('cl-')
+  expect(JSON.stringify(layout['icon-image'])).toContain('hint-revealed')
+  expect(layout['icon-allow-overlap']).toBe(true)
   expect(layout['icon-ignore-placement']).toBe(true)
-  expect(layout['symbol-z-order']).toBe('viewport-y') // 画面の下（手前）のピンほど前に描く
+  expect(layout['symbol-z-order']).toBe('viewport-y')
 })
 
-test('setVisible で2層とも切りかえ、隠している間は pick も null。attach 前の指定も効く', () => {
+test('setVisible・setMoving で層を切りかえ、隠している間は pick も null。attach 前の指定も効く', () => {
   const { map, m } = fake()
   const pins = createShopPins(m)
   pins.setVisible(false)
   pins.attach()
   expect((map.addLayer.mock.calls[0][0] as { layout: { visibility: string } }).layout.visibility).toBe('none')
   expect(pins.pick({ x: 1, y: 1 })).toBeNull()
-  expect(map.queryRenderedFeatures).not.toHaveBeenCalled()
   pins.setVisible(true)
-  expect(map.setLayoutProperty.mock.calls.map((c) => [c[0], c[2]])).toEqual([[PIN_LAYER, 'visible'], [PIN_LAYER_FOG, 'visible']])
-})
-
-test('setMoving(true) の間は2層とも隠し、false で戻す。「出さない」ボタンで隠している間は戻さない', () => {
-  const { map, m } = fake()
-  const pins = createShopPins(m)
-  pins.attach()
-  const shown = () => map.setLayoutProperty.mock.calls.map((c) => c[2])
+  expect(map.setLayoutProperty).toHaveBeenLastCalledWith(PIN_LAYER, 'visibility', 'visible')
   pins.setMoving(true)
-  expect(map.setLayoutProperty.mock.calls.map((c) => [c[0], c[2]])).toEqual([[PIN_LAYER, 'none'], [PIN_LAYER_FOG, 'none']])
-  pins.setMoving(false)
-  expect(shown().slice(2)).toEqual(['visible', 'visible'])
-  pins.setVisible(false)
-  pins.setMoving(true)
-  pins.setMoving(false)
-  expect(shown().slice(-2)).toEqual(['none', 'none'])
+  expect(map.setLayoutProperty).toHaveBeenLastCalledWith(PIN_LAYER, 'visibility', 'none')
 })
