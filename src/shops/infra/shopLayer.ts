@@ -8,6 +8,8 @@ import type { ShopKind } from '../domain/shop.ts'
 import { threeLayer } from '../../lib/threeLayer.ts'
 import { pickShop } from './pickShop.ts'
 import { MODEL_SCALE } from '../config.ts'
+import { isNight, onPhase } from '../../daynight/infra/phase.ts'
+import { GLOW_SCALE, glowMesh, lightUp, makeLights } from '../../daynight/infra/nightLook.ts'
 
 // 地図に置く建物1つ。1軒の店は model がその種類・shopIds が [id]。
 // ビル（同じ建物の複数の店）は model 'building'・id 'bldg:<先頭の店 id>'・shopIds に全員
@@ -38,13 +40,20 @@ export function createShopLayer(id: string): CustomLayerInterface & {
   let shops: PlacedShop[] = []
   let origin: LatLng | null = null
 
+  let lights: ReturnType<typeof makeLights> | null = null
+  let stopPhase: (() => void) | null = null
   const clear = () => {
     for (const m of meshes) {
       scene?.remove(m)
       m.dispose()
+      if (m.userData.glow) {
+        m.geometry.dispose()
+        ;(m.material as THREE.Material).dispose()
+      }
     }
     meshes = []
   }
+  const allMats = () => [...models.values()].flatMap((md) => md?.parts.flatMap((p) => (Array.isArray(p.mat) ? p.mat : [p.mat])) ?? [])
 
   const load = (kind: ModelKey) => {
     const url = urlOf(kind)
@@ -60,6 +69,7 @@ export function createShopLayer(id: string): CustomLayerInterface & {
           if (!mesh.isMesh) return
           const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
           for (const m of mats) (m as THREE.MeshStandardMaterial).envMapIntensity = 0 // 試作どおりマット
+          lightUp(mats, isNight()) // 夜は窓・提灯を強く光らせる（A14）
           parts.push({ geo: mesh.geometry, mat: mesh.material, local: mesh.matrixWorld.clone() })
         })
         const box = new THREE.Box3().setFromObject(gltf.scene)
@@ -118,6 +128,20 @@ export function createShopLayer(id: string): CustomLayerInterface & {
         meshes.push(inst)
       }
     }
+    // 夜: お店の足元に暖かい光のたまり（A14）
+    const lit = shops.filter((s) => drawnKey(s))
+    if (isNight() && lit.length) {
+      const glow = glowMesh(lit.length)
+      glow.userData.glow = true
+      lit.forEach((s, i) => {
+        const p = frame.to(s)
+        const k = s.sizeM * GLOW_SCALE
+        glow.setMatrixAt(i, m.compose(v.set(p.x, 0.15, -p.y), q.identity(), sc.set(k, 1, k)))
+      })
+      glow.computeBoundingSphere()
+      scene.add(glow)
+      meshes.push(glow)
+    }
     map?.triggerRepaint()
   }
 
@@ -126,14 +150,18 @@ export function createShopLayer(id: string): CustomLayerInterface & {
     onAdd(sc, mp) {
       scene = sc
       map = mp
-      // 試作どおりの光（空の光＋太陽）
-      sc.add(new THREE.HemisphereLight('#ffffff', '#e6dccf', 2.2))
-      const sun = new THREE.DirectionalLight('#fff2e4', 2.4)
-      sun.position.set(-0.6, 0.8, 0.55)
-      sc.add(sun)
+      // 試作どおりの光（空の光＋太陽）。夜は月明かり（A14）
+      lights = makeLights(sc, isNight())
+      stopPhase = onPhase((n) => {
+        lights?.apply(n)
+        lightUp(allMats(), n)
+        build()
+      })
       build()
     },
     onRemove() {
+      stopPhase?.()
+      stopPhase = null
       clear()
       for (const md of models.values()) {
         for (const p of md?.parts ?? []) {

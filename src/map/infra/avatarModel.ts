@@ -9,6 +9,8 @@ import {
   BLINK_TOTAL_MS, FACE_HAPPY, avatarHeightMeters, blinkFrame, initialMotion, joyDurationMs, nextBlinkDelay, playbackRate, stepMotion,
 } from '../domain/avatar3d.ts'
 import type { FaceFrame, MotionState } from '../domain/avatar3d.ts'
+import { isNight, onPhase } from '../../daynight/infra/phase.ts'
+import { makeLights } from '../../daynight/infra/nightLook.ts'
 import type { LatLng } from '../domain/geo.ts'
 
 // 使うキャラだけ遅れて読む（URL だけ持ち、ファイルは読み込むときに取りに行く）
@@ -47,10 +49,8 @@ export function createAvatarModel(map: MapLibreMap) {
   const layer = threeLayer({
     id: 'me-avatar-3d',
     onAdd(scene) {
-      scene.add(new THREE.HemisphereLight('#ffffff', '#e6dccf', 2.2))
-      const sun = new THREE.DirectionalLight('#fff2e4', 2.4)
-      sun.position.set(-0.6, 0.8, 0.55)
-      scene.add(sun)
+      const lights = makeLights(scene, isNight(), 1.8) // 夜は月明かり。自分は見やすいよう少し明るく（A14）
+      onPhase((n) => lights.apply(n)) // 地図と同じだけ生きるので、外さない
       scene.add(holder)
       const url = AVATARS[`../../assets/characters/${CHARACTER_ID}/avatar.glb`]
       if (!url) return
