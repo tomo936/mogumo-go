@@ -49,7 +49,7 @@ export function createAvatarModel(map: MapLibreMap) {
   const layer = threeLayer({
     id: 'me-avatar-3d',
     onAdd(scene) {
-      const lights = makeLights(scene, isNight(), 1.8) // 夜は月明かり。自分は見やすいよう少し明るく（A14）
+      const lights = makeLights(scene, isNight()) // 夜は月明かり。まわりと同じ暗さ（A14・2026-11-17 オーナー）
       onPhase((n) => lights.apply(n)) // 地図と同じだけ生きるので、外さない
       scene.add(holder)
       const url = AVATARS[`../../assets/characters/${CHARACTER_ID}/avatar.glb`]
