@@ -61,7 +61,7 @@ let dataHandler: ((e: { sourceId?: string; tile?: unknown; dataType?: string }) 
 let zoom = 16 // カメラ（拡大していないので、詳しい模型はふだん自分の位置だけで選ぶ）
 let center: LatLng = { lat: 35.68, lng: 139.76 }
 const fakeMap = () => ({
-  addLayer: vi.fn(), removeLayer: vi.fn(), getLayer: vi.fn(() => true),
+  addLayer: vi.fn(), removeLayer: vi.fn(), getLayer: vi.fn(() => true), addSource: vi.fn(), getSource: vi.fn(() => undefined), setLayoutProperty: vi.fn(),
   areTilesLoaded: () => tilesLoaded,
   querySourceFeatures,
   getZoom: () => zoom,
@@ -110,15 +110,18 @@ test('最初の位置で霧とお店の層が作られ、fetchHotpepper が現�
   const { world, fetchHotpepper, map } = setup()
   world.onPosition(home)
   expect(fogLayer.setClumps).toHaveBeenCalledTimes(1)
-  expect(map.addLayer).toHaveBeenCalledTimes(4)
+  expect(map.addLayer).toHaveBeenCalledTimes(5) // 夜の地面の光（A14）＋ 大型施設・お店・霧・霧の中の近い店
   expect(fetchHotpepper).toHaveBeenCalledTimes(1)
 })
 
-test('大型施設・お店・霧・霧の中の近い店は自分の位置の印より下に入れ、この順で上に重なる', () => {
+test('夜の地面の光・大型施設・お店・霧・霧の中の近い店は自分の位置の印より下に入れ、この順で上に重なる', () => {
   const { world, map } = setup()
   vi.mocked(map.getLayer).mockImplementation(((id: string) => (id === 'me-avatar-3d' || id === 'me-shadow' ? {} : undefined)) as never)
   world.onPosition(home)
-  expect(vi.mocked(map.addLayer).mock.calls).toEqual([[facilityLayer, 'me-avatar-3d'], [shopLayer, 'me-avatar-3d'], [fogLayer, 'me-avatar-3d'], [fogShopLayer, 'me-avatar-3d']])
+  const calls = vi.mocked(map.addLayer).mock.calls
+  expect((calls[0][0] as { id: string }).id).toBe('night-glow') // 地面の光は 3D より下
+  expect(calls[0][1]).toBe('me-avatar-3d')
+  expect(calls.slice(1)).toEqual([[facilityLayer, 'me-avatar-3d'], [shopLayer, 'me-avatar-3d'], [fogLayer, 'me-avatar-3d'], [fogShopLayer, 'me-avatar-3d']])
 })
 
 test('お店のピンは 1 つの層でいちばん上に入れ、1軒の店を渡し、タップはピンを先に見る', async () => {
