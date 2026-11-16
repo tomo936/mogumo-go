@@ -1,3 +1,4 @@
+import { MODEL_SCALE } from '../config.ts'
 import type { ShopKind } from './shop.ts'
 
 // 1軒の店の symbol ピンを持ち上げる高さ。模型の高さ = 大きさ（sizeM、幅の長い方）× 種類ごとの「高さ/幅」の比。
@@ -28,7 +29,7 @@ export const LIFT_MARGIN_M = 1 // 屋根の少し上
 
 // その店のピンを浮かせる高さ（m）= 模型の高さ + 少し
 export function liftM(kind: ShopKind, sizeM: number, marginM = LIFT_MARGIN_M): number {
-  return sizeM * (HEIGHT_RATIO[kind] ?? 1) + marginM
+  return sizeM * (MODEL_SCALE[kind] ?? 1) * (HEIGHT_RATIO[kind] ?? 1) + marginM
 }
 
 // 高さの段（スタイルの式は配列を動的に作れないので、段ごとの値を用意して match で選ぶ）。

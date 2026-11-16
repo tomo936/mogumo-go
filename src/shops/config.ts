@@ -2,6 +2,8 @@
 export const SHOP_RADIUS_M = 1000
 export const SHOP_REFETCH_M = 500
 export const SHOP_MIN_SIZE_M = 14
+// 種類ごとの模型の縮尺（無い種類は 1）。バーは奥行きがほぼ正方形で背も高く、体積が居酒屋の約 1.2 倍に見えたので 88%（2026-11-17 オーナー「でかくない？」）
+export const MODEL_SCALE: Record<string, number> = { bar: 0.88 }
 export const SHOP_MAX_SIZE_M = 18 // 建物の大きさは「少し違う」くらいに収める（本人 2026-11-06）
 export const SHOP_RETRY_WAIT_MS = 3000
 export const SHOP_REFRESH_M = 10 // お店の見える・見えないを計算し直す移動距離
