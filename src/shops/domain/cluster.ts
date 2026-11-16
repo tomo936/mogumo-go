@@ -37,34 +37,44 @@ export type ClusterFeature = {
   type: 'Feature'
   geometry: { type: 'Point'; coordinates: [number, number] }
   // liftTier・lt: ピンを持ち上げる高さの段（lt は 0 低・1 中・2 高。まとめはいちばん高い段）
-  properties: { id: string; kind: string; n: number; done: number; ids: string; liftTier: LiftTier; lt: number }
+  // kinds・dones: ビルの中のお店の種類と済み（2 軒のビルを 2 本のピンに戻すときに使う）
+  properties: { id: string; kind: string; n: number; done: number; ids: string; liftTier: LiftTier; lt: number; kinds?: string; dones?: string }
 }
 
 const TIER_NO: Record<LiftTier, number> = { low: 0, mid: 1, high: 2 }
 const DEFAULT_SIZE_M = 16 // 大きさが分からない店の目安（pinFeatures と同じ）
 
-// まとめる層に渡す点: 1 軒の店と、ビル・施設の中のお店（どれも 1 軒ずつの点。その店の場所と種類）
+// まとめる層に渡す点: 1 軒の店（n=1）と、ビル・施設（中のお店の数を持った 1 つの点。中身が分かれないように。2026-11-16 オーナー）
 export function clusterFeatures(
   singles: readonly (Point & { model: string; sizeM?: number })[],
-  buildings: readonly { id: string; topM: number; shops: readonly { id: string; kind: string; lat: number; lng: number }[] }[],
+  buildings: readonly { id: string; lat: number; lng: number; topM: number; shops: readonly { id: string; kind: string; lat: number; lng: number }[] }[],
   inFog: ReadonlySet<string>,
   hinted: ReadonlySet<string>,
   done: ReadonlySet<string>,
 ): ClusterFeature[] {
   const out: ClusterFeature[] = []
-  const add = (id: string, kind: string, lat: number, lng: number, heightM: number) => {
-    if (hinted.has(id)) return
+  const add = (id: string, kind: string, lat: number, lng: number, heightM: number, ids: readonly string[], kinds?: readonly string[]) => {
     const tier = liftTier(Math.round(heightM * 10) / 10)
-    out.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [lng, lat] }, properties: { id, kind, n: 1, done: done.has(id) ? 1 : 0, ids: id, liftTier: tier, lt: TIER_NO[tier] } })
+    out.push({
+      type: 'Feature', geometry: { type: 'Point', coordinates: [lng, lat] },
+      properties: {
+        id, kind, n: ids.length, done: ids.filter((x) => done.has(x)).length, ids: ids.join(','), liftTier: tier, lt: TIER_NO[tier],
+        ...(kinds ? { kinds: kinds.join(','), dones: ids.map((x) => (done.has(x) ? '1' : '0')).join(',') } : {}),
+      },
+    })
   }
   for (const s of singles) {
     if (inFog.has(s.id)) continue
     const id = s.shopIds.find((x) => !hinted.has(x))
-    if (id) add(id, s.model, s.lat, s.lng, liftM(s.model as ShopKind, s.sizeM ?? DEFAULT_SIZE_M))
+    if (id) add(id, s.model, s.lat, s.lng, liftM(s.model as ShopKind, s.sizeM ?? DEFAULT_SIZE_M), [id])
   }
   for (const b of buildings) {
     if (inFog.has(b.id)) continue
-    for (const sh of b.shops) add(sh.id, sh.kind, sh.lat, sh.lng, b.topM + LIFT_MARGIN_M)
+    const members = b.shops.filter((sh) => !hinted.has(sh.id))
+    if (members.length === 0) continue
+    // 気配を除いて 1 軒だけなら、そのお店のピン。2 軒以上ならビルの場所に、数を持った 1 つの点
+    if (members.length === 1) add(members[0].id, members[0].kind, b.lat, b.lng, b.topM + LIFT_MARGIN_M, [members[0].id])
+    else add(b.id, 'mystery', b.lat, b.lng, b.topM + LIFT_MARGIN_M, members.map((m) => m.id), members.map((m) => m.kind))
   }
   return out
 }
