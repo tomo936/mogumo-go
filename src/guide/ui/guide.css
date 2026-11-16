@@ -6,6 +6,9 @@
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer; /* iPhone の Safari は、これが無いと div のタップで click が来ない */
+  touch-action: manipulation;
 }
 .guide__dim {
   position: absolute;
@@ -92,4 +95,14 @@
   50% {
     transform: translateY(4px);
   }
+}
+.guide__debug {
+  position: absolute;
+  left: 18px;
+  bottom: 6px;
+  font: 11px/1.2 ui-monospace, monospace;
+  color: #8a5a32;
+}
+.guide__poko canvas[hidden] {
+  display: none;
 }

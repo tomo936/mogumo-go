@@ -156,7 +156,11 @@ function makeModelClass(rt: Runtime) {
 export type PokoHandle = { setTalking(on: boolean): void; dispose(): void }
 
 // canvas にポコタンを出す。読めなければ reject（画面は静止画に切り替える）
-export async function mountPoko(canvas: HTMLCanvasElement, scale = 1): Promise<PokoHandle> {
+// stage: どこまで進んだか（?debug で画面に出す。実機で止まる場所を見るため）
+export async function mountPoko(canvas: HTMLCanvasElement, stage: (s: string) => void = () => {}, scale = 1): Promise<PokoHandle> {
+  stage('core')
+  await loadCore()
+  stage('framework')
   const rt = await loadRuntime()
   const dpr = window.devicePixelRatio || 1
   const fit = () => {
@@ -166,11 +170,14 @@ export async function mountPoko(canvas: HTMLCanvasElement, scale = 1): Promise<P
   fit()
   const gl = canvas.getContext('webgl2', { premultipliedAlpha: true }) ?? canvas.getContext('webgl', { premultipliedAlpha: true })
   if (!gl) throw new Error('WebGL が使えない')
+  stage(`model ${canvas.width}x${canvas.height}`)
   const Poko = makeModelClass(rt)
   const model = new Poko(gl)
   await model.load(`${BASE}poko/`, 'poko.model3.json', canvas.width, canvas.height)
 
+  stage('draw')
   let alive = true
+  let frames = 0
   let raf = 0
   let last = performance.now()
   const frame = (now: number) => {
@@ -185,6 +192,7 @@ export async function mountPoko(canvas: HTMLCanvasElement, scale = 1): Promise<P
     const proj = new rt.CubismMatrix44()
     proj.scale((canvas.height / canvas.width) * scale, scale) // 縦の長さに合わせる（横長・縦長どちらの箱でも形がつぶれない）
     model.drawWith(proj, canvas.width, canvas.height)
+    if (++frames === 30) stage(`ok ${canvas.width}x${canvas.height}`)
     raf = requestAnimationFrame(frame)
   }
   raf = requestAnimationFrame(frame)
