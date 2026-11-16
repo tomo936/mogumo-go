@@ -12,6 +12,7 @@ type Props = {
   pinsHidden: boolean
   onTogglePins: () => void
   onSignOut: () => void
+  onGuide: () => void // ポコタンの案内をもう一度（A5）
   onClose: () => void
 }
 
@@ -81,7 +82,9 @@ export function Settings(p: Props) {
       </Group>
 
       <Group title="サポート">
-        <SoonRow label="遊び方をもう一度見る" />
+        <button type="button" className="st__row st__link" onClick={p.onGuide}>
+          <span>遊び方をもう一度見る<small>ポコタンが案内します</small></span><span aria-hidden="true">›</span>
+        </button>
         <SoonRow label="よくある質問" />
         {CONTACT_FORM_URL ? (
           <a className="st__row st__link" href={CONTACT_FORM_URL} target="_blank" rel="noopener noreferrer">
@@ -117,6 +120,7 @@ export function Settings(p: Props) {
             <p>「国勢調査 町丁・字等別境界データ」（総務省統計局）を加工して作成</p>
             <p>地名検索: <a href="https://www.gsi.go.jp/" target="_blank" rel="noreferrer">国土地理院</a></p>
             <p>図鑑の字体: <a href="https://fonts.google.com/specimen/M+PLUS+Rounded+1c" target="_blank" rel="noreferrer">M PLUS Rounded 1c</a>（SIL Open Font License 1.1）</p>
+            <p>ポコタンの動き: Live2D Cubism SDK（© Live2D Inc.）</p>
             <p>チェーン店の判定: <a href="https://github.com/osmlab/name-suggestion-index" target="_blank" rel="noreferrer">name-suggestion-index</a>（OpenStreetMap, BSD-3-Clause）</p>
           </div>
         )}

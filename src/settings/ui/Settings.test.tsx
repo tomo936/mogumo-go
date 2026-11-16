@@ -4,7 +4,7 @@ import { expect, test, vi } from 'vitest'
 import { Settings } from './Settings.tsx'
 
 const show = (o: Partial<Parameters<typeof Settings>[0]> = {}) => {
-  const p = { email: 'mogu@example.com', pinsHidden: false, onTogglePins: vi.fn(), onSignOut: vi.fn(), onClose: vi.fn(), ...o }
+  const p = { email: 'mogu@example.com', pinsHidden: false, onTogglePins: vi.fn(), onSignOut: vi.fn(), onGuide: vi.fn(), onClose: vi.fn(), ...o }
   render(<Settings {...p} />)
   return p
 }
@@ -22,6 +22,12 @@ test('ログイン中のメールとログアウト', async () => {
   expect(screen.getByText('mogu@example.com')).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: /ログアウト/ }))
   expect(p.onSignOut).toHaveBeenCalled()
+})
+
+test('遊び方をもう一度見るで onGuide（ポコタンの案内）', async () => {
+  const p = show()
+  await userEvent.click(screen.getByRole('button', { name: /遊び方をもう一度見る/ }))
+  expect(p.onGuide).toHaveBeenCalled()
 })
 
 test('お問い合わせはフォームの URL が無いあいだ準備中', () => {
