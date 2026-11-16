@@ -8,6 +8,7 @@ import { mountPoko } from '../infra/poko.ts'
 import type { PokoHandle } from '../infra/poko.ts'
 import pokoStill from '../../assets/guide/poko.webp'
 import { sound } from '../../sound/infra/sound.ts'
+import { debugOn } from '../../map/ui/debugOverlay.ts'
 
 type Props = {
   meOnScreen: () => { x: number; y: number } | null
@@ -15,6 +16,7 @@ type Props = {
 }
 
 const SELECTOR: Partial<Record<GuideTarget, string>> = { hint: '.hud-hint', menu: '.hud-toggle', player: '.hud-player, .hud-coins' }
+const STILL_AFTER_MS = 6000 // これまでに Live2D が出なければ、止まった絵にする
 const ME_R: Record<number, number> = { 1: 120, 2: 80 } // 自分のまわりの丸の大きさ（霧のページは広く、お店のページは近く）
 
 function holeFor(target: GuideTarget, page: number, meOnScreen: Props['meOnScreen']): Hole | null {
@@ -32,6 +34,7 @@ export function Guide({ meOnScreen, onClose }: Props) {
   const [shown, setShown] = useState(0)
   const [hole, setHole] = useState<Hole | null>(null)
   const [still, setStill] = useState(false) // Live2D が使えないときは止まった絵
+  const [stage, setStage] = useState('') // ?debug のときだけ出す（Live2D の読み込みがどこまで進んだか）
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pokoRef = useRef<PokoHandle | null>(null)
   const { text, target } = GUIDE_PAGES[page]
@@ -40,15 +43,21 @@ export function Guide({ meOnScreen, onClose }: Props) {
   useEffect(() => {
     let alive = true
     let handle: PokoHandle | null = null
-    mountPoko(canvasRef.current!)
+    const giveUp = setTimeout(() => alive && !handle && setStill(true), STILL_AFTER_MS)
+    mountPoko(canvasRef.current!, (st) => alive && setStage(st))
       .then((h) => {
         if (!alive) return h.dispose()
         handle = h
         pokoRef.current = h
       })
-      .catch(() => alive && setStill(true))
+      .catch((e: unknown) => {
+        if (!alive) return
+        setStage(`error ${e instanceof Error ? e.message : String(e)}`)
+        setStill(true)
+      })
     return () => {
       alive = false
+      clearTimeout(giveUp)
       pokoRef.current = null
       handle?.dispose()
     }
@@ -97,12 +106,14 @@ export function Guide({ meOnScreen, onClose }: Props) {
         スキップ
       </button>
       <div className="guide__poko" aria-hidden="true">
-        {still ? <img src={pokoStill} alt="" /> : <canvas ref={canvasRef} />}
+        {still && <img src={pokoStill} alt="" />}
+        <canvas ref={canvasRef} hidden={still} />
       </div>
       <div className="guide__box" aria-live="polite">
         <div className="guide__name">ポコタン</div>
         <p className="guide__say">{text.slice(0, shown)}</p>
         {done && <div className="guide__next" aria-hidden="true">▼</div>}
+        {debugOn(window.location.search) && <div className="guide__debug">{`poko: ${stage}${still ? ' (still)' : ''}`}</div>}
       </div>
     </div>
   )
