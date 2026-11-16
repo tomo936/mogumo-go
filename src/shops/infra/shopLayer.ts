@@ -103,7 +103,7 @@ export function createShopLayer(id: string): CustomLayerInterface & {
       // 1軒ずつの置き方（m）。正面（模型の +z）を facingDeg（北0・時計回り）へ向ける
       const place = list.map((s) => {
         const p = frame.to(s)
-        const k = (s.sizeM * (MODEL_SCALE[s.model] ?? 1)) / unitOf(s.model) // 種類ごとの縮尺（バーは 88%。config.ts）
+        const k = (s.sizeM * (MODEL_SCALE[s.model] ?? 1)) / unitOf(s.model) // 種類ごとの縮尺（バーは 78%。config.ts）
         return new THREE.Matrix4().compose(
           v.set(p.x, 0, -p.y),
           q.setFromAxisAngle(up, Math.PI - THREE.MathUtils.degToRad(s.facingDeg)),
