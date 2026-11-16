@@ -7,6 +7,7 @@ import type { LatLng } from '../../map/domain/geo.ts'
 import type { ShopKind } from '../domain/shop.ts'
 import { threeLayer } from '../../lib/threeLayer.ts'
 import { pickShop } from './pickShop.ts'
+import { MODEL_SCALE } from '../config.ts'
 
 // 地図に置く建物1つ。1軒の店は model がその種類・shopIds が [id]。
 // ビル（同じ建物の複数の店）は model 'building'・id 'bldg:<先頭の店 id>'・shopIds に全員
@@ -102,7 +103,7 @@ export function createShopLayer(id: string): CustomLayerInterface & {
       // 1軒ずつの置き方（m）。正面（模型の +z）を facingDeg（北0・時計回り）へ向ける
       const place = list.map((s) => {
         const p = frame.to(s)
-        const k = s.sizeM / unitOf(s.model)
+        const k = (s.sizeM * (MODEL_SCALE[s.model] ?? 1)) / unitOf(s.model) // 種類ごとの縮尺（バーは 88%。config.ts）
         return new THREE.Matrix4().compose(
           v.set(p.x, 0, -p.y),
           q.setFromAxisAngle(up, Math.PI - THREE.MathUtils.degToRad(s.facingDeg)),

@@ -138,7 +138,8 @@ export const kindFromMap = (subclass: string, name: string): ShopKind => {
       return 'cafe'
     case 'bar':
     case 'pub':
-      return has(name, IZAKAYA_WORDS) ? 'izakaya' : 'bar'
+      // 地図データの bar / pub は日本では居酒屋のことが多い（経堂の太陽堂 2026-11-17）ので、店名にもバーの言葉があるときだけ bar
+      return isBar(name) ? 'bar' : 'izakaya'
     default:
       return guess(name) ?? 'mystery' // fast_food でも名前で決まらない店（ラーメン・弁当のチェーン等）はハンバーガーにしない
   }
