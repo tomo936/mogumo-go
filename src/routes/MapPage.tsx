@@ -111,7 +111,14 @@ export function MapPage() {
     void mapRef.current?.whenShopsReady().then(() => loading.done())
   }, [])
   // タイトルを閉じて地図へ入ったら、カメラを空から降ろす（2026-11-16 オーナー「空から来たような感じ」）
-  useEffect(() => loading.onEnter(() => mapRef.current?.intro()), [])
+  useEffect(
+    () =>
+      loading.onEnter(() => {
+        mapRef.current?.intro()
+        sound.startBgm() // 空から降りるのに合わせて BGM（昼）がふわっと始まる（A6）
+      }),
+    [],
+  )
   useEffect(() => {
     let alive = true
     void mapRef.current?.whenShopsReady().then(() => alive && syncOsm())

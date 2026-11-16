@@ -5,7 +5,11 @@ import { parsePrefs } from '../domain/sfx.ts'
 import type { Cue, SfxName, SoundPrefs } from '../domain/sfx.ts'
 
 const urls = import.meta.glob('../../assets/sound/*.m4a', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
+import dayBgmUrl from '../../assets/sound/bgm/day.m4a?url'
+
 const KEY = 'mogumo.sound'
+const BGM_VOLUME = 0.5
+const BGM_FADE_S = 3
 const SFX_VOLUME = 0.8
 
 let ctx: AudioContext | null = null
@@ -24,6 +28,12 @@ const raw = AC
     }))
   : []
 const listeners = new Set<() => void>()
+// BGM: 昼の曲を Web Audio でループ（<audio loop> だと継ぎ目に間が出る端末があるため）
+let bgmOut: GainNode | null = null
+let bgmSrc: AudioBufferSourceNode | null = null
+let bgmBuf: AudioBuffer | null = null
+let bgmLoading = false
+let bgmWanted = false // 地図に入った後は true。設定でオフにしても true のまま（オンに戻したら鳴らす）
 let prefs: SoundPrefs = (() => {
   try {
     return parsePrefs(localStorage.getItem(KEY))
@@ -64,6 +74,56 @@ function ensure(): AudioContext | null {
   return c
 }
 
+function applyBgm() {
+  const c = ctx
+  if (!c) return
+  if (!bgmOut) {
+    bgmOut = c.createGain()
+    bgmOut.gain.value = 0
+    bgmOut.connect(c.destination)
+  }
+  const g = bgmOut.gain
+  const now = c.currentTime
+  g.cancelScheduledValues(now)
+  g.setValueAtTime(g.value, now)
+  if (bgmWanted && prefs.bgm) {
+    if (!bgmSrc && bgmBuf) {
+      bgmSrc = c.createBufferSource()
+      bgmSrc.buffer = bgmBuf
+      bgmSrc.loop = true
+      bgmSrc.connect(bgmOut)
+      bgmSrc.start()
+    } else if (!bgmBuf && !bgmLoading) {
+      bgmLoading = true
+      void fetch(dayBgmUrl)
+        .then((r) => r.arrayBuffer())
+        .then((b) => c.decodeAudioData(b))
+        .then((buf) => {
+          bgmBuf = buf
+          bgmLoading = false
+          applyBgm()
+        })
+        .catch(() => {
+          bgmLoading = false
+        })
+    }
+    g.linearRampToValueAtTime(BGM_VOLUME, now + BGM_FADE_S) // ふわっと始まる
+  } else {
+    g.linearRampToValueAtTime(0, now + 0.4)
+    if (bgmSrc) {
+      const old = bgmSrc
+      bgmSrc = null
+      setTimeout(() => {
+        try {
+          old.stop()
+        } catch {
+          /* もう止まっている */
+        }
+      }, 500)
+    }
+  }
+}
+
 function play(name: SfxName) {
   if (!prefs.sfx || !ctx || !sfxOut) return
   const buf = buffers.get(name)
@@ -84,6 +144,11 @@ export const sound = {
     if (c && c.state !== 'running') void c.resume().catch(() => {})
   },
   play,
+  // 地図に降りるときに呼ぶ。BGM（昼）がふわっと始まる
+  startBgm() {
+    bgmWanted = true
+    applyBgm()
+  },
   // 間をあけて順に鳴らす。戻り値で取り消せる（画面が先に閉じたとき）
   cues(list: Cue[]): () => void {
     const ids = list.map((c) => setTimeout(() => play(c.name), c.atMs))
@@ -97,6 +162,7 @@ export const sound = {
     } catch {
       /* 保存できなくてもこの間は効く */
     }
+    applyBgm()
     listeners.forEach((f) => f())
   },
   subscribe(f: () => void) {
