@@ -7,7 +7,7 @@ import type { Cue, SfxName, SoundPrefs } from '../domain/sfx.ts'
 const urls = import.meta.glob('../../assets/sound/*.m4a', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
 import dayBgmUrl from '../../assets/sound/bgm/day.m4a?url'
 import nightBgmUrl from '../../assets/sound/bgm/night.m4a?url'
-import { isNight } from '../../daynight/infra/phase.ts'
+import { isNight, onPhase } from '../../daynight/infra/phase.ts'
 
 const KEY = 'mogumo.sound'
 const BGM_VOLUME = 0.3
@@ -125,6 +125,28 @@ function applyBgm() {
     }
   }
 }
+
+// 昼と夜が切り替わったら、今の曲をふわっと消して、もう片方の曲に替える（A14）
+const SWAP_FADE_S = 1.5
+onPhase(() => {
+  bgmBuf = null // 次に鳴らすときは新しい時間帯の曲を読む
+  const c = ctx
+  if (!c || !bgmOut || !bgmSrc) return
+  const old = bgmSrc
+  bgmSrc = null
+  const g = bgmOut.gain
+  g.cancelScheduledValues(c.currentTime)
+  g.setValueAtTime(g.value, c.currentTime)
+  g.linearRampToValueAtTime(0, c.currentTime + SWAP_FADE_S)
+  setTimeout(() => {
+    try {
+      old.stop()
+    } catch {
+      /* もう止まっている */
+    }
+    applyBgm() // 新しい曲を読んで、ふわっと始める
+  }, SWAP_FADE_S * 1000 + 100)
+})
 
 function play(name: SfxName) {
   if (!prefs.sfx || !ctx || !sfxOut) return

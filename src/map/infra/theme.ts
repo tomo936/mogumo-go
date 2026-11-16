@@ -123,3 +123,20 @@ export function themeStyle(style: StyleSpecification, theme: MapTheme): StyleSpe
   }
   return next
 }
+
+// 地図を作り直さずに色だけ替える（昼と夜の切り替え。A14）。色の付け方は themeStyle と同じで、変わった paint だけを当てる
+type PaintTarget = {
+  getStyle(): StyleSpecification
+  getLayer(id: string): unknown
+  getPaintProperty(id: string, name: string): unknown
+  setPaintProperty(id: string, name: string, value: unknown): void
+}
+export function recolor(map: PaintTarget, theme: MapTheme) {
+  const next = themeStyle(map.getStyle(), theme)
+  for (const l of next.layers as AnyLayer[]) {
+    if (!l.paint || !map.getLayer(l.id)) continue
+    for (const [k, v] of Object.entries(l.paint)) {
+      if (JSON.stringify(map.getPaintProperty(l.id, k)) !== JSON.stringify(v)) map.setPaintProperty(l.id, k, v)
+    }
+  }
+}
