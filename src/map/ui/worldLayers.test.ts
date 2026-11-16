@@ -871,6 +871,17 @@ test('hintInputs は合体済みの店・近い店・晴れたセル・済みの
   expect(h.checked.has('x')).toBe(true)
 })
 
+test('onShopsReady は、地図のタイルが 1 枚も届いていないうちは呼ばない（届く前に読むと地図のお店が 0 軒のまま「そろった」になっていた。2026-11-16 実測）', async () => {
+  const onShopsReady = vi.fn()
+  const { world } = setup({ onShopsReady })
+  world.onPosition(home)
+  await flush()
+  expect(onShopsReady).not.toHaveBeenCalled()
+  dataHandler!({ sourceId: 'openmaptiles', dataType: 'source', tile: {} })
+  idleHandler!()
+  expect(onShopsReady).toHaveBeenCalledTimes(1)
+})
+
 test('onShopsReady は、見えるお店を全部置き終わってから（地図に出たときに全部見えるように。2026-11-16 オーナー）', async () => {
   let now = 1000
   const spy = vi.spyOn(performance, 'now').mockImplementation(() => (now += 50)) // 1 軒ごとに 1 コマの持ち時間を使い切る
@@ -878,6 +889,7 @@ test('onShopsReady は、見えるお店を全部置き終わってから（地�
     const onShopsReady = vi.fn()
     const three = [0, 1, 2].map((i) => ({ ...shop, id: `s${i}`, lat: home.lat + (20 + i * 15) / M }))
     const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve(three)), onShopsReady })
+    dataHandler!({ sourceId: 'openmaptiles', dataType: 'source', tile: {} })
     world.onPosition(home)
     await flush()
     expect(onShopsReady).not.toHaveBeenCalled() // まだ置いている途中
@@ -904,6 +916,7 @@ test('onShopsReady は、ホットペッパー・地図のお店・進み具合�
   await flush()
   expect(onShopsReady).not.toHaveBeenCalled() // 地図のお店がまだ
   tilesLoaded = true
+  dataHandler!({ sourceId: 'openmaptiles', dataType: 'source', tile: {} })
   idleHandler!()
   expect(onShopsReady).not.toHaveBeenCalled() // 進み具合がまだ
   resolveProgress({ cells: [], checkedShopIds: new Set() })
@@ -918,6 +931,7 @@ test('onShopsReady は、ホットペッパー・地図のお店・進み具合�
 test('shopsEnabled が false ならホットペッパーを待たずにそろう', async () => {
   const onShopsReady = vi.fn()
   const { world } = setup({ shopsEnabled: false, onShopsReady })
+  dataHandler!({ sourceId: 'openmaptiles', dataType: 'source', tile: {} })
   world.onPosition(home)
   await flush()
   expect(onShopsReady).toHaveBeenCalledTimes(1)
