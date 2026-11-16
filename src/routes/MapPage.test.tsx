@@ -559,6 +559,23 @@ test('図鑑を開くと、地図のお店のタイルを送り、地図のお�
   expect(syncOsmShops).toHaveBeenCalledWith('u1', expect.any(Set))
 })
 
+// ---- 近くのお店の一覧（A11、2026-11-16） ----
+test('右上のボタンで近くのお店の一覧が開き、お店を押すとお店のシートが開く', async () => {
+  const ramen: Shop = { id: 'osm:9', name: 'らーめん ちかく', lat: 35.0001, lng: 139, kind: 'ramen', details: null, mapId: null }
+  mapShopsNow = [ramen]
+  render(
+    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+      <MapPage />
+    </AuthContext.Provider>,
+  )
+  act(() => handlers[handlers.length - 1].position({ lat: 35, lng: 139 })) // 店の 11m 手前（霧の中でも 50m 以内は出す）
+  await userEvent.click(screen.getByRole('button', { name: '近くのお店' }))
+  expect(screen.getByRole('heading', { name: '近くのお店' })).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: /らーめん ちかく/ }))
+  expect(screen.queryByRole('heading', { name: '近くのお店' })).not.toBeInTheDocument()
+  expect(screen.getByText('らーめん ちかく')).toBeInTheDocument()
+})
+
 test('チェックインで霧が晴れたら、地図のお店のタイルを送る（時間では送らない）', async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
