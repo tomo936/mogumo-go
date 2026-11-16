@@ -60,7 +60,7 @@ export function lightUp(mats: THREE.Material[], night: boolean) {
 
 // お店の足元に置く光のたまり（地面に平らな四角に、真ん中ほど明るい丸を計算で描く。足し算で重ねる）。
 // 絵（テクスチャ）は使わない: 地図と描画のしくみを共有しているため、iPhone で地図の側の絵を読んで色つきの点々になった（2026-11-17）
-export const GLOW_SCALE = 3.0 // お店の幅の何倍の大きさか（前と同じ）
+export const GLOW_SCALE = 2.4 // お店の幅の何倍の大きさか（2026-11-17 2:10 にオーナーが気に入った大きさ。3.0 は重かった）
 let glowMat: THREE.ShaderMaterial | null = null
 function glowMaterial(): THREE.ShaderMaterial {
   glowMat ??= new THREE.ShaderMaterial({
@@ -78,7 +78,9 @@ function glowMaterial(): THREE.ShaderMaterial {
         float d = length(v_uv - 0.5) * 2.0;
         float a = d < 0.35 ? mix(1.0, 0.55, d / 0.35) : mix(0.55, 0.0, (d - 0.35) / 0.65);
         a = clamp(a, 0.0, 1.0);
-        gl_FragColor = vec4(u_color * a, 1.0);
+        // 前の絵を貼っていたときと同じ: 色はそのまま・濃さを a×0.85 にして、画面用の色に直してから足す（淡いクリームに見える）
+        gl_FragColor = vec4(u_color, a * 0.85);
+        #include <colorspace_fragment>
       }`,
     transparent: true,
     blending: THREE.AdditiveBlending,
