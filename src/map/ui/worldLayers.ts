@@ -28,7 +28,7 @@ import { createFacilityLayer } from '../../shops/infra/facilityLayer.ts'
 import type { PlacedFacility } from '../../shops/infra/facilityPick.ts'
 import type { PinnedBuilding } from '../../shops/infra/buildingPins.ts'
 import { createShopPins } from '../../shops/infra/shopPins.ts'
-import { createShopClusters } from '../../shops/infra/shopClusters.ts'
+import type { HintPin } from '../../shops/infra/shopPins.ts'
 import { clusterFeatures } from '../../shops/domain/cluster.ts'
 import { createShopLayer } from '../../shops/infra/shopLayer.ts'
 import type { PlacedShop } from '../../shops/infra/shopLayer.ts'
@@ -98,6 +98,8 @@ type World = {
   progressReady(): boolean // 保存済みの記録を読み終えたか
   hintInputs(): { shops: Shop[]; near: Shop[]; cleared: ReadonlySet<string>; checked: ReadonlySet<string> } // 気配の候補集めの材料
   setHintedShops(ids: ReadonlySet<string>): void // 気配の店（正体がまだ分からない店）。その店の1軒ピンは出さない（気配のピンと重なるため）
+  setHintPins(pins: readonly HintPin[]): void // 気配の「？」のピン（ほかのピンと同じ層に描く。2026-11-16）
+  bounceHint(id: string): void // 気配のピンをぽんと弾ませる
   setPinsVisible(visible: boolean): void // 店のピン（1軒・ビル・施設）と名前の札を出す・出さない（気配のピンは別）
   shopsReady(): boolean // お店の読み込み（3つ）がそろったか
   dispose(): void
@@ -111,11 +113,9 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   const facilityLayer = createFacilityLayer()
   const shopPins = createShopPins(map) // 1軒の店のピン（symbol レイヤー）
   const buildingPins = createBuildingPins(map, (ids) => deps.onPinTap(ids))
-  const shopClusters = createShopClusters(map) // 引いたときのまとめのピン（ズーム 17.5 より引いたとき。2026-11-13）
   // 人が地図を動かしている間は、店のピン（1軒・ビル・施設）を隠す。歩いてカメラが自動でついてくる動きでは隠さない
   const stopUserMove = watchUserMove(map, (moving) => {
     shopPins.setMoving(moving)
-    shopClusters.setMoving(moving)
     buildingPins.setMoving(moving)
   })
   const debugOverlay = debugOn(window.location.search) ? createDebugOverlay(map, buildingPins.debugRows) : null // ?debug のときだけ
@@ -390,7 +390,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     const done = checkedNow()
     if (shownFrom) shopPins.update(hintedIds.size === 0 ? shownPlaced : shownPlaced.filter((s) => !s.shopIds.some((id) => hintedIds.has(id))), shownInFog, shownFrom, done) // 1軒の店の ✓ はピンの絵の右上
     buildingPins.update(shownBuildings, done)
-    shopClusters.update(clusterFeatures(
+    shopPins.setClusterInput(clusterFeatures(
       shownPlaced,
       shownBuildings.map((b) => ({ id: b.placed.id, topM: b.topM, shops: b.shops })),
       shownInFog,
@@ -581,9 +581,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         map.addLayer(shopLayer, below)
         map.addLayer(fogLayer, below)
         map.addLayer(fogShopLayer, below)
-        // お店のピン: 晴れた所の店は雲の下、霧の中の近い店は雲の上。どちらも自分の印より下
-        shopPins.attach(fogLayer.id, below)
-        shopClusters.attach(below) // 雲より上に描く（晴れた所の店だけが入るので、霧の中は見えない。雲の際で隠れない。2026-11-13 オーナー）
+        // ピン（1 軒・まとめ・気配）は 1 つの層で、いちばん上（雲・自分のキャラより上。2026-11-16 オーナー）
+        shopPins.attach()
         setFog(p)
       } else if (distanceMeters(fogCenter, p) >= FOG_REBUILD_M) {
         setFog(p)
@@ -594,7 +593,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     },
     shopsNear: () => near,
     titleOf: (ids) => shownFacilities.find((f) => f.shopIds.includes(ids[0]))?.name ?? null,
-    pick: (point) => shopClusters.pick(point) ?? shopPins.pick(point) ?? fogShopLayer.pick(point) ?? shopLayer.pick(point) ?? facilityLayer.pick(point), // 手前に出やすい小さい模型を先に
+    pick: (point) => shopPins.pick(point) ?? fogShopLayer.pick(point) ?? shopLayer.pick(point) ?? facilityLayer.pick(point), // 手前に出やすい小さい模型を先に
     focus(shopIds) {
       focusIds = new Set(shopIds ?? [])
       if (refreshedAt && !disposed) showShops(refreshedAt)
@@ -619,9 +618,10 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       hintedIds = ids
       updateMarks()
     },
+    setHintPins: (pins) => shopPins.setHints(pins),
+    bounceHint: (id) => shopPins.bounceHint(id),
     setPinsVisible(visible) {
       shopPins.setVisible(visible)
-      shopClusters.setVisible(visible)
       buildingPins.setHidden(!visible)
     },
     shopsReady: () => ready.fired,
@@ -635,7 +635,6 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       if (frameId !== null) cancelAnimationFrame(frameId)
       stopUserMove()
       shopPins.dispose()
-      shopClusters.dispose()
       buildingPins.dispose()
       debugOverlay?.dispose()
       map.off('idle', onIdle)

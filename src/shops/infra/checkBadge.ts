@@ -36,3 +36,33 @@ export function checkBadgeImage(src: CanvasImageSource & { width: number; height
   ctx.stroke()
   return ctx.getImageData(0, 0, w, h)
 }
+
+// ピンの絵の右上に、緑の丸に白い「!」を重ねた絵（気配の正体が分かった印。前の HTML の印と同じ見た目）
+export function revealBadgeImage(src: CanvasImageSource & { width: number; height: number }): ImageData | null {
+  const w = src.width
+  const h = src.height
+  if (!w || !h || typeof document === 'undefined') return null
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  ctx.drawImage(src, 0, 0)
+  const r = w * 0.17
+  const cx = w - r - w * 0.02
+  const cy = r + h * 0.02
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  ctx.fillStyle = '#fff'
+  ctx.fill()
+  ctx.beginPath()
+  ctx.arc(cx, cy, r * 0.84, 0, Math.PI * 2)
+  ctx.fillStyle = GREEN
+  ctx.fill()
+  ctx.fillStyle = '#fff'
+  ctx.font = `bold ${Math.round(r * 1.3)}px sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('!', cx, cy + r * 0.05)
+  return ctx.getImageData(0, 0, w, h)
+}

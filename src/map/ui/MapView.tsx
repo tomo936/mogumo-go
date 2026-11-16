@@ -26,7 +26,6 @@ import { createAvatar } from '../infra/avatarMarker.ts'
 import { createAvatarModel } from '../infra/avatarModel.ts'
 import type { Expression } from '../infra/avatarModel.ts'
 import { attachWorld } from './worldLayers.ts'
-import { createHintPins } from '../../hints/infra/hintPins.ts'
 import type { DailyHint } from '../../hints/domain/hint.ts'
 import type { Visits } from '../../checkin/domain/visits.ts'
 import '../../hints/ui/hints.css'
@@ -52,6 +51,9 @@ export type MapViewHandle = {
   resetNorth(): void // 北を上に戻す
 }
 
+// 気配の「？」のピン（達成済みは出さない）。ほかのピンと同じ層に描く（2026-11-16 前後関係の直し）
+const hintPinsOf = (hints: readonly DailyHint[], positions: ReadonlyMap<string, LatLng>, revealed: ReadonlySet<string>) =>
+  hints.filter((h) => !h.completed && positions.has(h.id)).map((h) => ({ id: h.id, ...positions.get(h.id)!, revealed: revealed.has(h.id) }))
 const hintedShopIds = (hints: readonly DailyHint[], positions: ReadonlyMap<string, LatLng>): Set<string> =>
   new Set(hints.filter((h) => !h.completed && positions.has(h.id)).map((h) => h.shopId))
 
@@ -88,14 +90,12 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   const onHintTapRef = useRef(onHintTap)
   const worldRef = useRef<ReturnType<typeof attachWorld> | null>(null)
   const pinsHiddenRef = useRef(pinsHidden) // 世界ができる前に決まっていた分も、できたときに渡す
-  const hintPinsRef = useRef<ReturnType<typeof createHintPins> | null>(null)
   const avatarModelRef = useRef<ReturnType<typeof createAvatarModel> | null>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const bearingSubs = useRef(new Set<(b: number) => void>())
   useEffect(() => {
     pinsHiddenRef.current = pinsHidden
     worldRef.current?.setPinsVisible(!pinsHidden)
-    hintPinsRef.current?.setHidden(pinsHidden)
   }, [pinsHidden])
   useLayoutEffect(() => {
     onStatusRef.current = onStatus
@@ -133,12 +133,12 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     whenShopsReady: () => readyRef.current!.promise,
     setHints: (hints, positions, revealed) => {
       lastHintsRef.current = [hints, positions, revealed]
-      hintPinsRef.current?.update(hints, positions, revealed)
+      worldRef.current?.setHintPins(hintPinsOf(hints, positions, revealed))
       // 気配のピンが立つ店（まだ達成してない）は、店の1軒ピンを隠す（上に重なって見えるため）
       worldRef.current?.setHintedShops(hintedShopIds(hints, positions))
     },
     focusAt: (p) => focusAtRef.current(p),
-    bounceHint: (id) => hintPinsRef.current?.bounce(id),
+    bounceHint: (id) => worldRef.current?.bounceHint(id),
     express: (kind) => avatarModelRef.current?.express(kind),
     subscribeBearing: (cb) => {
       bearingSubs.current.add(cb)
@@ -193,10 +193,6 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       for (const cb of bearingSubs.current) cb(b)
     })
     if (readyRef.current!.done) newReady()
-    const hintPins = createHintPins(map, (id) => onHintTapRef.current(id))
-    hintPinsRef.current = hintPins
-    hintPins.setHidden(pinsHiddenRef.current)
-    if (lastHintsRef.current) hintPins.update(...lastHintsRef.current)
 
     const avatar = createAvatar(map) // 自分のアバター（お試し版）
     const avatarModel = createAvatarModel(map) // 3D の男の子（読めたら 2D の絵の代わりに出す）
@@ -243,7 +239,10 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         },
       })
       worldRef.current = s.world
-      if (lastHintsRef.current) s.world.setHintedShops(hintedShopIds(lastHintsRef.current[0], lastHintsRef.current[1]))
+      if (lastHintsRef.current) {
+        s.world.setHintedShops(hintedShopIds(lastHintsRef.current[0], lastHintsRef.current[1]))
+        s.world.setHintPins(hintPinsOf(...lastHintsRef.current))
+      }
       s.world.setPinsVisible(!pinsHiddenRef.current)
       if (s.current) s.world.onPosition(s.current)
       s.loaded = true
@@ -301,6 +300,12 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     }
     // 建物かピンが押された: 1軒ならお店のシート、2軒以上ならビルの一覧。カメラはそのお店（ビルなら先頭の店）へ寄せる
     tapRef.current = (ids) => {
+      // 気配のピンを押した（ピンは 1 つの層。2026-11-16）
+      const hint = ids?.[0]?.startsWith('hint:') ? ids[0].slice(5) : null
+      if (hint) {
+        onHintTapRef.current(hint)
+        return
+      }
       const found = (ids ?? []).map((id) => s.world?.shopsNear().find((sh) => sh.id === id)).filter((sh): sh is Shop => !!sh)
       // 建物でもピンでもない所（道路など）を押したときは何もしない。押しまちがいでシートが閉じたり、
       // カメラが自分に戻ったりしないように（2026-11-09 本人）。閉じるのはシートの × で
@@ -397,8 +402,6 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       window.removeEventListener('pointercancel', onUp)
       worldRef.current = null
       avatarModelRef.current = null
-      hintPins.dispose()
-      hintPinsRef.current = null
       s.world?.dispose()
       mapRef.current = null
       map.remove()

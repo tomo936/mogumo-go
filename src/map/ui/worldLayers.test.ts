@@ -14,7 +14,7 @@ vi.mock('../../shops/infra/shopLayer.ts', () => ({ createShopLayer: (id: string)
 const pinsUpdate = vi.fn()
 const facilityLayer = { id: 'facilities-3d', setFacilities: vi.fn(), pick: vi.fn(() => null) }
 vi.mock('../../shops/infra/facilityLayer.ts', () => ({ createFacilityLayer: () => facilityLayer }))
-const pinsApi = { attach: vi.fn(), update: vi.fn(), pick: vi.fn(() => null), setVisible: vi.fn(), setMoving: vi.fn(), dispose: vi.fn() }
+const pinsApi = { attach: vi.fn(), update: vi.fn(), setClusterInput: vi.fn(), setHints: vi.fn(), bounceHint: vi.fn(), pick: vi.fn(() => null), setVisible: vi.fn(), setMoving: vi.fn(), dispose: vi.fn() }
 const buildingApi = { update: pinsUpdate, setHidden: vi.fn(), setMoving: vi.fn(), dispose: vi.fn() }
 const userMove = { onChange: null as ((moving: boolean) => void) | null, stop: vi.fn() }
 vi.mock('../infra/userMove.ts', () => ({
@@ -25,7 +25,6 @@ vi.mock('../infra/userMove.ts', () => ({
 }))
 vi.mock('../../shops/infra/shopPins.ts', () => ({ createShopPins: () => pinsApi }))
 vi.mock('../../shops/infra/buildingPins.ts', () => ({ createBuildingPins: () => buildingApi }))
-vi.mock('../../shops/infra/shopClusters.ts', () => ({ createShopClusters: () => ({ attach: vi.fn(), update: vi.fn(), setVisible: vi.fn(), setMoving: vi.fn(), pick: () => null, dispose: vi.fn() }) }))
 
 vi.mock('../../shops/domain/facility.ts', async (orig) => {
   const a = await orig<typeof import('../../shops/domain/facility.ts')>()
@@ -119,11 +118,11 @@ test('大型施設・お店・霧・霧の中の近い店は自分の位置の�
   expect(vi.mocked(map.addLayer).mock.calls).toEqual([[facilityLayer, 'me-avatar-3d'], [shopLayer, 'me-avatar-3d'], [fogLayer, 'me-avatar-3d'], [fogShopLayer, 'me-avatar-3d']])
 })
 
-test('お店のピンは霧の層の手前と自分の印の手前に入れ、1軒の店を渡し、タップはピンを先に見る', async () => {
+test('お店のピンは 1 つの層でいちばん上に入れ、1軒の店を渡し、タップはピンを先に見る', async () => {
   const { world, map } = setup()
   vi.mocked(map.getLayer).mockImplementation(((id: string) => (id === 'me-avatar-3d' ? {} : undefined)) as never)
   world.onPosition(home)
-  expect(pinsApi.attach).toHaveBeenCalledWith('fog', 'me-avatar-3d')
+  expect(pinsApi.attach).toHaveBeenCalledWith() // ピンは 1 つの層でいちばん上（2026-11-16）
   await flush()
   expect(pinsApi.update).toHaveBeenLastCalledWith([expect.objectContaining({ id: 's1', model: 'ramen' })], expect.any(Set), expect.anything(), expect.any(Set))
   pinsApi.pick.mockReturnValueOnce(['s1'] as never)
@@ -934,4 +933,13 @@ test('広い町は見えている範囲だけセルにし、動いた先でも�
   world.onPosition(north(5000)) // 雲を置き直す所まで動く
   expect(clearedHas(world, north(5000))).toBe(true)
   expect(clearedHas(world, north(6500))).toBe(true)
+})
+
+test('気配のピンと弾みは、ピンの層に渡す（同じ層で前後を正しく描く。2026-11-16）', async () => {
+  const { world } = setup()
+  const pins = [{ id: 'h1', lat: 35, lng: 139, revealed: false }]
+  world.setHintPins(pins)
+  expect(pinsApi.setHints).toHaveBeenLastCalledWith(pins)
+  world.bounceHint('h1')
+  expect(pinsApi.bounceHint).toHaveBeenLastCalledWith('h1')
 })
