@@ -94,6 +94,15 @@ test('倍率 17〜17.7 は小さくまとめる（16 の段ではまとまる少
   expect(pinLayerFeatures(17.3, [], pair, []).filter((x) => x.properties.t === 'cluster')).toHaveLength(0)
 })
 
+test('施設・駅は倍率 17 から前の表記（HTML のピンの列と「6/6」）なので、まとめに入れない。16〜17 はまとめに入る（2026-11-16 オーナー）', () => {
+  const fac = { ...cf('fac', 0.00005), properties: { ...cf('fac', 0.00005).properties, id: 'fac', n: 6, ids: 'f1,f2,f3,f4,f5,f6', fac: 1 } }
+  const at16 = pinLayerFeatures(16.5, [], [...near, fac], [])
+  expect(at16.filter((x) => x.properties.t === 'cluster').map((x) => x.properties.n)).toEqual([9])
+  const at17 = pinLayerFeatures(17.3, [], [...near, fac], [])
+  expect(at17.some((x) => String(x.properties.ids ?? x.properties.id).includes('f1'))).toBe(false)
+  expect(at17.filter((x) => x.properties.t === 'cluster').map((x) => x.properties.n)).toEqual([3])
+})
+
 test('寄り（17.7 以上）: まとめず、1 軒ずつ（晴れた所も霧の中も）', () => {
   const singles = pinFeatures([shop, { ...shop, id: 'fog1' }], new Set(['fog1']), me)
   const f = pinLayerFeatures(17.8, singles, near, [])

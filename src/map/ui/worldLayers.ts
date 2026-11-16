@@ -130,6 +130,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   // カメラが自分から離れて見ている場所。近くの雲（晴れたセルを避ける）は原点から FOG_HALF_M までしか置かないので、
   // 図鑑の「地図で見る」などで遠くを見るときは、そこを原点にしないと行った所も晴れていない（2026-11-16 オーナー）
   let view: LatLng | null = null
+  // お店を読む・出す範囲の真ん中（見ている場所、無ければ自分）
+  const areaNow = (): LatLng | null => view ?? last
   const towns: ClearedTown[] = [] // クリアした町
   let lastClumps: Clump[] = [] // 層に最後に渡した雲の塊（波の「変わる前」）
   const checkedIds = new Set<string>() // サーバーが知っている id と、今回付けた id（hp: と osm: の両方がありうる）
@@ -215,7 +217,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     }
     // 見える店（近い順）。まだ置き方を計算していない店は近い順の列に入れ、1コマ PLACE_BUDGET_MS ずつ計算する
     // （初めての場所や霧が大きく晴れた直後に、数百軒を一度に計算して画面が止まらないように）。最初の分はこの場で計算する
-    shownVisible = visibleShops(shops, p, cleared)
+    shownVisible = visibleShops(shops, p, cleared, last ?? p)
     if (!map.areTilesLoaded()) {
       work = null // タイル読み込み中は置かない。idle のときにやり直す
     } else {
@@ -316,7 +318,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       const facility = !!fac && (members.length > 1 || hasEnoughShops(fac))
       const center = members.length === 1 ? members[0].hit.main : members[0].hit.bldg!
       // 施設は実際の輪郭で出すので今までどおり。それ以外は模型の中心が霧のセルなら出さない
-      const place = facility ? null : modelPlace(center, members.map((m) => m.shop), p, cleared)
+      const place = facility ? null : modelPlace(center, members.map((m) => m.shop), last ?? p, cleared)
       return { ids, members, facility, place, d: distanceMeters(p, center) }
     }).filter((g) => g.facility || g.place)
     const out: PlacedShop[] = []
@@ -396,7 +398,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     buildingPins.update(shownBuildings, done)
     shopPins.setClusterInput(clusterFeatures(
       shownPlaced,
-      shownBuildings.map((b) => ({ id: b.placed.id, lat: b.placed.lat, lng: b.placed.lng, topM: b.topM, shops: b.shops })),
+      shownBuildings.map((b) => ({ id: b.placed.id, lat: b.placed.lat, lng: b.placed.lng, topM: b.topM, facility: b.facility, shops: b.shops })),
       shownInFog,
       hintedIds,
       done,
@@ -484,7 +486,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         hpShops = list
         ready.hp = true
         shops = mergeShops(mapShops, hpShops)
-        if (last) refreshShops(last)
+        if (areaNow()) refreshShops(areaNow()!)
       },
       () => {
         fetching = false
@@ -501,7 +503,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     (!fetchCenter || distanceMeters(fetchCenter, p) >= SHOP_REFETCH_M)
 
   const onIdle = () => {
-    if (last) refreshShops(last)
+    if (areaNow()) refreshShops(areaNow()!)
   }
   map.on('idle', onIdle)
   // カメラが動き終わったら、詳しい模型を選び直す（ついて歩くときは毎コマ来るので、真ん中が動いた・拡大の境を越えたときだけ）
@@ -534,7 +536,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         return
       }
       if (fogCenter) setFog(fogCenter)
-      if (last) refreshShops(last)
+      if (areaNow()) refreshShops(areaNow()!)
       checkReady()
     },
     () => {},
@@ -548,7 +550,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       if (list.length === 0 || !fogCenter) return
       const before = cleared.size
       setFog(fogCenter)
-      if (cleared.size !== before && last) refreshShops(last)
+      if (cleared.size !== before && areaNow()) refreshShops(areaNow()!)
     },
     () => {},
   )
@@ -571,7 +573,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       fogLayer.setClumps(fogCenter, [...waveClumps(before, after, localFrame(fogCenter).to(from), performance.now() / 1000), ...farClumps(fogCenter)])
       lastClumps = after
     }
-    if (last) refreshShops(last)
+    if (areaNow()) refreshShops(areaNow()!)
   }
 
   return {
@@ -592,14 +594,17 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         setFog(view ?? p)
       }
       updateThin(p)
-      if (canFetch(p)) fetchAround(p)
-      if (!refreshedAt || distanceMeters(refreshedAt, p) >= SHOP_REFRESH_M) refreshShops(p)
+      const a = view ?? p
+      if (canFetch(a)) fetchAround(a)
+      if (!refreshedAt || distanceMeters(refreshedAt, a) >= SHOP_REFRESH_M) refreshShops(a)
     },
     setView(center) {
       view = center
       const origin = view ?? last
       if (disposed || !fogCenter || !origin) return
       if (distanceMeters(fogCenter, origin) >= FOG_REBUILD_M) setFog(origin)
+      if (canFetch(origin)) fetchAround(origin)
+      if (!refreshedAt || distanceMeters(refreshedAt, origin) >= SHOP_REFRESH_M) refreshShops(origin)
     },
     shopsNear: () => near,
     titleOf: (ids) => shownFacilities.find((f) => f.shopIds.includes(ids[0]))?.name ?? null,

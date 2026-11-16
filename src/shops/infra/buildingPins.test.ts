@@ -111,6 +111,20 @@ test('6軒以上の小さいビルは5つ＋「+N」、+N を押すと全員の 
   expect(onTap).toHaveBeenLastCalledWith(['a', 'b', 'c', 'd', 'e', 'f', 'g'])
 })
 
+test('引きの印: 17.7 未満は pins-far（ビルの並べたピンを隠す）、17 未満は pins-far-big（施設・駅のピンも隠す）。施設のマーカーには bldg-pins--facility（2026-11-16 オーナー「施設と駅は 2 段階めは前と同じ」）', () => {
+  zoom = 17.3
+  const pins = createBuildingPins(map, vi.fn())
+  pins.update([bldg(['a', 'b'], true), bldg(['c', 'd'])], new Set())
+  expect(live().map((m) => m.el.classList.contains('bldg-pins--facility'))).toEqual([true, false])
+  expect(container.classList.contains('pins-far')).toBe(true)
+  expect(container.classList.contains('pins-far-big')).toBe(false)
+  zoom = 16.5
+  handlers.get('zoom')!()
+  expect(container.classList.contains('pins-far-big')).toBe(true)
+  pins.dispose()
+  expect(container.classList.contains('pins-far-big')).toBe(false)
+})
+
 test('大型の施設は2軒でもまとめたピン', () => {
   const pins = createBuildingPins(map, vi.fn())
   pins.update([bldg(['a', 'b'], true)], new Set(['a']))
