@@ -34,6 +34,12 @@
   gap: 10px;
   margin-bottom: 12px;
 }
+/* 右にも戻るボタンと同じ幅の空きを置き、タブを画面の真ん中にそろえる */
+.ib__bar::after {
+  content: '';
+  flex-shrink: 0;
+  width: 40px;
+}
 .ib__back {
   display: flex;
   align-items: center;
