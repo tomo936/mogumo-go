@@ -8,7 +8,9 @@
   border-radius: 0;
   padding: 0;
   /* タイトル画面の絵（オーナー 2026-11-16。art/ui/title.png → src/assets/ui/title.webp） */
-  background: #8fc8f5 var(--splash-art) center bottom / cover no-repeat;
+  /* 下地の色は白（iPhone の Safari は、上に固定した部品の下地の色で上の時計の帯を塗り、タイトルを閉じたあとも残ることがある。
+     空色にすると地図の画面でも上が青い帯のままになった。2026-11-16 オーナー「上の青いの何」） */
+  background: #ffffff var(--splash-art) center bottom / cover no-repeat;
   color: #1f2a37;
   font-family: 'M PLUS Rounded 1c', system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
