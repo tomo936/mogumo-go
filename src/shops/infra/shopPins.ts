@@ -1,9 +1,9 @@
 // 地図のピン（1 つの symbol レイヤー。MapLibre が GPU で描く）。2026-11-16 オーナー「整理して修正して」で 1 つにまとめた:
 //  - 1 軒のお店（晴れた所・霧の中の近い店）・まとめのピン（引いたとき）・気配のピン（？）を同じ層に入れ、
 //    画面の下（手前）のピンほど前に描く（奥の気配が手前に乗らない）。層は自分のキャラより上（キャラがピンを踏まない）。
-//  - 引き（倍率 17 未満）は、晴れた所のお店（ビル・施設の中のお店も 1 軒ずつ）を supercluster でまとめる（2 軒から・140px）。
-//    寄り（17 以上）は 1 軒ずつ（ビルの中のお店は buildingPins）。霧の中の近い店と気配はいつも単独。
-//  - まとめのピンを押すと、カメラは自分を追いかけたまま倍率 17 まで寄る（中心は動かさない＝引き戻されない）。
+//  - 倍率 17.7 より引いたら、晴れた所のお店（ビル・施設の中のお店も 1 軒ずつ）を supercluster でまとめる（2 軒から。
+//    16〜17 は 140px、17〜17.7 は 70px）。17.7 から 1 軒ずつ（ビルの中のお店は buildingPins）。霧の中の近い店と気配はいつも単独。
+//  - まとめのピンを押すと、その場所へカメラを寄せ、まとめがなくなる倍率（17.7）まで寄る（カメラの寄せは MapView）。
 // 画像の登録・GeoJSON source の更新・レイヤー追加・タップの当たり判定をここに閉じこめる。
 import type { GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl'
 import type { LatLng } from '../../map/domain/geo.ts'
@@ -12,7 +12,7 @@ import type { PointFeature } from 'supercluster'
 import mysteryPin from '../../assets/pins/mystery.png'
 import { pinFeatures } from '../domain/pinFeatures.ts'
 import type { PinFeature } from '../domain/pinFeatures.ts'
-import { CLUSTER_MIN_POINTS, CLUSTER_RADIUS_PX, CLUSTER_UNTIL_ZOOM, clusterScale } from '../domain/cluster.ts'
+import { CLUSTER_MIN_POINTS, clusterScale, clusterStage } from '../domain/cluster.ts'
 import type { ClusterFeature } from '../domain/cluster.ts'
 import { createClusterImages } from './shopClusters.ts'
 import { LIFT_TIERS } from '../domain/pinLift.ts'
@@ -105,12 +105,14 @@ export function pinLayerFeatures(
   bounce: ReadonlyMap<string, number> = new Map(),
 ): Out[] {
   const out: Out[] = []
-  if (zoom < CLUSTER_UNTIL_ZOOM) {
-    // 引き: 晴れた所のお店をまとめる（ビルの中のお店も 1 軒ずつ入っている）。霧の中の近い店は単独
+  const stage = clusterStage(zoom)
+  if (stage) {
+    // 引き: 晴れた所のお店をまとめる（ビルの中のお店も 1 軒ずつ入っている）。霧の中の近い店は単独。
+    // まとめ方は段ごと（倍率 16 の段は 140px、17 の段は 70px）
     const index = new Supercluster<ClusterFeature['properties'], { n: number; done: number; lt: number }>({
-      radius: CLUSTER_RADIUS_PX,
+      radius: stage.radiusPx,
       extent: 512, // MapLibre の 512px のタイルと同じ（radius が画面の px になる）
-      maxZoom: CLUSTER_UNTIL_ZOOM - 1,
+      maxZoom: stage.zoom,
       minPoints: CLUSTER_MIN_POINTS,
       map: (p) => ({ n: p.n, done: p.done, lt: p.lt }),
       reduce: (acc, p) => {
@@ -120,7 +122,7 @@ export function pinLayerFeatures(
       },
     })
     index.load(clusterInput as unknown as PointFeature<ClusterFeature['properties']>[])
-    for (const f of index.getClusters([-180, -85, 180, 85], Math.max(0, Math.floor(Math.min(zoom, CLUSTER_UNTIL_ZOOM - 1))))) {
+    for (const f of index.getClusters([-180, -85, 180, 85], stage.zoom)) {
       const [lng, lat] = f.geometry.coordinates
       const p = f.properties as Record<string, unknown>
       if (p.cluster) out.push(point(lng, lat, { t: 'cluster', id: `cluster:${p.cluster_id}`, n: p.n, lt: p.lt }))
@@ -144,7 +146,8 @@ export function createShopPins(map: MapLibreMap) {
   let clusterInput: readonly ClusterFeature[] = []
   let hints: readonly HintPin[] = []
   const bounce = new Map<string, number>()
-  let far = map.getZoom() < CLUSTER_UNTIL_ZOOM
+  const stageKey = () => clusterStage(map.getZoom())?.zoom ?? 'all'
+  let shownStage = stageKey()
 
   const data = (): GeoJSON.FeatureCollection => ({
     type: 'FeatureCollection',
@@ -154,11 +157,11 @@ export function createShopPins(map: MapLibreMap) {
     if (attached) (map.getSource(PIN_SOURCE) as GeoJSONSource | undefined)?.setData(data())
   }
   const clusterImages = createClusterImages(map, push)
-  // 引き・寄りをまたいだときだけ作り直す（まとめの計算は倍率 16 の 1 段だけなので、またがなければ同じ）
+  // 段（16・17・全部）をまたいだときだけ作り直す（まとめは段ごとに 1 つの整数の倍率で計算するので、またがなければ同じ）
   const onZoom = () => {
-    const next = map.getZoom() < CLUSTER_UNTIL_ZOOM
-    if (next === far) return
-    far = next
+    const next = stageKey()
+    if (next === shownStage) return
+    shownStage = next
     push()
   }
 
@@ -251,7 +254,8 @@ export function createShopPins(map: MapLibreMap) {
       moving = next
       applyVisibility()
     },
-    // 押された点のピン: お店なら店の id、気配なら ['hint:<id>']、まとめならその場で倍率 17 まで寄って []
+    // 押された点のピン: お店なら店の id、気配なら ['hint:<id>']、まとめなら ['cluster:<経度>,<緯度>']
+    // （まとめの場所へのカメラの寄せは地図の画面がする。自分を追いかけるのを止めてから動かさないと引き戻されるため）
     pick(point: { x: number; y: number }): string[] | null {
       if (!attached || hidden) return null
       const box: [[number, number], [number, number]] = [[point.x - TAP_PAD_PX, point.y - TAP_PAD_PX], [point.x + TAP_PAD_PX, point.y + TAP_PAD_PX]]
@@ -260,9 +264,8 @@ export function createShopPins(map: MapLibreMap) {
       const p = hit.properties as Record<string, unknown>
       if (p.t === 'hint') return [`hint:${String(p.id)}`]
       if (p.t === 'cluster') {
-        // カメラは自分を追いかけたまま寄るだけ（中心を動かすと、次のコマで自分の位置へ引き戻される）
-        map.easeTo({ zoom: CLUSTER_UNTIL_ZOOM + 0.05, duration: 500 })
-        return []
+        const [lng, lat] = (hit.geometry as GeoJSON.Point).coordinates
+        return [`cluster:${lng},${lat}`]
       }
       return [String(p.id)]
     },

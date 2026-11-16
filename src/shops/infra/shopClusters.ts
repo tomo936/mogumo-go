@@ -8,52 +8,29 @@ import { BADGE_TEXT_FIT, BADGE_WIDEST_TEXT, badgeText } from '../domain/cluster.
 const FONT = '"M PLUS Rounded 1c"'
 const INK = '#4a2f18'
 
-// まとめのピンの絵（256px の台＋右上の丸い札）。pixelRatio 2 で使う。
-// 札: インクの縁＋右下の平らな影（アプリのボタンと同じ）、橙の地、内側に白い輪。数字は白にインクの縁。
-// 字の大きさは桁によらず同じ（「99+」が収まる大きさ）。字の実際の高さを測って、丸のちょうど真ん中に置く
+// まとめのピンの絵（オーナーの台の絵 art/pins/cluster-frame.png → cluster-base.png 256px。2026-11-16「数字を真ん中、料理アイコンは消す」）。
+// クリーム色の丸のちょうど真ん中に、こげ茶の太い数字。字の大きさは桁によらず同じ（「99+」が丸に収まる大きさ）。pixelRatio 2 で使う
+const CIRCLE = { x: 127.8, y: 103.5, r: 84 } // 丸の真ん中と半径（art/prototypes/cluster-base.py で測った値）
 export function drawCluster(base: CanvasImageSource, n: number): ImageData {
-  const W = 360, H = 330, PIN = 256
+  const S = 256
   const cv = document.createElement('canvas')
-  cv.width = W
-  cv.height = H
+  cv.width = S
+  cv.height = S
   const c = cv.getContext('2d')!
-  const px = (W - PIN) / 2, py = H - PIN // ピンの先が絵の下の真ん中
-  c.drawImage(base, px, py, PIN, PIN)
-  const D = 104, r = D / 2
-  const cx = px + PIN - 30, cy = py + 14 // 札の真ん中（ピンの右上にかかる）
-  const circle = (x: number, y: number, rr: number) => {
-    c.beginPath()
-    c.arc(x, y, rr, 0, Math.PI * 2)
-  }
-  c.fillStyle = INK
-  circle(cx + 5, cy + 6, r + 5) // 平らな影
-  c.fill()
-  circle(cx, cy, r + 5) // インクの縁
-  c.fill()
-  c.fillStyle = '#ffffff'
-  circle(cx, cy, r + 1) // 白い輪
-  c.fill()
-  c.fillStyle = '#ff7a3d'
-  circle(cx, cy, r - 5) // 橙の地
-  c.fill()
-  // 字の大きさ: 「99+」の幅が丸の BADGE_TEXT_FIT に収まる大きさ（全部の数で同じ）
+  c.drawImage(base, 0, 0, S, S)
+  // 字の大きさ: 「99+」の幅が丸の直径の BADGE_TEXT_FIT に収まる大きさ（全部の数で同じ）
   c.font = `800 100px ${FONT}`
-  const px100 = (100 * D * BADGE_TEXT_FIT) / c.measureText(BADGE_WIDEST_TEXT).width
-  const size = Math.min(56, Math.floor(px100))
+  const size = Math.min(110, Math.floor((100 * 2 * CIRCLE.r * BADGE_TEXT_FIT) / c.measureText(BADGE_WIDEST_TEXT).width))
   c.font = `800 ${size}px ${FONT}`
   const text = badgeText(n)
   const m = c.measureText(text)
-  const x = cx - (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2 // 左端 x−L・右端 x＋R の真ん中を cx に
-  const y = cy + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2
+  const x = CIRCLE.x - (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2 // 左端 x−L・右端 x＋R の真ん中を丸の真ん中に
+  const y = CIRCLE.y + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2
   c.textAlign = 'left'
   c.textBaseline = 'alphabetic'
-  c.lineJoin = 'round'
-  c.lineWidth = 7
-  c.strokeStyle = INK
-  c.strokeText(text, x, y)
-  c.fillStyle = '#ffffff'
+  c.fillStyle = INK
   c.fillText(text, x, y)
-  return c.getImageData(0, 0, W, H)
+  return c.getImageData(0, 0, S, S)
 }
 
 // 足りない cl-<数> の絵を描いて足す。台の絵と丸い字が読めるまでの分は覚えておき、読めたら描いて onReady を呼ぶ
