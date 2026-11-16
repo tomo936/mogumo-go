@@ -539,7 +539,19 @@ export function MapPage() {
           onClose={() => setNearbyInput(null)}
         />
       )}
-      {recordTab && <Record home={home} initialTab={recordTab} onTownSync={onTownSync} onClose={() => setRecordTab(null)} />}
+      {recordTab && (
+        <Record
+          home={home}
+          initialTab={recordTab}
+          onTownSync={onTownSync}
+          onClose={() => setRecordTab(null)}
+          onLocate={(shop) => {
+            setRecordTab(null) // 記録とワールドマップを閉じて、図鑑の「地図で見る」と同じく、そのお店へ寄せてシートを開く
+            mapRef.current?.focusAt(shop)
+            select(shop)
+          }}
+        />
+      )}
       {myPageOpen && userId && (
         <MyPage
           userId={userId}

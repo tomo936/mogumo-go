@@ -18,8 +18,8 @@ import { PlaceView } from './PlaceView.tsx'
 const v = (shopId: string, day: string, lat: number | null): VisitEntry => ({
   shopId, name: `店${shopId}`, kind: 'ramen', photoUrl: null, day, at: Date.parse(`${day}T03:00:00Z`), lat, lng: lat === null ? null : 139, wasHint: false, mysteryHint: false,
 })
-const setup = (visits: VisitEntry[], over: { onBack?: () => void; onReturn?: () => void } = {}) =>
-  render(<PlaceView center={{ lat: 35, lng: 139 }} zoom={15} cells={[]} towns={[]} visits={visits} home={null} onBack={over.onBack ?? (() => {})} onReturn={over.onReturn ?? (() => {})} />)
+const setup = (visits: VisitEntry[], over: { onBack?: () => void; onReturn?: () => void; onLocate?: (s: unknown) => void } = {}) =>
+  render(<PlaceView center={{ lat: 35, lng: 139 }} zoom={15} cells={[]} towns={[]} visits={visits} home={null} onBack={over.onBack ?? (() => {})} onReturn={over.onReturn ?? (() => {})} onLocate={over.onLocate} />)
 
 test('位置の無い訪問はピンにしない。同じ店 3 回は 1 ピン', () => {
   setup([v('a', '2026-10-01', 35), v('a', '2026-10-02', 35), v('a', '2026-10-03', 35), v('b', '2026-10-01', null)])
@@ -51,4 +51,18 @@ test('ピンを押すとシートが出て、チェックインのボタンは�
   act(() => tap?.('a'))
   expect(screen.getByText('店a')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /チェックイン/ })).toBeNull()
+})
+
+test('お店のシートの「地図で見る」で、そのお店を地図の画面へ渡す（2026-11-17 オーナー）', () => {
+  const onLocate = vi.fn()
+  setup([v('a', '2026-10-01', 35)], { onLocate })
+  act(() => tap?.('a'))
+  fireEvent.click(screen.getByRole('button', { name: '地図で見る' }))
+  expect(onLocate).toHaveBeenCalledWith(expect.objectContaining({ id: 'a', name: '店a', kind: 'ramen', lat: 35, lng: 139 }))
+})
+
+test('onLocate が無ければ「地図で見る」は出さない', () => {
+  setup([v('a', '2026-10-01', 35)])
+  act(() => tap?.('a'))
+  expect(screen.queryByRole('button', { name: '地図で見る' })).toBeNull()
 })

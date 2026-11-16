@@ -23,6 +23,7 @@ import type { Geometry } from '../../towns/domain/shape.ts'
 import { TownList, type TownListState } from '../../towns/ui/TownList.tsx'
 import { WorldMap } from '../../world/ui/WorldMap.tsx'
 import { PlaceView } from '../../world/ui/PlaceView.tsx'
+import type { Shop } from '../../shops/domain/shop.ts'
 
 type State = { status: 'loading' } | { status: 'error' } | { status: 'ready'; cells: ClearedCell[]; visits: VisitEntry[]; towns: ClearedTown[] }
 
@@ -50,11 +51,12 @@ export type RecordTab = 'record' | 'badges'
 type Props = {
   home: LatLng | null
   onClose: () => void
+  onLocate?: (shop: Shop) => void // ワールドマップの「見るだけの地図」で「地図で見る」を押した: 記録を閉じて、いつもの地図でそのお店へ
   initialTab?: RecordTab
   onTownSync?: (s: TownSync) => void // 開いているあいだに町をクリア・コンプリートしたとき（地図の画面が帯と霧に使う）
 }
 
-export function Record({ home, onClose, initialTab = 'record', onTownSync }: Props) {
+export function Record({ home, onClose, initialTab = 'record', onTownSync, onLocate }: Props) {
   const [state, setState] = useState<State>({ status: 'loading' })
   const [townState, setTownState] = useState<TownListState>({ status: 'loading' })
   const [gained, setGained] = useState<ClearedTown[]>(NO_TOWNS) // 開いているあいだに新しくクリアした町
@@ -272,6 +274,7 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync }: Pro
               home={home}
               onBack={() => setPlace(null)}
               onReturn={onClose}
+              onLocate={onLocate}
             />
           )}
         </>

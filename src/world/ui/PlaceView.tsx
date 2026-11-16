@@ -9,6 +9,7 @@ import type { ClearedTown } from '../../towns/domain/shape.ts'
 import { distanceMeters } from '../../map/domain/geo.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
 import { ShopSheet } from '../../checkin/ui/ShopSheet.tsx'
+import type { Shop } from '../../shops/domain/shop.ts'
 import { addVisit } from '../../checkin/domain/visits.ts'
 import type { Visits } from '../../checkin/domain/visits.ts'
 import './world.css'
@@ -22,11 +23,12 @@ type Props = {
   home: LatLng | null
   onBack: () => void
   onReturn: () => void
+  onLocate?: (shop: Shop) => void // お店のシートの「地図で見る」: いつもの地図でそのお店へ寄せる（図鑑と同じ。2026-11-17 オーナー）
 }
 
 type Placed = VisitEntry & { lat: number; lng: number }
 
-export function PlaceView({ center, zoom, cells, towns, visits, home, onBack, onReturn }: Props) {
+export function PlaceView({ center, zoom, cells, towns, visits, home, onBack, onReturn, onLocate }: Props) {
   const [now] = useState(() => Date.now())
   const [openId, setOpenId] = useState<string | null>(null)
   const focus = useMemo(() => ({ center, zoom }), [center, zoom])
@@ -53,6 +55,8 @@ export function PlaceView({ center, zoom, cells, towns, visits, home, onBack, on
     return r ?? null
   }, [openId, visits])
 
+  const openShop: Shop | null = open ? { id: open.shopId, name: open.name, lat: open.lat, lng: open.lng, kind: open.kind, details: null, mapId: null } : null
+
   return (
     <section className="vw" aria-label="見るだけの地図">
       <RecordMap cells={cells} towns={towns} t={now} home={home} pins={pins} wave={false} focus={focus} onPinTap={setOpenId} />
@@ -68,7 +72,8 @@ export function PlaceView({ center, zoom, cells, towns, visits, home, onBack, on
       {open && (
         <ShopSheet
           viewOnly
-          shop={{ id: open.shopId, name: open.name, lat: open.lat, lng: open.lng, kind: open.kind, details: null, mapId: null }}
+          shop={openShop!}
+          onLocate={onLocate && openShop ? () => onLocate(openShop) : undefined}
           distanceM={distanceMeters(home ?? center, open)}
           visits={openVisits}
           recordReady
