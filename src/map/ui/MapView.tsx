@@ -22,6 +22,7 @@ import { loadClearedTowns } from '../../towns/infra/townsApi.ts'
 import type { ClearedTown } from '../../towns/domain/shape.ts'
 import type { Shop } from '../../shops/domain/shop.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
+import { createHomePin } from '../infra/homePin.ts'
 import { createAvatar } from '../infra/avatarMarker.ts'
 import { createAvatarModel } from '../infra/avatarModel.ts'
 import type { Expression } from '../infra/avatarModel.ts'
@@ -211,6 +212,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
 
     const avatar = createAvatar(map) // 自分のアバター（お試し版）
     const avatarModel = createAvatarModel(map) // 3D の男の子（読めたら 2D の絵の代わりに出す）
+    let homePin: ReturnType<typeof createHomePin> | null = null // 自宅のピン（地図ができてから置く）
     avatarModelRef.current = avatarModel
 
     // 位置: target が最新の目標、current が画面に出している位置、drawn がサークルを描いた位置
@@ -239,6 +241,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         id: 'me-shadow', type: 'circle', source: 'me-shadow',
         paint: { 'circle-radius': 10, 'circle-color': '#1f2a37', 'circle-opacity': 0.25, 'circle-pitch-alignment': 'map' },
       })
+      homePin = home ? createHomePin(map, home) : null // 自宅のピン（A12）
       s.world = attachWorld(map, {
         home,
         fetchHotpepper: fetchHotpepperShops,
@@ -468,6 +471,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     return () => {
       cancelAnimationFrame(loop.frame)
       avatar.dispose()
+      homePin?.dispose()
       clearTimeout(firstFixTimer)
       clearInterval(staleTimer)
       stopWatch()
