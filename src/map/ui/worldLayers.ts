@@ -392,7 +392,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     buildingPins.update(shownBuildings, done)
     shopPins.setClusterInput(clusterFeatures(
       shownPlaced,
-      shownBuildings.map((b) => ({ id: b.placed.id, topM: b.topM, shops: b.shops })),
+      shownBuildings.map((b) => ({ id: b.placed.id, lat: b.placed.lat, lng: b.placed.lng, topM: b.topM, shops: b.shops })),
       shownInFog,
       hintedIds,
       done,

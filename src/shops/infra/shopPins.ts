@@ -65,6 +65,14 @@ const TIER = ['step', ['get', 'n'], clusterScale(2), 10, clusterScale(10), 30, c
 const manySize = (z: number) => 0.42 + 0.08 * Math.min(1, Math.max(0, (z - 14) / 3.5))
 const clusterLift = (z: number, repM: number): [number, number] => [0, -Math.round(((LIFT_PX_PER_M_AT_17_5 * repM * 2 ** (z - 17.5)) / manySize(z)) * 10) / 10]
 const SIZE_ZOOMS = [14, 16, 17, 18]
+const SIDE_PX = 15 // 2 本を左右に並べるときのずれ（画面の px）
+const shopLift = (z: number, side: number) => {
+  const at = (repM: number): [number, number] => {
+    const [x, y] = liftOffsetAt(z, repM)
+    return [x + Math.round((side * SIDE_PX * 10) / iconSizeAt(z)) / 10, y]
+  }
+  return ['match', ['get', 'liftTier'], 'low', ['literal', at(LIFT_TIERS.low.repM)], 'high', ['literal', at(LIFT_TIERS.high.repM)], ['literal', at(LIFT_TIERS.mid.repM)]]
+}
 
 // 種類（t）ごとの大きさ・持ち上げ。ズームの式はいちばん外に置く決まり（MapLibre）
 const ICON_SIZE_ALL = [
@@ -82,7 +90,8 @@ const OFFSET_ALL = [
       'match', ['get', 't'],
       'cluster', ['match', ['get', 'lt'], 0, ['literal', clusterLift(z, LIFT_TIERS.low.repM)], 2, ['literal', clusterLift(z, LIFT_TIERS.high.repM)], ['literal', clusterLift(z, LIFT_TIERS.mid.repM)]],
       'hint', ['literal', [0, 0]], // 気配は地面の点にピンの先（前と同じ）
-      ['match', ['get', 'liftTier'], 'low', ['literal', liftOffsetAt(z, LIFT_TIERS.low.repM)], 'high', ['literal', liftOffsetAt(z, LIFT_TIERS.high.repM)], ['literal', liftOffsetAt(z, LIFT_TIERS.mid.repM)]],
+      // お店: 高さの段で持ち上げ、左右に並べるとき（side）は横へずらす
+      ['match', ['get', 'side'], 'l', shopLift(z, -1), 'r', shopLift(z, 1), shopLift(z, 0)],
     ],
   ]),
 ] as const
@@ -125,8 +134,22 @@ export function pinLayerFeatures(
     for (const f of index.getClusters([-180, -85, 180, 85], stage.zoom)) {
       const [lng, lat] = f.geometry.coordinates
       const p = f.properties as Record<string, unknown>
-      if (p.cluster) out.push(point(lng, lat, { t: 'cluster', id: `cluster:${p.cluster_id}`, n: p.n, lt: p.lt }))
-      else out.push(point(lng, lat, { t: 'shop', id: p.id, ids: p.ids, kind: p.kind, done: Number(p.done) > 0, liftTier: p.liftTier }))
+      const shopOf = (q: Record<string, unknown>, at: [number, number]) =>
+        point(at[0], at[1], { t: 'shop', id: q.id, ids: q.ids, kind: q.kind, done: Number(q.done) > 0, liftTier: q.liftTier })
+      if (p.cluster && Number(p.n) === 2) {
+        // まとめた結果が 2 軒なら、数字ではなく 2 本のピン（それぞれの場所。2026-11-16 オーナー「2 なら個別でいい」）
+        for (const leaf of index.getLeaves(Number(p.cluster_id), Infinity)) out.push(shopOf(leaf.properties as Record<string, unknown>, leaf.geometry.coordinates as [number, number]))
+      } else if (p.cluster) out.push(point(lng, lat, { t: 'cluster', id: `cluster:${p.cluster_id}`, n: p.n, lt: p.lt }))
+      else if (Number(p.n) === 2 && typeof p.kinds === 'string') {
+        // 2 軒入りのビルがぽつんとあるときは、ビルの所に 2 本を左右に並べる
+        const ids = String(p.ids).split(',')
+        const kinds = p.kinds.split(',')
+        const dones = String(p.dones ?? '').split(',')
+        ids.forEach((sid, i) => out.push(point(lng, lat, { t: 'shop', id: sid, ids: sid, kind: kinds[i], done: dones[i] === '1', liftTier: p.liftTier, side: i === 0 ? 'l' : 'r' })))
+      }
+      // 近くに何もないビル（3 軒以上の 1 つの点）は、そのビルの数のまとめのピン（押すと寄ってほどける）
+      else if (Number(p.n) > 2) out.push(point(lng, lat, { t: 'cluster', id: `bld:${String(p.id)}`, n: p.n, lt: p.lt }))
+      else out.push(shopOf(p, [lng, lat]))
     }
     for (const s of singles) if (s.properties.fog) out.push(point(...s.geometry.coordinates, { t: 'shop', ...s.properties, ids: s.properties.id }))
   } else {

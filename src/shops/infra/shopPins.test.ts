@@ -67,8 +67,29 @@ test('引きでも、霧の中の近いお店は単独で出す。晴れた所�
   expect(f.map((x) => x.properties.id)).toEqual(['fog1'])
 })
 
-test('倍率 17〜17.7 は小さくまとめる（16 の段ではまとまる少し離れた 2 軒が、17 の段では別々）', () => {
-  const pair = [cf('p', 0), cf('q', 0.0012)] // 約 110m
+test('まとめた結果が 2 軒なら、数字ではなく 2 本のピン（それぞれの場所）', () => {
+  const pair = [cf('p', 0), cf('q', 0.0002)]
+  const f = pinLayerFeatures(16.5, [], pair, [])
+  expect(f.map((x) => [x.properties.t, x.properties.id]).sort()).toEqual([['shop', 'p'], ['shop', 'q']])
+})
+
+test('2 軒入りのビルがぽつんとあるときは、ビルの所に 2 本を左右に並べる（中のお店の種類）', () => {
+  const b = cf('bld', 0.05)
+  const lone2 = { ...b, properties: { ...b.properties, id: 'bld', n: 2, ids: 'x,y', done: 0, kinds: 'sushi,cafe', dones: '1,0' } }
+  const f = pinLayerFeatures(17.3, [], [lone2], [])
+  expect(f.map((x) => [x.properties.t, x.properties.id, x.properties.kind, x.properties.done, x.properties.side])).toEqual([
+    ['shop', 'x', 'sushi', true, 'l'], ['shop', 'y', 'cafe', false, 'r'],
+  ])
+})
+
+test('近くに何もないビル（3 軒以上の 1 つの点）は、そのビルの数のまとめのピン', () => {
+  const lone = { ...cf('bld', 0.05), properties: { ...cf('bld', 0.05).properties, id: 'bld', n: 6, ids: 'a,b,c,d,e,f', done: 0 } }
+  const f = pinLayerFeatures(17.3, [], [lone], [])
+  expect(f.map((x) => [x.properties.t, x.properties.n])).toEqual([['cluster', 6]])
+})
+
+test('倍率 17〜17.7 は小さくまとめる（16 の段ではまとまる少し離れた 3 軒が、17 の段では別々）', () => {
+  const pair = [cf('p', 0), cf('q', 0.0006), cf('r', 0.0012)] // 約 55m おき（倍率 16 で約 56px、17 で約 112px）
   expect(pinLayerFeatures(16.5, [], pair, []).filter((x) => x.properties.t === 'cluster')).toHaveLength(1)
   expect(pinLayerFeatures(17.3, [], pair, []).filter((x) => x.properties.t === 'cluster')).toHaveLength(0)
 })
