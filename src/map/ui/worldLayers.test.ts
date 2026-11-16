@@ -193,6 +193,22 @@ test('400m では再取得せず、520m で2回目。720m で雲の塊を置き�
   expect(fogLayer.setClumps).toHaveBeenCalledTimes(2)
 })
 
+test('カメラが自分から離れた場所を見ている（図鑑の「地図で見る」・ピンで寄った）ときは、雲をその場所のまわりに置き直す（行った所の晴れが出る。2026-11-16 オーナー「行ったことあるのに晴れてない」）', async () => {
+  const far = north(3000)
+  const { world } = setup({ loadProgress: vi.fn(() => Promise.resolve({ cells: [cellOf(far)], checkedShopIds: new Set<string>() })) })
+  world.onPosition(home)
+  await flush()
+  fogLayer.setClumps.mockClear()
+  world.setView(far)
+  expect(fogLayer.setClumps).toHaveBeenCalledTimes(1)
+  expect(fogLayer.setClumps.mock.lastCall![0]).toEqual(far)
+  world.onPosition(home) // 歩いても、見ている場所のまま
+  expect(fogLayer.setClumps).toHaveBeenCalledTimes(1)
+  world.setView(null) // 自分に戻った
+  expect(fogLayer.setClumps).toHaveBeenCalledTimes(2)
+  expect(fogLayer.setClumps.mock.lastCall![0]).toEqual(home)
+})
+
 test('取得中は2本目を投げない', async () => {
   let resolve: (s: Shop[]) => void = () => {}
   const { world, fetchHotpepper } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => new Promise<Shop[]>((r) => { resolve = r })) })
