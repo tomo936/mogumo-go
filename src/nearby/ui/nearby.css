@@ -131,3 +131,24 @@
   line-height: 1.7;
   color: #8a735a;
 }
+
+/* 右から滑って出る・右へ滑って閉じる（2026-11-16 オーナー）。動きを減らす設定のときは出し入れだけ */
+.nb {
+  animation: nb-in 220ms ease-out;
+}
+.nb--leaving {
+  animation: nb-out 220ms ease-in forwards;
+}
+@keyframes nb-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes nb-out {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nb, .nb--leaving {
+    animation: none;
+  }
+}

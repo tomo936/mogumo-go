@@ -1,5 +1,5 @@
 import { loading } from '../credits/loadingGate.ts'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { AuthContext } from '../auth/AuthContext.ts'
@@ -572,7 +572,7 @@ test('右上のボタンで近くのお店の一覧が開き、お店を押す�
   await userEvent.click(screen.getByRole('button', { name: '近くのお店' }))
   expect(screen.getByRole('heading', { name: '近くのお店' })).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: /らーめん ちかく/ }))
-  expect(screen.queryByRole('heading', { name: '近くのお店' })).not.toBeInTheDocument()
+  await waitFor(() => expect(screen.queryByRole('heading', { name: '近くのお店' })).not.toBeInTheDocument()) // 右へ滑ってから閉じる
   expect(screen.getByText('らーめん ちかく')).toBeInTheDocument()
 })
 
