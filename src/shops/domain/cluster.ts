@@ -7,7 +7,8 @@ import type { ShopKind } from './shop.ts'
 
 export const CLUSTER_UNTIL_ZOOM = 17 // これより引いたらまとめる（倍率 16〜17）。17 から今までどおり全部のピン。17〜17.5 の細かいまとめはやめた（2026-11-13 オーナー）
 export const CLUSTER_RADIUS_PX = 140 // 画面でこの近さまでのピンをまとめる（かなり離れていない限りまとめる。2026-11-13 オーナー「3以上はかなり離れてない限りまとめよう」）。2 軒以下はまとめない（CLUSTER_MIN_POINTS）
-export const CLUSTER_MIN_POINTS = 3 // 3 軒以上でまとめる。2 軒以下は 1 軒ずつのピン（「2」などは出さない）
+export const CLUSTER_MIN_POINTS = 2 // 近くのピンは 2 軒からまとめる（最初の仕様。3 軒以上にしたら大きなまとめの横にピンが残って見づらかった＝2026-11-16 オーナー）
+export const BUILDING_MIN_SHOPS = 3 // ビルをまとめに入れるのは 3 軒以上のときだけ（2 軒のビルは「2/2」のビルのピンのまま）
 // 複合施設（ビル・駅・大型施設）をまとめに入れるのは、いちばん引いたときだけ。それ以外は今までのビルのピン（「6/6」など）
 export const BUILDING_CLUSTER_UNTIL_ZOOM = 16.3
 
@@ -45,7 +46,7 @@ export function clusterFeatures(
     if (inFog.has(p.id)) return
     const ids = p.shopIds.filter((id) => !hinted.has(id))
     if (ids.length === 0) return
-    if (bld === 1 && ids.length < CLUSTER_MIN_POINTS) return // 2 軒以下のビルはまとめず、今までのビルのピンのまま（「2」の札を出さない）
+    if (bld === 1 && ids.length < BUILDING_MIN_SHOPS) return // 2 軒以下のビルはまとめず、今までのビルのピンのまま（「2」の札を出さない）
     const tier = liftTier(Math.round(heightM * 10) / 10)
     out.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [p.lng, p.lat] }, properties: { id: p.id, kind, n: ids.length, done: ids.filter((id) => done.has(id)).length, ids: ids.join(','), liftTier: tier, lt: TIER_NO[tier], bld } })
   }
