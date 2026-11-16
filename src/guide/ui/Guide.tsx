@@ -2,7 +2,7 @@
 // 下にセリフの窓、左上に Live2D のポコタン。説明する部品のところだけ丸く明るく抜く。タップで次へ、右上でスキップ。
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import './guide.css'
-import { GUIDE_PAGES, holeAround, onTap, shownChars } from '../domain/guide.ts'
+import { GUIDE_PAGES, holeAround, onTap, shownChars, unionRect } from '../domain/guide.ts'
 import type { GuideTarget, Hole } from '../domain/guide.ts'
 import { mountPoko } from '../infra/poko.ts'
 import type { PokoHandle } from '../infra/poko.ts'
@@ -14,7 +14,7 @@ type Props = {
   onClose: () => void
 }
 
-const SELECTOR: Partial<Record<GuideTarget, string>> = { hint: '.hud-hint', menu: '.hud-toggle' }
+const SELECTOR: Partial<Record<GuideTarget, string>> = { hint: '.hud-hint', menu: '.hud-toggle', player: '.hud-player, .hud-coins' }
 const ME_R: Record<number, number> = { 1: 120, 2: 80 } // 自分のまわりの丸の大きさ（霧のページは広く、お店のページは近く）
 
 function holeFor(target: GuideTarget, page: number, meOnScreen: Props['meOnScreen']): Hole | null {
@@ -23,8 +23,8 @@ function holeFor(target: GuideTarget, page: number, meOnScreen: Props['meOnScree
     return { cx: p.x, cy: p.y, r: ME_R[page] ?? 100 }
   }
   const sel = SELECTOR[target]
-  const el = sel ? document.querySelector(sel) : null
-  return el ? holeAround(el.getBoundingClientRect(), 10) : null
+  const box = sel ? unionRect([...document.querySelectorAll(sel)].map((el) => el.getBoundingClientRect())) : null
+  return box ? holeAround(box, 10) : null
 }
 
 export function Guide({ meOnScreen, onClose }: Props) {
