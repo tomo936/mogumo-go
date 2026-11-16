@@ -1,6 +1,6 @@
 // 近くのお店の一覧（A11、全画面）。徒歩圏内の、晴れた場所のお店を近い順に。ジャンルで絞り込める。
 // 押すとそのお店へカメラを寄せてお店のシートを開く（呼び出し側 onPick）。仕様: docs/superpowers/specs/2026-11-16-nearby-list-design.md
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './nearby.css'
 import type { Cleared } from '../../fog/domain/clearing.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
@@ -21,17 +21,28 @@ type Props = {
   onClose: () => void
 }
 
+export const SLIDE_MS = 220 // 右から滑って出る・右へ滑って閉じる時間（nearby.css の nb-in / nb-out と同じ）
+
 const distanceText = (m: number) => `${Math.max(10, Math.round(m / 10) * 10)}m`
 
 export function NearbyList({ shops, me, cleared, checked, hiddenIds, onPick, onClose }: Props) {
   const [kind, setKind] = useState<ShopKind | null>(null)
+  const [leaving, setLeaving] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(() => () => clearTimeout(timer.current), [])
+  // 閉じるときは右へ滑ってから、呼び出し側に知らせる（二重に押されても 1 回だけ）
+  const leave = (after: () => void) => {
+    if (leaving) return
+    setLeaving(true)
+    timer.current = setTimeout(after, SLIDE_MS)
+  }
   const all = useMemo(() => (me ? nearbyShops(shops, me, cleared, null, hiddenIds) : []), [shops, me, cleared, hiddenIds])
   const kinds = useMemo(() => kindsIn(all), [all])
   const list = kind ? all.filter((x) => x.shop.kind === kind) : all
   return (
-    <section className="nb" aria-label="近くのお店">
+    <section className={leaving ? 'nb nb--leaving' : 'nb'} aria-label="近くのお店">
       <header className="nb__bar">
-        <button type="button" className="nb__back" aria-label="戻る" onClick={onClose}>
+        <button type="button" className="nb__back" aria-label="戻る" onClick={() => leave(onClose)}>
           <Icon name="back" size={20} />
         </button>
         <h2>近くのお店</h2>
@@ -58,7 +69,7 @@ export function NearbyList({ shops, me, cleared, checked, hiddenIds, onPick, onC
           <ul className="nb__list">
             {list.map(({ shop, distanceM }) => (
               <li key={shop.id}>
-                <button type="button" className="nb__row" onClick={() => onPick(shop)}>
+                <button type="button" className="nb__row" onClick={() => leave(() => onPick(shop))}>
                   <img className="nb__icon" src={kindIcon(shop.kind)} alt="" />
                   <span className="nb__body">
                     <b>{shop.name}</b>

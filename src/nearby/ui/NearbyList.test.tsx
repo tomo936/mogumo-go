@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import { cellKey, cellsInCircle } from '../../fog/domain/grid.ts'
@@ -37,7 +37,7 @@ test('お店を押すと onPick、済みのお店には印', async () => {
   expect(within(screen.getByRole('button', { name: /店b/ })).getByRole('img', { name: '済み' })).toBeInTheDocument()
   expect(within(screen.getByRole('button', { name: /店a/ })).queryByRole('img', { name: '済み' })).toBeNull()
   await userEvent.click(screen.getByRole('button', { name: /店a/ }))
-  expect(p.onPick).toHaveBeenCalledWith(shops[0])
+  await waitFor(() => expect(p.onPick).toHaveBeenCalledWith(shops[0])) // 右へ滑ってから
 })
 
 test('お店が無いときは歩いて晴らす案内。現在地が無いときは待ってもらう', () => {
@@ -51,5 +51,6 @@ test('お店が無いときは歩いて晴らす案内。現在地が無いと�
 test('戻るで onClose', async () => {
   const p = show()
   await userEvent.click(screen.getByRole('button', { name: '戻る' }))
-  expect(p.onClose).toHaveBeenCalled()
+  expect(screen.getByRole('region', { name: '近くのお店' })).toHaveClass('nb--leaving')
+  await waitFor(() => expect(p.onClose).toHaveBeenCalledTimes(1))
 })
