@@ -6,6 +6,8 @@ import type { Cue, SfxName, SoundPrefs } from '../domain/sfx.ts'
 
 const urls = import.meta.glob('../../assets/sound/*.m4a', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
 import dayBgmUrl from '../../assets/sound/bgm/day.m4a?url'
+import nightBgmUrl from '../../assets/sound/bgm/night.m4a?url'
+import { isNight } from '../../daynight/infra/phase.ts'
 
 const KEY = 'mogumo.sound'
 const BGM_VOLUME = 0.3
@@ -28,7 +30,7 @@ const raw = AC
     }))
   : []
 const listeners = new Set<() => void>()
-// BGM: 昼の曲を Web Audio でループ（<audio loop> だと継ぎ目に間が出る端末があるため）
+// BGM: 昼の曲（夜は夜の曲。A14）を Web Audio でループ（<audio loop> だと継ぎ目に間が出る端末があるため）
 let bgmOut: GainNode | null = null
 let bgmSrc: AudioBufferSourceNode | null = null
 let bgmBuf: AudioBuffer | null = null
@@ -95,7 +97,7 @@ function applyBgm() {
       bgmSrc.start()
     } else if (!bgmBuf && !bgmLoading) {
       bgmLoading = true
-      void fetch(dayBgmUrl)
+      void fetch(isNight() ? nightBgmUrl : dayBgmUrl) // 夜は夜の曲（A14）
         .then((r) => r.arrayBuffer())
         .then((b) => c.decodeAudioData(b))
         .then((buf) => {

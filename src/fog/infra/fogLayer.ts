@@ -8,6 +8,7 @@ import type { LatLng } from '../../map/domain/geo.ts'
 import { drawOrder } from '../domain/clumps.ts'
 import type { Clump } from '../domain/clumps.ts'
 import type { AnimClump } from '../domain/wave.ts'
+import { isNight } from '../../daynight/infra/phase.ts'
 
 const LIFT = 0.22 // 影の帯の厚み（塊の半幅に対する割合）
 const SOFT = 0.12 // 白と影の境目のぼかし
@@ -76,6 +77,7 @@ in float v_seed;
 in float v_alpha;
 uniform float u_lift;
 uniform float u_soft;
+uniform float u_night; // 1 なら夜の雲（月明かりの青。A14）
 out vec4 o;
 float h(float k) { return fract(sin(v_seed * 91.7 + k * 37.3) * 43758.5453); }
 float sdBox(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
@@ -101,6 +103,11 @@ void main() {
   vec3 top = mix(vec3(1.0), vec3(0.94, 0.97, 1.0), 1.0 - smoothstep(-0.5, 0.6, v_uv.y));
   vec3 col = mix(vec3(0.70, 0.84, 0.96), top, lit);
   col = mix(col, vec3(0.62, 0.78, 0.93), smoothstep(-aa * 2.5, -aa, d) * 0.5); // ふちの薄い線
+  // 夜: 上は月明かりの淡い青紫、下の影は深い紺
+  vec3 nTop = mix(vec3(0.66, 0.70, 0.88), vec3(0.58, 0.62, 0.82), 1.0 - smoothstep(-0.5, 0.6, v_uv.y));
+  vec3 nCol = mix(vec3(0.24, 0.28, 0.48), nTop, lit);
+  nCol = mix(nCol, vec3(0.20, 0.23, 0.42), smoothstep(-aa * 2.5, -aa, d) * 0.5);
+  col = mix(col, nCol, u_night);
   a *= v_alpha;
   o = vec4(col * a, a);
 }`
@@ -150,6 +157,7 @@ export function createFogLayer(): FogLayer {
   let uViewport: WebGLUniformLocation | null = null
   let uLift: WebGLUniformLocation | null = null
   let uSoft: WebGLUniformLocation | null = null
+  let uNight: WebGLUniformLocation | null = null
   let uTime: WebGLUniformLocation | null = null
   let uThin: WebGLUniformLocation | null = null
   let origin: LatLng | null = null
@@ -202,6 +210,7 @@ export function createFogLayer(): FogLayer {
       uViewport = gl.getUniformLocation(prog, 'u_viewport')
       uLift = gl.getUniformLocation(prog, 'u_lift')
       uSoft = gl.getUniformLocation(prog, 'u_soft')
+      uNight = gl.getUniformLocation(prog, 'u_night')
       uTime = gl.getUniformLocation(prog, 'u_time')
       uThin = gl.getUniformLocation(prog, 'u_thin')
       vao = gl.createVertexArray()
@@ -246,6 +255,7 @@ export function createFogLayer(): FogLayer {
       gl.uniform2f(uViewport, gl.drawingBufferWidth, gl.drawingBufferHeight)
       gl.uniform1f(uLift, LIFT)
       gl.uniform1f(uSoft, SOFT)
+      gl.uniform1f(uNight, isNight() ? 1 : 0)
       const now = performance.now() / 1000
       gl.uniform1f(uTime, now)
       gl.uniform3fv(uThin, thin)

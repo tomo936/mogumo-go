@@ -32,6 +32,18 @@ export const THEMES = {
       majorRoadScale: 1.25,
     },
   },
+  // D の夜（A14 試作 2026-11-17）: 紺の地面・青紫の建物・道は暗め、大きい道は街灯の暖かい色
+  illustNight: {
+    ground: '#2b3358', residential: '#303a62', park: '#2c5248', wood: '#26493f', water: '#1d3a6e', waterLine: '#3a66a8',
+    building: '#454b78', buildingLine: '#171a33', road: '#56608f', roadCasing: '#171a33', path: '#424c7c', rail: '#6a6f96', majorRoad: '#b39a62', majorRoadCasing: '#171a33',
+    label: '#e8e4ff', labelHalo: '#1c2040', showPlaceLabels: false, showRoadLabels: false,
+    illust: {
+      buildingFills: ['#434a78', '#4a5182', '#51588c', '#585f96'],
+      buildingShadow: 'rgba(8, 8, 28, 0.45)',
+      roadScale: 1.5,
+      majorRoadScale: 1.25,
+    },
+  },
 } satisfies Record<string, MapTheme>
 
 export type ThemeName = keyof typeof THEMES

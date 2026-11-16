@@ -10,6 +10,8 @@ import { FACILITY_FLOOR_M } from '../config.ts'
 import { outerEdges } from '../domain/facility.ts'
 import { pickFacility } from './facilityPick.ts'
 import type { PlacedFacility } from './facilityPick.ts'
+import { isNight, onPhase } from '../../daynight/infra/phase.ts'
+import { makeLights } from '../../daynight/infra/nightLook.ts'
 import { screenScale } from './screenScale.ts'
 
 const WALL = '#f6ead7'
@@ -99,6 +101,7 @@ export function createFacilityLayer(): CustomLayerInterface & {
 } {
   let scene: THREE.Scene | null = null
   let map: MapLibreMap | null = null
+  let stopPhase: (() => void) | null = null
   let list: PlacedFacility[] = []
   let origin: LatLng | null = null
   let objects: THREE.Object3D[] = []
@@ -210,10 +213,11 @@ export function createFacilityLayer(): CustomLayerInterface & {
     onAdd(sc, mp) {
       scene = sc
       map = mp
-      sc.add(new THREE.HemisphereLight('#ffffff', '#e6dccf', 2.2))
-      const sun = new THREE.DirectionalLight('#fff2e4', 2.4)
-      sun.position.set(-0.6, 0.8, 0.55)
-      sc.add(sun)
+      const lights = makeLights(sc, isNight()) // 夜は月明かり（A14）
+      stopPhase = onPhase((n) => {
+        lights.apply(n)
+        map?.triggerRepaint()
+      })
       const wall = mat(WALL)
       wall.map = wallTexture()
       const awning = mat('#ffffff')
@@ -225,6 +229,8 @@ export function createFacilityLayer(): CustomLayerInterface & {
       build()
     },
     onRemove() {
+      stopPhase?.()
+      stopPhase = null
       clear()
       for (const set of [mats, stMats]) if (set) for (const m of Object.values(set)) {
         ;(m as THREE.MeshStandardMaterial).map?.dispose()
