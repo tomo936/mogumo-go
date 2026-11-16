@@ -323,3 +323,32 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
   color: #fff;
 }
+
+/* お知らせ・プレゼントのボタン（近くのお店の下。A7） */
+.hud-inbox {
+  position: absolute;
+  right: 18px;
+  top: 140px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #e8883a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+  color: #fff;
+}
+.hud-inbox__dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 13px;
+  height: 13px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #e5484d;
+}

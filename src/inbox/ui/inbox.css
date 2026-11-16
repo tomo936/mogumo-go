@@ -1,0 +1,198 @@
+/* お知らせ・プレゼント（全画面）。近くのお店の一覧（nearby.css）と同じ「明るい昼の手帳」 */
+.ib {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  padding: calc(10px + env(safe-area-inset-top)) 14px 0;
+  background-color: #f3e9d6;
+  background-image: radial-gradient(rgba(120, 90, 50, 0.07) 1px, transparent 1px);
+  background-size: 14px 14px;
+  color: #4a3b2c;
+  animation: ib-in 220ms ease-out;
+}
+.ib--leaving {
+  animation: ib-out 220ms ease-in forwards;
+}
+@keyframes ib-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes ib-out {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ib, .ib--leaving {
+    animation: none;
+  }
+}
+.ib__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ib__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fffdf7;
+  box-shadow: 0 2px 6px rgba(90, 60, 30, 0.18);
+  color: #6b4a2b;
+}
+.ib__tabs {
+  display: flex;
+  flex: 1;
+  padding: 3px;
+  border-radius: 99px;
+  background: #e6d6b8;
+}
+.ib__tabs button {
+  position: relative;
+  flex: 1;
+  padding: 8px 0;
+  border: 0;
+  border-radius: 99px;
+  background: transparent;
+  color: #8a735a;
+  font-size: 15px;
+  font-weight: 800;
+}
+.ib__tabs button.is-on {
+  background: #fffdf7;
+  color: #a2561b;
+  box-shadow: 0 1px 4px rgba(90, 60, 30, 0.16);
+}
+.ib__dot {
+  position: absolute;
+  top: 6px;
+  margin-left: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e5484d;
+}
+.ib__list {
+  flex: 1;
+  padding: 0 0 calc(24px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+.ib__card {
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fffdf7;
+  box-shadow: 0 1px 4px rgba(90, 60, 30, 0.14);
+}
+.ib__card header {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.ib__card header b {
+  flex: 1;
+  font-size: 15px;
+}
+.ib__card header small {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #8a735a;
+}
+.ib__card p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ib__new {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #e5484d;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+}
+.ib__present {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ib__present.is-claimed {
+  opacity: 0.55;
+}
+.ib__gift {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ffe9cf;
+  color: #e8883a;
+}
+.ib__pbody {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.ib__pbody b {
+  font-size: 15px;
+}
+.ib__pbody p {
+  margin: 0;
+  font-size: 13px;
+}
+.ib__coins {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #a2561b;
+}
+.ib__left {
+  font-size: 11px;
+  color: #8a735a;
+}
+.ib__err {
+  font-size: 11px;
+  color: #c0392b;
+}
+.ib__claim {
+  flex-shrink: 0;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 99px;
+  background: #e8883a;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 2px 0 #b8641f;
+}
+.ib__claim:disabled {
+  opacity: 0.6;
+}
+.ib__done {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #8a735a;
+}
+.ib__empty {
+  margin: 40px 12px;
+  text-align: center;
+  color: #8a735a;
+}

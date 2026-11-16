@@ -44,6 +44,11 @@ import type { TownNews, TownSync } from '../towns/domain/progress.ts'
 import { TownBanner } from '../towns/ui/TownBanner.tsx'
 import { sound } from '../sound/infra/sound.ts'
 import { NearbyList } from '../nearby/ui/NearbyList.tsx'
+import { Inbox } from '../inbox/ui/Inbox.tsx'
+import { claimPresent, loadInbox } from '../inbox/infra/inboxApi.ts'
+import { loadRead, markRead } from '../inbox/infra/readState.ts'
+import { hasDot } from '../inbox/domain/inbox.ts'
+import type { Notice, Present } from '../inbox/domain/inbox.ts'
 import { LoginBonus } from '../loginbonus/ui/LoginBonus.tsx'
 import { Guide } from '../guide/ui/Guide.tsx'
 import { guideSeen, markGuideSeen } from '../guide/infra/seen.ts'
@@ -337,6 +342,35 @@ export function MapPage() {
       clearTimeout(timer)
     }
   }, [entered, userId, tour, refreshStats])
+  // お知らせ・プレゼント（A7）: 地図に入ったとき・アプリに戻ったとき・画面を閉じたときに読み直す（赤い点のため）
+  const [inbox, setInbox] = useState<{ notices: Notice[]; presents: Present[] }>({ notices: [], presents: [] })
+  const [readIds, setReadIds] = useState<ReadonlySet<number>>(() => (userId ? loadRead(userId) : new Set()))
+  const [inboxOpen, setInboxOpen] = useState(false)
+  const refreshInbox = useCallback(() => {
+    if (!userId) return
+    void loadInbox().then((r) => aliveRef.current && setInbox(r))
+  }, [userId])
+  useEffect(() => {
+    if (!entered || !userId) return
+    refreshInbox()
+    const onVisible = () => !document.hidden && refreshInbox()
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [entered, userId, refreshInbox])
+  const seenNotices = useCallback(() => {
+    if (userId) setReadIds(markRead(userId, inbox.notices.map((n) => n.id)))
+  }, [userId, inbox.notices])
+  const onClaimPresent = useCallback(
+    async (id: number) => {
+      const r = await claimPresent(id)
+      if (r && (r.status === 'ok' || r.status === 'already')) {
+        setInbox((b) => ({ ...b, presents: b.presents.map((p) => (p.id === id ? { ...p, claimed: true } : p)) }))
+        if (r.status === 'ok') refreshStats() // コインの数字を読み直す
+      }
+      return r
+    },
+    [refreshStats],
+  )
   const [soonName, setSoonName] = useState<string | null>(null) // まだ作っていない画面の名前（短く出す）
   useEffect(() => {
     if (!userId) return
@@ -557,6 +591,19 @@ export function MapPage() {
       )}
       {tour === 'open' && <Guide onClose={closeGuide} />}
       {loginBonus && <LoginBonus claim={loginBonus} onClose={() => setLoginBonus(null)} />}
+      {inboxOpen && (
+        <Inbox
+          notices={inbox.notices}
+          presents={inbox.presents}
+          read={readIds}
+          onSeenNotices={seenNotices}
+          onClaim={onClaimPresent}
+          onClose={() => {
+            setInboxOpen(false)
+            refreshInbox()
+          }}
+        />
+      )}
       {nearbyInput && (
         <NearbyList
           shops={nearbyInput.shops}
@@ -666,6 +713,11 @@ export function MapPage() {
             const inp = mapRef.current?.hintInputs()
             setNearbyInput({ shops: inp?.shops ?? [], cleared: inp?.cleared ?? new Set(), checked: inp?.checked ?? new Set() })
           }}
+          onInbox={() => {
+            closeExplore()
+            setInboxOpen(true)
+          }}
+          inboxDot={hasDot(inbox.notices, readIds, inbox.presents)}
           onRecord={() => {
             closeExplore()
             setRecordTab('record')
