@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { loading } from '../credits/loadingGate.ts'
 import { useAuth } from '../auth/AuthContext.ts'
 import { LocationOverlay } from '../map/ui/LocationOverlay.tsx'
 import { MapView } from '../map/ui/MapView.tsx'
@@ -103,6 +104,11 @@ export function MapPage() {
     if (!userId || !osmEnabled || !inp) return
     void syncOsmShops(userId, inp.cleared)
   }, [userId, osmEnabled])
+  // 起動時のスプラッシュは、お店がそろうまで「読み込み中」で出しておく（最大 8 秒。src/credits/loadingGate.ts）
+  useEffect(() => {
+    loading.start()
+    void mapRef.current?.whenShopsReady().then(() => loading.done())
+  }, [])
   useEffect(() => {
     let alive = true
     void mapRef.current?.whenShopsReady().then(() => alive && syncOsm())
