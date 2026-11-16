@@ -159,7 +159,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   // お店の読み込みがそろったか: ホットペッパー（使えない環境では不要）・地図のお店の取り出し・進み具合
   const ready = { hp: !deps.shopsEnabled, map: false, progress: false, fired: false }
   const checkReady = () => {
-    if (ready.fired || disposed || !ready.hp || !ready.map || !ready.progress) return
+    // 見えるお店を置き終わるまで待つ（置いている途中で地図を出すと、お店が少しずつ増えて「出ていない」ように見える。2026-11-16 オーナー）
+    if (ready.fired || disposed || !ready.hp || !ready.map || !ready.progress || work) return
     ready.fired = true
     deps.onShopsReady?.()
   }
@@ -256,6 +257,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       placeSome()
       if (refreshedAt && (!work || performance.now() - layerAt >= LAYER_UPDATE_MS)) showShops(refreshedAt)
       if (work) nextFrame()
+      else checkReady()
     })
   }
 
