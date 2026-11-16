@@ -24,3 +24,5 @@ ffmpeg -y -loglevel error -i art/branding/appicon-kuma-v1.png -vf "scale=180:180
 python3 -I art/loading/webp-noblend.py "$out/loading-pancake.webp"  # iPhone でコマが重ならないように（上の ffmpeg のあと必ず）
 # ロゴ（オーナー 2026-11-16）: ほぼ透明の点（アルファ 24 未満）を消して、うっすら四角い枠が見えないように。可逆の WebP
 ffmpeg -y -i art/branding/logo.png -vf "format=rgba,scale=720:-1:flags=lanczos,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lt(alpha(X,Y),24),0,alpha(X,Y))'" -c:v libwebp -lossless 1 -compression_level 6 "$out/logo.webp"
+# ログインボーナスのパネル（ミシェーラ 2026-11-16 受領。A4）: 幅 840px の WebP（アルファあり）
+ffmpeg -y -loglevel error -i art/ui/login-bonus-panel.png -vf "scale=840:-1:flags=lanczos" -c:v libwebp -lossless 0 -quality 82 -compression_level 6 "$out/login-bonus-panel.webp"

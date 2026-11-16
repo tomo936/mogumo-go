@@ -44,6 +44,9 @@ import type { TownNews, TownSync } from '../towns/domain/progress.ts'
 import { TownBanner } from '../towns/ui/TownBanner.tsx'
 import { sound } from '../sound/infra/sound.ts'
 import { NearbyList } from '../nearby/ui/NearbyList.tsx'
+import { LoginBonus } from '../loginbonus/ui/LoginBonus.tsx'
+import { claimLoginBonus } from '../loginbonus/infra/loginBonusApi.ts'
+import type { Claim } from '../loginbonus/domain/loginBonus.ts'
 import { ReviewEditor } from '../reviews/ui/ReviewEditor.tsx'
 import { loadLatest, loadMine, loadSummary, photoUrls } from '../reviews/infra/reviewsApi.ts'
 import { targetCheckin } from '../reviews/domain/review.ts'
@@ -63,6 +66,8 @@ function loadPinsHidden(): boolean {
   }
 }
 
+
+const LOGIN_BONUS_DELAY_MS = 3200 // 地図へ入ってから受け取り画面を出すまで（空から降りる演出が終わるころ）
 
 export function MapPage() {
   const { session, signOut } = useAuth()
@@ -111,12 +116,16 @@ export function MapPage() {
     loading.start()
     void mapRef.current?.whenShopsReady().then(() => loading.done())
   }, [])
+  // ログインボーナス（A4）の受け取り画面と、地図へ入ったか
+  const [entered, setEntered] = useState(false)
+  const [loginBonus, setLoginBonus] = useState<Claim | null>(null)
   // タイトルを閉じて地図へ入ったら、カメラを空から降ろす（2026-11-16 オーナー「空から来たような感じ」）
   useEffect(
     () =>
       loading.onEnter(() => {
         mapRef.current?.intro()
         sound.startBgm() // 空から降りるのに合わせて BGM（昼）がふわっと始まる（A6）
+        setEntered(true)
       }),
     [],
   )
@@ -284,6 +293,21 @@ export function MapPage() {
       .catch(() => {})
     loadCoins().then(setCoins).catch(() => {})
   }, [])
+  // ログインボーナス（A4）: 地図へ入ったら今日の分を受け取り、空から降りる演出が終わったころに画面を出す
+  useEffect(() => {
+    if (!entered || !userId) return
+    let alive = true
+    let timer: ReturnType<typeof setTimeout> | undefined
+    void claimLoginBonus().then((c) => {
+      if (!alive || !c?.claimedNow) return
+      refreshStats() // コインの数字を読み直す
+      timer = setTimeout(() => alive && setLoginBonus(c), LOGIN_BONUS_DELAY_MS)
+    })
+    return () => {
+      alive = false
+      clearTimeout(timer)
+    }
+  }, [entered, userId, refreshStats])
   const [soonName, setSoonName] = useState<string | null>(null) // まだ作っていない画面の名前（短く出す）
   useEffect(() => {
     if (!userId) return
@@ -499,6 +523,7 @@ export function MapPage() {
           onClose={() => setZukanOpen(false)}
         />
       )}
+      {loginBonus && <LoginBonus claim={loginBonus} onClose={() => setLoginBonus(null)} />}
       {nearbyInput && (
         <NearbyList
           shops={nearbyInput.shops}
