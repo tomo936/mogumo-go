@@ -5,10 +5,21 @@ import type { ShopKind } from './shop.ts'
 
 // 気配のお店（正体を伏せている）と霧の中の近いお店は数に入れない（気配は「？」のピンで単独に出す）。
 
-// 段は 2 つ（2026-11-16 オーナー承認 docs/superpowers/specs/2026-11-16-map-pins-by-zoom-design.md）:
-// 寄り（17 以上）は全部のピン・ビルの並べたピン・施設の「6/6」。引き（16〜17）はお店をぜんぶまとめ、施設は名前の札だけ
-export const CLUSTER_UNTIL_ZOOM = 17
-export const CLUSTER_RADIUS_PX = 140 // 画面でこの近さまでのピンをまとめる（かなり離れていない限りまとめる。2026-11-13 オーナー「3以上はかなり離れてない限りまとめよう」）。2 軒以下はまとめない（CLUSTER_MIN_POINTS）
+// 段は 3 つ（2026-11-16 オーナー「zoom してもまだ多すぎる、段階いる？」。設計 docs/superpowers/specs/2026-11-16-map-pins-by-zoom-design.md）:
+//  倍率 16〜17: 大きくまとめる（140px）／17〜17.7: 小さくまとめる（70px）／17.7 から: 全部のピン・ビルの並べたピン・施設の「6/6」。
+//  まとめている間、施設は名前の札だけ
+export const CLUSTER_UNTIL_ZOOM = 17.7
+export const CLUSTER_STAGES = [
+  { zoom: 16, radiusPx: 140 },
+  { zoom: 17, radiusPx: 70 },
+] as const
+// 今の倍率でのまとめ方（まとめない倍率なら null）。zoom: まとめを計算する整数の倍率
+export function clusterStage(zoom: number): { zoom: number; radiusPx: number } | null {
+  if (zoom >= CLUSTER_UNTIL_ZOOM) return null
+  let stage: { zoom: number; radiusPx: number } = CLUSTER_STAGES[0]
+  for (const st of CLUSTER_STAGES) if (zoom >= st.zoom) stage = st
+  return { zoom: stage.zoom, radiusPx: stage.radiusPx }
+}
 export const CLUSTER_MIN_POINTS = 2 // 近くのピンは 2 軒からまとめる（最初の仕様。3 軒以上にしたら大きなまとめの横にピンが残って見づらかった＝2026-11-16 オーナー）
 
 // 札の数字。100 以上は「99+」
@@ -16,7 +27,7 @@ export const badgeText = (n: number): string => (n > 99 ? '99+' : String(n))
 
 // 札の字の大きさは桁によらず同じ（2026-11-13 オーナー）。いちばん長い「99+」が丸の中に収まる大きさにそろえる
 export const BADGE_WIDEST_TEXT = '99+'
-export const BADGE_TEXT_FIT = 0.74 // 丸の直径に対して、いちばん長い字の幅をここまでにする
+export const BADGE_TEXT_FIT = 0.86 // 丸の直径に対して、いちばん長い字（99+）の幅をここまでにする（2026-11-16 数字を大きく）
 
 // まとめた数でピンの大きさを 3 段に（2〜9・10〜29・30 以上）
 export const clusterScale = (n: number): number => (n >= 30 ? 1.25 : n >= 10 ? 1.12 : 1)

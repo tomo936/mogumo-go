@@ -67,9 +67,15 @@ test('引きでも、霧の中の近いお店は単独で出す。晴れた所�
   expect(f.map((x) => x.properties.id)).toEqual(['fog1'])
 })
 
-test('寄り（17 以上）: まとめず、1 軒ずつ（晴れた所も霧の中も）', () => {
+test('倍率 17〜17.7 は小さくまとめる（16 の段ではまとまる少し離れた 2 軒が、17 の段では別々）', () => {
+  const pair = [cf('p', 0), cf('q', 0.0012)] // 約 110m
+  expect(pinLayerFeatures(16.5, [], pair, []).filter((x) => x.properties.t === 'cluster')).toHaveLength(1)
+  expect(pinLayerFeatures(17.3, [], pair, []).filter((x) => x.properties.t === 'cluster')).toHaveLength(0)
+})
+
+test('寄り（17.7 以上）: まとめず、1 軒ずつ（晴れた所も霧の中も）', () => {
   const singles = pinFeatures([shop, { ...shop, id: 'fog1' }], new Set(['fog1']), me)
-  const f = pinLayerFeatures(17.2, singles, near, [])
+  const f = pinLayerFeatures(17.8, singles, near, [])
   expect(f.map((x) => [x.properties.t, x.properties.id])).toEqual([['shop', 'a'], ['shop', 'fog1']])
 })
 
@@ -81,13 +87,13 @@ test('気配のピンは、どの倍率でも同じ層に単独で入る（正�
   }
 })
 
-test('引き・寄りをまたぐと作り直す（またがなければ作り直さない）', () => {
-  const { setData, handlers, map, m } = fake(17.5)
+test('段をまたぐと作り直す（またがなければ作り直さない）', () => {
+  const { setData, handlers, map, m } = fake(17.9)
   const pins = createShopPins(m)
   pins.attach()
   pins.setClusterInput(near)
   const n = setData.mock.calls.length
-  map.zoom = 17.3
+  map.zoom = 17.8
   handlers.zoom.forEach((h) => h())
   expect(setData.mock.calls.length).toBe(n)
   map.zoom = 16.6
@@ -96,7 +102,7 @@ test('引き・寄りをまたぐと作り直す（またがなければ作り�
   expect(lastData(setData).some((x) => x.properties.t === 'cluster')).toBe(true)
 })
 
-test('pick: お店は店の id、気配は hint:<id>、まとめはカメラの中心を動かさずに倍率 17 まで寄って []', () => {
+test('pick: お店は店の id、気配は hint:<id>、まとめは cluster:<経度>,<緯度>（カメラはそこへ寄せる。動かすのは地図の画面）', () => {
   const { map, m } = fake(16.5)
   const pins = createShopPins(m)
   expect(pins.pick({ x: 10, y: 10 })).toBeNull() // attach 前
@@ -107,11 +113,9 @@ test('pick: お店は店の id、気配は hint:<id>、まとめはカメラの�
   expect(map.queryRenderedFeatures).toHaveBeenLastCalledWith([[2, 2], [18, 18]], { layers: [PIN_LAYER] })
   map.queryRenderedFeatures.mockReturnValueOnce([{ properties: { t: 'hint', id: 'h1' } }])
   expect(pins.pick({ x: 10, y: 10 })).toEqual(['hint:h1'])
-  map.queryRenderedFeatures.mockReturnValueOnce([{ properties: { t: 'cluster', id: 'cluster:1' } }])
-  expect(pins.pick({ x: 10, y: 10 })).toEqual([])
-  const arg = map.easeTo.mock.calls[0][0] as Record<string, unknown>
-  expect(arg.center).toBeUndefined() // 中心を動かさない（自分を追いかけるカメラに引き戻されない）
-  expect(Number(arg.zoom)).toBeGreaterThanOrEqual(17)
+  map.queryRenderedFeatures.mockReturnValueOnce([{ properties: { t: 'cluster', id: 'cluster:1' }, geometry: { type: 'Point', coordinates: [139.63, 35.65] } }])
+  expect(pins.pick({ x: 10, y: 10 })).toEqual(['cluster:139.63,35.65'])
+  expect(map.easeTo).not.toHaveBeenCalled() // カメラは地図の画面（MapView）が自分の追いかけを止めてから動かす
 })
 
 test('dispose で層・source・絵を外す', () => {
