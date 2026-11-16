@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { ClusterFeature } from '../domain/cluster.ts'
-import { BUILDING_CLUSTER_UNTIL_ZOOM, CLUSTER_MIN_POINTS, CLUSTER_UNTIL_ZOOM } from '../domain/cluster.ts'
+import { CLUSTER_MIN_POINTS, CLUSTER_UNTIL_ZOOM } from '../domain/cluster.ts'
 import { createShopClusters } from './shopClusters.ts'
 
-const feat = (id: string, bld: number): ClusterFeature => ({
+const feat = (id: string): ClusterFeature => ({
   type: 'Feature', geometry: { type: 'Point', coordinates: [139, 35] },
-  properties: { id, kind: 'ramen', n: bld ? 3 : 1, done: 0, ids: id, liftTier: 'mid', lt: 1, bld },
+  properties: { id, kind: 'ramen', n: 1, done: 0, ids: id, liftTier: 'mid', lt: 1 },
 })
 
 function fakeMap(zoom: number) {
@@ -47,25 +47,11 @@ describe('shopClusters', () => {
     expect(f.added.map((l) => l.before)).toEqual(['me-avatar-3d', 'me-avatar-3d'])
   })
 
-  it('複合施設は、いちばん引いたときだけまとめに入る（ズームをまたぐと入れ替わる）', () => {
-    const f = fakeMap(16.1)
+  it('渡された点をそのまま並べる（ビルの中のお店も 1 軒ずつの点で渡ってくる）', () => {
+    const f = fakeMap(16.5)
     const c = createShopClusters(f.map as never)
     c.attach()
-    c.update([feat('shop', 0), feat('bld', 1)])
-    expect(names(f.source!.setData)).toEqual(['shop', 'bld']) // 16.1: いちばん引いたところ
-    f.map.zoom = BUILDING_CLUSTER_UNTIL_ZOOM + 0.5
-    f.handlers.zoom.forEach((h) => h())
-    expect(names(f.source!.setData)).toEqual(['shop']) // 寄ったら今までのビルのピンに任せる
-    f.map.zoom = 16.1
-    f.handlers.zoom.forEach((h) => h())
-    expect(names(f.source!.setData)).toEqual(['shop', 'bld'])
-  })
-
-  it('最初から寄っていれば、複合施設は入らない', () => {
-    const f = fakeMap(17)
-    const c = createShopClusters(f.map as never)
-    c.attach()
-    c.update([feat('shop', 0), feat('bld', 1)])
-    expect(names(f.source!.setData)).toEqual(['shop'])
+    c.update([feat('a'), feat('b')])
+    expect(names(f.source!.setData)).toEqual(['a', 'b'])
   })
 })

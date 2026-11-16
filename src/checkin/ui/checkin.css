@@ -199,9 +199,9 @@
 .pins-off .bldg-pins {
   visibility: hidden;
 }
-/* いちばん引いたとき（倍率 16.3 未満）は、まとめに入る 3 軒以上のビルのピンだけ隠す。名前の札と 2 軒以下のビルのピンは残す。2026-11-13 */
-.pins-far .bldg-pins--clustered .bldg-pin,
-.pins-far .bldg-pins--clustered .bldg-pin__more {
+/* 引き（倍率 17 未満）は、ビルの並べたピンと施設の「6/6」を隠し、名前の札だけ残す（中のお店はまとめのピンに入る）。2026-11-16 */
+.pins-far .bldg-pin,
+.pins-far .bldg-pin__more {
   visibility: hidden;
 }
 

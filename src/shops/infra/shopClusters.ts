@@ -4,7 +4,7 @@
 import type { GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl'
 import '@fontsource/m-plus-rounded-1c/800.css'
 import baseUrl from '../../assets/pins/cluster-base.png'
-import { BADGE_TEXT_FIT, BADGE_WIDEST_TEXT, badgeText, BUILDING_CLUSTER_UNTIL_ZOOM, CLUSTER_MIN_POINTS, CLUSTER_RADIUS_PX, CLUSTER_UNTIL_ZOOM, clusterScale } from '../domain/cluster.ts'
+import { BADGE_TEXT_FIT, BADGE_WIDEST_TEXT, badgeText, CLUSTER_MIN_POINTS, CLUSTER_RADIUS_PX, CLUSTER_UNTIL_ZOOM, clusterScale } from '../domain/cluster.ts'
 import { LIFT_TIERS } from '../domain/pinLift.ts'
 import { ICON_OFFSET, LIFT_PX_PER_M_AT_17_5, LIFT_ZOOMS } from './shopPins.ts'
 import type { ClusterFeature } from '../domain/cluster.ts'
@@ -85,16 +85,8 @@ export function createShopClusters(map: MapLibreMap) {
   let hidden = false
   let moving = false
   let all: readonly ClusterFeature[] = []
-  // 複合施設（bld=1）をまとめに入れるのは、いちばん引いたときだけ（それ以外は今までのビルのピン）
-  let farBuildings = map.getZoom() < BUILDING_CLUSTER_UNTIL_ZOOM
-  const dataNow = (): GeoJSON.FeatureCollection => ({ type: 'FeatureCollection', features: all.filter((f) => f.properties.bld === 0 || farBuildings) as unknown as GeoJSON.Feature[] })
+  const dataNow = (): GeoJSON.FeatureCollection => ({ type: 'FeatureCollection', features: all as unknown as GeoJSON.Feature[] })
   const push = () => (map.getSource(CLUSTER_SOURCE) as GeoJSONSource | undefined)?.setData(dataNow())
-  const onZoom = () => {
-    const far = map.getZoom() < BUILDING_CLUSTER_UNTIL_ZOOM
-    if (far === farBuildings) return
-    farBuildings = far
-    if (attached) push()
-  }
   let base: HTMLImageElement | null = null
   const pending = new Set<number>()
 
@@ -145,7 +137,6 @@ export function createShopClusters(map: MapLibreMap) {
       if (attached || disposed) return
       attached = true
       map.on('styleimagemissing', onMissing)
-      map.on('zoom', onZoom)
       map.addSource(CLUSTER_SOURCE, {
         type: 'geojson',
         data: dataNow(),
@@ -205,7 +196,6 @@ export function createShopClusters(map: MapLibreMap) {
     dispose() {
       disposed = true
       map.off('styleimagemissing', onMissing)
-      map.off('zoom', onZoom)
       for (const id of [ONE_LAYER, MANY_LAYER]) if (map.getLayer(id)) map.removeLayer(id)
       if (map.getSource(CLUSTER_SOURCE)) map.removeSource(CLUSTER_SOURCE)
       for (const id of map.listImages?.() ?? []) if (id.startsWith('cl-')) map.removeImage(id)

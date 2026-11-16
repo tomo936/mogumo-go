@@ -5,12 +5,11 @@ import type { ShopKind } from './shop.ts'
 
 // 気配のお店（正体を伏せている）と霧の中の近いお店は数に入れない（気配は「？」のピンで単独に出す）。
 
-export const CLUSTER_UNTIL_ZOOM = 17 // これより引いたらまとめる（倍率 16〜17）。17 から今までどおり全部のピン。17〜17.5 の細かいまとめはやめた（2026-11-13 オーナー）
+// 段は 2 つ（2026-11-16 オーナー承認 docs/superpowers/specs/2026-11-16-map-pins-by-zoom-design.md）:
+// 寄り（17 以上）は全部のピン・ビルの並べたピン・施設の「6/6」。引き（16〜17）はお店をぜんぶまとめ、施設は名前の札だけ
+export const CLUSTER_UNTIL_ZOOM = 17
 export const CLUSTER_RADIUS_PX = 140 // 画面でこの近さまでのピンをまとめる（かなり離れていない限りまとめる。2026-11-13 オーナー「3以上はかなり離れてない限りまとめよう」）。2 軒以下はまとめない（CLUSTER_MIN_POINTS）
 export const CLUSTER_MIN_POINTS = 2 // 近くのピンは 2 軒からまとめる（最初の仕様。3 軒以上にしたら大きなまとめの横にピンが残って見づらかった＝2026-11-16 オーナー）
-export const BUILDING_MIN_SHOPS = 3 // ビルをまとめに入れるのは 3 軒以上のときだけ（2 軒のビルは「2/2」のビルのピンのまま）
-// 複合施設（ビル・駅・大型施設）をまとめに入れるのは、いちばん引いたときだけ。それ以外は今までのビルのピン（「6/6」など）
-export const BUILDING_CLUSTER_UNTIL_ZOOM = 16.3
 
 // 札の数字。100 以上は「99+」
 export const badgeText = (n: number): string => (n > 99 ? '99+' : String(n))
@@ -26,31 +25,35 @@ type Point = { id: string; lat: number; lng: number; shopIds: readonly string[] 
 export type ClusterFeature = {
   type: 'Feature'
   geometry: { type: 'Point'; coordinates: [number, number] }
-  // liftTier・lt: ピンを持ち上げる高さの段（lt は 0 低・1 中・2 高。まとめはいちばん高い段）／bld: ビル・施設か
-  properties: { id: string; kind: string; n: number; done: number; ids: string; liftTier: LiftTier; lt: number; bld: number }
+  // liftTier・lt: ピンを持ち上げる高さの段（lt は 0 低・1 中・2 高。まとめはいちばん高い段）
+  properties: { id: string; kind: string; n: number; done: number; ids: string; liftTier: LiftTier; lt: number }
 }
 
 const TIER_NO: Record<LiftTier, number> = { low: 0, mid: 1, high: 2 }
 const DEFAULT_SIZE_M = 16 // 大きさが分からない店の目安（pinFeatures と同じ）
 
-// まとめる層に渡す点: 1 軒の店（n=1、絵は kind）とビル・施設（n=中のお店の数）
+// まとめる層に渡す点: 1 軒の店と、ビル・施設の中のお店（どれも 1 軒ずつの点。その店の場所と種類）
 export function clusterFeatures(
   singles: readonly (Point & { model: string; sizeM?: number })[],
-  buildings: readonly (Point & { topM: number })[],
+  buildings: readonly { id: string; topM: number; shops: readonly { id: string; kind: string; lat: number; lng: number }[] }[],
   inFog: ReadonlySet<string>,
   hinted: ReadonlySet<string>,
   done: ReadonlySet<string>,
 ): ClusterFeature[] {
   const out: ClusterFeature[] = []
-  const add = (p: Point, kind: string, heightM: number, bld: number) => {
-    if (inFog.has(p.id)) return
-    const ids = p.shopIds.filter((id) => !hinted.has(id))
-    if (ids.length === 0) return
-    if (bld === 1 && ids.length < BUILDING_MIN_SHOPS) return // 2 軒以下のビルはまとめず、今までのビルのピンのまま（「2」の札を出さない）
+  const add = (id: string, kind: string, lat: number, lng: number, heightM: number) => {
+    if (hinted.has(id)) return
     const tier = liftTier(Math.round(heightM * 10) / 10)
-    out.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [p.lng, p.lat] }, properties: { id: p.id, kind, n: ids.length, done: ids.filter((id) => done.has(id)).length, ids: ids.join(','), liftTier: tier, lt: TIER_NO[tier], bld } })
+    out.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [lng, lat] }, properties: { id, kind, n: 1, done: done.has(id) ? 1 : 0, ids: id, liftTier: tier, lt: TIER_NO[tier] } })
   }
-  for (const s of singles) add(s, s.model, liftM(s.model as ShopKind, s.sizeM ?? DEFAULT_SIZE_M), 0)
-  for (const b of buildings) add(b, 'mystery', b.topM + LIFT_MARGIN_M, 1)
+  for (const s of singles) {
+    if (inFog.has(s.id)) continue
+    const id = s.shopIds.find((x) => !hinted.has(x))
+    if (id) add(id, s.model, s.lat, s.lng, liftM(s.model as ShopKind, s.sizeM ?? DEFAULT_SIZE_M))
+  }
+  for (const b of buildings) {
+    if (inFog.has(b.id)) continue
+    for (const sh of b.shops) add(sh.id, sh.kind, sh.lat, sh.lng, b.topM + LIFT_MARGIN_M)
+  }
   return out
 }
