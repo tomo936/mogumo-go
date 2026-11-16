@@ -29,48 +29,31 @@ export function makeLights(scene: THREE.Scene, night: boolean, nightHemi = 1.1) 
 }
 
 const EMISSIVE_NIGHT = 3.2 // 夜の窓・提灯の光り方（昼は模型のまま）
+const GLASS_NIGHT = '#ffd08a' // 夜のガラス窓: 中の明かりがついた暖かい黄色
+const GLASS_NIGHT_INTENSITY = 1.4
 const base = new WeakMap<THREE.Material, number>()
 
-// 模型の中で、もともと光る材質（窓・提灯など）だけを夜に強くする
+// 水色の明るい材質 = ガラス窓（光る窓を持たない模型（ラーメン・ベーカリー・洋食）は窓がこれ）
+const hsl = { h: 0, s: 0, l: 0 }
+function isGlass(m: THREE.MeshStandardMaterial): boolean {
+  if (!m.color) return false
+  m.color.getHSL(hsl, THREE.SRGBColorSpace)
+  return hsl.h > 0.5 && hsl.h < 0.7 && hsl.l > 0.7 && hsl.s > 0.2
+}
+
+// 夜は、もともと光る材質（窓・提灯）を強く、ガラス窓に中の明かりをつける。昼は模型のまま。
+// 地面に光の丸を置くやり方は、点々のちらつきと重さが出たのでやめた（2026-11-17 オーナー）
 export function lightUp(mats: THREE.Material[], night: boolean) {
   for (const m of mats) {
     const s = m as THREE.MeshStandardMaterial
-    if (!s.emissive || s.emissive.getHex() === 0) continue
-    if (!base.has(m)) base.set(m, s.emissiveIntensity)
-    s.emissiveIntensity = night ? EMISSIVE_NIGHT : base.get(m)!
+    if (!s.emissive) continue
+    if (!s.userData.glass && (base.has(m) || s.emissive.getHex() !== 0)) {
+      if (!base.has(m)) base.set(m, s.emissiveIntensity)
+      s.emissiveIntensity = night ? EMISSIVE_NIGHT : base.get(m)!
+    } else if (s.userData.glass || isGlass(s)) {
+      s.userData.glass = true // 一度ガラスと決めたら、夜に光らせたあとも同じ扱い
+      s.emissive.set(night ? GLASS_NIGHT : '#000000')
+      s.emissiveIntensity = night ? GLASS_NIGHT_INTENSITY : 1
+    }
   }
-}
-
-let glowTex: THREE.Texture | null = null
-function glowTexture(): THREE.Texture {
-  if (glowTex) return glowTex
-  const c = document.createElement('canvas')
-  c.width = c.height = 128
-  const g = c.getContext('2d')!
-  const r = g.createRadialGradient(64, 64, 0, 64, 64, 64)
-  r.addColorStop(0, 'rgba(255,255,255,1)')
-  r.addColorStop(0.35, 'rgba(255,255,255,0.55)')
-  r.addColorStop(1, 'rgba(255,255,255,0)')
-  g.fillStyle = r
-  g.fillRect(0, 0, 128, 128)
-  glowTex = new THREE.CanvasTexture(c)
-  return glowTex
-}
-
-// お店の足元に置く光のたまり（地面に平らな丸。足し算で明るくする）
-export const GLOW_SCALE = 3.0 // お店の幅の何倍の丸か
-export function glowMesh(count: number): THREE.InstancedMesh {
-  const geo = new THREE.PlaneGeometry(1, 1)
-  geo.rotateX(-Math.PI / 2)
-  const mat = new THREE.MeshBasicMaterial({
-    map: glowTexture(),
-    color: '#ffb260',
-    transparent: true,
-    opacity: 1,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  })
-  const mesh = new THREE.InstancedMesh(geo, mat, count)
-  mesh.renderOrder = -1
-  return mesh
 }
