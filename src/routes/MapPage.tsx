@@ -507,7 +507,7 @@ export function MapPage() {
       )}
       {effect && <CheckinEffect key={effect.key} coins={effect.coins} exp={effect.exp} levelUp={effect.levelUp} reveal={effect.reveal} onDone={() => {
             setEffect(null)
-            if (!selectedRef.current) mapRef.current?.unfocus() // 演出が終わったらカメラを自分に戻す
+            if (!selectedRef.current) mapRef.current?.unfocus() // 演出が終わったら選んだ建物の詳しい模型を戻す（カメラはその場所のまま。自分に戻すのは方位磁針）
           }} />}
       {reviewing && (
         <ReviewEditor
