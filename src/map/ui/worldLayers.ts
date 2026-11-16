@@ -87,6 +87,7 @@ type World = {
   onPosition(p: LatLng): void
   shopsNear(): Shop[]
   pick(point: { x: number; y: number }): string[] | null // 押された建物の店の id（ビルなら全員）
+  setView(center: LatLng | null): void // カメラが自分から離れて見ている場所（自分を追いかけているときは null）。雲はそこのまわりに置く
   focus(shopIds: string[] | null): void // タップして選んだ店（その建物は必ず詳しい模型）。閉じたら null
   addCleared(cells: Cell[], from: LatLng): void
   addTown(town: ClearedTown, from: LatLng | null): void // 今クリアした町。見えている範囲を波で晴らす（from が null なら現在地から）
@@ -125,7 +126,10 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   let shownFrom: LatLng | null = null // 距離順（ピンの優先）の基準にした現在地
   let shownBuildings: PinnedBuilding[] = [] // いま出しているビルと、その中の店
   let shownFacilities: PlacedFacility[] = [] // いま出している大型施設・駅
-  let fogCenter: LatLng | null = null // 雲の塊を置いたときの現在地
+  let fogCenter: LatLng | null = null // 雲の塊を置いたときの原点（ふだんは現在地、離れた所を見ているときはその場所）
+  // カメラが自分から離れて見ている場所。近くの雲（晴れたセルを避ける）は原点から FOG_HALF_M までしか置かないので、
+  // 図鑑の「地図で見る」などで遠くを見るときは、そこを原点にしないと行った所も晴れていない（2026-11-16 オーナー）
+  let view: LatLng | null = null
   const towns: ClearedTown[] = [] // クリアした町
   let lastClumps: Clump[] = [] // 層に最後に渡した雲の塊（波の「変わる前」）
   const checkedIds = new Set<string>() // サーバーが知っている id と、今回付けた id（hp: と osm: の両方がありうる）
@@ -583,13 +587,19 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         map.addLayer(fogShopLayer, below)
         // ピン（1 軒・まとめ・気配）は 1 つの層で、いちばん上（雲・自分のキャラより上。2026-11-16 オーナー）
         shopPins.attach()
-        setFog(p)
-      } else if (distanceMeters(fogCenter, p) >= FOG_REBUILD_M) {
-        setFog(p)
+        setFog(view ?? p)
+      } else if (distanceMeters(fogCenter, view ?? p) >= FOG_REBUILD_M) {
+        setFog(view ?? p)
       }
       updateThin(p)
       if (canFetch(p)) fetchAround(p)
       if (!refreshedAt || distanceMeters(refreshedAt, p) >= SHOP_REFRESH_M) refreshShops(p)
+    },
+    setView(center) {
+      view = center
+      const origin = view ?? last
+      if (disposed || !fogCenter || !origin) return
+      if (distanceMeters(fogCenter, origin) >= FOG_REBUILD_M) setFog(origin)
     },
     shopsNear: () => near,
     titleOf: (ids) => shownFacilities.find((f) => f.shopIds.includes(ids[0]))?.name ?? null,

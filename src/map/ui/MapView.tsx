@@ -190,6 +190,11 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     })
     map.touchZoomRotate.disableRotation()
     mapRef.current = map
+    // カメラが止まったら、自分から離れた所を見ているか世界に伝える（雲をそこのまわりに置くため）
+    map.on('moveend', () => {
+      const c = map.getCenter()
+      s.world?.setView(focusRef.current ? { lat: c.lat, lng: c.lng } : null)
+    })
     map.on('rotate', () => {
       const b = map.getBearing()
       for (const cb of bearingSubs.current) cb(b)
