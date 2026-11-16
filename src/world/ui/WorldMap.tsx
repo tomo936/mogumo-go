@@ -5,7 +5,7 @@ import { Map as MapLibreMap, Marker } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import '../../map/infra/maplibreWorker.ts'
 import { MAP_THEME, STYLE_URL } from '../../map/config.ts'
-import { THEMES, pickTheme } from '../../map/infra/themes.ts'
+import { currentTheme } from '../../map/infra/themes.ts'
 import { themeStyle } from '../../map/infra/theme.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
 import type { TownProgress } from '../../towns/domain/progress.ts'
@@ -77,7 +77,7 @@ export function WorldMap({ towns, onClose, onOpen, loadBoxes = loadTownBoxes }: 
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const theme = THEMES[pickTheme(window.location.search, MAP_THEME)]
+    const theme = currentTheme(window.location.search, MAP_THEME) // 夜は夜の色（A14）
     const map = new MapLibreMap({
       container: el,
       style: STYLE_URL,
