@@ -2,9 +2,25 @@
 
 シロとの受け渡しは `handoff/`（別物）。こちらは Claude Code 自身の会話の引き継ぎ。
 
-最終更新: 2026-11-16 深夜（Claude Code）。区切りごとに上書きする。
+最終更新: 2026-11-17 深夜（Claude Code）。区切りごとに上書きする。
 
 ## いまの状態
+- 【2026-11-17 深夜 区切り（最新）】dev は送った最後のコミット（main は未反映）。ブランチ `cycle1-building`。
+  - **次にやること: A5 ポコタンの案内（オーナー「いつもの開発フローで、Live2D で揺れながらクチパク、語尾に『ポコ！』で明るく、レイアウト案を見せて」）**。
+    - レイアウト案 3 つを見せた（`art/prototypes/pokotan-guide/layouts-v1.png`、作り `mock.html`）: A ノベル型（下にセリフの窓＋名札、左に大きなポコタン、説明する所を丸く抜く。おすすめ）／B 吹き出し型（右下からのぞく）／C カード型（真ん中のカード＋何ページ目かの点＋つぎへ・スキップ）。**オーナーの選択待ち**（組み合わせも可と伝えた）。
+    - 共通の案: 1 文字ずつ出る・どこを押しても次へ（途中なら全部出す）・右上にスキップ・設定から見直せる。
+    - Live2D: 枝 `origin/add-pokotan-live2d` に模型（`public/live2d/poko/`、口 ParamMouthOpenY・体の揺れ・呼吸・髪としっぽの物理あり、`talk(ms)` で口パク）、Cubism Core（Live2D Proprietary Software License）、参考の部品 `docs/reference/pokotan-live2d/`（Live2DCharacter.jsx・PokoModel.js・runtime.js）。**Cubism の Framework（`live2d-framework/`）は枝に無い** → 持ってくる確認（新しいものを入れる＝オーナー確認）と Live2D のライセンス条件の確認が要る（オーナーに伝えた）。
+  - **2026-11-17 にやったこと（dev に反映）**:
+    - A6 音: 効果音 9 個（v2 ポップ。`art/sound/sfx-synth.mjs`→`src/assets/sound/`）、昼の BGM（Fable の v1。`src/assets/sound/bgm/day.m4a`、Web Audio でループ、地図に降りるとき開始）、設定に BGM・効果音の ON/OFF、音量 BGM 0.3・効果音 0.6。夜の曲 `art/sound/bgm/night.m4a` は A14（昼と夜）で入れる。設計 `docs/superpowers/specs/2026-11-16-sound-design.md`。
+    - A11 近くのお店の一覧（右上の方位磁針の下、徒歩 800m、ジャンルで絞り込み、右から滑る）。設計 `docs/superpowers/specs/2026-11-16-nearby-list-design.md`。
+    - A17 バー（居酒屋から分けた。地図の bar/pub は店名にバーの言葉があるときだけ、ホットペッパー G012 はバー。3D は Opus のサブが Blender で作成、表示は 78% に縮小 `src/shops/config.ts` の `MODEL_SCALE`）。ミシェーラの素材（バー・ガチャ 30 体の原画・ログボのパネル）受領、返信 `handoff/to-shiro/2026-11-16-bar-gacha-loginbonus-received.md`（ガチャの 3D 素材は未着）。SPEC に A15 ガチャ・A16・A17。
+    - A4 ログインボーナス（7 日で 1 周、10×6・7 日目 50、休んでも消えない、地図に入って 3.2 秒後に画面、上に大きなコイン）。SQL `0009_login_bonus.sql` はオーナーが適用済み。設計 `docs/superpowers/specs/2026-11-17-login-bonus-design.md`。
+    - 遠くを見て戻るとお店が減る件を直した（貯めたお店を「見ている場所」と「自分」の両方のまわりで残す。`src/shops/domain/retain.ts`）。下北へ飛んだ直後に少ないのは、待てば出るのでそのまま（オーナー）。
+    - ワールドマップの見るだけの地図のシートに「地図で見る」（図鑑と同じ動き）。ボタンの見た目を図鑑にそろえた。
+    - A12 自宅は**なし**（3D もピンも。一度作って取り下げた）。
+    - Edge Function `weekly-missions` はオーナーが再デプロイ済み（バー入りの kind.ts・core.ts）。
+  - 残り: A5（上）、A8 メンテ画面、A14 昼と夜、ガチャ（3D 素材待ち）、A3・A7、上のモヤ（未診断）。
+  - 学び: この環境の「歩いたふり」ではカメラが自分に引き戻され、遠くへ飛ぶ場面を Playwright で再現できなかった（何度も試して時間を使いすぎた。オーナー「いつまでカメラカメラしてるの」）。同じ方法で 2 回だめなら、`?debug` に数を出して iPhone で見てもらう方へ切り替える。
 - 【2026-11-16 深夜 区切り（最新）】dev は `b16ba19`（main は未反映）。ブランチ `cycle1-building`。
   - **次にやること: A6 BGM・効果音**（オーナー「次 BGM と効果音でいい？」→ SPEC §11 A6 の案から設計。iPhone は最初のタップの後でないと鳴らせない＝タイトルの「タップしてスタート」で解錠できる。設定に音の ON/OFF）。
   - **今日後半にやったこと（dev に反映・オーナー確認済み「いい感じ」）**:

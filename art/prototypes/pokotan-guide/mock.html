@@ -1,0 +1,58 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}body{margin:0;background:#e9e2d4;font-family:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Noto Sans CJK JP",sans-serif;display:flex;gap:28px;padding:24px}
+.col{display:flex;flex-direction:column;align-items:center;gap:10px}
+.cap{font-size:22px;font-weight:800;color:#5a3b1e}.sub{font-size:14px;color:#7a5a3a;width:390px;text-align:center;line-height:1.5}
+.ph{position:relative;width:390px;height:844px;border-radius:36px;overflow:hidden;background:url(../../../art/prototypes/pokotan-guide/map.png) center/cover;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.dim{position:absolute;inset:0;background:rgba(40,25,10,.45)}
+.poko{position:absolute}
+.name{position:absolute;top:-16px;left:18px;background:#ff8fb1;color:#fff;font-weight:800;font-size:15px;padding:4px 14px;border-radius:99px;border:3px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+.say{font-size:17px;font-weight:700;line-height:1.6;color:#4a3320}
+.say b{color:#e8782f}
+.next{position:absolute;right:16px;bottom:10px;color:#e8782f;font-size:18px;animation:b 1s infinite}
+@keyframes b{50%{transform:translateY(4px)}}
+.hole{position:absolute;border-radius:50%;box-shadow:0 0 0 2000px rgba(40,25,10,.5);border:4px dashed #fff}
+.skip{position:absolute;top:58px;right:14px;background:rgba(255,255,255,.9);color:#7a5a3a;font-weight:800;font-size:13px;padding:5px 12px;border-radius:99px}
+.dots{display:flex;gap:6px;justify-content:center;margin-top:10px}.dots i{width:8px;height:8px;border-radius:50%;background:#e2d2b8}.dots i.on{background:#e8782f;width:20px;border-radius:99px}
+.tag{position:absolute;left:12px;top:12px;background:#fff8;font-size:11px;padding:2px 8px;border-radius:6px;color:#555}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5ad8e6"/><stop offset="1" stop-color="#8a6cf0"/></linearGradient>
+<linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c45ce6"/><stop offset="1" stop-color="#f55a78"/></linearGradient>
+<symbol id="poko" viewBox="0 0 200 260">
+<path d="M150 210 Q190 200 186 150" fill="none" stroke="#d65ad0" stroke-width="5"/><circle cx="186" cy="146" r="8" fill="#f55a78"/>
+<path d="M58 30 Q50 0 70 8 Q80 40 78 70Z" fill="#fff" stroke="#222" stroke-width="5"/><path d="M60 22 Q56 8 66 12 Q70 30 68 42Z" fill="url(#g1)"/>
+<path d="M142 30 Q150 0 130 8 Q120 40 122 70Z" fill="#fff" stroke="#222" stroke-width="5"/><path d="M140 22 Q144 8 134 12 Q130 30 132 42Z" fill="#6be3a8"/>
+<path d="M40 120 Q40 60 100 58 Q160 60 160 120 L164 210 Q160 240 132 238 L70 238 Q40 240 36 210Z" fill="#fff" stroke="#222" stroke-width="5"/>
+<ellipse cx="62" cy="200" rx="18" ry="26" fill="url(#g2)"/><ellipse cx="148" cy="150" rx="12" ry="22" fill="url(#g2)"/><ellipse cx="110" cy="230" rx="22" ry="8" fill="#f55a78"/><ellipse cx="140" cy="88" rx="14" ry="12" fill="url(#g1)"/>
+<circle cx="82" cy="118" r="6" fill="#222"/><circle cx="120" cy="118" r="6" fill="#222"/><ellipse cx="101" cy="140" rx="9" ry="7" fill="#c0504a"/>
+<ellipse cx="70" cy="134" rx="9" ry="5" fill="#ffb3c1" opacity=".8"/><ellipse cx="132" cy="134" rx="9" ry="5" fill="#ffb3c1" opacity=".8"/>
+</symbol></defs></svg>
+
+<div class="col"><div class="cap">案A ノベル型（おすすめ）</div>
+<div class="ph"><span class="tag">仮のポコタン（実際は Live2D で揺れてクチパク）</span><div class="dim"></div><div class="skip">スキップ</div>
+<div class="hole" style="left:150px;top:22px;width:92px;height:92px"></div>
+<svg class="poko" style="left:-6px;bottom:200px;width:210px;height:273px"><use href="#poko"/></svg>
+<div style="position:absolute;left:12px;right:12px;bottom:28px;height:176px;background:#fffaf0;border:4px solid #8a5a32;border-radius:22px;padding:24px 18px 0;box-shadow:0 6px 0 #8a5a32">
+<div class="name">ポコタン</div><div class="say">上の<b>「？」の雲</b>をタップすると、今日の<b>気配</b>がわかるポコ！ 近くのお店を探しに行くポコ〜！</div><div class="next">▼</div></div></div>
+<div class="sub">恋愛ゲーム風。下にセリフの窓、左に大きなポコタン。説明する所だけ明るく丸く抜く。タップで次へ</div></div>
+
+<div class="col"><div class="cap">案B 吹き出し型</div>
+<div class="ph"><span class="tag">仮のポコタン</span><div class="skip">スキップ</div>
+<svg class="poko" style="right:-20px;bottom:110px;width:150px;height:195px"><use href="#poko"/></svg>
+<div style="position:absolute;left:16px;right:120px;bottom:250px;background:#fffaf0;border:4px solid #8a5a32;border-radius:22px;padding:14px 14px 30px">
+<div class="say" style="font-size:15px">上の<b>「？」の雲</b>で、今日の<b>気配</b>がわかるポコ！</div><div class="next">▼</div>
+<div style="position:absolute;right:-18px;bottom:30px;width:0;height:0;border:12px solid transparent;border-left:18px solid #8a5a32"></div></div>
+<div style="position:absolute;left:170px;top:120px;font-size:40px">⬆️</div></div>
+<div class="sub">地図をあまり隠さない。右下からポコタンがのぞいて、吹き出しで話す。指す所は矢印で示す</div></div>
+
+<div class="col"><div class="cap">案C カード型</div>
+<div class="ph"><span class="tag">仮のポコタン</span><div class="dim"></div>
+<div style="position:absolute;left:26px;right:26px;top:260px;background:#fffaf0;border:4px solid #8a5a32;border-radius:26px;padding:96px 20px 22px;box-shadow:0 6px 0 #8a5a32">
+<svg class="poko" style="left:50%;top:-110px;transform:translateX(-50%);width:160px;height:208px"><use href="#poko"/></svg>
+<div style="text-align:center;font-weight:800;font-size:19px;color:#8a5a32;margin-bottom:8px">気配ってなに？</div>
+<div class="say" style="text-align:center">上の「？」の雲で、今日の<b>気配</b>がわかるポコ！ 3 つ見つけるとコインがもらえるポコ〜！</div>
+<div class="dots"><i></i><i class="on"></i><i></i><i></i><i></i></div>
+<div style="margin-top:14px;display:flex;gap:10px"><div style="flex:1;text-align:center;padding:12px;border-radius:99px;border:2.5px solid #8a5a32;color:#8a5a32;font-weight:800">スキップ</div><div style="flex:2;text-align:center;padding:12px;border-radius:99px;background:#e8782f;color:#fff;font-weight:800;box-shadow:0 4px 0 #8a5a32">つぎへ</div></div>
+</div></div>
+<div class="sub">真ん中のカードの上からポコタンが顔を出す。何ページ目かが分かり、スキップしやすい。地図は暗くなる</div></div>
+</body></html>
