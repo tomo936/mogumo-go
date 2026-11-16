@@ -142,6 +142,22 @@ test('店が何軒あっても、1回の更新でタイルを読むのは道路1
   expect(featureReads()).toBe(2)
 })
 
+test('まわりの地図（道路・建物）がまだ届いていないお店は置かずに待ち、届いたら建物に合わせて置く（コルティの 6 軒が 2 軒になっていた。2026-11-16 オーナー）', async () => {
+  tiles = {}
+  const a: Shop = { id: 'a', name: 'a', lat: home.lat + 14 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe', details: null, mapId: null }
+  const b: Shop = { id: 'b', name: 'b', lat: home.lat + 18 / M, lng: home.lng + 5 / LNG_M, kind: 'ramen', details: null, mapId: null }
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([b, a])) })
+  world.onPosition(home)
+  await flush()
+  runFrames()
+  tiles = { transportation: [roadFeature], building: [building(0, 16, 20, 12)] }
+  dataHandler!({ sourceId: 'openmaptiles', dataType: 'source', tile: {} })
+  idleHandler!()
+  runFrames()
+  const out = vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]
+  expect(out.map((x) => x.id)).toEqual(['bldg:a'])
+})
+
 test('同じ建物に2軒あれば、ビル1つ（model building・id bldg:a・shopIds [a,b]）を建物の真ん中に置く', async () => {
   tiles = { transportation: [roadFeature], building: [building(0, 16, 20, 12)] }
   const a: Shop = { id: 'a', name: 'a', lat: home.lat + 14 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe', details: null, mapId: null }
