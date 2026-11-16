@@ -56,3 +56,4 @@
 - 2026-11-11 Claude Code（Fable）: 3D のアバター用の絵の依頼から、男の子の顔の参考（おいしい・ねむい）を取り下げ（オーナー決定で表情は ふつう・うれしい の 2 つだけ）。残るのは女の子の参考画像だけ（to-shiro/2026-11-11-avatar-3d-art.md、着手は OK のあと）。
 - 2026-11-12 メニューアイコン 8 点とグルメコインを受領（art/ui/menu/・art/ui/coin/）。返信 handoff/to-shiro/2026-11-12-menu-icons-received.md
 - 2026-11-12 Claude Code: メニューアイコン 8 点とグルメコインを地図の画面に反映（src/assets/ui/*.webp、変換は art/ui/convert-ui.sh、MapHud・CoinIcon）。
+- 2026-11-16 ブランディング素材のうちローディングアニメ（WebM・PNG 連番）を受領（art/loading/）、アプリ用 WebP を作ってタイトル画面に反映。アイコン・スプラッシュ・WebP・ロゴ単体のファイルは受け取り待ち。返信 handoff/to-shiro/2026-11-16-branding-received.md
