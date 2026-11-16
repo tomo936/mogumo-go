@@ -24,26 +24,33 @@ test('起動時のタイトル画面に地図の出典が出る。「タップ�
   expect(screen.queryByText('地名検索: 国土地理院')).not.toBeInTheDocument()
 })
 
-test('地図がお店を読んでいる間は「読み込み中」（パンケーキ）で、タップしても始まらない。そろったら「タップしてスタート」（2026-11-16 オーナー）', () => {
+test('「タップしてスタート」はすぐ出る。押すと、お店を読んでいる間は右下に「読み込み中」、そろったらメインへ（2026-11-16 オーナー「OP はなし」）', () => {
   loading.start()
   render(<Splash />)
+  expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  act(() => screen.getByRole('button', { name: /タップしてスタート/ }).click())
   expect(screen.getByRole('status')).toHaveTextContent('読み込み中')
   expect(screen.queryByText('タップしてスタート')).not.toBeInTheDocument()
-  act(() => screen.getByRole('button').click())
-  expect(screen.getByRole('status')).toBeInTheDocument()
   act(() => loading.done())
-  expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button')).not.toBeInTheDocument()
+})
+
+test('もうそろっていれば、押したらすぐメインへ', () => {
+  loading.start()
+  loading.done()
+  render(<Splash />)
   act(() => screen.getByRole('button', { name: /タップしてスタート/ }).click())
   expect(screen.queryByRole('button')).not.toBeInTheDocument()
 })
 
-test('そろわなくても 8 秒で「タップしてスタート」を出す', () => {
+test('そろわなくても、起動から 8 秒でメインへ（押したあと）', () => {
   loading.start()
   render(<Splash />)
+  act(() => screen.getByRole('button', { name: /タップしてスタート/ }).click())
   act(() => vi.advanceTimersByTime(7999))
-  expect(screen.queryByText('タップしてスタート')).not.toBeInTheDocument()
+  expect(screen.getByRole('status')).toBeInTheDocument()
   act(() => vi.advanceTimersByTime(1))
-  expect(screen.getByText('タップしてスタート')).toBeInTheDocument()
+  expect(screen.queryByRole('button')).not.toBeInTheDocument()
 })
 
 test('出典ボタンで詳しい出典とリンクが見られる', () => {
