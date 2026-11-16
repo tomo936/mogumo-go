@@ -1458,8 +1458,173 @@ def takoyaki():
                              (LX - 0.1, -0.35, 0.59, 'succ', 0.7), (LX - 0.12, FY - 0.15, 0.0, 'succ', 1.0), (W / 2 + 0.1, FY - 0.15, 0.0, 'round', 0.85)):
         plant_pot(x, y, z, kd, s)
 
+# ── バー（見本 bar-v1.png）: 角を落とした八角形の正面（真ん中に戸、両どなりの斜めの面に上が丸い窓）・れんがの壁・木の厚い平らな笠木 ──
+# 戸の上に深緑のひさし（すそは波）、窓の中は明るい棚に酒びん、戸の右に樽。看板の文字なし・屋根の上には何も置かない
+def poly_offset(pts, d):
+    """凸の多角形（上から見て反時計回り）を外へ d だけ広げる（となりの辺を広げた線の交わり）"""
+    n = len(pts); out = []
+    for i in range(n):
+        (x0, y0), (x1, y1), (x2, y2) = pts[i - 1], pts[i], pts[(i + 1) % n]
+        def ln(ax, ay, bx, by):
+            L = math.hypot(bx - ax, by - ay); nx, ny = (by - ay) / L, -(bx - ax) / L
+            return (ax + nx * d, ay + ny * d), ((bx - ax) / L, (by - ay) / L)
+        (pa, da), (pb, db) = ln(x0, y0, x1, y1), ln(x1, y1, x2, y2)
+        den = da[0] * db[1] - da[1] * db[0]
+        t = ((pb[0] - pa[0]) * db[1] - (pb[1] - pa[1]) * db[0]) / den
+        out.append((pa[0] + da[0] * t, pa[1] + da[1] * t))
+    return out
+
+def poly_prism(pts, z0, z1, m, bevel=0.03):
+    me = bpy.data.meshes.new('pp'); bm = bmesh.new()
+    f = bm.faces.new([bm.verts.new((x, y, z0)) for x, y in pts])
+    ex = bmesh.ops.extrude_face_region(bm, geom=[f])
+    bmesh.ops.translate(bm, verts=[g for g in ex['geom'] if isinstance(g, bmesh.types.BMVert)], vec=(0, 0, z1 - z0))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces); bm.to_mesh(me); bm.free()
+    o = bpy.data.objects.new('pp', me); col.objects.link(o)
+    return finish(o, m, bevel, 2)
+
+def edge_frame(p0, p1, off):
+    """辺 p0→p1（反時計回り）の真ん中を原点に、x を辺の向き・-Y を外向きにする行列と、辺の長さ"""
+    L = math.dist(p0, p1); dx, dy = (p1[0] - p0[0]) / L, (p1[1] - p0[1]) / L; nx, ny = dy, -dx
+    mx, my = (p0[0] + p1[0]) / 2 + nx * off, (p0[1] + p1[1]) / 2 + ny * off
+    return M_at(mx, my, 0, rz=math.atan2(nx, -ny)), L
+
+def brick_run(span, z0, z1, cols, holes=(), bh=0.11, bw=0.24, depth=0.05):
+    """1つの辺のれんが（辺の座標。y=0 が壁の面、-Y が外）。holes: (中心x, 下z, 上z, 半幅, 丸い上なら True)。穴にかかるれんがは穴の手前で切る"""
+    objs = []; rows = int((z1 - z0) / bh)
+    for r in range(rows):
+        z = z0 + bh * (r + 0.5); off = bw / 2 if r % 2 else 0
+        cuts = []
+        for hx, hz0, hz1, hw, arch in holes:
+            top = hz1 + (hw if arch else 0)
+            if z + bh / 2 - 0.01 < hz0 or z - bh / 2 + 0.01 > top: continue
+            w = hw
+            if arch and z > hz1:
+                zz = max(hz1, z - bh / 2 + 0.01) if z - bh / 2 + 0.01 > hz1 else hz1
+                w = math.sqrt(max(0.0, hw * hw - (zz - hz1) ** 2))
+            cuts.append((hx - w, hx + w))
+        n = int(span / bw) + 2
+        for k in range(n):
+            lo, hi = -span / 2 + bw * k - off, -span / 2 + bw * (k + 1) - off
+            lo, hi = max(lo, -span / 2), min(hi, span / 2)
+            pieces = [(lo, hi)]
+            for c0, c1 in cuts:
+                nxt = []
+                for a, b in pieces:
+                    if b <= c0 or a >= c1: nxt.append((a, b)); continue
+                    if a < c0: nxt.append((a, c0))
+                    if b > c1: nxt.append((c1, b))
+                pieces = nxt
+            for a, b in pieces:
+                if b - a < 0.04: continue
+                objs.append(cube((b - a - 0.014, depth, bh - 0.014), ((a + b) / 2, -depth / 2, z), mat(cols[(k * 3 + r * 7) % len(cols)]), bevel=0.012, seg=1))
+    return objs
+
+def arch_ring(r0, r1, depth, m, steps=14):
+    """上が丸い窓の枠の、半円の輪（辺の座標で -Y が外。原点が半円の中心）"""
+    if LO: steps = max(6, steps // 2)
+    me = bpy.data.meshes.new('ring'); bm = bmesh.new()
+    a = [bm.verts.new((r0, 0, 0)), bm.verts.new((r1, 0, 0))]; e = bm.edges.new(a)
+    bmesh.ops.spin(bm, geom=a + [e], cent=(0, 0, 0), axis=(0, -1, 0), angle=math.pi, steps=steps, use_duplicate=False)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces); bm.to_mesh(me); bm.free()
+    o = bpy.data.objects.new('ring', me); col.objects.link(o)
+    finish(o, m, 0.01, 1); sm = o.modifiers.new('s', 'SOLIDIFY'); sm.thickness = depth; sm.offset = 0.0   # 厚みは面の両側へ半分ずつ
+    return o
+
+def bottle(x, y, z, m, h=0.15, r=0.028):
+    return [cyl(r, h * 0.62, (x, y, z + h * 0.31), m, verts=10, bevel=0.006),
+            cyl(r * 0.42, h * 0.38, (x, y, z + h * 0.81), m, verts=8, bevel=0)]
+
+def bottle_shelf(w, z0, z1, shelf_n, wood, bott, y=-0.035):
+    """窓や戸の中の明るい棚と酒びん（辺の座標）"""
+    objs = []
+    for j in range(shelf_n):
+        z = z0 + (z1 - z0) * (j + 0.15) / shelf_n
+        objs.append(cube((w, 0.07, 0.025), (0, y, z), wood, bevel=0.004))
+        n = max(2, int(w / 0.075))
+        for k in range(n):
+            x = -w / 2 + w * (k + 0.5) / n
+            if (k + j) % 4 == 3: continue
+            objs += bottle(x, y, z + 0.012, bott[(k * 2 + j) % len(bott)], h=0.13 + 0.03 * ((k + j) % 2))
+    return objs
+
+def arch_window(M, w, zb, hr, FRAME, GLOW, WOOD, bott, sill=True):
+    """上が丸い窓（辺の座標で真ん中 x=0）: 明るい奥＋棚と酒びん＋木の枠と桟＋窓台。zb は下、hr は四角い部分の高さ"""
+    r = w / 2; zs = zb + hr; objs = []
+    objs.append(cube((w, 0.02, hr), (0, -0.01, zb + hr / 2), GLOW, bevel=0))                 # 明るい奥
+    hd = half_disc(0, -0.01, zs, r, GLOW, depth=0.02); hd.rotation_euler = (0, math.pi, 0); objs.append(hd)
+    objs += bottle_shelf(w - 0.04, zb + 0.02, zs + r * 0.55, 3, WOOD, bott)
+    fw, fd = 0.06, 0.11
+    for sx in (-1, 1): objs.append(cube((fw, fd, hr + 0.03), (sx * (r + fw / 2), -fd / 2, zb + hr / 2), FRAME, bevel=0.015))
+    objs.append(arch_ring(r, r + fw, fd, FRAME)); objs[-1].location = (0, -fd / 2, zs)
+    objs.append(cube((w + 2 * fw, fd, fw), (0, -fd / 2, zb - fw / 2), FRAME, bevel=0.015))
+    mb = 0.022
+    objs.append(cube((mb, 0.03, hr + r - 0.02), (0, -0.1, zb + (hr + r) / 2), FRAME, bevel=0))                 # 縦の桟
+    for j in range(1, 4): objs.append(cube((w, 0.03, mb), (0, -0.1, zb + hr * j / 4), FRAME, bevel=0))        # 横の桟
+    objs.append(cube((w * 0.86, 0.03, mb), (0, -0.1, zs + r * 0.45), FRAME, bevel=0))
+    if sill: objs.append(cube((w + 0.26, 0.2, 0.06), (0, -0.09, zb - fw - 0.02), WOOD, bevel=0.02))          # 窓台
+    xform(objs, M); return objs
+
+def bar():
+    BR = ['#a4513d', '#994935', '#ad5a45', '#913f2f', '#9f4d3a']; MORTAR = mat('#7a3f30'); PLINTH = mat('#64483d')
+    WOOD = mat('#80502f'); WOOD_D = mat('#673d24'); WOOD_L = mat('#93603a'); CAP = mat('#7a4a2c'); CAP_D = mat('#673e25')
+    GLOW = mat('#f4cf94', 0.7, emit=0.45); GREEN = mat('#2a6242', 0.85); GREEN_D = mat('#235538', 0.85); BRASS = mat('#c9a04a', 0.4)
+    IRON = mat('#4f4a46', 0.5)
+    bott = [mat('#3f5e33', 0.3), mat('#5c2a20', 0.3), mat('#9a6224', 0.3), mat('#e3e6e0', 0.25), mat('#2f3d2c', 0.3)]
+    W, D, H, C, Z0 = 2.3, 2.0, 1.86, 0.68, 0.1; FY = -D / 2; BY = D / 2; A = W / 2; F = A - C
+    P = [(-F, FY), (F, FY), (A, FY + C), (A, BY), (-A, BY), (-A, FY + C)]                       # 上から見た形（反時計回り。正面＝-Y が戸）
+    base = poly_prism(poly_offset(P, 0.06), 0.0, Z0, PLINTH, bevel=0.02)                      # 足もとの石の帯
+    base.name = '0_base'   # 名前の順で先頭に来る原点の部品。軽い版（LIGHT）はこの部品の原点でつなぐので、glb の根元が原点になる（ほかの店と同じ）
+    poly_prism(P, Z0 - 0.02, H, mat(BR[0]) if LO else MORTAR, bevel=0.0)                      # 壁の芯（目地の色。遠く用はれんがを外すので、れんがの色に）
+    # 戸と窓の穴（辺の座標: 中心x, 下z, 上z, 半幅, 丸い上）
+    DW, DH = 0.56, 1.24; WW, WB, WH = 0.5, 0.56, 0.62
+    holes = {0: [(0.0, Z0, Z0 + DH + 0.1, DW / 2 + 0.09, False)],
+             1: [(0.0, WB - 0.12, WB + WH, WW / 2 + 0.065, True)],
+             5: [(0.0, WB - 0.12, WB + WH, WW / 2 + 0.065, True)]}
+    for i in range(len(P)):
+        M, L = edge_frame(P[i], P[(i + 1) % len(P)], 0.0)
+        xform(brick_run(L + 0.03, Z0, H, BR, holes.get(i, ())), M)
+    # 木の厚い笠木（平ら。上には何も置かない）
+    poly_prism(poly_offset(P, 0.07), H - 0.04, H + 0.04, CAP_D, bevel=0.02)
+    poly_prism(poly_offset(P, 0.12), H + 0.04, H + 0.2, CAP, bevel=0.035)
+    # 両どなりの斜めの面: 上が丸い窓（明るい棚に酒びん）
+    for i in (1, 5):
+        M, L = edge_frame(P[i], P[(i + 1) % len(P)], 0.0)
+        arch_window(M, WW, WB, WH, WOOD_D, GLOW, WOOD_L, bott)
+    # 正面: 木の戸（上はガラスの格子で中の棚が見える・下は2枚の板）＋太い木の枠＋真ちゅうの取っ手
+    M, _ = edge_frame(P[0], P[1], 0.0); objs = []
+    for sx in (-1, 1): objs.append(cube((0.09, 0.13, DH + 0.1), (sx * (DW / 2 + 0.045), -0.065, Z0 + (DH + 0.1) / 2), WOOD_D, bevel=0.018))
+    objs.append(cube((DW + 0.18, 0.13, 0.1), (0, -0.065, Z0 + DH + 0.05), WOOD_D, bevel=0.018))
+    objs.append(cube((DW, 0.05, DH), (0, -0.025, Z0 + DH / 2), WOOD, bevel=0.012))                       # 戸の板
+    gz0, gz1 = Z0 + 0.62, Z0 + DH - 0.08; gw = DW - 0.14
+    objs.append(cube((gw, 0.02, gz1 - gz0), (0, -0.055, (gz0 + gz1) / 2), GLOW, bevel=0))                 # ガラスの奥（明るい）
+    objs += bottle_shelf(gw - 0.04, gz0 + 0.03, gz1 - 0.12, 2, WOOD_L, bott, y=-0.075)
+    objs.append(cube((0.03, 0.03, gz1 - gz0), (0, -0.12, (gz0 + gz1) / 2), WOOD_D, bevel=0))
+    for j in (1, 2): objs.append(cube((gw, 0.03, 0.025), (0, -0.12, gz0 + (gz1 - gz0) * j / 3), WOOD_D, bevel=0))
+    for sx in (-1, 1): objs.append(cube((0.07, 0.07, gz1 - gz0 + 0.07), (sx * (gw / 2 + 0.035), -0.09, (gz0 + gz1) / 2), WOOD, bevel=0.012))
+    for zz in (gz0 - 0.035, gz1 + 0.035): objs.append(cube((gw + 0.14, 0.07, 0.07), (0, -0.09, zz), WOOD, bevel=0.012))
+    for sx in (-1, 1): objs.append(cube((0.19, 0.07, 0.42), (sx * 0.12, -0.07, Z0 + 0.3), WOOD_L, bevel=0.025))   # 下の2枚の板
+    objs.append(cube((0.07, 0.04, 0.14), (-0.19, -0.075, Z0 + 0.6), BRASS, bevel=0.012))
+    objs.append(cube((0.11, 0.035, 0.03), (-0.16, -0.12, Z0 + 0.62), BRASS, bevel=0.01))
+    xform(objs, M)
+    # 戸の上の深緑のひさし（ひだ＋波のすそ）と巻き上げの棒
+    AZ = Z0 + DH + 0.5
+    awning(DW + 0.36, 5, 0.42, 1.0, GREEN, GREEN_D, M_at(0, FY - 0.07, AZ))
+    cyl(0.045, DW + 0.42, (0, FY - 0.08, AZ + 0.01), GREEN_D, rot=(0, math.pi / 2, 0), verts=14, bevel=0)
+    for sx in (-1, 1): sphere(0.05, (sx * (DW / 2 + 0.21), FY - 0.08, AZ + 0.01), GREEN_D, seg=10)
+    # 戸の右の樽（木の板＋鉄のたが3本＋ふた）
+    bx, by, bz = F + 0.25, FY - 0.17, 0.0; br = 0.17; bh = 0.46
+    lathe([(0, 0), (br * 0.82, 0), (br * 0.95, bh * 0.2), (br, bh * 0.5), (br * 0.95, bh * 0.8), (br * 0.82, bh), (br * 0.7, bh + 0.005), (0, bh + 0.005)], (bx, by, bz), WOOD, steps=20)
+    for t, rr in ((0.12, 0.89), (0.5, 1.0), (0.88, 0.89)):
+        lathe([(br * rr - 0.002, bh * t - 0.022), (br * rr + 0.012, bh * t - 0.018), (br * rr + 0.012, bh * t + 0.018), (br * rr - 0.002, bh * t + 0.022)], (bx, by, bz), IRON, steps=20)
+    cyl(br * 0.72, 0.02, (bx, by, bz + bh + 0.012), WOOD_L, verts=20, bevel=0.006)
+    if not LO:
+        for k in range(10):
+            a = k * math.tau / 10
+            cube((0.012, 0.02, bh * 0.9), (bx + math.cos(a) * br * 0.99, by + math.sin(a) * br * 0.99, bz + bh / 2), WOOD_D, bevel=0, rot=(0, 0, a))
+
 {'station': station, 'building': building, 'ramen': ramen, 'sushi': sushi, 'chinese': chinese, 'yakiniku': yakiniku, 'western': western, 'cake': cake, 'bakery': bakery, 'mystery': mystery, 'soba': soba, 'izakaya': izakaya, 'washoku': washoku, 'curry': curry, 'cafe': cafe,
- 'donburi': donburi, 'burger': burger, 'ethnic': ethnic, 'okonomiyaki': okonomiyaki, 'takoyaki': takoyaki}[KIND]()
+ 'donburi': donburi, 'burger': burger, 'ethnic': ethnic, 'okonomiyaki': okonomiyaki, 'takoyaki': takoyaki, 'bar': bar}[KIND]()
 # 曲線（瓦の筋など）は glb に入らないので形に変えておく
 for o in list(bpy.data.objects):
     if o.type == 'CURVE':

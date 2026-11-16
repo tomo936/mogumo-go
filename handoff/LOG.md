@@ -59,3 +59,4 @@
 - 2026-11-16 ブランディング素材のうちローディングアニメ（WebM・PNG 連番）を受領（art/loading/）、アプリ用 WebP を作ってタイトル画面に反映。アイコン・スプラッシュ・WebP・ロゴ単体のファイルは受け取り待ち。返信 handoff/to-shiro/2026-11-16-branding-received.md
 - 2026-11-16 ブランディング素材の再送（zip）を受領: アプリアイコン（public/ に縮小して反映）・スプラッシュ（art/branding/ に保管）・ローディング本命 WebP（art/loading/）。返信 handoff/to-shiro/2026-11-16-branding-received.md（完了）
 - 2026-11-16 バー（ジャンル追加）・ガチャのキャラ原画 30 枚・ログインボーナスのパネルを受領（art/pins/frames/pin-bar.png・art/pins/icons/bar.png・art/reference/shops/bar-v1.png・art/gacha/chars/・art/ui/login-bonus-panel.png）。返信 handoff/to-shiro/2026-11-16-bar-gacha-loginbonus-received.md（対応中。着手の順番はオーナー待ち）
+- 2026-11-17 Claude Code: ジャンル「バー」（bar）を実装して dev に反映（判定・ピン・図鑑・実績・週ミッション・3D 模型）。返信 handoff/to-shiro/2026-11-16-bar-gacha-loginbonus-received.md

@@ -139,7 +139,7 @@ export function countProgress(m: MissionRow, week: string, visits: readonly Visi
 }
 
 // 端末から来た「まわりの種類と軒数」を読む（知らない種類・数でないものは捨てる）
-const KINDS: ShopKind[] = ['ramen', 'sushi', 'soba', 'washoku', 'izakaya', 'chinese', 'yakiniku', 'western', 'curry', 'cafe', 'cake', 'bakery', 'mystery', 'donburi', 'burger', 'ethnic', 'okonomiyaki', 'takoyaki']
+const KINDS: ShopKind[] = ['ramen', 'sushi', 'soba', 'washoku', 'izakaya', 'bar', 'chinese', 'yakiniku', 'western', 'curry', 'cafe', 'cake', 'bakery', 'mystery', 'donburi', 'burger', 'ethnic', 'okonomiyaki', 'takoyaki']
 export function parseDraw(v: unknown): { kinds: Partial<Record<ShopKind, number>>; hasHome: boolean } | null {
   if (typeof v !== 'object' || v === null) return null
   const o = v as { kinds?: unknown; has_home?: unknown }

@@ -6,7 +6,7 @@ import type { BadgeDef, BadgeGroup, BadgeIcon, Measure, Prepared, Stars } from '
 
 // 図鑑と同じ並び
 export const GENRE_ORDER: ShopKind[] = [
-  'ramen', 'sushi', 'soba', 'washoku', 'izakaya', 'chinese', 'yakiniku', 'western', 'curry',
+  'ramen', 'sushi', 'soba', 'washoku', 'izakaya', 'bar', 'chinese', 'yakiniku', 'western', 'curry',
   'cafe', 'cake', 'bakery', 'donburi', 'burger', 'ethnic', 'okonomiyaki', 'takoyaki', 'mystery',
 ]
 const GENRE_STEPS: { need: number; name: (l: string) => string }[] = [
@@ -50,7 +50,7 @@ const others: BadgeDef[] = [
   def('explore_new_100', 'explore', '開拓王', 'はじめてのお店に 100軒行く', 3, icon('store'), 100, distinctCount(shop), { unit: '軒', series: 'explore_new' }),
   def('explore_new_300', 'explore', 'グルメ大王', 'はじめてのお店に 300軒行く', 4, icon('store'), 300, distinctCount(shop), { unit: '軒', series: 'explore_new' }),
   def('explore_kinds_7', 'explore', '七変化', '7種類のジャンルのお店に行く', 2, icon('bowls'), 7, distinctCount((v) => v.kind), { unit: '種類' }),
-  def('explore_kinds_all', 'explore', 'ぜんぶ食べた', '18種類ぜんぶのジャンルのお店に行く', 4, icon('bowls'), 18, distinctCount((v) => v.kind), { unit: '種類' }),
+  def('explore_kinds_all', 'explore', 'ぜんぶ食べた', '19種類ぜんぶのジャンルのお店に行く', 4, icon('bowls'), 19, distinctCount((v) => v.kind), { unit: '種類' }),
   // 常連
   def('regular_3', 'regular', '顔なじみ', '同じお店に 3回行く', 1, icon('heart'), 3, groupReach(shop), { series: 'regular' }),
   def('regular_10', 'regular', '常連さん', '同じお店に 10回行く', 2, icon('heart'), 10, groupReach(shop), { series: 'regular' }),

@@ -1,4 +1,4 @@
-// お店の建物（18種の glb）。種類ごとに初めて要るときに読み、同じ種類はインスタンス描画で使い回す
+// お店の建物（19種の glb）。種類ごとに初めて要るときに読み、同じ種類はインスタンス描画で使い回す
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { CustomLayerInterface, Map as MapLibreMap } from 'maplibre-gl'

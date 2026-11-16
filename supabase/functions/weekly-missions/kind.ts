@@ -6,6 +6,7 @@ export type ShopKind =
   | 'soba'
   | 'washoku'
   | 'izakaya'
+  | 'bar'
   | 'chinese'
   | 'yakiniku'
   | 'western'
@@ -51,6 +52,11 @@ const ETHNIC: Word[] = [
   'タイ料理', 'タイ式', 'タイ屋台', 'タイ国', 'タイダイニング', 'バンコク', 'ケバブ', 'kebab', 'thai', 'ベトナム', 'vietnam', /フォー(?![ムマクスチ])/, 'ガパオ', 'カオマンガイ', 'パクチー', 'アジアン', 'エスニック',
   '韓国', 'korea', '純豆腐', 'スンドゥブ', 'チェゴヤ', 'ビビンバ', 'トッポギ', 'サムギョプサル', 'チヂミ', 'インドネシア', 'シンガポール', 'マレーシア', '台湾', 'ミャンマー', 'カンボジア',
 ]
+// 居酒屋と分かる言葉（店名にあれば、バーの言葉があっても居酒屋）
+const IZAKAYA_WORDS: Word[] = ['居酒屋', '酒場', '焼鳥', '焼き鳥', 'やきとり', '串', '魚民', '和民', '鳥貴族', '大衆', '立ち飲み', '立呑', 'もつ焼', '塚田農場', '磯丸水産']
+// バーの言葉（A17、2026-11-16 バーを居酒屋から分けた）。「バー」は ナンバー・ハンバーガー・ハンバーグ・バーベキューに当たらないようにする
+const BAR_WORDS: Word[] = [/(?<!ナン)バー(?!ガ|グ|ベ)/, /(^|[^a-z])bar($|[^a-z])/, 'パブ', /(^|[^a-z])pub($|[^a-z])/, 'カクテル', 'ウイスキー', 'ウィスキー', 'whisky', 'whiskey']
+const isBar = (name: string) => has(name, BAR_WORDS) && !has(name, IZAKAYA_WORDS)
 const OKONOMIYAKI: Word[] = ['お好み焼', 'お好み', 'もんじゃ', '鉄板焼', 'okonomiyaki']
 const TAKOYAKI: Word[] = ['たこ焼', 'たこやき', 'タコ焼', 'たこ焼き', '銀だこ', 'takoyaki']
 // 地図の店（ジャンルの情報が無い）を店名から推し量るための言葉
@@ -67,10 +73,8 @@ const GUESS: [ShopKind, Word[]][] = [
   ]],
   ['takoyaki', TAKOYAKI],
   ['okonomiyaki', OKONOMIYAKI],
-  ['izakaya', [
-    '居酒屋', '酒場', '焼鳥', '焼き鳥', 'やきとり', '串', '魚民', '和民', '鳥貴族', '大衆', '立ち飲み', '立呑',
-    'もつ焼', '塚田農場', '磯丸水産', 'とり', '鳥', /バル(?![ーコト])/, /(?<!ナン)バー(?!ガ)/, /(^|[^a-z])bar($|[^a-z])/,
-  ]],
+  ['izakaya', [...IZAKAYA_WORDS, 'とり', '鳥', /バル(?![ーコト])/]],
+  ['bar', BAR_WORDS],
   ['cake', ['ケーキ', 'スイーツ', 'たい焼', 'たいやき', '鯛焼', 'パティスリー', 'ドーナツ', 'クレープ', 'ジェラート', 'アイス', 'patisserie', 'cake', 'donut']],
   ['cafe', ['カフェ', '珈琲', 'コーヒー', '喫茶', 'cafe', 'coffee', 'café']],
   ['washoku', [
@@ -111,7 +115,9 @@ export const kindFromHotpepper = (genreCode: string | null, name: string): ShopK
   if (genreCode === 'G004') return has(name, DONBURI) ? 'donburi' : 'washoku'
   if (genreCode === 'G016') return 'okonomiyaki'
   if (genreCode === 'G009') return 'ethnic'
-  if (genreCode === 'G001' || genreCode === 'G002' || genreCode === 'G012' || genreCode === 'G011') return 'izakaya'
+  if (genreCode === 'G012') return has(name, IZAKAYA_WORDS) ? 'izakaya' : 'bar' // バー・カクテル
+  if (genreCode === 'G001' || genreCode === 'G002') return isBar(name) ? 'bar' : 'izakaya' // 居酒屋・ダイニングバー: 店名がバーなら bar
+  if (genreCode === 'G011') return 'izakaya'
   if (genreCode === 'G014' && has(name, CAKE)) return 'cake'
   if (genreCode === 'G014') return 'cafe'
   if (has(name, BAKERY)) return 'bakery'
@@ -132,7 +138,7 @@ export const kindFromMap = (subclass: string, name: string): ShopKind => {
       return 'cafe'
     case 'bar':
     case 'pub':
-      return 'izakaya'
+      return has(name, IZAKAYA_WORDS) ? 'izakaya' : 'bar'
     default:
       return guess(name) ?? 'mystery' // fast_food でも名前で決まらない店（ラーメン・弁当のチェーン等）はハンバーガーにしない
   }

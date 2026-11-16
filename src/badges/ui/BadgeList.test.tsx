@@ -11,14 +11,14 @@ const states = evaluate({ visits: [v('ramen', '2026-11-01T03:00:00Z'), v('ramen'
 test('グループの見出しと「取れた数 / 全部」', () => {
   render(<BadgeList states={states} hasHome={false} />)
   const genre = screen.getByRole('region', { name: 'ジャンル' })
-  expect(within(genre).getByText('2 / 90')).toBeInTheDocument() // 数はバッジの数
+  expect(within(genre).getByText('2 / 95')).toBeInTheDocument() // 数はバッジの数
   expect(screen.getByRole('region', { name: 'ちょっと変わった' })).toBeInTheDocument()
 })
 
 test('段のある実績は1行に全部の段を並べる。押すと取った日・次の段・段の並び', async () => {
   render(<BadgeList states={states} hasHome={false} />)
   const genre = screen.getByRole('region', { name: 'ジャンル' })
-  expect(within(genre).getAllByRole('button')).toHaveLength(90)
+  expect(within(genre).getAllByRole('button')).toHaveLength(95)
   expect(within(genre).getByRole('img', { name: 'ラーメン通（まだ）' })).toBeInTheDocument()
   await userEvent.click(within(genre).getByRole('img', { name: 'ラーメン好き' }))
   expect(screen.getByText('2026.11.03 にとった')).toBeInTheDocument()

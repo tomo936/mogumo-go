@@ -11,21 +11,21 @@ const KINDS = [
 ]
 
 describe('ピンの絵', () => {
-  it('合成済みのピンが 19 枚＋まとめの台がそろっている（sweets は cake、「？」は mystery、フォークとナイフは other、まとめは cluster-base 256px）', () => {
+  it('合成済みのピンが 20 枚＋まとめの台がそろっている（sweets は cake、「？」は mystery、フォークとナイフは other、まとめは cluster-base 256px）', () => {
     const names = Object.keys(pins).map((p) => p.replace('./pins/', '').replace('.png', ''))
     expect(names.sort()).toEqual([...KINDS, 'other', ...NEW_KINDS, 'cluster-base'].sort())
   })
 })
 
-const NEW_KINDS = ['donburi', 'burger', 'ethnic', 'okonomiyaki', 'takoyaki']
+const NEW_KINDS = ['donburi', 'burger', 'ethnic', 'okonomiyaki', 'takoyaki', 'bar'] // bar は 2026-11-16 に足した（A17）
 
 describe('3D 素材', () => {
-  it('店の glb が 18 種＋ビルそろっている', () => {
+  it('店の glb が 19 種＋ビルそろっている', () => {
     const names = Object.keys(shops).map((p) => p.replace('./shops/', '').replace('.glb', ''))
     expect(names.sort()).toEqual([...KINDS, ...NEW_KINDS, 'building'].sort())
   })
 
-  it('遠く用の軽い glb（lod/）も 18 種＋ビルそろっている', () => {
+  it('遠く用の軽い glb（lod/）も 19 種＋ビルそろっている', () => {
     const names = Object.keys(lods).map((p) => p.replace('./shops/lod/', '').replace('.glb', ''))
     expect(names.sort()).toEqual([...KINDS, ...NEW_KINDS, 'building'].sort())
   })
