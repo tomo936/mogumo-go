@@ -70,6 +70,7 @@ function loadPinsHidden(): boolean {
 }
 
 
+const POKO_PRELOAD_MAX_MS = 8000 // タイトルでポコタンを待つのはここまで（遅い回線でもタイトルが進むように）
 const LOGIN_BONUS_DELAY_MS = 3200 // 地図へ入ってから受け取り画面を出すまで（空から降りる演出が終わるころ）
 
 export function MapPage() {
@@ -115,9 +116,14 @@ export function MapPage() {
     void syncOsmShops(userId, inp.cleared)
   }, [userId, osmEnabled])
   // 起動時のスプラッシュは、お店がそろうまで「読み込み中」で出しておく（最大 8 秒。src/credits/loadingGate.ts）
+  // タイトルの読み込み: お店がそろってから、案内がまだの人はポコタン（A5）も読む。そのあと「タップしてスタート」。
+  // お店とポコタンを同時に読まない（2026-11-17 オーナー「タイトルでの読み込みの時にするべき」）。ポコタンは最大 POKO_PRELOAD_MAX_MS まで待つ
+  const firstGuide = useRef(userId ? !guideSeen(userId) : false)
   useEffect(() => {
     loading.start()
-    void mapRef.current?.whenShopsReady().then(() => loading.done())
+    void mapRef.current?.whenShopsReady()
+      .then(() => (firstGuide.current ? Promise.race([preloadPoko(), new Promise((r) => setTimeout(r, POKO_PRELOAD_MAX_MS))]) : null))
+      .then(() => loading.done())
   }, [])
   // ログインボーナス（A4）の受け取り画面と、地図へ入ったか
   const [entered, setEntered] = useState(false)
@@ -303,16 +309,9 @@ export function MapPage() {
   useEffect(() => {
     if (!entered || !userId || tour !== 'wait') return
     if (guideSeen(userId)) return setTour('done')
-    // お店がそろってからポコタンを読み始める（お店の読み込みと重ねない。2026-11-17 オーナー「最初にお店が出ない」）。
-    // 案内は、空から降りる演出（3.2 秒）とお店がそろうのの遅いほうのあとに出す
-    let alive = true
-    const ready = mapRef.current?.whenShopsReady() ?? Promise.resolve()
-    void ready.then(() => alive && preloadPoko())
-    const delay = new Promise((r) => setTimeout(r, LOGIN_BONUS_DELAY_MS))
-    void Promise.all([ready, delay]).then(() => alive && setTour('open'))
-    return () => {
-      alive = false
-    }
+    // ポコタンはタイトルの読み込みで読んである。空から降りる演出（3.2 秒）が終わったら出す
+    const t = setTimeout(() => setTour('open'), LOGIN_BONUS_DELAY_MS)
+    return () => clearTimeout(t)
   }, [entered, userId, tour])
   const closeGuide = useCallback(() => {
     guideShown.current = true

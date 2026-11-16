@@ -169,20 +169,27 @@ export type PokoHandle = { setMouth(open: number): void; dispose(): void }
 const MODEL_DIR = `${BASE}poko/`
 const MODEL_FILE = 'poko.model3.json'
 
-// 先読み: Core・Framework・モデルのファイル・絵を読み始めておく（失敗しても何もしない。本番でもう一度試す）
-export function preloadPoko() {
-  void loadRuntime().catch(() => {})
-  void getFile(`${MODEL_DIR}${MODEL_FILE}`)
-    .then((b) => {
-      const j = JSON.parse(new TextDecoder().decode(b)) as { FileReferences?: { Moc?: string; Physics?: string; Textures?: string[] } }
-      const r = j.FileReferences ?? {}
-      for (const f of [r.Moc, r.Physics]) if (f) void getFile(`${MODEL_DIR}${f}`).catch(() => {})
-      for (const t of r.Textures ?? []) new Image().src = `${MODEL_DIR}${t}`
-    })
-    .catch(() => {})
+// 先読み: Core・Framework・モデルのファイル・絵を読んでおく（タイトルの読み込みのあいだ）。
+// 全部そろうか失敗したら解ける（失敗しても reject しない。本番でもう一度試す）
+export function preloadPoko(): Promise<void> {
+  const quiet = (p: Promise<unknown>) => p.then(() => {}, () => {})
+  const model = getFile(`${MODEL_DIR}${MODEL_FILE}`).then((b) => {
+    const j = JSON.parse(new TextDecoder().decode(b)) as { FileReferences?: { Moc?: string; Physics?: string; Textures?: string[] } }
+    const r = j.FileReferences ?? {}
+    const jobs: Promise<unknown>[] = [r.Moc, r.Physics].filter((f): f is string => !!f).map((f) => getFile(`${MODEL_DIR}${f}`))
+    for (const t of r.Textures ?? [])
+      jobs.push(
+        new Promise<void>((resolve) => {
+          const img = new Image()
+          img.onload = img.onerror = () => resolve()
+          img.src = `${MODEL_DIR}${t}`
+        }),
+      )
+    return Promise.all(jobs)
+  })
+  return Promise.all([quiet(loadRuntime()), quiet(model)]).then(() => {})
 }
 
-// canvas にポコタンを出す。読めなければ reject（画面は静止画に切り替える）
 // stage: どこまで進んだか（?debug で画面に出す。実機で止まる場所を見るため）
 export async function mountPoko(canvas: HTMLCanvasElement, stage: (s: string) => void = () => {}, scale = 1): Promise<PokoHandle> {
   stage('core')

@@ -40,7 +40,7 @@
 - Cubism Web Framework は公式 GitHub `Live2D/CubismWebFramework`（5-r.5、コミット d4da0aa。ぽこポケの写しと中身が同じことを確認）を rolldown で 1 つの JS（約 195KB・gzip 39KB）にして `src/vendor/live2d-framework/` に置き、使う分だけの型を手書きの `.d.ts` にした（Framework は enum・namespace を使うため、そのままでは `erasableSyntaxOnly` で落ちる）。npm のパッケージは足さない。シェーダーは公式と同じことを確認。
 - 案内を開いたときだけ Core と Framework を読み込む（いつもの地図は重くならない）。
 - 動き: 待機の揺れ・呼吸・まばたき（`PokoModel.js` を参考）。口（`ParamMouthOpenY`）は字の出方に合わせて 2 字ごとに開け閉めし、区切りの間と出きったあとは閉じる（2026-11-17 オーナー「口数が合っていない」）。
-- 先読み: 案内を出す人は、お店の読み込みがそろってから Core・Framework・モデルを読み始める（オーナー「出るのが遅い」「最初にお店が出ない」）。案内は 3.2 秒とお店がそろうのの遅いほうのあとに出す。
+- 先読み: 案内がまだの人は、タイトルの読み込みの中で、お店がそろったあとに Core・Framework・モデルを読む（最大 8 秒待つ）。そのあと「タップしてスタート」。案内は地図に入って 3.2 秒後（オーナー「出るのが遅い」「最初にお店が出ない」「タイトルでの読み込みの時にするべき」）。
 - Live2D が読めない端末では、ポコタンの静止画（`src/assets/guide/poko.webp`、Live2D の描画を撮った 1 枚）で続ける。
 - ライセンス表示: 設定の出典に「Live2D Cubism」を足す。
 
