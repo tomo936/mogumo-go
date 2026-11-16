@@ -3,6 +3,8 @@
 import { useEffect, useRef } from 'react'
 import type { TownNews } from '../domain/progress.ts'
 import { TownIcon } from './TownIcon.tsx'
+import { townCues } from '../../sound/domain/sfx.ts'
+import { sound } from '../../sound/infra/sound.ts'
 import './towns.css'
 
 export const TOWN_BANNER_MS = 4000
@@ -18,7 +20,13 @@ export function TownBanner({ news, onDone }: Props) {
   useEffect(() => {
     if (!id) return
     const t = setTimeout(() => doneRef.current(), TOWN_BANNER_MS)
-    return () => clearTimeout(t)
+    const stopSound = sound.cues(townCues(news?.coins ?? 0)) // 大ファンファーレ（A6）
+    return () => {
+      clearTimeout(t)
+      stopSound()
+    }
+    // 知らせごとに 1 回（id が同じならコインも同じ）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
   if (!news) return null
   const clear = news.kind === 'clear'

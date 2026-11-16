@@ -1,10 +1,11 @@
 // 設定（全画面）。仕様: docs/superpowers/specs/2026-11-10-record-pins-badges-mypage-settings-design.md（確定・設定の項目）
-// まだ作っていない項目（音・お知らせ・軽量モード・規約など）は「準備中」で押せない見た目にする。
-import { useState } from 'react'
+// まだ作っていない項目（お知らせ・軽量モード・規約など）は「準備中」で押せない見た目にする。
+import { useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import './settings.css'
 import { Icon } from '../../ui/Icon.tsx'
 import { APP_VERSION, CONTACT_FORM_URL } from '../config.ts'
+import { sound } from '../../sound/infra/sound.ts'
 
 type Props = {
   email: string | null
@@ -46,6 +47,7 @@ function Switch({ label, on, onChange, disabled, sub }: { label: string; on: boo
 export function Settings(p: Props) {
   const [privacyOpen, setPrivacyOpen] = useState(false)
   const [creditsOpen, setCreditsOpen] = useState(false)
+  const snd = useSyncExternalStore(sound.subscribe, sound.prefs) // BGM・効果音の ON/OFF（A6。端末ごと）
   return (
     <section className="st" aria-label="設定">
       <header className="st__bar">
@@ -55,9 +57,9 @@ export function Settings(p: Props) {
         <h2>設定</h2>
       </header>
 
-      <Group title="サウンド" soon>
-        <div className="st__row is-soon" aria-disabled="true"><span>BGM</span><span className="st__vol" /></div>
-        <div className="st__row is-soon" aria-disabled="true"><span>効果音</span><span className="st__vol" /></div>
+      <Group title="サウンド">
+        <Switch label="BGM" on={snd.bgm} onChange={() => sound.setPrefs({ ...snd, bgm: !snd.bgm })} />
+        <Switch label="効果音" on={snd.sfx} onChange={() => sound.setPrefs({ ...snd, sfx: !snd.sfx })} />
       </Group>
 
       <Group title="地図">

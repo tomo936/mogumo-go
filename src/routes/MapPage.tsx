@@ -42,6 +42,7 @@ import { nextStatus } from '../map/domain/locationStatus.ts'
 import { syncUntilSettled } from '../towns/infra/townsApi.ts'
 import type { TownNews, TownSync } from '../towns/domain/progress.ts'
 import { TownBanner } from '../towns/ui/TownBanner.tsx'
+import { sound } from '../sound/infra/sound.ts'
 import { ReviewEditor } from '../reviews/ui/ReviewEditor.tsx'
 import { loadLatest, loadMine, loadSummary, photoUrls } from '../reviews/infra/reviewsApi.ts'
 import { targetCheckin } from '../reviews/domain/review.ts'
@@ -387,12 +388,19 @@ export function MapPage() {
         home={home}
         onShopsError={() => setShopsError(true)}
         onSelectShop={(shop) => {
+          sound.play('tap') // 地図のピンはボタンではないので、ここで「ぽこっ」（A6）
           setBuilding(null) // 地図で別のお店を押したら、ビルの一覧からは外れる
           select(shop)
         }}
-        onSelectBuilding={selectBuilding}
+        onSelectBuilding={(shops, title) => {
+          if (shops) sound.play('tap')
+          selectBuilding(shops, title)
+        }}
         onPosition={setMe}
-        onHintTap={pickHint}
+        onHintTap={(id) => {
+          sound.play('tap')
+          pickHint(id)
+        }}
         pinsHidden={pinsHidden}
         paused={recordTab !== null || zukanOpen || myPageOpen || settingsOpen}
       />

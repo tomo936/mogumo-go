@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import '@fontsource/m-plus-rounded-1c/800.css'
 import './credits.css'
 import { loading } from './loadingGate.ts'
+import { sound } from '../sound/infra/sound.ts'
 import titleArt from '../assets/ui/title.webp'
 import pancakeArt from '../assets/ui/loading-pancake.webp'
 import logoArt from '../assets/ui/logo.webp'
@@ -46,7 +47,15 @@ export function Splash() {
       type="button"
       className="splash"
       style={{ '--splash-art': `url(${titleArt})` } as React.CSSProperties}
-      onClick={() => setTapped(true)}
+      data-sfx="none"
+      onClick={() => {
+        // iPhone はここ（最初のタップ）で音を鳴らせるようになる。スタートのジングル（A6）
+        if (!tapped) {
+          sound.unlock()
+          sound.play('start')
+        }
+        setTapped(true)
+      }}
     >
       {/* ロゴ（オーナー 2026-11-16。art/branding/logo.png → src/assets/ui/logo.webp 幅 720px） */}
       <img className="splash-logo" src={logoArt} alt="もぐもGO" />

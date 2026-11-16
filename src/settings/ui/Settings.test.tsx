@@ -56,3 +56,16 @@ test('準備中のスイッチは押せない、戻るで閉じる', async () =>
   await userEvent.click(screen.getByRole('button', { name: '戻る' }))
   expect(p.onClose).toHaveBeenCalled()
 })
+
+test('BGM と効果音のスイッチは別々に切り替わり、端末に覚える（A6）', async () => {
+  show()
+  const bgm = screen.getByRole('switch', { name: 'BGM' })
+  const sfx = screen.getByRole('switch', { name: '効果音' })
+  expect(bgm).toHaveAttribute('aria-checked', 'true')
+  expect(sfx).toHaveAttribute('aria-checked', 'true')
+  await userEvent.click(sfx)
+  expect(sfx).toHaveAttribute('aria-checked', 'false')
+  expect(bgm).toHaveAttribute('aria-checked', 'true')
+  expect(JSON.parse(localStorage.getItem('mogumo.sound')!)).toEqual({ bgm: true, sfx: false })
+  await userEvent.click(sfx) // 戻しておく（ほかのテストに残さない）
+})

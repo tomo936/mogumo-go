@@ -5,6 +5,8 @@ import { DIFFICULTY_LABEL, missionTitle } from '../domain/mission.ts'
 import type { Mission } from '../domain/mission.ts'
 import '../../towns/ui/towns.css'
 import './missions.css'
+import { missionCues } from '../../sound/domain/sfx.ts'
+import { sound } from '../../sound/infra/sound.ts'
 
 export const MISSION_BANNER_MS = 4000
 
@@ -15,7 +17,11 @@ export function MissionBanner({ mission, onDone }: { mission: Mission; onDone: (
   })
   useEffect(() => {
     const t = setTimeout(() => doneRef.current(), MISSION_BANNER_MS)
-    return () => clearTimeout(t)
+    const stopSound = sound.cues(missionCues()) // 達成の音 → コイン（A6）
+    return () => {
+      clearTimeout(t)
+      stopSound()
+    }
   }, [mission.id])
   return (
     <div className="town-banner mission-banner" role="status" onClick={onDone}>

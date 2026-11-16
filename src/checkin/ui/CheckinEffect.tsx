@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from 'react'
 import './checkin.css'
 import { startConfetti } from './confetti.ts'
+import { checkinCues } from '../../sound/domain/sfx.ts'
+import { sound } from '../../sound/infra/sound.ts'
 
 export const EFFECT_MS = 3000
 
@@ -30,6 +32,11 @@ export function CheckinEffect({ coins, exp = 0, levelUp = null, reveal = null, o
     const t = setTimeout(finish, EFFECT_MS)
     return () => clearTimeout(t)
   }, [])
+
+  // 音: ファンファーレ → 霧 → コイン → Lv アップ（A6）
+  // 出たときに 1 回だけ（key を変えて出し直すので、値が変わることは無い）
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => sound.cues(checkinCues({ coins, levelUp })), [])
 
   useEffect(() => {
     const canvas = canvasRef.current
