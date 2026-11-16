@@ -32,6 +32,8 @@ vi.mock('../reviews/infra/reviewsApi.ts', () => ({
 }))
 const syncOsmShops = vi.fn(async (..._a: unknown[]) => {})
 vi.mock('../zukan/infra/osmSync.ts', () => ({ syncOsmShops: (...a: unknown[]) => syncOsmShops(...a) }))
+const claimLoginBonus = vi.fn(() => Promise.resolve(null as { stampNo: number; coins: number; claimedNow: boolean } | null))
+vi.mock('../loginbonus/infra/loginBonusApi.ts', () => ({ claimLoginBonus: (...a: unknown[]) => (claimLoginBonus as (...x: unknown[]) => unknown)(...a) }))
 vi.mock('../mypage/infra/coins.ts', () => ({ loadCoins: () => Promise.resolve(420) }))
 const syncMissions = vi.fn()
 vi.mock('../missions/infra/missionsApi.ts', () => ({ syncMissions: (...a: unknown[]) => syncMissions(...a) }))
@@ -574,6 +576,41 @@ test('右上のボタンで近くのお店の一覧が開き、お店を押す�
   await userEvent.click(screen.getByRole('button', { name: /らーめん ちかく/ }))
   await waitFor(() => expect(screen.queryByRole('heading', { name: '近くのお店' })).not.toBeInTheDocument()) // 右へ滑ってから閉じる
   expect(screen.getByText('らーめん ちかく')).toBeInTheDocument()
+})
+
+// ---- ログインボーナス（A4、2026-11-17） ----
+test('地図へ入ると今日の分を受け取り、少しあとに受け取り画面が出る（受け取り済みなら出ない）', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  claimLoginBonus.mockReset()
+  claimLoginBonus.mockResolvedValueOnce({ stampNo: 2, coins: 10, claimedNow: true })
+  render(
+    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+      <MapPage />
+    </AuthContext.Provider>,
+  )
+  expect(claimLoginBonus).not.toHaveBeenCalled() // タイトルを閉じる前は受け取らない
+  await act(async () => { loading.enter() })
+  expect(claimLoginBonus).toHaveBeenCalledTimes(1)
+  expect(screen.queryByRole('dialog', { name: 'ログインボーナス' })).not.toBeInTheDocument() // 空から降りる演出のあいだは出さない
+  await act(async () => { vi.advanceTimersByTime(3300) })
+  expect(screen.getByRole('dialog', { name: 'ログインボーナス' })).toBeInTheDocument()
+  vi.useRealTimers()
+})
+
+test('ログインボーナスは受け取り済み（claimedNow が false）なら画面を出さない', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  claimLoginBonus.mockReset()
+  claimLoginBonus.mockResolvedValueOnce({ stampNo: 2, coins: 0, claimedNow: false })
+  render(
+    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+      <MapPage />
+    </AuthContext.Provider>,
+  )
+  await act(async () => { loading.enter() })
+  await act(async () => { vi.advanceTimersByTime(5000) })
+  expect(claimLoginBonus).toHaveBeenCalled()
+  expect(screen.queryByRole('dialog', { name: 'ログインボーナス' })).not.toBeInTheDocument()
+  vi.useRealTimers()
 })
 
 test('チェックインで霧が晴れたら、地図のお店のタイルを送る（時間では送らない）', async () => {

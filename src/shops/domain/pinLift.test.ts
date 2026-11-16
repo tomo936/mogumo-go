@@ -3,7 +3,7 @@ import { HEIGHT_RATIO, liftM, liftTier, LIFT_TIERS } from './pinLift.ts'
 import type { ShopKind } from './shop.ts'
 
 test('19種すべてに高さ/幅の比がある', () => {
-  const kinds: ShopKind[] = ['ramen', 'sushi', 'soba', 'washoku', 'izakaya', 'chinese', 'yakiniku', 'western', 'curry', 'cafe', 'cake', 'bakery', 'mystery', 'donburi', 'burger', 'ethnic', 'okonomiyaki', 'takoyaki']
+  const kinds: ShopKind[] = ['ramen', 'sushi', 'soba', 'washoku', 'izakaya', 'bar', 'chinese', 'yakiniku', 'western', 'curry', 'cafe', 'cake', 'bakery', 'mystery', 'donburi', 'burger', 'ethnic', 'okonomiyaki', 'takoyaki']
   for (const k of kinds) expect(HEIGHT_RATIO[k]).toBeGreaterThan(0)
 })
 
