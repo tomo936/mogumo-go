@@ -34,6 +34,33 @@ export function Stars({ n }: { n: number }) {
   )
 }
 
+// 帯の名前。帯の布は山なりの弧（真ん中が高い。絵を測ると、布の中心線は 幅の位置 u で 高さの 0.322 + 1.12×(u−0.5)²）。
+// 1 文字ずつ、その弧に沿って下げて傾ける。読み上げは 1 つの文字列
+const RIBBON_FONT = 18
+const RIBBON_PAD = 48
+export function RibbonName({ name }: { name: string }) {
+  const chars = [...name]
+  const w = Math.max(230, chars.length * RIBBON_FONT + RIBBON_PAD * 2)
+  const h = 60
+  return (
+    <span className="gc__ribbon" style={{ width: w }}>
+      <span className="gc-sr">{name}</span>
+      <span className="gc__ribbon-text" aria-hidden="true">
+        {chars.map((ch, i) => {
+          const u = 0.5 + ((i + 0.5 - chars.length / 2) * RIBBON_FONT) / w
+          const dy = h * 1.12 * (u - 0.5) ** 2
+          const deg = (Math.atan((2.24 * h * (u - 0.5)) / w) * 180) / Math.PI
+          return (
+            <span key={i} style={{ transform: `translateY(${dy.toFixed(1)}px) rotate(${deg.toFixed(1)}deg)` }}>
+              {ch}
+            </span>
+          )
+        })}
+      </span>
+    </span>
+  )
+}
+
 export function NewBadge() {
   return (
     <span className="gc__new">
@@ -68,13 +95,18 @@ export function GachaScreen({ coins, owned, pullsSinceFive, busy, error, onDraw,
         <p>いろんなグルメの仲間たちと出会おう！</p>
       </div>
 
-      <div className="gc__show" key={c.id}>
-        <Stars n={c.rarity ?? 3} />
-        <span className="gc__ribbon">{c.name}</span>
+      {/* 台と光の柱は動かさず、★・名前・キャラだけを入れ替える（2026-11-17 オーナー） */}
+      <div className="gc__show">
+        <span className="gc-swap" key={`s${c.id}`}>
+          <Stars n={c.rarity ?? 3} />
+        </span>
+        <span className="gc-swap" key={`r${c.id}`}>
+          <RibbonName name={c.name} />
+        </span>
         <div className="gc__stage">
           <span className="gc__glow" aria-hidden="true" />
-          <img src={standArtUrl(c.id)} alt="" />
-          {!owned.has(c.id) && <NewBadge />}
+          <img className="gc-swap" key={`c${c.id}`} src={standArtUrl(c.id)} alt="" />
+          {!owned.has(c.id) && <NewBadge key={`n${c.id}`} />}
         </div>
       </div>
 

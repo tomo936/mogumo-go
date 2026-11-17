@@ -7,7 +7,7 @@ import { characterById } from '../domain/characters.ts'
 import { bestRarity, friendshipHearts } from '../domain/gacha.ts'
 import type { Draw } from '../domain/gacha.ts'
 import { standArtUrl } from '../infra/gachaApi.ts'
-import { NewBadge, Stars } from './GachaScreen.tsx'
+import { NewBadge, RibbonName, Stars } from './GachaScreen.tsx'
 import potUrl from '../../assets/gacha/ui/08-pot.webp'
 import lidUrl from '../../assets/gacha/ui/09-lid.webp'
 import steamUrl from '../../assets/gacha/ui/10-steam.webp'
@@ -106,7 +106,7 @@ function One({ d, count }: { d: Draw; count: string | null }) {
     <div className={`pl__one pl__one--r${d.rarity}`} key={d.pos}>
       {count && <span className="pl__count">{count}</span>}
       <Stars n={d.rarity} />
-      <span className="gc__ribbon">{c?.name ?? '？'}</span>
+      <RibbonName name={c?.name ?? '？'} />
       <div className="gc__stage pl__stage">
         <span className="gc__glow" aria-hidden="true" />
         <img src={standArtUrl(d.characterId)} alt="" />
