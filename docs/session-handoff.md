@@ -8,6 +8,12 @@
 
 ## いまの状態
 
+- **【2026-11-18 深夜 区切り（最新）】結合試験は手順 1〜12 とも通った（手元の Docker の Supabase ＋ Playwright）。結果 `docs/integration-test-2026-11-18.md`、台本 `scripts/e2e/`（README に回し方）。本番デプロイの手順 `docs/superpowers/plans/2026-11-18-production-deploy.md`。**
+  - 見つけたこと: 【中】ビル・施設の店でチェックインすると戻った一覧の「済み」が古い（`MapPage.tsx` の `checkin` が `building.checked` を読み直さない）、【小】ポコタンの案内 8 ページ目のガチャの文、【小】ゲストのお問い合わせ送信後の「メールアドレスにお送りします」。
+  - 本番で dev と同じ数のお店を出すには `shopSourceEnabled`（`src/shops/infra/hotpepper.ts`）の dev だけの制限を外す（総合レビュー H3。11/6 の Overpass 時代の残り）。手順書の 1。
+  - 待ち（オーナー）: 直すものの決定（上の 3 件・H1 ほか）、手順書 2-1 の SQL の結果（本番にどこまで入っているか）。
+  - 手元の Supabase は Docker で動いたまま（`npx supabase stop` で止める。サンドボックスの外で）。
+
 - **【2026-11-18 結合試験の方針（オーナー決定・最優先）】ミシェーラにもオーナーにもやらせず、Claude Code が手元で自動で回す。**
   - 理由: ミシェーラの環境では手順 2（ゲスト開始）で止まり、通らなかった。オーナーも試験はやりたくない。
   - やり方: 手元の Docker に本物と同じ Supabase を立てる（Supabase CLI は `npm i -D supabase`、オーナー承認済み）→ SQL 0001〜0015 と Edge Functions を入れる → Turnstile は手元では切る → ホットペッパーは決まった見本を返す（キー・回数を使わない）→ Playwright で `handoff/to-shiro/2026-11-17-integration-test.md` の**手順 1〜12 を全部**通す（途中で DB の中身も確かめる）。本番・dev のデータには触らない。
