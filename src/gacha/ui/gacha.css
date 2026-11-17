@@ -1,5 +1,5 @@
 /* ガチャの画面（見本 art/reference/gacha/gacha-screen-ref.png）。
-   ミシェーラの画像が届くまで、背景・看板・台・帯は CSS の色と形で仮に描く。届いたら background-image に差し替える */
+   背景・看板・台・光の柱・帯・★・NEW! はミシェーラの絵（art/gacha/ui/ → src/assets/gacha/ui/、台本 art/prototypes/gacha-ui.py。2026-11-17） */
 .gc {
   position: fixed;
   inset: 0;
@@ -11,10 +11,7 @@
   box-sizing: border-box;
   padding: calc(10px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
   overflow-y: auto;
-  /* 仮の背景: 青空 → 夕方の横丁の暖かい色 → 石畳 */
-  background:
-    radial-gradient(ellipse 60% 40% at 50% 52%, rgba(255, 236, 170, 0.9), transparent 70%),
-    linear-gradient(#8fd0f5 0%, #cfe9f5 18%, #f6dfb8 40%, #e9c08a 72%, #c9a173 100%);
+  background: #e9c08a url('../../assets/gacha/ui/01-bg.webp') center / cover no-repeat;
   color: #5b3a1e;
   font-family: 'M PLUS Rounded 1c', system-ui, sans-serif;
   animation: gc-in 220ms ease-out both;
@@ -58,14 +55,19 @@
   font-weight: 800;
 }
 
-/* 看板（仮: 木の板） */
+/* 看板（木の板＋コック帽の絵。文字はここで書く） */
 .gc__sign {
   position: relative;
-  padding: 12px 22px 10px;
-  border: 4px solid #8a5a2b;
-  border-radius: 20px;
-  background: linear-gradient(#d9a15c, #b97a3a);
-  box-shadow: 0 5px 0 #6e4520, inset 0 2px 0 rgba(255, 255, 255, 0.35);
+  width: min(92vw, 400px);
+  aspect-ratio: 800 / 391;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 15%;
+  box-sizing: border-box;
+  background: url('../../assets/gacha/ui/02-sign.webp') center / contain no-repeat;
+  filter: drop-shadow(0 4px 6px rgba(80, 45, 15, 0.3));
   text-align: center;
 }
 .gc__sign h1 {
@@ -79,10 +81,10 @@
   text-shadow: 0 3px 0 #6e3b12;
 }
 .gc__sign p {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   padding: 2px 10px;
   border-radius: 99px;
-  background: #fff4dc;
+  background: rgba(255, 244, 220, 0.92);
   color: #6b4a2b;
   font-size: 13px;
   font-weight: 800;
@@ -105,47 +107,41 @@
   display: inline-flex;
   gap: 2px;
 }
-.gc-stars i {
-  color: #ffd23f;
-  font-size: 34px;
-  font-style: normal;
-  line-height: 1;
-  -webkit-text-stroke: 2px #b8740f;
-  paint-order: stroke fill;
-  text-shadow: 0 3px 0 #a5620c;
+.gc-stars img {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 2px 2px rgba(120, 70, 10, 0.35));
 }
 .gc__ribbon {
-  margin-top: 6px;
-  padding: 6px 28px;
-  border-radius: 6px;
-  background: #d9473a;
-  box-shadow: 0 3px 0 #a52f25;
+  margin-top: 2px;
+  min-width: 230px;
+  padding: 10px 46px 18px;
+  box-sizing: border-box;
+  background: url('../../assets/gacha/ui/04-ribbon.webp') center / 100% 100% no-repeat;
   color: #fff;
   font-size: 18px;
   font-weight: 800;
-  clip-path: polygon(0 0, 100% 0, 96% 50%, 100% 100%, 0 100%, 4% 50%);
+  text-align: center;
+  text-shadow: 0 2px 0 rgba(120, 20, 15, 0.45);
+  white-space: nowrap;
 }
 .gc__stage {
   position: relative;
   width: min(78vw, 330px);
   aspect-ratio: 1;
-  /* 仮の台: 木の丸い台（3 段に見える楕円） */
-  background:
-    radial-gradient(ellipse 44% 7% at 50% 90%, #9c6a34 0 97%, transparent 100%),
-    radial-gradient(ellipse 40% 7% at 50% 86%, #c48a4a 0 97%, transparent 100%),
-    radial-gradient(ellipse 36% 6% at 50% 82%, #e0ad6a 0 97%, transparent 100%);
+  /* 木の台（絵）。下に置く */
+  background: url('../../assets/gacha/ui/03-stage.webp') 50% 100% / 100% auto no-repeat;
 }
+/* 台の上に立つ光の柱（絵）。キャラの後ろ */
 .gc__glow {
   position: absolute;
-  left: 22%;
-  right: 22%;
-  top: 0;
-  bottom: 14%;
-  border-radius: 40% 40% 10% 10%;
-  background: linear-gradient(rgba(255, 246, 200, 0), rgba(255, 233, 150, 0.85));
-  filter: blur(6px);
+  left: 12%;
+  right: 12%;
+  top: -6%;
+  bottom: 12%;
+  background: url('../../assets/gacha/ui/03-light-pillar.webp') 50% 100% / contain no-repeat;
 }
-.gc__stage img {
+.gc__stage > img {
   position: absolute;
   left: 10%;
   right: 10%;
@@ -157,16 +153,21 @@
 }
 .gc__new {
   position: absolute;
-  right: 0;
-  top: 10%;
-  padding: 8px 12px;
-  border: 3px solid #e8883a;
-  border-radius: 18px;
-  background: #fff;
-  color: #e8883a;
-  font-size: 18px;
-  font-weight: 800;
+  right: -4%;
+  top: 6%;
+  width: 30%;
+  aspect-ratio: 240 / 193;
+  background: url('../../assets/gacha/ui/06-new.webp') center / contain no-repeat;
   transform: rotate(8deg);
+}
+/* 読み上げ用の文字（見た目は絵） */
+.gc-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .gc__error {
@@ -294,10 +295,9 @@
   justify-content: space-between;
   font-weight: 800;
 }
-.gc-rates__head .gc-stars i {
-  font-size: 18px;
-  -webkit-text-stroke-width: 1px;
-  text-shadow: none;
+.gc-rates__head .gc-stars img {
+  width: 20px;
+  height: 20px;
 }
 .gc-rates__row p,
 .gc-rates__note {
