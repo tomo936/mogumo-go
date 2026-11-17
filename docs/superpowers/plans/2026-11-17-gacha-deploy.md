@@ -6,6 +6,7 @@
 1. Supabase（dev のプロジェクト）→ SQL Editor → New query
 2. `supabase/migrations/0014_gacha.sql` の中身を全部貼って Run
 3. 「Success」と出れば OK
+4. 続けて `supabase/migrations/0015_rename_kirin.sql`（01 の名前を「にじいろキリン」に）も同じように Run（0014 をまだ流していなければ、0014 だけで新しい名前になる。流しても害はない）
 
 流す前でもアプリは動く（ガチャを引くと「まわせませんでした」と出るだけ。キャラ一覧は最初の 2 人だけ）。
 

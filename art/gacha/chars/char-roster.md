@@ -3,7 +3,7 @@
 ファイル名 char-<番号>-<名前>.webp が原画です。
 
 ## ★5
-- 01 星降るキリン（char-01-hoshifuru-kirin.webp）
+- 01 にじいろキリン（char-01-nijiiro-kirin.webp）※2026-11-17 オーナーが絵と名前を変更（旧: 星降るキリン）
 - 02 月うさぎ（char-02-tsuki-usagi.webp）
 - 03 虹ペガサス（char-03-niji-pegasus.webp）
 - 04 天使（char-04-tenshi.webp）
