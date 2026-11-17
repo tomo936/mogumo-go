@@ -11,6 +11,7 @@ type Props = { id: number; fallback: ReactNode }
 
 const SPIN = 0.5 // ひとりでに回る速さ（rad/秒）
 const RESUME_MS = 2500 // 指を離してから、また回り出すまで
+const FEET = 0.78 // 足の高さ（表示の上から）。charList.css の .cl__pedestal と同じ
 
 export function AvatarViewer({ id, fallback }: Props) {
   const box = useRef<HTMLDivElement>(null)
@@ -71,9 +72,12 @@ export function AvatarViewer({ id, fallback }: Props) {
         const center = b.getCenter(new THREE.Vector3())
         gltf.scene.position.sub(new THREE.Vector3(center.x, b.min.y, center.z))
         turn.add(gltf.scene)
-        const dist = (size.y * 0.7) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
-        camera.position.set(0, size.y * 0.62, dist)
-        camera.lookAt(0, size.y * 0.5, 0)
+        // 足（y=0）が表示の高さの FEET（上から 78%）に来るよう、カメラの高さと距離を決める（キャラ一覧の台の上面と同じ線）
+        const eye = size.y * 0.45
+        const half = eye / (2 * FEET - 1) // 画面の半分の高さ（m）
+        const dist = half / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
+        camera.position.set(0, eye, dist)
+        camera.lookAt(0, eye, 0)
         mixer = new THREE.AnimationMixer(gltf.scene)
         const idle = gltf.animations.find((a) => a.name === 'idle')
         if (idle) mixer.clipAction(idle).play()
