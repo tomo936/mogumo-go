@@ -51,7 +51,7 @@
   color: #8a6a48;
 }
 
-/* 上半分: 台の上のキャラ（ガチャと同じ木の台と光の柱）＋その下に名前とボタン */
+/* 上半分: 台の上のキャラ（ガチャと同じ木の台）＋その下に名前とボタン */
 .cl__big {
   display: flex;
   flex-direction: column;
@@ -73,17 +73,6 @@
   position: relative;
   flex: 1 1 0;
   min-height: 0;
-}
-/* 光の柱（台の上に立つ。キャラの後ろ） */
-.cl__pillar {
-  position: absolute;
-  left: 50%;
-  bottom: 22%;
-  width: min(60%, 260px);
-  height: 74%;
-  transform: translateX(-50%);
-  background: url('../../assets/gacha/ui/03-light-pillar.webp') 50% 100% / 100% 100% no-repeat;
-  opacity: 0.85;
 }
 /* 木の台。上面の真ん中（絵の高さの 28%）を、足の線（上から 78%）に合わせる */
 .cl__pedestal {

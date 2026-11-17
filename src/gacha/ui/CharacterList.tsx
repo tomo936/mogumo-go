@@ -53,9 +53,8 @@ export function CharacterList({ owned, currentId, onPick, onClose }: Props) {
       </header>
 
       <section className={hearts === FRIENDSHIP_MAX ? 'cl__big is-max' : 'cl__big'} aria-label="選んでいるキャラ">
-        {/* 台と光は動かさず、上のキャラだけ替える。足は台の上面（高さの 78%）に乗る（AvatarViewer の FEET と同じ） */}
+        {/* 台は動かさず、上のキャラだけ替える（光の柱は 2026-11-17 オーナー「光いらない」で外した）。足は台の上面（高さの 78%）に乗る（AvatarViewer の FEET と同じ） */}
         <div className="cl__stage">
-          <span className="cl__pillar" aria-hidden="true" />
           <img className="cl__pedestal" src={pedestalUrl} alt="" />
           <div className="cl__who" key={c.id}>
             {/* 3D があるキャラは 3D（回して見られる）、無ければ原画 */}
