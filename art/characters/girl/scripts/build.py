@@ -799,6 +799,8 @@ if STAGE == 5:
     src = open('/home/otosa/mogumo-go/art/prototypes/avatar/blender-v2.py').read().split('\n')
     block = '\n'.join(src[333:441])   # spline・WALK・RUN・gait・joy・idle・lift（blender-v2.py の動きの節。決め方の実績）
     block = block.replace("A = RUNA if run else 0.28", "A = MO['runSwing'] if run else MO['walkSwing']")
+    block = block.replace("p['arm' + s] = -A * c + (0.05 if run else 0.0)", "p['arm' + s] = -A * c + (MO.get('runArmOffset', 0.05) if run else 0.0)")   # 女の子 3 回目: 走りの前の振りを抑える
+    assert "runArmOffset" in block
     block = block.replace("(1.45 + 0.12 * -ce) if run else (0.32 + 0.12 * -ce)", "(MO['runElbow'] + 0.12 * -ce) if run else (0.32 + 0.12 * -ce)")
     # 3 回目: わきを閉じる（腕の開きの足し分を設定から）。手は軽く握る（指のかたまりを曲げる）。うれしいは前の版と同じ開き・手は開いたまま
     # 4 回目（オーナー: 走りの足をもっとまっすぐ）: 走りは腰のひねりを小さく、ももを内へ戻して、足を前後にまっすぐ振る
