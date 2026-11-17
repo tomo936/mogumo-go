@@ -63,3 +63,4 @@
 - 2026-11-17 Claude Code: ガチャ画面・引く画面の素材 10 枚をお願い（handoff/to-shiro/2026-11-17-gacha-screens-art.md、見本 art/reference/gacha/）
 - 2026-11-17 ガチャ開始 5 体＋スターター女の子の 3D 用の絵を受領（art/characters/<番号-名前>/ref/・art/characters/girl/ref/）。返信 handoff/to-shiro/2026-11-17-chars3d-received.md（対応中）
 - 2026-11-17 ガチャ画面・引く画面の素材 11 点を受領（art/gacha/ui/）。返信 handoff/to-shiro/2026-11-17-gacha-ui-parts-received.md（完了）
+- 2026-11-17 Claude Code: 結合試験をお願い（handoff/to-shiro/2026-11-17-integration-test.md。dev のサイトで ?fake=緯度,経度 の歩いたふりを使えるようにした）

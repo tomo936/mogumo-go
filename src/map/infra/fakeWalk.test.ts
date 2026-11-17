@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { distanceMeters } from '../domain/geo.ts'
-import { isFakeWalkEnabled, startFakeWalk } from './fakeWalk.ts'
+import { fakeStart, isFakeWalkEnabled, startFakeWalk } from './fakeWalk.ts'
 import type { Fix } from '../domain/smoothing.ts'
 
 beforeEach(() => vi.useFakeTimers())
@@ -32,4 +32,17 @@ test('自宅から始めると、最初の点は自宅から 2m 以内', () => {
   vi.advanceTimersByTime(1000)
   stop()
   expect(distanceMeters(home, fixes[0])).toBeLessThan(2)
+})
+
+test('dev のサイト（mogumo-go-dev.vercel.app）でも ?fake で歩いたふり。本番のサイトでは使えない（2026-11-17 ミシェーラの結合試験のため）', () => {
+  expect(isFakeWalkEnabled('?fake', false, 'mogumo-go-dev.vercel.app')).toBe(true)
+  expect(isFakeWalkEnabled('?fake', false, 'mogumo-go.vercel.app')).toBe(false)
+  expect(isFakeWalkEnabled('', false, 'mogumo-go-dev.vercel.app')).toBe(false)
+})
+
+test('fakeStart: ?fake=緯度,経度 で始める場所。書いていない・読めないときは null', () => {
+  expect(fakeStart('?fake=35.6512,139.6362')).toEqual({ lat: 35.6512, lng: 139.6362 })
+  expect(fakeStart('?fake')).toBeNull()
+  expect(fakeStart('?fake=abc')).toBeNull()
+  expect(fakeStart('?fake=95,139')).toBeNull()
 })

@@ -11,7 +11,7 @@ import {
 import { recolor, themeStyle } from '../infra/theme.ts'
 import { onPhase } from '../../daynight/infra/phase.ts'
 import { currentTheme } from '../infra/themes.ts'
-import { isFakeWalkEnabled, startFakeWalk } from '../infra/fakeWalk.ts'
+import { fakeStart, isFakeWalkEnabled, startFakeWalk } from '../infra/fakeWalk.ts'
 import { circlePolygon, distanceMeters, metersPerPixel } from '../domain/geo.ts'
 import { ripplesAt } from '../domain/ripple.ts'
 import type { LatLng } from '../domain/geo.ts'
@@ -308,8 +308,8 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       container.style.visibility = 'visible'
       onStatusRef.current({ type: 'fix' })
     }
-    const stopWatch = isFakeWalkEnabled(window.location.search, import.meta.env.DEV)
-      ? startFakeWalk(onFix, home ?? undefined)
+    const stopWatch = isFakeWalkEnabled(window.location.search, import.meta.env.DEV, window.location.hostname)
+      ? startFakeWalk(onFix, fakeStart(window.location.search) ?? home ?? undefined)
       : watchLocation(onFix, (failure) => onStatusRef.current({ type: 'failure', failure }))
 
     // 1本指の横なぞりで回す（2本指のときはピンチのズームに任せる）
