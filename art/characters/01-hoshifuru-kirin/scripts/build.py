@@ -166,13 +166,21 @@ if STAGE == 2:
     lab[(z > L['horn_base']) & gold] = NI['gold']
     # ---- しっぽ: 胴の後ろの面より後ろ、根元から先 ----
     TL = L['tail']
-    tail = (z > TL['z'][0]) & (z < TL['z'][1]) & (ax < TL['x']) & (y > TL['y_root'])
+    tail = (z > TL['z'][0]) & (z < TL['z'][1]) & (ax < TL['x']) & (y > TL['y_root']) & ~pinkred   # 上は 0.25 まで（0.27 だとリュックの下の端が入り、毛束の色・しっぽの重みになった）
     lab[tail & (y > TL['y_tuft'])] = NI['tuft']
     # ---- リュック（背中の後ろで桃色）・肩ひも（桃色）・金の飾り ----
     torso = ~armz & (z > L['crotch']) & (z < NECK + 0.12) & ~tail
     packbody = torso & (y > L['pack_y']) & pinkred
     lab[packbody] = NI['pack']
     lab[torso & ~packbody & pinkred & (z < NECK + 0.02)] = NI['strap']
+    # わきの下を通る肩ひもの輪（輪切りで胴と別の輪: |x| 0.08〜0.15・y 0〜0.07・z 0.27〜0.31）と、リュックの持ち手（首の後ろ、z 0.44〜0.53・y>0.065）
+    SL_ = L['strap_loop']
+    lab[(ax > SL_['x'][0]) & (ax < SL_['x'][1]) & (y > SL_['y'][0]) & (y < SL_['y'][1]) & (z > SL_['z'][0]) & (z < SL_['z'][1]) & ~armz] = NI['strap']
+    HD_ = L['pack_handle']
+    lab[(z > HD_['z'][0]) & (z < HD_['z'][1]) & (y > HD_['y']) & (ax < HD_['x'])] = NI['pack']
+    # 胸の前の肩ひも: 生成の色が桃〜赤紫でうすい所も拾う（濃い所だけでは途切れた）
+    pinkish = ((h_ < 0.06) | (h_ > 0.88)) & (s_ > 0.18)
+    lab[torso & ~packbody & pinkish & (z > 0.27) & (z < NECK) & (ax > 0.07) & (ax < 0.2) & (y < 0.02)] = NI['strap']
     lab[torso & gold & (z < L['horn_base'])] = NI['gold']
     # ---- 首輪: 首の前と横の紫の帯 ----
     collar = ~armz & purple & (z > NECK - L['collar'][0]) & (z < NECK + L['collar'][1]) & (y < L['collar_y'])
@@ -428,7 +436,7 @@ if STAGE == 3:
     bone('pack', (0, py, pz1), (0, py, pz0), 'chest')
     # キリン: しっぽ 2 本（根元 → 毛束の根元 → 先）と耳 左右 1 本（設計 2026-11-17-kirin-rig-design.md）
     TLc = L['tail']
-    tl_ = (V[:, 2] > TLc['z'][0]) & (V[:, 2] < TLc['z'][1]) & (np.abs(V[:, 0]) < TLc['x']) & (V[:, 1] > TLc['y_root'] - 0.01) & (vs != 3)
+    tl_ = (V[:, 2] > TLc['z'][0]) & (V[:, 2] < TLc['z'][1]) & (np.abs(V[:, 0]) < TLc['x']) & (V[:, 1] > TLc['y_root'] - 0.01) & ~np.isin(vs, [3, 8])
     def tmean(y0, y1):
         m_ = tl_ & (V[:, 1] > y0) & (V[:, 1] < y1); return np.array([0.0, float(V[m_, 1].mean()), float(V[m_, 2].mean())])
     T0 = tmean(TLc['y_root'] - 0.01, TLc['y_root'] + 0.005); T1 = tmean(TLc['y_tuft'] - 0.008, TLc['y_tuft'] + 0.008)
@@ -529,6 +537,8 @@ if STAGE == 3:
     for i in np.nonzero(tl_)[0]:
         f1 = sstep((V[i, 1] - TLc['y_root']) / L['tail_band'] + 0.5); f2 = sstep((V[i, 1] - TLc['y_tuft']) / L['tail_band'] + 0.5)
         Wt[i] *= (1 - f1); Wt[i, B['tail1']] += f1 * (1 - f2); Wt[i, B['tail2']] += f1 * f2
+    # キリン: 肩ひもは chest 100%（走りで腰の重みが混ざった肩ひもの輪が、リュックの横から突き出た）
+    st_ = vs == 8; Wt[st_] = 0; Wt[st_, B['chest']] = 1
     # 持ち物: pack 100%
     Wt[pk] = 0; Wt[pk, B['pack']] = 1
     # 靴: foot 100%（足首の帯 0.03 だけ shin と混ぜる）
@@ -659,7 +669,7 @@ if STAGE == 4:
     partB = textwrap.dedent('\n'.join(V2[601:691]))   # 半分・閉じ・うれしい の絵（同上）
     # 顔の面: 頭の前の肌・目（髪・耳・フードは入れない）
     vs_ = np.empty(len(me.polygons), int); me.attributes['seg'].data.foreach_get('value', vs_)
-    seg_face = set(int(i) for i, p in enumerate(me.polygons) if vs_[i] in (2, 5) and p.normal.y < -0.2 and FX0 < p.center.x < FX1 and FZ0 < p.center.z < FZ1 and p.center.y < 0)
+    seg_face = set(int(i) for i, p in enumerate(me.polygons) if vs_[i] in (NI['fur'], NI['eyes']) and p.normal.y < -0.2 and FX0 < p.center.x < FX1 and FZ0 < p.center.z < FZ1 and p.center.y < 0)   # キリン: 顔は毛と目
     partA = partA.replace("sel = [f for f in bm.faces if all(FX0 < v.co.x < FX1 and FZ0 < v.co.z < FZ1 for v in f.verts) and f.normal.y < -0.3]",
                           "sel = [f for f in bm.faces if f.index in seg_face and all(FX0 < v.co.x < FX1 and FZ0 < v.co.z < FZ1 for v in f.verts)]")
     assert 'seg_face' in partA
@@ -710,8 +720,17 @@ if STAGE == 4:
         r0 = max(e[2] for e in eyes) + 8; c0, c1 = eyes[0][3], eyes[1][1]
         d = np.linalg.norm(img[r0:(r1 or int(h * 0.97)), c0:c1] - sk, axis=2) > 0.15
         ys, xs = np.nonzero(d); return (ys.mean() + r0, xs.mean() + c0)
-    MR1 = max(e[2] for e in EB) + FC['mouth_rows']   # 女の子: あごの印を口と取り違えないよう、目の下 mouth_rows 画素まで
-    mo = mouth_box(old_normal, EO, OH); mn_ = mouth_box(ns['normal'], EB, CHh, MR1)
+    MR1 = max(e[2] for e in EB) + FC['mouth_rows']
+    # キリン: 口（小さな笑顔）と鼻の点は、目の下のふちより上から始まる。目の間の列で、目の上下のまん中から MR1 までの暗い所を口の枠にする
+    nrm_ = ns['normal']; sk_ = np.median(nrm_[int(CHh * 0.3):int(CHh * 0.6), EB[0][3] + 5:EB[1][1] - 5].reshape(-1, 3), 0)
+    MR0 = int((EB[0][0] + EB[0][2]) / 2)
+    lw_ = np.array([0.3, 0.55, 0.15], np.float32)
+    C0_, C1_ = EB[0][3] + 25, EB[1][1] - 25   # 目のふちの影を拾わないよう、目から 25 画素はなす
+    dd_ = (sk_ @ lw_ - nrm_[MR0:MR1, C0_:C1_] @ lw_) > FC['mouth_t']   # 肌より暗い所（口・鼻の点）。色の差だと毛のむらを拾った
+    ys_, xs_ = np.nonzero(dd_)
+    mn_ = (float(ys_.mean() + MR0), float(xs_.mean() + C0_))
+    LOG['mouth_box'] = [int(ys_.min() + MR0), int(xs_.min() + C0_), int(ys_.max() + MR0), int(xs_.max() + C0_)]
+    mo = mouth_box(old_normal, EO, OH)
     LOG['mouth_centers'] = dict(old=[round(float(v), 1) for v in mo], new=[round(float(v), 1) for v in mn_])
     low = yy_ > max(e[2] for e in EB) + 6
     ox2 = np.clip(((xx_ - mn_[1]) * sx + mo[1]).round().astype(int), 0, OW - 1)
@@ -742,20 +761,28 @@ if STAGE == 4:
 
     """) + partB[i1:]
     # この子の目は大きく、まつげが暗い所の箱の外へ出るので、消す範囲を広げる
-    partB = partB.replace('mr0, mr1, mc0, mc1 = eb_ + 4, int(CHh * 0.97), EB[0][3], EB[1][1]', 'mr0, mr1, mc0, mc1 = eb_ + 4, MR1, EB[0][3], EB[1][1]')
+    partB = partB.replace('mr0, mr1, mc0, mc1 = eb_ + 4, int(CHh * 0.97), EB[0][3], EB[1][1]', 'mr0, mr1, mc0, mc1 = MR0, MR1, EB[0][3], EB[1][1]')
     # 女の子: うれしい の目の弧は、女の子の目の色（ink）でぬる。目の箱の上 30% より上は写さない（男の子の絵の小さな汚れ・まゆを入れない）
     partB = partB.replace('happyc = base * (1 - ha[:, :, None]) + hrgb * ha[:, :, None]',
         'eyezone = np.maximum(ell(EB[0], PAD + 9), ell(EB[1], PAD + 9)) > 0\n'
-        'ha = ha * np.where(eyezone, (yy >= min(e[0] for e in EB) + 0.3 * (EB[0][2] - EB[0][0])), 1.0)\n'
+        'ha = ha * np.where(eyezone, (yy >= min(e[0] for e in EB) + %f * (EB[0][2] - EB[0][0])), 1.0)\n' % FC['happy_cut'] +
         'happyc = base * (1 - ha[:, :, None]) + np.where(eyezone[:, :, None], ink[None, None], hrgb) * ha[:, :, None]')
     # 女の子: 口は元の笑顔のまま（男の子の開いた口は写さない。立ち絵の顔も口を閉じた笑顔）
     partB = partB.replace('base = erase(base, nmouth, 5)', 'pass').replace('R = np.maximum.reduce([ell(EB[0], 16), ell(EB[1], 16), ell(hmouth, 3)])', 'R = np.maximum(ell(EB[0], 16), ell(EB[1], 16))')
-    assert 'MR1' in partB and 'eyezone' in partB and 'ell(hmouth' not in partB
+    assert 'MR1' in partB and 'MR0' in partB and 'eyezone' in partB and 'ell(hmouth' not in partB
     partB = partB.replace('PAD = 7', 'PAD = %d' % FC['erase_pad']).replace('ell(EB[0], 16), ell(EB[1], 16)', 'ell(EB[0], %d), ell(EB[1], %d)' % (FC['erase_pad'] + 9, FC['erase_pad'] + 9))
     assert 'PAD = %d' % FC['erase_pad'] in partB
-    ns['MR1'] = MR1
+    ns['MR1'] = MR1; ns['MR0'] = MR0
     exec(partB, ns)
     atlas = ns['atlas']; normal = ns['normal']
+    # キリン: うれしい の目は、男の子の絵を写すと片方の弧が目の枠で切れたので、とじ目と同じ線（stroke）で上向きの弧（∩）を両目に描く。口は元の笑顔のまま
+    hap = ns['base']; ink_ = ns['ink']
+    for (r0, c0, r1, c1) in EB:
+        hgt, w = r1 - r0, c1 - c0
+        xs_ = np.linspace(c0 + w * 0.1, c1 - w * 0.1, 16); sn_ = np.sin(np.pi * (xs_ - xs_[0]) / (xs_[-1] - xs_[0]))
+        ys_ = r0 + hgt * FC['happy_y'] - hgt * FC['happy_h'] * sn_
+        hap = ns['stroke'](hap, list(zip(ys_, xs_)), max(3.0, hgt * 0.11), ink_)
+    atlas[:, 3 * CW:4 * CW, :3] = np.clip(hap, 0, 1)
     # ふち 1 画素も変えない: こま 1〜3 の、目・口の枠の外が こま 0 と同じかを数える
     R = ns['R']; keep = R <= 0
     for i in (1, 2, 3):
@@ -812,23 +839,49 @@ if STAGE == 5:
     block = block.replace("A = RUNA if run else 0.28", "A = MO['runSwing'] if run else MO['walkSwing']")
     block = block.replace("p['arm' + s] = -A * c + (0.05 if run else 0.0)", "p['arm' + s] = -A * c + (MO.get('runArmOffset', 0.05) if run else 0.0)")   # 女の子 3 回目: 走りの前の振りを抑える
     assert "runArmOffset" in block
-    block = block.replace("(1.45 + 0.12 * -ce) if run else (0.32 + 0.12 * -ce)", "(MO['runElbow'] + 0.12 * -ce) if run else (0.32 + 0.12 * -ce)")
+    block = block.replace("(1.45 + 0.12 * -ce) if run else (0.32 + 0.12 * -ce)", "(MO['runElbow'] + 0.12 * -ce) if run else (MO['walkElbow'] + 0.1 * -ce)")
     # 3 回目: わきを閉じる（腕の開きの足し分を設定から）。手は軽く握る（指のかたまりを曲げる）。うれしいは前の版と同じ開き・手は開いたまま
     # 4 回目（オーナー: 走りの足をもっとまっすぐ）: 走りは腰のひねりを小さく、ももを内へ戻して、足を前後にまっすぐ振る
     assert "p['hipTwist'] = -(0.12 if run else 0.10) * c" in block
     block = block.replace("p['hipTwist'] = -(0.12 if run else 0.10) * c", "p['hipTwist'] = -(MO.get('runHipTwist', 0.12) if run else 0.10) * c\n    p['legOut'] = -MO.get('runLegIn', 0.0) if run else 0.0")
     block = block.replace("p['armOut'] = 0.12 if run else 0.04", "p['armOut'] = MO['runOut'] if run else MO['walkOut']\n    for s_ in 'LR': p['fingers' + s_] = MO['fistRun'] if run else MO['fistWalk']")
-    block = block.replace("p = {'armOut': 0.55 + 0.15 * math.sin(TAU * ph)", "p = {'armOut': 0.55 + (AD - 0.60) + 0.15 * math.sin(TAU * ph)")
+    block = block.replace("p = {'armOut': 0.55 + 0.15 * math.sin(TAU * ph)", "p = {'armOut': MO['joyOut'] + MO['joyOutAmp'] * math.sin(TAU * ph)")   # キリン: 開く上限 0.61 の 8 割まで
+    block = block.replace("        p['elbow' + s] = 0.6\n", "        p['elbow' + s] = MO['joyElbow']\n")
+    block = block.replace("        p['knee' + s] = k\n", "        p['knee' + s] = k * MO['joyKneeScale']\n")
     block = block.replace("'armOut': 0.03 + 0.02 * b, 'pack': 0.01 * b}", "'armOut': MO['idleOut'] + 0.02 * b, 'pack': 0.01 * b, 'fingersL': MO['fistIdle'], 'fingersR': MO['fistIdle']}")
-    assert block.count("MO['fistRun']") == 1 and block.count("MO['fistIdle']") == 2 and "(AD - 0.60)" in block
+    assert block.count("MO['fistRun']") == 1 and block.count("MO['fistIdle']") == 2 and "MO['joyOut']" in block and "MO['joyElbow']" in block and "MO['joyKneeScale']" in block and "MO['walkElbow']" in block
     ns = dict(globals()); ns.update(MO=MO, AD=AD)
     exec(block, ns)
     # 走り: 股の前は上限の 8 割まで、ひざは上限の 8 割まで（体のはずみで走りを見せる）
-    RUN = ns['RUN']
-    RUN['thigh'] = [(p, v * MO['runThighScale'] if v > 0 else v) for p, v in RUN['thigh']]
-    RUN['knee'] = [(p, v * MO['runKneeScale']) for p, v in RUN['knee']]
+    RUN = ns['RUN']; WALK = ns['WALK']
+    # キリン: 足が短く、ひざを曲げると折れ目が出る（関門 3）。股・ひざ・足首を上限の 8 割までに縮める（前と後ろで別の倍率）
+    for K_, pre in ((RUN, 'run'), (WALK, 'walk')):
+        K_['thigh'] = [(p, v * (MO[pre + 'ThighScale'] if v > 0 else MO[pre + 'ThighBackScale'])) for p, v in K_['thigh']]
+        K_['knee'] = [(p, v * MO[pre + 'KneeScale']) for p, v in K_['knee']]
+        K_['foot'] = [(p, v * MO[pre + 'FootScale']) for p, v in K_['foot']]
     lim = CFG['limits']
     LOG['run_max'] = dict(thigh=max(v for _, v in RUN['thigh']), knee=max(v for _, v in RUN['knee']), limits=lim)
+    LOG['walk_max'] = dict(thigh=[min(v for _, v in WALK['thigh']), max(v for _, v in WALK['thigh'])], knee=max(v for _, v in WALK['knee']))
+    # キリン: しっぽと耳（設計: 歩き・走りでしっぽを横に ±12°、先は遅れて ±18°。待機は先だけゆっくり・耳がたまにぴくっ ±10°。
+    # 走りは しっぽが後ろへ少し伸び（持ち上げる）、耳が後ろへ −8°。うれしいは 耳が開き（上げる 12°）、しっぽが速く振れる）
+    TA = MO['tail']; EA = MO['ear']
+    def twitch(ph, at, w=0.07):
+        d = (ph - at) % 1.0
+        return math.sin(math.pi * d / w) ** 2 if d < w else 0.0
+    def add_tail_ear(fn, kind):
+        def f(ph):
+            p = fn(ph); T2 = 2 * math.pi
+            if kind in ('walk', 'run'):
+                p['tailSwing'] = TA['swing'] * math.sin(T2 * ph); p['tailSwing2'] = TA['swing2'] * math.sin(T2 * (ph - TA['lag']))
+                if kind == 'run': p['tailLift'] = TA['runLift']; p['tailLift2'] = TA['runLift'] * 0.5; p['earBack'] = EA['runBack']
+            elif kind == 'idle':
+                p['tailSwing2'] = TA['idle2'] * math.sin(T2 * ph); p['tailSwing'] = TA['idle1'] * math.sin(T2 * (ph + 0.1))
+                p['earUpL'] = EA['twitch'] * twitch(ph, 0.55); p['earUpR'] = EA['twitch'] * twitch(ph, 0.18)
+            elif kind == 'joy':
+                p['earUp'] = EA['joyUp'] * (0.75 + 0.25 * math.sin(T2 * ph))
+                p['tailSwing'] = TA['swing'] * math.sin(2 * T2 * ph); p['tailSwing2'] = TA['swing2'] * math.sin(2 * T2 * (ph - TA['lag']))
+            return p
+        return f
     def ap(p): apply_pose(rig, p, AD)
     reset(rig)
     REST_ANKLE, REST_TOE = rig.pose.bones['footL'].head.z, rig.pose.bones['footL'].tail.z
@@ -847,10 +900,10 @@ if STAGE == 5:
              'armOut': MO['idleOut'] + 0.012 * br, 'elbowL': 0.14 + 0.03 * br, 'elbowR': 0.14 + 0.03 * br,
              'fingersL': MO['fistIdle'], 'fingersR': MO['fistIdle']}
         return p
-    ACTS = {'walk': (30, lambda ph: ns['gait'](ph, ns['WALK'], False), lambda ph: 0.0),
-            'run': (18, lambda ph: ns['gait'](ph, RUN, True), ns['lift_run']),
-            'idle': (120, idle_r5, lambda ph: 0.0),   # 5 回目: ふくらまさない自然な待機（体重の移動・息で胸と肩が少し上がる・頭のゆらぎ）。4 秒
-            'joy': (24, ns['joy'], ns['lift_joy'])}
+    ACTS = {'walk': (30, add_tail_ear(lambda ph: ns['gait'](ph, WALK, False), 'walk'), lambda ph: 0.0),
+            'run': (18, add_tail_ear(lambda ph: ns['gait'](ph, RUN, True), 'run'), lambda ph: ns['lift_run'](ph) * MO['runLiftScale']),
+            'idle': (120, add_tail_ear(idle_r5, 'idle'), lambda ph: 0.0),   # 体重の移動・息・頭のゆらぎ。4 秒
+            'joy': (24, add_tail_ear(ns['joy'], 'joy'), ns['lift_joy'])}
     bpy.context.scene.render.fps = 30
     rig.animation_data_create()
     # 角度の上限を数える（動きの全コマで）
@@ -868,8 +921,9 @@ if STAGE == 5:
             p = fn((i % N) / N)
             for k_ in ('pack', 'packRoll'): p.pop(k_, None)   # 持ち物は揺らさない
             if lift is not None: p['y'] = float(ys[i % N])
-            for k_ in ('armL', 'armR', 'thighL', 'thighR', 'kneeL', 'kneeR', 'elbowL', 'elbowR'):
-                peak[k_[:-1] + ('+' if p.get(k_, 0) >= 0 else '-')] = max(peak[k_[:-1] + ('+' if p.get(k_, 0) >= 0 else '-')], abs(p.get(k_, 0)))
+            for k_ in ('armL', 'armR', 'thighL', 'thighR', 'kneeL', 'kneeR', 'elbowL', 'elbowR', 'armOut', 'tailSwing', 'tailSwing2', 'earUpL', 'earBack'):
+                nm_ = (k_[:-1] if k_[-1] in 'LR' and k_ != 'earUpL' else k_) + ('+' if p.get(k_, 0) >= 0 else '-')
+                peak[nm_] = max(peak[nm_], abs(p.get(k_, 0)))
             ap(p); key_all(rig, i + 1)   # コマは 1 から（0 から始めると、書き出しで前の動きの姿勢が 0 コマ目に混ざった）
         act.use_fake_user = True   # 書き出しは ACTIONS（NLA で書き出すと、0 コマ目に別の動きの姿勢が混ざった）
         rig.animation_data.action = None
@@ -891,7 +945,7 @@ if STAGE == 5:
     R0 = np.array([v.co for v in mm.vertices]); shj = {1: np.array(rig.data.bones['upperarmL'].head_local), -1: np.array(rig.data.bones['upperarmR'].head_local)}
     dsh = np.array([np.linalg.norm(R0[i] - shj[side[i]]) if side[i] else 0 for i in range(nv_)])
     # 腕の点のうち、わきより下（腕の島）で、肩の関節から 0.05 より先（肩のつなぎ目の点は、胴と重みを分け合うので数えない）
-    armv = np.nonzero((armw > 0.99) & (R0[:, 2] < CFG['landmarks']['armpit'] - 0.012) & (dsh > 0.05))[0]; torv = (armw < 1e-4) & (headw < 0.5)
+    armv = np.nonzero((armw > 0.99) & (dsh > 0.05))[0]; torv = (armw < 1e-4) & (headw < 0.5)   # キリン: 腕はわきより上にもある
     TRI_ = np.array([p_.vertices[:] for p_ in mm.polygons]); tf = TRI_[torv[TRI_].all(1)]
     GAP = {}
     for name, (N, fn, lift) in ACTS.items():

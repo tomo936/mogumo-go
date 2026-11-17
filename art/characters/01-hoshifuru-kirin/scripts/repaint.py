@@ -1,4 +1,4 @@
-# 女の子（男の子の repaint.py を写して、区分けと位置の境目を女の子用にした）: 塗り直し（段 4 のあと、段 5 の前）。build.py の段 45 から読む（exec）。
+# キリン（女の子の repaint.py を写して、区分けと位置の境目をキリン用にした。毛は場所からのグラデーション＝案 A）: 塗り直し（段 4 のあと、段 5 の前）。build.py の段 45 から読む（exec）。
 # 生成の色を捨て、区分けごとに元の立ち絵から取った色で塗る。陰は形から計算した陰（AO、なめらか）だけを薄く乗せる。
 # 区分けは点（頂点）ごとに決めてなめらかにし、絵の画素ごとに 3D の位置で補って決める（面の境で切らない）。
 # 顔の 4 こまは、目・まゆ・口・ほほの赤みだけ残し、肌は新しい肌の色にそろえる（こまの間でふちが同じことは保つ）。
@@ -37,21 +37,49 @@ NAMES_R = NAMES   # build.py の区分けの名前（13）
 K = len(NAMES_R); Cc = np.array([RC['colors'][n_] for n_ in NAMES_R], np.float32) / 255.0
 z = V[:, 2]; ax = np.abs(V[:, 0]); y = V[:, 1]
 lab = np.empty(nv, int); me.attributes['lab'].data.foreach_get('value', lab)
-lab[lab == NI['eyes']] = NI['skin']   # 目・まゆは顔の絵（face）の側にある。下地は肌（男の子と同じ）
+lab[lab == NI['eyes']] = NI['fur']   # 目は顔の絵（face）の側にある。下地は毛
 GEO = json.load(open(os.path.join(WORK, 'stage2-geo.json')))
 ARM = {s: dict(sh=np.array(GEO['arms'][s]['sh']), a=np.array(GEO['arms'][s]['a']), cuff=GEO['arms'][s]['cuff'], tl=GEO['arms'][s]['tl']) for s in 'LR'}
 def armzone(P, side=None):
-    """腕の範囲（段 2 と同じ: 腕の軸からの距離 arm_rmax 以内）"""
+    """腕の範囲（段 2 と同じ: 胴の幅より外・高さ 0.25〜わき+0.15）"""
     m = np.zeros(len(P), bool)
     for s, sg in (('L', 1), ('R', -1)):
         if side and s != side: continue
-        A_ = ARM[s]; rel = P - A_['sh']; t_ = np.clip(rel @ A_['a'], 0, A_['tl'] + 0.02); d_ = np.linalg.norm(rel - np.outer(t_, A_['a']), axis=1)
-        m |= (sg * P[:, 0] > L['shoulder_x'] + 0.02) & (P[:, 2] < L['armpit'] + 0.08) & (P[:, 2] > 0.2) & (d_ < L['arm_rmax'])
+        m |= (sg * P[:, 0] > L['arm_x0']) & (P[:, 2] > 0.25) & (P[:, 2] < L['armpit'] + 0.15)
     return m
+
+
+GR = RC['fur_grad']
+def interp(stops, t):
+    zs = np.array([s_[0] for s_ in stops]); cs = np.array([s_[1] for s_ in stops], np.float32) / 255.0
+    return np.stack([np.interp(t, zs, cs[:, c]) for c in range(3)], -1)
+def fur_color(P):
+    """毛の色（案 A）: 体は高さで 若草 → 水色 → うす紫、頭は 水色（顔）→ 紫〜桃（てっぺん）。背中側は紫へ寄せる"""
+    X_, Y_, Z_ = P[:, 0], P[:, 1], P[:, 2]
+    body = interp(GR['body'], Z_); head = interp(GR['head'], Z_)
+    wh = sz(Z_ - GR['head_from'], GR['head_w'])[:, None]
+    c = body * (1 - wh) + head * wh
+    bk = (GR['back_amount'] * sz(Y_ - GR['back_y'], GR['back_w']) * sz(Z_ - GR['back_z'], 0.06))[:, None]
+    c = c * (1 - bk) + (np.array(GR['back'], np.float32) / 255.0)[None] * bk
+    # 腕: 肩（うす紫）→ 手首（水色〜若草）を腕の軸に沿って（元の立ち絵の腕は水色〜若草）
+    for s_, sg_ in (('L', 1), ('R', -1)):
+        A_ = ARM[s_]; m_ = (sg_ * X_ > L['arm_x0'] - 0.02) & (Z_ > 0.25) & (Z_ < L['armpit'] + 0.15)
+        if not m_.any(): continue
+        t_ = np.clip(((P[m_] - A_['sh']) @ A_['a']) / max(A_['cuff'], 1e-3), 0, 1)
+        wa = sz(sg_ * X_[m_] - L['arm_x0'], 0.03)[:, None]
+        c[m_] = c[m_] * (1 - wa) + interp(GR['arm'], t_) * wa
+    # 耳の外側: 付け根（水色）→ 先（うす紫）
+    em_ = (Z_ > L['ear_z'][0] - 0.02) & (np.abs(X_) > L['ear_x'] - 0.02)
+    if em_.any():
+        we = sz(np.abs(X_[em_]) - L['ear_x'] - 0.01, 0.06)[:, None]   # 付け根の裏で頭の紫との境が縦の線に見えたので広く
+        c[em_] = c[em_] * (1 - we) + interp(GR['ear'], np.abs(X_[em_])) * we
+    return c
+
+
 armz = armzone(V)
-legz = (ax < 0.16) & (z < L['sock_top'] + 0.012) & ~armz
+legz = (ax < 0.2) & (z < L['hoof_line'] + 0.012) & ~armz
 fixed = armz | legz                                               # 位置で決めた所は、ならしで動かさない
-SMALL = [NI[n_] for n_ in ('red', 'green', 'tie')]          # 小さくても消さない区分け（髪どめ・目）
+SMALL = [NI['gold']]          # 小さくても消さない区分け（星・飾り）
 LOG['labels_raw'] = {NAMES_R[k]: int((lab == k).sum()) for k in range(K)}
 for _ in range(RC['vote_iter']):
     new = lab.copy()
@@ -149,27 +177,24 @@ SH = RC['sharp']; q = (q / np.maximum(q.max(1, keepdims=True), 1e-9)) ** SH; q /
 # 位置で決める境目（画素ごと。幅 edge_w のなめらかな境目）
 ew = RC['edge_w']
 AX = np.abs(X_)
-iS, iC, iK, iH, iSo, iSh, iSl = NI['skin'], NI['cardigan'], NI['skirt'], NI['hair'], NI['socks'], NI['shoe'], NI['sole']
-# 足: くつした・靴・靴底は高さの線で（色によらない）。スカートの内側の面はそのまま
-legp = (AX < 0.16) & (Z_ < L['sock_top'] + 0.012) & (q[:, [iS, iSo, iSh, iSl]].sum(1) > 0.5) & ~armzone(xyz)
+iF, iP, iHo, iCo = NI['fur'], NI['paw'], NI['hoof'], NI['collar']
+# 足: ひづめは高さの線で（色によらない）
+legp = (AX < 0.2) & (Z_ < L['hoof_line'] + 0.012) & (q[:, [iF, iHo]].sum(1) > 0.5) & ~armzone(xyz)
 if legp.any():
-    zz = Z_[legp]
-    sole = sz(L['sole_z'] - zz, ew); shoe = sz(L['shoe_line'] - zz, ew) * (1 - sole); sock = sz(L['sock_top'] - zz, ew) * (1 - shoe - sole)
-    qq = np.zeros((legp.sum(), K), np.float32); qq[:, iSl] = sole; qq[:, iSh] = shoe; qq[:, iSo] = sock; qq[:, iS] = 1 - sole - shoe - sock
-    q[legp] = qq
-# 首元: 肌とえりの境目は、首の前の肌の一番下の高さ zl の水平な線。首の幅 neck_r より外の肌（肩の点）はえりの色に
-NECK = L['neck']; ty_ = S3['ty']
-nk = (lab == iS) & (ax < 0.03) & (y < ty_) & (z < NECK) & (z > NECK - 0.1)
-zl = float(np.percentile(z[nk], 5)) if nk.sum() > 5 else NECK - 0.03; LOG['neck_line'] = round(zl, 4)
-nkp = (Z_ > zl - 0.03) & (Z_ < NECK + 0.005) & (AX < 0.16) & (q[:, [iS, iC]].sum(1) > 0.5) & ~armzone(xyz) & (Y_ < ty_ + 0.03)
-sk_ = sz(Z_[nkp] - zl, ew) * sz(L['neck_r'] - AX[nkp], ew)
-qq = np.zeros((nkp.sum(), K), np.float32); qq[:, iS] = sk_; qq[:, iC] = 1 - sk_; q[nkp] = qq
-# 腕: 袖と手は、腕の軸に沿った袖口の位置で
+    hf = sz(L['hoof_line'] - Z_[legp], ew)
+    qq = np.zeros((legp.sum(), K), np.float32); qq[:, iHo] = hf; qq[:, iF] = 1 - hf; q[legp] = qq
+# 首輪: 首の高さの帯（collar_band）。毛・首輪の所だけ
+c0_, c1_ = RC['collar_band']
+nkp = (Z_ > c0_ - 0.01) & (Z_ < c1_ + 0.01) & (AX < 0.2) & (q[:, [iF, iCo]].sum(1) > 0.5) & ~armzone(xyz)
+cl_ = sz(Z_[nkp] - c0_, ew) * sz(c1_ - Z_[nkp], ew)
+qq = np.zeros((nkp.sum(), K), np.float32); qq[:, iCo] = cl_; qq[:, iF] = 1 - cl_; q[nkp] = qq
+LOG['collar_band'] = RC['collar_band']
+# 腕: 毛と手は、腕の軸に沿った手首の位置で
 for s, sg in (('L', 1), ('R', -1)):
-    A_ = ARM[s]; m = armzone(xyz, s) & (q[:, [iC, iS]].sum(1) > 0.5)
+    A_ = ARM[s]; m = armzone(xyz, s) & (q[:, [iF, iP]].sum(1) > 0.5)
     t = (xyz[m] - A_['sh']) @ A_['a']; hand = sz(t - A_['cuff'], ew)
-    qq = np.zeros((m.sum(), K), np.float32); qq[:, iS] = hand; qq[:, iC] = 1 - hand; q[m] = qq
-rgb = (q @ Cc) * shade(aot)[:, None]
+    qq = np.zeros((m.sum(), K), np.float32); qq[:, iP] = hand; qq[:, iF] = 1 - hand; q[m] = qq
+rgb = (q @ Cc + q[:, [iF]] * (fur_color(xyz) - Cc[iF][None])) * shade(aot)[:, None]   # 毛はグラデーション
 img = np.zeros((H, W, 3), np.float32); img[cov] = rgb
 img = dilate_fill(img, cov)
 Pb = pixels(bimg); Pb[:, :, :3] = img; Pb[:, :, 3] = 1
@@ -184,7 +209,8 @@ ffaces = np.nonzero(MAT == 1)[0]
 fidF, barF = raster(ffaces, UVa * [AW, AH], CW, AH)               # こま 0 の範囲（u < 1/4）
 covF = fidF >= 0; BF = barF[covF]; BF /= np.maximum(BF.sum(1, keepdims=True), 1e-6); VF = TRI[fidF[covF]]
 qF = (Pv[VF] * BF[:, :, None]).sum(1); qF = (qF / np.maximum(qF.max(1, keepdims=True), 1e-9)) ** SH; qF /= qF.sum(1, keepdims=True)
-base = np.zeros((AH, CW, 3), np.float32); base[covF] = (qF @ Cc) * shade((ao[VF] * BF).sum(1))[:, None]
+xyzF = (V[VF] * BF[:, :, None]).sum(1)
+base = np.zeros((AH, CW, 3), np.float32); base[covF] = (qF @ Cc + qF[:, [iF]] * (fur_color(xyzF) - Cc[iF][None])) * shade((ao[VF] * BF).sum(1))[:, None]
 base = dilate_fill(base, covF)
 O0 = FA[:, :CW, :3].copy()
 # 元の肌の色（目・口などをのぞいて、なめらかに）
@@ -214,7 +240,7 @@ pe = RC['eye_pad']
 ph = RC['eye_padx']
 eyem = np.maximum(box(EBt[0][0] - pe, EBt[0][1] - ph, EBt[0][2] + pe, EBt[0][3] + ph), box(EBt[1][0] - pe, EBt[1][1] - ph, EBt[1][2] + pe, EBt[1][3] + ph))
 brow = np.maximum(box(EBt[0][0] - 80, EBt[0][1] - 10, EBt[0][0] - 25, EBt[0][3] + 10), box(EBt[1][0] - 80, EBt[1][1] - 10, EBt[1][0] - 25, EBt[1][3] + 10))
-mouth = box(mc[0] - 28, mc[1] - 80, mc[0] + 42, mc[1] + 80)
+mb_ = S4['mouth_box']; mouth = box(mb_[0] - 12, mb_[1] - 12, mb_[2] + 12, mb_[3] + 12)   # キリン: 口と鼻の点を囲む枠（段 4 で測った）
 def soften(m, n=3):
     for _ in range(n): m = (m + np.roll(m, 1, 0) + np.roll(m, -1, 0) + np.roll(m, 1, 1) + np.roll(m, -1, 1)) / 5
     return m
@@ -230,6 +256,7 @@ for (r0, c0, r1, c1) in EBt:
     sy, sx = np.sqrt(np.average((ry - my) ** 2, weights=w_)), np.sqrt(np.average((rx - mx) ** 2, weights=w_))
     LOG['blush'].append([round(float(v), 1) for v in (my, mx, sy, sx)])
 sgm = np.mean([b_[2:] for b_ in LOG['blush']], 0) if LOG['blush'] else None
+if sgm is not None: sgm[0] = max(sgm[0], RC['blush_ry'] * sgm[1])   # キリン: 生成の頬は細い横線（縦 6・横 40 画素）だったので、縦を横の blush_ry 倍以上に（元の立ち絵は丸い頬）
 for (my, mx, _, _) in LOG['blush']:   # 左右で同じ大きさの、やわらかいだ円
     rr2 = ((rows_b - my) / (RC['blush_r'] * sgm[0])) ** 2 + ((cols_b - mx) / (RC['blush_r'] * sgm[1])) ** 2
     blush = np.maximum(blush, np.clip(1 - rr2, 0, 1) ** 1.5)

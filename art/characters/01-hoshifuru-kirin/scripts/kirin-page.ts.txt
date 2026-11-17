@@ -62,7 +62,7 @@ function shot(w: number, h: number, yaw: number, elev: number, vh: number, tgt: 
 }
 function label(g: CanvasRenderingContext2D, s: string, x: number, y: number, size = 14) { g.font = `${size}px sans-serif`; g.fillStyle = '#6b3f26'; g.fillText(s, x, y) }
 const DIRS: [string, number, number][] = [['正面', 0, 0], ['右横', 90, 0], ['左横', 270, 0], ['後ろ', 180, 0], ['斜め上の前', 30, 40], ['斜め上の後ろ', 150, 40]]
-const PERIOD: Record<string, number> = { walk: 1.0, run: 0.6, idle: 3.0, joy: 0.8 }
+const PERIOD: Record<string, number> = { walk: 1.0, run: 0.6, idle: 4.0, joy: 0.8 }
 const MID = new THREE.Vector3(0, 0.5, 0)
 
 async function shots() {
@@ -93,7 +93,8 @@ async function grid() {
 async function video() {
   // 2 回目: 正面（少し上 8°）からの歩き・走りも入れる（足の幅を見るため）
   // 最後に、待機中のまばたきを顔の大写し（顔が画面の高さの約半分）で 3 回（オーナーの依頼。こまの切り替えは 0.04→0.07→0.04 秒のまま）
-  const seq: [string, number, number, number][] = [['idle', 3.0, 30, 40], ['walk', 2.0, 30, 40], ['walk', 2.0, 0, 8], ['run', 1.2, 30, 40], ['run', 1.2, 0, 8], ['joy', 1.6, 30, 40], ['idle', 3.6, 0, 0]]
+  // キリン: 待機を斜め後ろの上からも（しっぽの先・耳のぴくっ）。待機は 4 秒で 1 周
+  const seq: [string, number, number, number][] = [['idle', 4.0, 30, 40], ['idle', 4.0, 150, 30], ['walk', 2.0, 30, 40], ['walk', 2.0, 0, 8], ['walk', 2.0, 150, 30], ['run', 1.2, 30, 40], ['run', 1.2, 0, 8], ['run', 1.2, 150, 30], ['joy', 1.6, 30, 40], ['idle', 3.6, 0, 0]]
   let n = 0
   for (const [si, [anim, dur, yaw, elev]] of seq.entries()) {
     const face = si === seq.length - 1
@@ -104,13 +105,13 @@ async function video() {
       setFace(bl)
       const cv = document.createElement('canvas'); cv.width = 1000; cv.height = 640; const g = cv.getContext('2d')!
       g.fillStyle = '#fbf0d9'; g.fillRect(0, 0, 1000, 640)
-      g.drawImage(face ? shot(600, 600, 0, 0, 0.42, new THREE.Vector3(0, 0.68, 0), '#fbf0d9') : shot(600, 600, yaw, elev, 1.12, MID, '#fbf0d9'), 0, 20)
+      g.drawImage(face ? shot(600, 600, 0, 0, 0.42, new THREE.Vector3(0, 0.63, 0), '#fbf0d9') : shot(600, 600, yaw, elev, 1.12, MID, '#fbf0d9'), 0, 20)
       g.imageSmoothingEnabled = false
       const s40 = shot(44, 44, 30, 40, 1.12, MID, '#fbf0d9'), s16 = shot(18, 18, 30, 40, 1.12, MID, '#fbf0d9')
       g.drawImage(s40, 620, 60, 176, 176); g.drawImage(s16, 820, 60, 72, 72)
       g.drawImage(s40, 640, 300); g.drawImage(s16, 700, 313)
       g.imageSmoothingEnabled = true
-      label(g, face ? 'まばたき（顔の大写し）' : `${anim}${yaw === 0 ? '（正面）' : '（斜め上の前）'}`, 10, 18, 16); label(g, '40px・16px（4 倍）', 620, 50); label(g, '実寸', 640, 290)
+      label(g, face ? 'まばたき（顔の大写し）' : `${anim}${yaw === 0 ? '（正面）' : yaw === 150 ? '（斜め上の後ろ）' : '（斜め上の前）'}`, 10, 18, 16); label(g, '40px・16px（4 倍）', 620, 50); label(g, '実寸', 640, 290)
       await save(`v-${String(n++).padStart(4, '0')}`, cv.toDataURL('image/png'))
     }
   }
