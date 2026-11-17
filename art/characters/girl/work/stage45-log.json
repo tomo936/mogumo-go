@@ -1,0 +1,55 @@
+{
+ "labels_raw": {
+  "cardigan": 2391,
+  "hair": 6202,
+  "skin": 2201,
+  "pack": 1051,
+  "shoe": 224,
+  "eyes": 0,
+  "skirt": 1641,
+  "socks": 299,
+  "strap": 412,
+  "red": 242,
+  "green": 118,
+  "tie": 0,
+  "sole": 192
+ },
+ "labels": {
+  "cardigan": 2353,
+  "hair": 6347,
+  "skin": 2074,
+  "pack": 1051,
+  "shoe": 224,
+  "eyes": 0,
+  "skirt": 1638,
+  "socks": 299,
+  "strap": 412,
+  "red": 265,
+  "green": 118,
+  "tie": 0,
+  "sole": 192
+ },
+ "ao": [
+  0.296,
+  0.581,
+  0.946,
+  0.999
+ ],
+ "neck_line": 0.5233,
+ "blush": [
+  [
+   220.4,
+   37.1,
+   13.9,
+   20.2
+  ],
+  [
+   221.8,
+   458.0,
+   14.0,
+   48.4
+  ]
+ ],
+ "face_cell1_changed_outside": 0,
+ "face_cell2_changed_outside": 0
+}

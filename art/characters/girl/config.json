@@ -65,7 +65,9 @@
   "wrist_frac": 0.92,
   "shoulder_band": 0.03,
   "leg_top": 0.235,
-  "skirt_r": 0.072
+  "skirt_r": 0.072,
+  "arm_rmax": 0.07,
+  "neck_r": 0.07
  },
  "repaint": {
   "colors": {
@@ -135,7 +137,37 @@
     168
    ]
   },
-  "note": "元の立ち絵 stand-front・side・back の区分けごとの色の中央値（refcol）。肌は顔の肌、髪は中央値より少し明るく（陰を乗せるため）"
+  "note": "元の立ち絵 stand-front・side・back の区分けごとの色の中央値（refcol）。肌は顔の肌、髪は中央値より少し明るく（陰を乗せるため）",
+  "min_island": 25,
+  "smooth_iter": 4,
+  "sharp": 24,
+  "edge_w": 0.0012,
+  "ao_rays": 48,
+  "ao_dist": 0.05,
+  "ao_smooth": 4,
+  "ao_strength": 0.45,
+  "face_t0": 0.04,
+  "face_t1": 0.12,
+  "face_blur": 20,
+  "face_inset": 10,
+  "eye_pad": 10,
+  "blush_t": 0.05,
+  "blush_a": 0.55,
+  "dark_lum": 0.35,
+  "min_dark": 60,
+  "vote_iter": 6,
+  "eye_lum": 0.45,
+  "mouth_lum": 0.62,
+  "blush_color": [
+   240,
+   150,
+   150
+  ],
+  "blush_r": 2.2,
+  "eye_padx": 2,
+  "feat_soft": 4,
+  "brows": false,
+  "note_girl": "brows false: この子のまゆは前髪に隠れる（立ち絵）。生成の絵のおでこの汚れを残さない"
  },
  "skirt": {
   "k": 0.5,
@@ -152,6 +184,53 @@
   "note": "男の子の値から始める"
  },
  "motion": {
-  "legStand": 0.0
+  "legStand": 0.0,
+  "armDown": 0.53,
+  "walkSwing": 0.26,
+  "runSwing": 0.48,
+  "runElbow": 1.3,
+  "runThighScale": 0.7,
+  "runKneeScale": 0.75,
+  "walkOut": 0.0,
+  "runOut": 0.0,
+  "idleOut": 0.0,
+  "fist": 1.4,
+  "runHipTwist": 0.04,
+  "runLegIn": 0.03,
+  "note": "armDown 0.53: A ポーズの開き 50.5° から、元の立ち絵の手の位置（体のまん中から身長の約 0.19〜0.21）に合わせて体から約 20°。legStand 0: 三面図の足首の中心の間（0.10〜0.12）が立ち絵と同じ。走りの股・ひざは上限の 8 割まで（股 0.7 倍→最大 0.70、ひざ 0.75 倍→最大 1.46）"
+ },
+ "face": {
+  "box": [
+   -0.16,
+   0.16,
+   0.555,
+   0.77
+  ],
+  "cell": [
+   512,
+   344
+  ],
+  "erase_pad": 15,
+  "happy_src": "art/characters/boy/face4.png",
+  "note": "耳は入れない（x ±0.16）。うれしい は女の子の絵が無いので、男の子の face4.png のこま 3 の目の弧・口を目の位置で合わせて写す（仮。絵が届いたら差し替え）",
+  "mouth_rows": 70
+ },
+ "limits": {
+  "note": "関門 3（2026-11-17、ARMDOWN 0.53）で破れなかった角度（ラジアン）。動きはこの 8 割まで。股の前はスカートのため 50°（60°＋ひざ 110° ですそがちぎれた）",
+  "armFront": 1.047,
+  "armBack": 0.698,
+  "armSide": 1.571,
+  "elbow": 1.92,
+  "thighFront": 0.873,
+  "thighBack": 0.524,
+  "knee": 1.92,
+  "fingers": 1.92
+ },
+ "decisions_2026_11_17": {
+  "skirt": "スカートの点はすそで同じ側の股の骨 50%（k 0.5）。歩き（股 +0.42/−0.32）・走り（股 最大 0.70・ひざ 1.53）でめりこみ・ちぎれなし（gate3-skirt・motion-closeups）。走りの蹴り上げのコマで後ろのすそが少しとがる（はねて見える程度）",
+  "twintails": "ツインテール・髪どめは髪の区分けで head 100%（head_not100 = 0）。揺らさない",
+  "arms": "腕の範囲は腕の軸から 0.07 以内（段 2・段 45 とも）。x だけで決めるとスカートの横が袖の色になった",
+  "repaint": "段 45 は段 4 の顔の絵 work/face4-stage4.png から（face4.png は出力）。区分けの割合は最大で割ってから 24 乗（3 区分けが出会う所が黒くなった）。目の区分けの下地は肌。首元の肌は水平な線（neck_line）",
+  "happy": "うれしい は目を弧（男の子の face4.png のこま 3 から、目の位置で合わせ、女の子の目の色で）、口は元の笑顔のまま。女の子のうれしい顔の絵は無い（仮）"
  }
 }

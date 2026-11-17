@@ -144,7 +144,7 @@ if STAGE == 2:
     roots = np.array([find(i) for i in range(nv)])
     rr, cnt = np.unique(roots[below], return_counts=True)
     main = rr[cnt.argmax()]
-    ARM = {}
+    ARM = {}; ZONES = {}
     skinish = (h_ < 0.055) | (h_ > 0.97)
     for r in rr:
         m = below & (roots == r)
@@ -155,8 +155,11 @@ if STAGE == 2:
         tip = c0 + a * ((P - c0) @ a).max()
         sh = np.array([sg * L['shoulder_x'], c0[1], AP + 0.1])        # 肩のおおよその所（軸の向きを決めるため）
         a2 = tip - sh; a2 /= np.linalg.norm(a2)
-        zone = (sg * x > L['shoulder_x'] + 0.02) & (z < AP + 0.08) & (z > 0.2)
+        rel = V - sh; tt_ = np.clip(rel @ a2, 0, np.linalg.norm(tip - sh) + 0.02); dax = np.linalg.norm(rel - np.outer(tt_, a2), axis=1)
+        # 女の子: 腕の範囲は腕の軸からの距離で決める（x だけで決めると、広がったスカートの横まで腕になった）
+        zone = (sg * x > L['shoulder_x'] + 0.02) & (z < AP + 0.08) & (z > 0.2) & (dax < L['arm_rmax'])
         zone |= m
+        ZONES[sd] = zone
         t = (V - sh) @ a2; tl = float(np.linalg.norm(tip - sh)); cuff = None
         for t0 in np.arange(0.4 * tl, tl, 0.002):
             b = zone & (t >= t0) & (t < t0 + 0.004)
@@ -165,8 +168,7 @@ if STAGE == 2:
         lab[zone & (t > cuff)] = NI['skin']
         lab[zone & (t <= cuff)] = NI['cardigan']
     LOG['arms'] = {k: dict(cuff=round(v['cuff'], 4), tl=round(v['tl'], 4), tip=np.round(v['tip'], 3).tolist()) for k, v in ARM.items()}
-    armz = np.zeros(nv, bool)
-    for sd, sg in (('L', 1), ('R', -1)): armz |= (sg * x > L['shoulder_x'] + 0.02) & (z < AP + 0.08) & (z > 0.2)
+    armz = ZONES['L'] | ZONES['R']
     # ---- 足・スカート（位置で決める）----
     def legd(sg): return np.hypot(x - sg * L['leg_x'], y - LEGY)
     LEGY = float(np.median(y[(z > 0.12) & (z < 0.16) & (ax < 0.12)]))
@@ -622,3 +624,276 @@ if STAGE == 31:
     print('GATE3 exported', len(POSES))
 
 
+# ===================================================================== 段 4: 顔（顔の面だけ材質 face。4 こまを横に並べた絵）
+if STAGE == 4:
+    import textwrap
+    bpy.ops.wm.open_mainfile(filepath=os.path.join(WORK, 'stage3.blend'))
+    av = bpy.data.objects['avatar']; me = av.data; L = CFG['landmarks']; FC = CFG['face']
+    FX0, FX1, FZ0, FZ1 = FC['box']
+    timg = tex_of(av); TW, TH = timg.size
+    tex = pixels(timg)[:, :, :3]
+    CW = FC['cell'][0]; CHh = FC['cell'][1]
+    V2 = open('/home/otosa/mogumo-go/art/prototypes/avatar/blender-v2.py').read().split('\n')
+    partA = textwrap.dedent('\n'.join(V2[503:601]))   # 体の絵から顔を写す〜目の箱（blender-v2.py の顔の節。実績）
+    partB = textwrap.dedent('\n'.join(V2[601:691]))   # 半分・閉じ・うれしい の絵（同上）
+    # 顔の面: 頭の前の肌・目（髪・耳・フードは入れない）
+    vs_ = np.empty(len(me.polygons), int); me.attributes['seg'].data.foreach_get('value', vs_)
+    seg_face = set(int(i) for i, p in enumerate(me.polygons) if vs_[i] in (2, 5) and p.normal.y < -0.2 and FX0 < p.center.x < FX1 and FZ0 < p.center.z < FZ1 and p.center.y < 0)
+    partA = partA.replace("sel = [f for f in bm.faces if all(FX0 < v.co.x < FX1 and FZ0 < v.co.z < FZ1 for v in f.verts) and f.normal.y < -0.3]",
+                          "sel = [f for f in bm.faces if f.index in seg_face and all(FX0 < v.co.x < FX1 and FZ0 < v.co.z < FZ1 for v in f.verts)]")
+    assert 'seg_face' in partA
+    ns = dict(globals()); ns.update(locals())
+    exec(partA, ns)
+    EB = ns['EB']
+    # 顔の面の外（絵のすき間）は、近い色で全部うめる（小さく表示したときに、ふちへ黒がにじまないように）
+    nrm, cov = ns['normal'], ns['cover']
+    while not cov.all():
+        m_ = cov.astype(np.float32); acc = np.zeros_like(nrm); cnt = np.zeros_like(m_)
+        for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            acc += np.roll(np.roll(nrm * m_[:, :, None], dy, 0), dx, 1); cnt += np.roll(np.roll(m_, dy, 0), dx, 1)
+        grow = (~cov) & (cnt > 0); nrm[grow] = acc[grow] / cnt[grow][:, None]; cov = cov | grow
+    ns['normal'], ns['cover'] = nrm, cov
+    # 男の子の face4.png の うれしい のこまを、目の位置で合わせて写す
+    src = bpy.data.images.load('/home/otosa/mogumo-go/' + FC['happy_src'])   # 女の子: うれしい の絵が無いので、男の子の仕上がりの顔のこま 3 を写す（仮）
+    OP = pixels(src)[::-1]; OW = src.size[0] // 4; OH = src.size[1]
+    old_normal, old_happy = OP[:, 0:OW, :3], OP[:, OW * 3:OW * 4]
+    lum_o = old_normal @ np.array([0.3, 0.55, 0.15], np.float32)
+    from collections import deque
+    def blobs2(dark):
+        lab = np.zeros(dark.shape, int); out = []
+        for sy, sx in zip(*np.nonzero(dark)):
+            if lab[sy, sx]: continue
+            q = deque([(sy, sx)]); lab[sy, sx] = len(out) + 1; pts = []
+            while q:
+                a_, b_ = q.popleft(); pts.append((a_, b_))
+                for da, db in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    c_, d_ = a_ + da, b_ + db
+                    if 0 <= c_ < dark.shape[0] and 0 <= d_ < dark.shape[1] and dark[c_, d_] and not lab[c_, d_]:
+                        lab[c_, d_] = len(out) + 1; q.append((c_, d_))
+            out.append(np.array(pts))
+        out.sort(key=len, reverse=True)
+        return sorted(out[:2], key=lambda b: b[:, 1].mean())
+    yo, xo = np.mgrid[0:OH, 0:OW]
+    eo = blobs2((lum_o < 0.33) & (yo > OH * 0.25) & (yo < OH * 0.85))
+    EO = [(b[:, 0].min(), b[:, 1].min(), b[:, 0].max(), b[:, 1].max()) for b in eo]
+    cx_n = [(e[1] + e[3]) / 2 for e in EB]; cx_o = [(e[1] + e[3]) / 2 for e in EO]
+    cy_n = np.mean([(e[0] + e[2]) / 2 for e in EB]); cy_o = np.mean([(e[0] + e[2]) / 2 for e in EO])
+    sx = (cx_o[1] - cx_o[0]) / (cx_n[1] - cx_n[0]); sy = sx
+    yy_, xx_ = np.mgrid[0:CHh, 0:CW]
+    ox = np.clip(((xx_ - (cx_n[0] + cx_n[1]) / 2) * sx + (cx_o[0] + cx_o[1]) / 2).round().astype(int), 0, OW - 1)
+    oy = np.clip(((yy_ - cy_n) * sy + cy_o).round().astype(int), 0, OH - 1)
+    happy = old_happy[oy, ox]
+    # 口は口どうしで合わせる（目の間の幅で縮めたうえで、ふつうの口のまん中どうしをそろえる）
+    def mouth_box(img, eyes, h, r1=None):
+        sk = np.median(img[int(h * 0.3):int(h * 0.6), (eyes[0][3] + eyes[1][1]) // 2 - 10:(eyes[0][3] + eyes[1][1]) // 2 + 10].reshape(-1, 3), 0)
+        r0 = max(e[2] for e in eyes) + 8; c0, c1 = eyes[0][3], eyes[1][1]
+        d = np.linalg.norm(img[r0:(r1 or int(h * 0.97)), c0:c1] - sk, axis=2) > 0.15
+        ys, xs = np.nonzero(d); return (ys.mean() + r0, xs.mean() + c0)
+    MR1 = max(e[2] for e in EB) + FC['mouth_rows']   # 女の子: あごの印を口と取り違えないよう、目の下 mouth_rows 画素まで
+    mo = mouth_box(old_normal, EO, OH); mn_ = mouth_box(ns['normal'], EB, CHh, MR1)
+    LOG['mouth_centers'] = dict(old=[round(float(v), 1) for v in mo], new=[round(float(v), 1) for v in mn_])
+    low = yy_ > max(e[2] for e in EB) + 6
+    ox2 = np.clip(((xx_ - mn_[1]) * sx + mo[1]).round().astype(int), 0, OW - 1)
+    oy2 = np.clip(((yy_ - mn_[0]) * sy + mo[0]).round().astype(int), 0, OH - 1)
+    happy[low] = old_happy[oy2, ox2][low]
+    LOG['face'] = dict(eyes_new=[list(map(int, e)) for e in EB], eyes_old=[list(map(int, e)) for e in EO], scale=round(float(sx), 3), faces=len(seg_face))
+    ns['happy'] = happy
+    # 2 回目: 目を消すぬり方を変える。箱のふち 1 画素を元の色に固定して中をならす（ラプラスの式）。だ円のやわらかいふちで元の暗い色が
+    # 半分残ると、目のまわりにうすい輪が出た（1 回目の不具合）。ふちと中が続いているので、箱の全体をぬっても境目が出ない
+    partB = partB.replace('np.clip((1.0 - nd) * min(rx, ry) / 4, 0, 1)', 'np.clip((1.0 - nd) * min(rx, ry) / 12, 0, 1)')  # うれしいの写し（ell）は 1 回目のまま
+    i0 = partB.index('def erase(img, box, pad, below=None):'); i1 = partB.index('def stroke(')
+    partB = partB[:i0] + textwrap.dedent("""
+        def erase(img, box, pad, below=None):
+            r0, c0, r1, c1 = max(box[0] - pad, 5), max(box[1] - pad, 1), min(box[2] + pad, img.shape[0] - 6), min(box[3] + pad, img.shape[1] - 2)
+            top = hsm(img[r0 - 4:r0, c0:c1 + 1].mean(0))
+            bot = hsm(img[r1 + 1:r1 + 5, c0:c1 + 1].mean(0))
+            t = ((np.arange(r0, r1 + 1) - r0 + 0.5) / (r1 - r0 + 1))[:, None, None]
+            full = img.copy()
+            full[r0:r1 + 1, c0:c1 + 1] = top[None] * (1 - t) + bot[None] * t
+            Rg = full[r0 - 1:r1 + 2, c0 - 1:c1 + 2].copy()
+            for _ in range(1500):
+                Rg[1:-1, 1:-1] = (Rg[:-2, 1:-1] + Rg[2:, 1:-1] + Rg[1:-1, :-2] + Rg[1:-1, 2:]) / 4
+            full[r0:r1 + 1, c0:c1 + 1] = Rg[1:-1, 1:-1]
+            m = np.zeros(img.shape[:2], np.float32); m[r0:r1 + 1, c0:c1 + 1] = 1
+            if below is not None:
+                m = m * np.clip(below - (yy - 0.5) + 0.5, 0, 1)
+            return img * (1 - m[:, :, None]) + full * m[:, :, None]
+
+    """) + partB[i1:]
+    # この子の目は大きく、まつげが暗い所の箱の外へ出るので、消す範囲を広げる
+    partB = partB.replace('mr0, mr1, mc0, mc1 = eb_ + 4, int(CHh * 0.97), EB[0][3], EB[1][1]', 'mr0, mr1, mc0, mc1 = eb_ + 4, MR1, EB[0][3], EB[1][1]')
+    # 女の子: うれしい の目の弧は、女の子の目の色（ink）でぬる。目の箱の上 30% より上は写さない（男の子の絵の小さな汚れ・まゆを入れない）
+    partB = partB.replace('happyc = base * (1 - ha[:, :, None]) + hrgb * ha[:, :, None]',
+        'eyezone = np.maximum(ell(EB[0], PAD + 9), ell(EB[1], PAD + 9)) > 0\n'
+        'ha = ha * np.where(eyezone, (yy >= min(e[0] for e in EB) + 0.3 * (EB[0][2] - EB[0][0])), 1.0)\n'
+        'happyc = base * (1 - ha[:, :, None]) + np.where(eyezone[:, :, None], ink[None, None], hrgb) * ha[:, :, None]')
+    # 女の子: 口は元の笑顔のまま（男の子の開いた口は写さない。立ち絵の顔も口を閉じた笑顔）
+    partB = partB.replace('base = erase(base, nmouth, 5)', 'pass').replace('R = np.maximum.reduce([ell(EB[0], 16), ell(EB[1], 16), ell(hmouth, 3)])', 'R = np.maximum(ell(EB[0], 16), ell(EB[1], 16))')
+    assert 'MR1' in partB and 'eyezone' in partB and 'ell(hmouth' not in partB
+    partB = partB.replace('PAD = 7', 'PAD = %d' % FC['erase_pad']).replace('ell(EB[0], 16), ell(EB[1], 16)', 'ell(EB[0], %d), ell(EB[1], %d)' % (FC['erase_pad'] + 9, FC['erase_pad'] + 9))
+    assert 'PAD = %d' % FC['erase_pad'] in partB
+    ns['MR1'] = MR1
+    exec(partB, ns)
+    atlas = ns['atlas']; normal = ns['normal']
+    # ふち 1 画素も変えない: こま 1〜3 の、目・口の枠の外が こま 0 と同じかを数える
+    R = ns['R']; keep = R <= 0
+    for i in (1, 2, 3):
+        cell = atlas[:, i * CW:(i + 1) * CW, :3]
+        if i in (1, 2):
+            pad = FC['erase_pad'] + 16
+            m = np.ones((CHh, CW), bool)
+            for (r0, c0, r1, c1) in EB: m[max(r0 - pad, 0):r1 + pad + 1, max(c0 - pad, 0):c1 + pad + 1] = False
+        else:
+            m = keep.copy()
+            nm = ns['nmouth']
+            for (r0, c0, r1, c1) in EB: m[max(r0 - FC['erase_pad'] - 16, 0):r1 + FC['erase_pad'] + 17, max(c0 - FC['erase_pad'] - 16, 0):c1 + FC['erase_pad'] + 17] = False
+            m[nm[0] - 6:nm[2] + 7, nm[1] - 6:nm[3] + 7] = False
+        LOG['face'][f'cell{i}_changed_outside_boxes'] = int((np.abs(cell - atlas[:, :CW, :3]).max(2)[m] > 1e-6).sum())
+    aimg = bpy.data.images.new('face4', CW * 4, CHh, alpha=False)
+    aimg.pixels.foreach_set(atlas[::-1].ravel()); aimg.pack()
+    aimg.filepath_raw = os.path.join(WORK, 'face4-stage4.png'); aimg.file_format = 'PNG'; aimg.save()   # 女の子: 段 45 はこの絵から（face4.png は段 45 の出力。上書きで二重に塗り直された）
+    fmat = bpy.data.materials.new('face'); fmat.use_nodes = True
+    bsdf = fmat.node_tree.nodes['Principled BSDF']; bsdf.inputs['Roughness'].default_value = 0.9
+    tn = fmat.node_tree.nodes.new('ShaderNodeTexImage'); tn.image = aimg; tn.interpolation = 'Linear'
+    fmat.node_tree.links.new(tn.outputs['Color'], bsdf.inputs['Base Color'])
+    me.materials[0].name = 'avatar'
+    me.materials.append(fmat)
+    bm = ns['bm']; uvl = bm.loops.layers.uv.active
+    for f in ns['sel']:
+        f.material_index = 1
+        for l in f.loops: l[uvl].uv = (((l.vert.co.x - FX0) / (FX1 - FX0)) / 4, (l.vert.co.z - FZ0) / (FZ1 - FZ0))
+    bm.to_mesh(me); bm.free()
+    save('stage4.blend')
+    json.dump(LOG, open(os.path.join(WORK, 'stage4-log.json'), 'w'), indent=1, ensure_ascii=False)
+    print('STAGE4', json.dumps(LOG, ensure_ascii=False))
+
+
+# ===================================================================== 段 45（3 回目）: 塗り直し。区分けごとの色＋形の陰（repaint.py）
+if STAGE == 45:
+    from mathutils import Matrix
+    Mx = Matrix
+    exec(open(os.path.join(HERE, 'repaint.py')).read())
+
+
+# ===================================================================== 段 5: 動き（この体の寸法と、関門 3 の上限の 8 割で決め直す）
+if STAGE == 5:
+    from mathutils import Matrix
+    Mx = Matrix
+    bpy.ops.wm.open_mainfile(filepath=os.path.join(WORK, 'stage4r.blend'))   # 3 回目: 塗り直した物から
+    rig = bpy.data.objects['rig']; MO = CFG['motion']; AD = float(os.environ.get('ARMDOWN', MO['armDown']))
+    for mi_, path_ in ((0, os.path.join(WORK, 'body-r3.png')), (1, os.path.join(CH, 'face4.png'))):   # 3 回目: 塗り直した絵を読み直す
+        for n_ in bpy.data.objects['avatar'].data.materials[mi_].node_tree.nodes:
+            if n_.type == 'TEX_IMAGE':
+                im_ = bpy.data.images.load(path_, check_existing=False); im_.colorspace_settings.name = n_.image.colorspace_settings.name
+                im_.pack(); im_.name = n_.image.name + '_r3'; n_.image = im_
+    src = open('/home/otosa/mogumo-go/art/prototypes/avatar/blender-v2.py').read().split('\n')
+    block = '\n'.join(src[333:441])   # spline・WALK・RUN・gait・joy・idle・lift（blender-v2.py の動きの節。決め方の実績）
+    block = block.replace("A = RUNA if run else 0.28", "A = MO['runSwing'] if run else MO['walkSwing']")
+    block = block.replace("(1.45 + 0.12 * -ce) if run else (0.32 + 0.12 * -ce)", "(MO['runElbow'] + 0.12 * -ce) if run else (0.32 + 0.12 * -ce)")
+    # 3 回目: わきを閉じる（腕の開きの足し分を設定から）。手は軽く握る（指のかたまりを曲げる）。うれしいは前の版と同じ開き・手は開いたまま
+    # 4 回目（オーナー: 走りの足をもっとまっすぐ）: 走りは腰のひねりを小さく、ももを内へ戻して、足を前後にまっすぐ振る
+    assert "p['hipTwist'] = -(0.12 if run else 0.10) * c" in block
+    block = block.replace("p['hipTwist'] = -(0.12 if run else 0.10) * c", "p['hipTwist'] = -(MO.get('runHipTwist', 0.12) if run else 0.10) * c\n    p['legOut'] = -MO.get('runLegIn', 0.0) if run else 0.0")
+    block = block.replace("p['armOut'] = 0.12 if run else 0.04", "p['armOut'] = MO['runOut'] if run else MO['walkOut']\n    for s_ in 'LR': p['fingers' + s_] = MO['fist']")
+    block = block.replace("p = {'armOut': 0.55 + 0.15 * math.sin(TAU * ph)", "p = {'armOut': 0.55 + (AD - 0.60) + 0.15 * math.sin(TAU * ph)")
+    block = block.replace("'armOut': 0.03 + 0.02 * b, 'pack': 0.01 * b}", "'armOut': MO['idleOut'] + 0.02 * b, 'pack': 0.01 * b, 'fingersL': MO['fist'], 'fingersR': MO['fist']}")
+    assert block.count("MO['fist']") == 3 and "(AD - 0.60)" in block
+    ns = dict(globals()); ns.update(MO=MO, AD=AD)
+    exec(block, ns)
+    # 走り: 股の前は上限の 8 割まで、ひざは上限の 8 割まで（体のはずみで走りを見せる）
+    RUN = ns['RUN']
+    RUN['thigh'] = [(p, v * MO['runThighScale'] if v > 0 else v) for p, v in RUN['thigh']]
+    RUN['knee'] = [(p, v * MO['runKneeScale']) for p, v in RUN['knee']]
+    lim = CFG['limits']
+    LOG['run_max'] = dict(thigh=max(v for _, v in RUN['thigh']), knee=max(v for _, v in RUN['knee']), limits=lim)
+    def ap(p): apply_pose(rig, p, AD)
+    reset(rig)
+    REST_ANKLE, REST_TOE = rig.pose.bones['footL'].head.z, rig.pose.bones['footL'].tail.z
+    def ground_clear():
+        m = 9.0
+        for s in 'LR':
+            f = rig.pose.bones['foot' + s]; m = min(m, f.head.z - REST_ANKLE, f.tail.z - REST_TOE)
+        return m
+    def idle_r5(ph):
+        T2 = 2 * math.pi
+        br = math.sin(T2 * 2 * ph)            # 息（4 秒に 2 回）
+        sw = math.sin(T2 * ph)                # 体重の左右の移動（4 秒に 1 回）
+        p = {'hipRoll': 0.018 * sw, 'hipTwist': 0.012 * math.sin(T2 * (ph - 0.15)),
+             'chestRoll': -0.014 * sw, 'chestLean': -0.018 * br,
+             'headPitch': -0.012, 'headTwist': 0.03 * math.sin(T2 * (ph - 0.3)),
+             'armOut': MO['idleOut'] + 0.012 * br, 'elbowL': 0.14 + 0.03 * br, 'elbowR': 0.14 + 0.03 * br,
+             'fingersL': MO['fist'], 'fingersR': MO['fist']}
+        return p
+    ACTS = {'walk': (30, lambda ph: ns['gait'](ph, ns['WALK'], False), lambda ph: 0.0),
+            'run': (18, lambda ph: ns['gait'](ph, RUN, True), ns['lift_run']),
+            'idle': (120, idle_r5, lambda ph: 0.0),   # 5 回目: ふくらまさない自然な待機（体重の移動・息で胸と肩が少し上がる・頭のゆらぎ）。4 秒
+            'joy': (24, ns['joy'], ns['lift_joy'])}
+    bpy.context.scene.render.fps = 30
+    rig.animation_data_create()
+    # 角度の上限を数える（動きの全コマで）
+    peak = defaultdict(float)
+    for name, (N, fn, lift) in ACTS.items():
+        ys = np.zeros(N)
+        if lift is not None:
+            for i in range(N):
+                ap(fn(i / N)); ys[i] = -ground_clear()
+            k = np.array([0.25, 0.5, 0.25])
+            for _ in range(2): ys = k[0] * np.roll(ys, 1) + k[1] * ys + k[2] * np.roll(ys, -1)
+            ys += np.array([lift(i / N) for i in range(N)])
+        act = bpy.data.actions.new(name); rig.animation_data.action = act
+        for i in range(N + 1):
+            p = fn((i % N) / N)
+            for k_ in ('pack', 'packRoll'): p.pop(k_, None)   # 持ち物は揺らさない
+            if lift is not None: p['y'] = float(ys[i % N])
+            for k_ in ('armL', 'armR', 'thighL', 'thighR', 'kneeL', 'kneeR', 'elbowL', 'elbowR'):
+                peak[k_[:-1] + ('+' if p.get(k_, 0) >= 0 else '-')] = max(peak[k_[:-1] + ('+' if p.get(k_, 0) >= 0 else '-')], abs(p.get(k_, 0)))
+            ap(p); key_all(rig, i + 1)   # コマは 1 から（0 から始めると、書き出しで前の動きの姿勢が 0 コマ目に混ざった）
+        act.use_fake_user = True   # 書き出しは ACTIONS（NLA で書き出すと、0 コマ目に別の動きの姿勢が混ざった）
+        rig.animation_data.action = None
+        LOG[f'{name}_y'] = [round(float(ys.min()), 4), round(float(ys.max()), 4)]
+    LOG['peak_angles'] = {k: round(v, 3) for k, v in peak.items()}
+    # 3 回目: わきのすき間（腕・手と、胴・持ち物・足の面との、符号つきの距離の最小。負ならめりこみ）を全コマで測る
+    from mathutils.bvhtree import BVHTree
+    from mathutils import Vector
+    av = bpy.data.objects['avatar']; mm = av.data; nv_ = len(mm.vertices)
+    gidx = {g.index: g.name for g in av.vertex_groups}
+    armw = np.zeros(nv_); headw = np.zeros(nv_); side = np.zeros(nv_, int); part = np.zeros(nv_, int)
+    for v in mm.vertices:
+        for g in v.groups:
+            nm_ = gidx[g.group]
+            if nm_[:-1] in ('upperarm', 'forearm', 'hand', 'fingers'):
+                armw[v.index] += g.weight; side[v.index] = 1 if nm_[-1] == 'L' else -1
+                part[v.index] = max(part[v.index], ('upperarm', 'forearm', 'hand', 'fingers').index(nm_[:-1]) + 1 if g.weight > 0.5 else 0)
+            if nm_ == 'head': headw[v.index] += g.weight
+    R0 = np.array([v.co for v in mm.vertices]); shj = {1: np.array(rig.data.bones['upperarmL'].head_local), -1: np.array(rig.data.bones['upperarmR'].head_local)}
+    dsh = np.array([np.linalg.norm(R0[i] - shj[side[i]]) if side[i] else 0 for i in range(nv_)])
+    # 腕の点のうち、わきより下（腕の島）で、肩の関節から 0.05 より先（肩のつなぎ目の点は、胴と重みを分け合うので数えない）
+    armv = np.nonzero((armw > 0.99) & (R0[:, 2] < CFG['landmarks']['armpit'] - 0.012) & (dsh > 0.05))[0]; torv = (armw < 1e-4) & (headw < 0.5)
+    TRI_ = np.array([p_.vertices[:] for p_ in mm.polygons]); tf = TRI_[torv[TRI_].all(1)]
+    GAP = {}
+    for name, (N, fn, lift) in ACTS.items():
+        rig.animation_data.action = bpy.data.actions[name]; best = (9.0, 0, ''); far = (9.0, 0, '')
+        for i in range(1, N + 1):
+            bpy.context.scene.frame_set(i); dg = bpy.context.evaluated_depsgraph_get(); em = av.evaluated_get(dg).to_mesh()
+            P_ = np.empty(nv_ * 3, np.float32); em.vertices.foreach_get('co', P_); P_ = P_.reshape(-1, 3); av.evaluated_get(dg).to_mesh_clear()
+            bvh = BVHTree.FromPolygons(P_.tolist(), tf.tolist())
+            for vi in armv:
+                r_ = bvh.find_nearest(Vector(P_[vi]))
+                if r_[0] is None: continue
+                sd = (Vector(P_[vi]) - r_[0]).dot(r_[1])
+                if dsh[vi] > 0.09 and sd < far[0]: far = (sd, i, ('上腕', '前腕', '手', '指')[part[vi] - 1] + ('L' if side[vi] > 0 else 'R'))
+                if sd < best[0]: best = (sd, i, ('上腕', '前腕', '手', '指')[part[vi] - 1] + ('L' if side[vi] > 0 else 'R'), [round(float(x), 3) for x in R0[vi]], int(r_[2]), [round(float(x), 3) for x in R0[tf[r_[2]][0]]])
+        GAP[name] = dict(min=round(float(best[0]), 4), frame=best[1], part=best[2], rest=best[3] if len(best) > 3 else None, face_rest=best[5] if len(best) > 3 else None, beyond009=dict(min=round(float(far[0]), 4), frame=far[1], part=far[2]))
+        rig.animation_data.action = None
+    LOG['arm_gap'] = GAP
+    print('GAP', json.dumps(GAP, ensure_ascii=False))
+    if os.environ.get('NOEXPORT'): raise SystemExit
+    reset(rig)
+    bpy.context.scene.frame_start = 1; bpy.context.scene.frame_set(1)
+    save('stage5.blend')
+    out = os.environ.get('OUT', os.path.join(CH, 'avatar.glb'))
+    export(out, 'ACTIONS')
+    tris = sum(len(p.vertices) - 2 for p in bpy.data.objects['avatar'].data.polygons)
+    LOG['export'] = dict(bytes=os.path.getsize(out), tris=tris, bones=len(rig.data.bones), actions=[a.name for a in bpy.data.actions])
+    json.dump(LOG, open(os.path.join(WORK, 'stage5-log.json'), 'w'), indent=1, ensure_ascii=False)
+    print('STAGE5', json.dumps(LOG, ensure_ascii=False))
