@@ -28,6 +28,10 @@ function SkyIntro({ onDone }: { onDone: () => void }) {
 }
 
 export function Splash() {
+  // 起動してすぐ出していたタイトル（index.html の #boot）を、同じ見た目のこの画面に引き継いで消す
+  useEffect(() => {
+    document.getElementById('boot')?.remove()
+  }, [])
   const [tapped, setTapped] = useState(false)
   const [introDone, setIntroDone] = useState(false)
   const [gaveUp, setGaveUp] = useState(false)
@@ -69,14 +73,11 @@ export function Splash() {
       ) : (
         <span className="splash-start">タップしてスタート</span>
       )}
+      {/* 出典は必要なものだけ（2026-11-17 オーナー「最小限に」）。地図は地図の上に出典を出していないのでここで（OSMF の指針: 起動時の画面）、
+          ホットペッパーはアプリの中に表示が要る。ほかの出典（e-Stat・国土地理院・字体・チェーン店の一覧）は設定の「出典」に */}
       <span className="splash-credit">
-        <span>地図: OpenFreeMap © OpenMapTiles</span>
-        <span>データ: © OpenStreetMap contributors</span>
+        <span>地図 © OpenStreetMap contributors · OpenMapTiles · OpenFreeMap</span>
         <span>Powered by ホットペッパーグルメ Webサービス</span>
-        <span>町の境目: 「国勢調査 町丁・字等別境界データ」（総務省統計局・e-Stat）を加工して作成</span>
-        <span>地名検索: 国土地理院</span>
-        <span>図鑑の字体: M PLUS Rounded 1c（SIL Open Font License 1.1）</span>
-        <span>チェーン店の判定: name-suggestion-index（OpenStreetMap, BSD-3-Clause）</span>
       </span>
     </button>
   )

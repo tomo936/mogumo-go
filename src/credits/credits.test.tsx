@@ -10,18 +10,24 @@ beforeEach(() => {
 })
 afterEach(() => vi.useRealTimers())
 
-test('起動時のタイトル画面に地図の出典が出る。「タップしてスタート」を押すまで出したまま', () => {
+test('起動時のタイトル画面には、要る出典だけ（地図とホットペッパー）。「タップしてスタート」を押すまで出したまま（2026-11-17 オーナー「最小限に」）', () => {
   render(<Splash />)
-  expect(screen.getByText('地図: OpenFreeMap © OpenMapTiles')).toBeInTheDocument()
-  expect(screen.getByText('データ: © OpenStreetMap contributors')).toBeInTheDocument()
+  const map = 'OpenStreetMap contributors'
+  expect(screen.getByText(new RegExp(map))).toHaveTextContent('地図 © OpenStreetMap contributors · OpenMapTiles · OpenFreeMap')
   expect(screen.getByText('Powered by ホットペッパーグルメ Webサービス')).toBeInTheDocument()
-  expect(screen.getByText('地名検索: 国土地理院')).toBeInTheDocument()
-  expect(screen.getByText('町の境目: 「国勢調査 町丁・字等別境界データ」（総務省統計局・e-Stat）を加工して作成')).toBeInTheDocument()
-  expect(screen.getByText('図鑑の字体: M PLUS Rounded 1c（SIL Open Font License 1.1）')).toBeInTheDocument()
-  expect(screen.getByText('チェーン店の判定: name-suggestion-index（OpenStreetMap, BSD-3-Clause）')).toBeInTheDocument()
+  // ほかの出典は設定の「出典」に（タイトルには出さない）
+  expect(screen.queryByText(/国土地理院|e-Stat|M PLUS|name-suggestion/)).not.toBeInTheDocument()
   act(() => vi.advanceTimersByTime(60000))
   act(() => screen.getByRole('button', { name: /タップしてスタート/ }).click())
-  expect(screen.queryByText('地名検索: 国土地理院')).not.toBeInTheDocument()
+  expect(screen.queryByText(new RegExp(map))).not.toBeInTheDocument()
+})
+
+test('起動直後の index.html のタイトル（#boot）は、アプリのタイトルが出たら消す', () => {
+  const boot = document.createElement('div')
+  boot.id = 'boot'
+  document.body.appendChild(boot)
+  render(<Splash />)
+  expect(document.getElementById('boot')).toBeNull()
 })
 
 test('「タップしてスタート」はすぐ出る。押すと、お店を読んでいる間は右下に「読み込み中」、そろったらメインへ（2026-11-16 オーナー「OP はなし」）', () => {
@@ -44,7 +50,7 @@ test('タイトルを閉じると、タイトルの絵がふわっと消える�
   act(() => screen.getByRole('button', { name: /タップしてスタート/ }).click())
   expect(entered).toHaveBeenCalledTimes(1)
   const intro = screen.getByTestId('sky-intro')
-  expect(screen.queryByText('地名検索: 国土地理院')).not.toBeInTheDocument()
+  expect(screen.queryByText(/OpenStreetMap contributors/)).not.toBeInTheDocument()
   act(() => { intro.dispatchEvent(new Event('animationend', { bubbles: true })) })
   expect(screen.queryByTestId('sky-intro')).not.toBeInTheDocument()
   stop()
