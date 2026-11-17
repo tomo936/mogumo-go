@@ -297,6 +297,8 @@ def vcomponents(me, mask):
 
 Mx = None
 LEG_STAND = float(os.environ.get('LEGSTAND', CFG['motion'].get('legStand', 0.0)))
+TWIST_F = float(os.environ.get('TWISTF', CFG['motion'].get('twistForearm', 0.0)))   # 前腕のねじり（ラジアン、+ で手のひらが内側へ）
+TWIST_H = float(os.environ.get('TWISTH', CFG['motion'].get('twistHand', 0.0)))     # 手首のねじり
 
 
 def reset(rig):
@@ -331,9 +333,12 @@ def apply_pose(rig, p, armDown):
     for s, sg in (('L', 1), ('R', -1)):
         # 腕: まず A ポーズから下ろし（Y 軸）、それから前後に振る（X 軸）
         rot(rig, 'upperarm' + s, ('X', -g('arm' + s)), ('Y', sg * (armDown - g('armOut') - g('armOut' + s))))
-        rot(rig, 'forearm' + s, ('X', -g('elbow' + s)))
+        # 女の子（2 回目）: 手のひらを体の内側へ（親指が前）。前腕を自分の軸で TWIST_F、手首で TWIST_H ねじる（1 か所で 90° ねじると細くつぶれるので分ける）。
+        # ねじってから、ひじを前へ曲げる（世界の X 軸）
+        fa_ = rig.pose.bones['forearm' + s]; axv = (fa_.tail - fa_.head).normalized()
+        rot(rig, 'forearm' + s, ('X', -g('elbow' + s)), (axv, sg * (TWIST_F + g('twist' + s))))
         from mathutils import Quaternion
-        for bn, q in (('hand' + s, Quaternion((0, 1, 0), sg * g('handTwist' + s))), ('fingers' + s, Quaternion((1, 0, 0), g('fingers' + s)))):
+        for bn, q in (('hand' + s, Quaternion((0, 1, 0), sg * (TWIST_H + g('handTwist' + s)))), ('fingers' + s, Quaternion((1, 0, 0), g('fingers' + s)))):
             pb_ = rig.pose.bones.get(bn)
             if pb_ is not None: pb_.rotation_quaternion = q
         bpy.context.view_layer.update()
@@ -608,6 +613,11 @@ if STAGE == 31:
             ('ひじ110＋指90', {'elbowL': D(110), 'elbowR': D(110), 'fingersL': D(90), 'fingersR': D(90)}, AD),
             ('腕 前50 ひじ100 指90・後40', {'armL': D(50), 'elbowL': D(100), 'armR': -D(40), 'elbowR': D(60), 'fingersL': D(90), 'fingersR': D(90)}, AD),
             ('手首ひねり ±20', {'handTwistL': D(20), 'handTwistR': -D(20), 'fingersL': D(90), 'fingersR': D(90)}, AD)]
+    if os.environ.get('POSESET') == 'twist':   # 女の子 2 回目: 手のひらの向き（前腕・手首のねじり）と走りの腕
+        POSES = [('立ち 指0', {}, AD), ('立ち 指0.8', {'fingersL': 0.8, 'fingersR': 0.8}, AD),
+                 ('ひじ90 指1.5', {'elbowL': D(90), 'elbowR': D(90), 'fingersL': 1.5, 'fingersR': 1.5}, AD),
+                 ('左 前40ひじ95・右 後30ひじ80', {'armL': D(40), 'elbowL': D(95), 'armR': -D(30), 'elbowR': D(80), 'fingersL': 1.5, 'fingersR': 1.5}, AD),
+                 ('左 後30ひじ80・右 前40ひじ95', {'armR': D(40), 'elbowR': D(95), 'armL': -D(30), 'elbowL': D(80), 'fingersL': 1.5, 'fingersR': 1.5}, AD)]
     bpy.context.scene.render.fps = 30
     HP = []
     rig.animation_data_create(); act = bpy.data.actions.new('gate3'); rig.animation_data.action = act
@@ -794,10 +804,10 @@ if STAGE == 5:
     # 4 回目（オーナー: 走りの足をもっとまっすぐ）: 走りは腰のひねりを小さく、ももを内へ戻して、足を前後にまっすぐ振る
     assert "p['hipTwist'] = -(0.12 if run else 0.10) * c" in block
     block = block.replace("p['hipTwist'] = -(0.12 if run else 0.10) * c", "p['hipTwist'] = -(MO.get('runHipTwist', 0.12) if run else 0.10) * c\n    p['legOut'] = -MO.get('runLegIn', 0.0) if run else 0.0")
-    block = block.replace("p['armOut'] = 0.12 if run else 0.04", "p['armOut'] = MO['runOut'] if run else MO['walkOut']\n    for s_ in 'LR': p['fingers' + s_] = MO['fist']")
+    block = block.replace("p['armOut'] = 0.12 if run else 0.04", "p['armOut'] = MO['runOut'] if run else MO['walkOut']\n    for s_ in 'LR': p['fingers' + s_] = MO['fistRun'] if run else MO['fistWalk']")
     block = block.replace("p = {'armOut': 0.55 + 0.15 * math.sin(TAU * ph)", "p = {'armOut': 0.55 + (AD - 0.60) + 0.15 * math.sin(TAU * ph)")
-    block = block.replace("'armOut': 0.03 + 0.02 * b, 'pack': 0.01 * b}", "'armOut': MO['idleOut'] + 0.02 * b, 'pack': 0.01 * b, 'fingersL': MO['fist'], 'fingersR': MO['fist']}")
-    assert block.count("MO['fist']") == 3 and "(AD - 0.60)" in block
+    block = block.replace("'armOut': 0.03 + 0.02 * b, 'pack': 0.01 * b}", "'armOut': MO['idleOut'] + 0.02 * b, 'pack': 0.01 * b, 'fingersL': MO['fistIdle'], 'fingersR': MO['fistIdle']}")
+    assert block.count("MO['fistRun']") == 1 and block.count("MO['fistIdle']") == 2 and "(AD - 0.60)" in block
     ns = dict(globals()); ns.update(MO=MO, AD=AD)
     exec(block, ns)
     # 走り: 股の前は上限の 8 割まで、ひざは上限の 8 割まで（体のはずみで走りを見せる）
@@ -822,7 +832,7 @@ if STAGE == 5:
              'chestRoll': -0.014 * sw, 'chestLean': -0.018 * br,
              'headPitch': -0.012, 'headTwist': 0.03 * math.sin(T2 * (ph - 0.3)),
              'armOut': MO['idleOut'] + 0.012 * br, 'elbowL': 0.14 + 0.03 * br, 'elbowR': 0.14 + 0.03 * br,
-             'fingersL': MO['fist'], 'fingersR': MO['fist']}
+             'fingersL': MO['fistIdle'], 'fingersR': MO['fistIdle']}
         return p
     ACTS = {'walk': (30, lambda ph: ns['gait'](ph, ns['WALK'], False), lambda ph: 0.0),
             'run': (18, lambda ph: ns['gait'](ph, RUN, True), ns['lift_run']),
