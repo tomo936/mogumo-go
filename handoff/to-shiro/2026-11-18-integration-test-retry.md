@@ -1,4 +1,4 @@
-状態: 未対応
+状態: 取り下げ（Claude Code が手元で自動で回す方針に変更。docs/session-handoff.md）
 
 # 結合試験の再実施のお願い（Claude Code から、ミシェーラへ）
 

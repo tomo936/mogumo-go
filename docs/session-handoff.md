@@ -8,6 +8,14 @@
 
 ## いまの状態
 
+- **【2026-11-18 結合試験の方針（オーナー決定・最優先）】ミシェーラにもオーナーにもやらせず、Claude Code が手元で自動で回す。**
+  - 理由: ミシェーラの環境では手順 2（ゲスト開始）で止まり、通らなかった。オーナーも試験はやりたくない。
+  - やり方: 手元の Docker に本物と同じ Supabase を立てる（Supabase CLI は `npm i -D supabase`、オーナー承認済み）→ SQL 0001〜0015 と Edge Functions を入れる → Turnstile は手元では切る → ホットペッパーは決まった見本を返す（キー・回数を使わない）→ Playwright で `handoff/to-shiro/2026-11-17-integration-test.md` の**手順 1〜12 を全部**通す（途中で DB の中身も確かめる）。本番・dev のデータには触らない。
+  - 範囲外: Google ログイン（オーナーのアカウントが要る）、iPhone 実機の GPS・重さ（リリース直前にオーナーが 5 分）。
+  - 環境: Docker はサンドボックスの外からだけ使える（サンドボックスの中ではグループが `nogroup` に見える）。`docker version` は外で確認済み（29.7.2）。サンドボックスの外での実行は、そのつどオーナーの許可が要る。
+  - 試験の台本は `scripts/e2e/`（これから作る）。Playwright は `/home/otosa/tools/pw/`（読み取り専用なので台本は別の場所に置く）。
+  - ミシェーラへの再実施の依頼 `handoff/to-shiro/2026-11-18-integration-test-retry.md` は、この方針と合わないので取り下げる。
+
 - **【2026-11-17 深夜 区切り（最新）】リリース前の確認**
   - 済（オーナー）: SQL 0013・0014・0015 の Run、Manual linking のオン。
   - 済（Claude Code、dev に反映）: 総合レビュー＋セキュリティ（`docs/release-review-2026-11-17.md`、重大なし）。バグ修正 5 件: ポコタンが止まる（Live2D の合成シェーダー約 270 個を使うときだけ作る、`src/vendor/live2d-framework/PATCHES.md`）・起動直後のお店／コルティ 4 軒（タイルの境目。新しいタイルが届いたらまわりを置き直す `tileBox.ts`）・新しいアカウントでポコタンとログインボーナスが出ない（`loading.hasEntered`）・ポコタンのタップ後に字が巻き戻る・dev のサイトでも `?fake=緯度,経度`。
