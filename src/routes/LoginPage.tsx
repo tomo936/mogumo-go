@@ -4,6 +4,7 @@ import { Link, Navigate } from 'react-router'
 import { useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthContext.ts'
 import { captchaToken } from '../auth/infra/turnstile.ts'
+import { LoadingStatus } from '../credits/LoadingStatus.tsx'
 import titleArt from '../assets/ui/title.webp'
 import logoArt from '../assets/ui/logo.webp'
 import './login.css'
@@ -25,7 +26,7 @@ export function LoginPage() {
   const [busy, setBusy] = useState<'google' | 'guest' | null>(null)
   const [guestFailed, setGuestFailed] = useState<string | null>(null) // 失敗したときの理由（null = 失敗していない）
   const captchaRef = useRef<HTMLDivElement>(null)
-  if (loading) return <p className="status">読み込み中…</p>
+  if (loading) return <LoadingStatus />
   if (session) return <Navigate to="/" replace />
   return (
     <main className="login" style={{ '--login-art': `url(${titleArt})` } as React.CSSProperties}>
