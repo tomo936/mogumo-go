@@ -1,5 +1,5 @@
 # 地図の上の 2D のキャラ（3D がまだ無いキャラの代わり）用に、原画の白い背景を抜いて、いちばん大きいかたまり（キャラ本体。まわりのキラキラは捨てる）だけを残す。
-# 出力: src/assets/gacha/stand/NN.webp（ガチャ 30 体）・102.webp（女の子）。高さ 360px・透明つき・下の余白なし（足元＝画像の下端）
+# 出力: src/assets/gacha/stand/NN.webp（ガチャ 30 体）・101.webp（男の子）・102.webp（女の子）。高さ 360px・透明つき・下の余白なし（足元＝画像の下端）
 # 使い方: blender -b -P art/prototypes/gacha-stand.py -- <リポジトリの場所>
 import bpy, sys, os, re
 import numpy as np
@@ -10,6 +10,7 @@ for f in sorted(os.listdir(os.path.join(root, 'art/gacha/chars'))):
     m = re.match(r'char-(\d\d)-.*\.webp$', f)
     if m: jobs.append((os.path.join(root, 'art/gacha/chars', f), m.group(1)))
 jobs.append((os.path.join(root, 'src/assets/characters/starter-girl.webp'), '102'))
+jobs.append((os.path.join(root, 'src/assets/characters/starter-boy.webp'), '101'))
 sc = bpy.context.scene
 sc.view_settings.view_transform = 'Standard'; sc.view_settings.look = 'None'
 s = sc.render.image_settings; s.file_format = 'WEBP'; s.quality = 85; s.color_mode = 'RGBA'

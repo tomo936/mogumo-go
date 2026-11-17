@@ -147,10 +147,13 @@
 }
 .gc__stage img {
   position: absolute;
-  left: 8%;
-  bottom: 12%;
-  width: 84%;
-  mix-blend-mode: multiply; /* 原画の白い背景を光に溶かす */
+  left: 10%;
+  right: 10%;
+  bottom: 13%;
+  height: 80%;
+  width: 80%;
+  object-fit: contain;
+  object-position: 50% 100%;
 }
 .gc__new {
   position: absolute;

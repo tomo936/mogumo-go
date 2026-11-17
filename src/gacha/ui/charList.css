@@ -79,12 +79,11 @@
 }
 .cl__stage img {
   position: absolute;
-  inset: 0 0 4%;
+  inset: 2% 0 6%;
   width: 100%;
-  height: 100%;
+  height: 92%;
   object-fit: contain;
   object-position: 50% 100%;
-  mix-blend-mode: multiply;
 }
 .cl__info {
   flex: 1;
@@ -184,10 +183,11 @@
 }
 .cl__cell img {
   position: absolute;
-  left: -17.5%;
-  bottom: 2%;
-  width: 135%;
-  mix-blend-mode: multiply;
+  inset: 8% 8% 6%;
+  width: 84%;
+  height: 86%;
+  object-fit: contain;
+  object-position: 50% 100%;
 }
 .cl__cell.is-sel {
   border-color: #e8883a;
@@ -200,8 +200,7 @@
 }
 .cl__cell.is-locked img {
   filter: brightness(0);
-  opacity: 0.18;
-  mix-blend-mode: normal;
+  opacity: 0.16;
 }
 .cl__cell:disabled {
   opacity: 1;

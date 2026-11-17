@@ -25,6 +25,7 @@ import type { Shop } from '../../shops/domain/shop.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
 import { createAvatar } from '../infra/avatarMarker.ts'
 import { createAvatarModel } from '../infra/avatarModel.ts'
+import { standArtUrl } from '../../gacha/infra/gachaApi.ts'
 import type { Expression } from '../infra/avatarModel.ts'
 import { attachWorld } from './worldLayers.ts'
 import type { DailyHint } from '../../hints/domain/hint.ts'
@@ -74,13 +75,8 @@ type Props = {
   ref?: Ref<MapViewHandle>
 }
 
-// 3D が無いキャラは、背景を抜いた立ち絵（src/assets/gacha/stand/、台本 art/prototypes/gacha-stand.py）を 2D で出す。
-// 男の子（101）は 3D が無くても歩く絵（null）
-const STANDS = import.meta.glob<string>('../../assets/gacha/stand/*.webp', { query: '?url', import: 'default', eager: true })
-function stillFor(id: number): string | null {
-  if (id === 101) return null
-  return STANDS[`../../assets/gacha/stand/${id === 102 ? '102' : String(id).padStart(2, '0')}.webp`] ?? null
-}
+// 3D が無いキャラは、背景を抜いた立ち絵を 2D で出す。男の子（101）は 3D が無くても歩く絵（null）
+const stillFor = (id: number): string | null => (id === 101 ? null : standArtUrl(id))
 
 const TAP_MAX_MOVE_PX = 10
 const TAP_MAX_MS = 300

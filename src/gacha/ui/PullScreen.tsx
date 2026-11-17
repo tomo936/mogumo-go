@@ -6,7 +6,7 @@ import './pull.css'
 import { characterById } from '../domain/characters.ts'
 import { bestRarity, friendshipHearts } from '../domain/gacha.ts'
 import type { Draw } from '../domain/gacha.ts'
-import { charArtUrl } from '../infra/gachaApi.ts'
+import { standArtUrl } from '../infra/gachaApi.ts'
 import { Stars } from './GachaScreen.tsx'
 
 type Props = { draws: Draw[]; onDone: () => void }
@@ -69,7 +69,7 @@ export function PullScreen({ draws, onDone }: Props) {
             const c = characterById(d.characterId)
             return (
               <li key={d.pos} className={`pl__cell pl__cell--r${d.rarity}`}>
-                <img src={charArtUrl(d.characterId)} alt="" />
+                <img src={standArtUrl(d.characterId)} alt="" />
                 <span>{c?.name ?? '？'}</span>
                 {d.isNew && <i className="pl__cell-new">NEW</i>}
               </li>
@@ -104,7 +104,7 @@ function One({ d, count }: { d: Draw; count: string | null }) {
       <span className="gc__ribbon">{c?.name ?? '？'}</span>
       <div className="gc__stage pl__stage">
         <span className="gc__glow" aria-hidden="true" />
-        <img src={charArtUrl(d.characterId)} alt="" />
+        <img src={standArtUrl(d.characterId)} alt="" />
         {d.isNew ? (
           <span className="gc__new">NEW!</span>
         ) : (

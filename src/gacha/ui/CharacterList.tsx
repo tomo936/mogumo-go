@@ -5,7 +5,7 @@ import './charList.css'
 import { CHARACTERS } from '../domain/characters.ts'
 import type { Rarity } from '../domain/characters.ts'
 import { FRIENDSHIP_MAX, friendshipHearts } from '../domain/gacha.ts'
-import { charArtUrl } from '../infra/gachaApi.ts'
+import { standArtUrl } from '../infra/gachaApi.ts'
 import { Icon } from '../../ui/Icon.tsx'
 import { Stars } from './GachaScreen.tsx'
 
@@ -52,7 +52,7 @@ export function CharacterList({ owned, currentId, onPick, onClose }: Props) {
 
       <section className={hearts === FRIENDSHIP_MAX ? 'cl__big is-max' : 'cl__big'} aria-label="選んでいるキャラ">
         <div className="cl__stage" key={c.id}>
-          <img src={charArtUrl(c.id)} alt="" />
+          <img src={standArtUrl(c.id)} alt="" />
         </div>
         <div className="cl__info">
           {c.rarity ? <Stars n={c.rarity} /> : <span className="cl__first">はじめのなかま</span>}
@@ -99,7 +99,7 @@ export function CharacterList({ owned, currentId, onPick, onClose }: Props) {
                   setFailed(false)
                 }}
               >
-                <img src={charArtUrl(x.id)} alt="" />
+                <img src={standArtUrl(x.id)} alt="" />
                 {x.id === using && <span className="cl__using">使用中</span>}
                 {x.rarity && <span className={`cl__r cl__r--${x.rarity}`}>{`★${x.rarity}`}</span>}
               </button>

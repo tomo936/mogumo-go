@@ -174,6 +174,8 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 .pl__hint {
+  position: relative;
+  z-index: 2;
   margin: 0;
   color: #fff;
   font-size: 13px;
@@ -208,8 +210,8 @@
 .pl__cell img {
   width: 100%;
   aspect-ratio: 1;
-  object-fit: cover;
-  mix-blend-mode: multiply;
+  object-fit: contain;
+  object-position: 50% 100%;
 }
 .pl__cell span {
   font-size: 10px;
@@ -230,6 +232,8 @@
   font-weight: 800;
 }
 .pl__done {
+  position: relative; /* 光（.pl__one::before）より手前に */
+  z-index: 2;
   width: min(100%, 300px);
   padding: 14px;
   background: #e8883a;

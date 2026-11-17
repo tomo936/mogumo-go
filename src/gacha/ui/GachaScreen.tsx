@@ -6,7 +6,7 @@ import { CHARACTERS } from '../domain/characters.ts'
 import type { Rarity } from '../domain/characters.ts'
 import { DRAW_COST, RATES, untilCeiling } from '../domain/gacha.ts'
 import type { DrawType } from '../domain/gacha.ts'
-import { charArtUrl } from '../infra/gachaApi.ts'
+import { standArtUrl } from '../infra/gachaApi.ts'
 import { Icon } from '../../ui/Icon.tsx'
 import { CoinIcon } from '../../ui/CoinIcon.tsx'
 
@@ -64,7 +64,7 @@ export function GachaScreen({ coins, owned, pullsSinceFive, busy, error, onDraw,
         <span className="gc__ribbon">{c.name}</span>
         <div className="gc__stage">
           <span className="gc__glow" aria-hidden="true" />
-          <img src={charArtUrl(c.id)} alt="" />
+          <img src={standArtUrl(c.id)} alt="" />
           {!owned.has(c.id) && <span className="gc__new">NEW!</span>}
         </div>
       </div>

@@ -40,3 +40,10 @@ export function charArtUrl(id: number): string {
   const g = GACHA[`../../assets/gacha/chars/${String(id).padStart(2, '0')}.webp`]
   return g ?? STARTER['../../assets/characters/starter-boy.webp']
 }
+
+// 背景を抜いた立ち絵（台の上・一覧・地図の 2D で使う）。src/assets/gacha/stand/（台本 art/prototypes/gacha-stand.py）
+const STANDS = import.meta.glob<string>('../../assets/gacha/stand/*.webp', { query: '?url', import: 'default', eager: true })
+export function standArtUrl(id: number): string {
+  const key = id >= 100 ? String(id) : String(id).padStart(2, '0')
+  return STANDS[`../../assets/gacha/stand/${key}.webp`] ?? STANDS['../../assets/gacha/stand/101.webp']
+}
