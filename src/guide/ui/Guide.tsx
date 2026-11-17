@@ -63,7 +63,7 @@ export function Guide({ onClose }: Props) {
     setShown(0)
     const id = setInterval(() => {
       const n = shownChars(text, performance.now() - t0)
-      setShown(n)
+      setShown((prev) => Math.max(prev, n)) // タップで全部出したあとに巻き戻さない
       if (n >= text.length) clearInterval(id)
     }, 30)
     return () => clearInterval(id)
