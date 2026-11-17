@@ -2,6 +2,8 @@
 // 地図の画面が start（読み始め）と done（そろった）を知らせる。地図の画面が無い（ログイン前など）ときは start されないので待たない
 type State = 'idle' | 'waiting' | 'done'
 let state: State = 'idle'
+// タイトルをもう閉じたか。新しいアカウントはログイン・初回設定のあとに地図の画面ができるので、閉じた合図を後から知る必要がある（2026-11-17 オーナー「新しいアカウントでポコタンが出ない」）
+let entered = false
 const subs = new Set<() => void>()
 const enterSubs = new Set<() => void>() // タイトルを閉じて地図へ入った（空から降りる演出の合図）
 const set = (next: State) => {
@@ -17,10 +19,17 @@ export const loading = {
     subs.add(cb)
     return () => { subs.delete(cb) }
   },
-  enter: () => { for (const cb of enterSubs) cb() },
+  enter: () => {
+    entered = true
+    for (const cb of enterSubs) cb()
+  },
+  hasEntered: () => entered,
   onEnter: (cb: () => void) => {
     enterSubs.add(cb)
     return () => { enterSubs.delete(cb) }
   },
-  reset: () => set('idle'), // テスト用
+  reset: () => {
+    entered = false
+    set('idle')
+  }, // テスト用
 }

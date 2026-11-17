@@ -159,15 +159,19 @@ export function MapPage() {
   // ポコタンの案内（A5）: 初めての人は空から降りたあとに出す。ログインボーナスは案内が終わってから
   const [tour, setTour] = useState<'wait' | 'open' | 'done'>('wait')
   // タイトルを閉じて地図へ入ったら、カメラを空から降ろす（2026-11-16 オーナー「空から来たような感じ」）
-  useEffect(
-    () =>
-      loading.onEnter(() => {
-        mapRef.current?.intro()
-        sound.startBgm() // 空から降りるのに合わせて BGM（昼）がふわっと始まる（A6）
-        setEntered(true)
-      }),
-    [],
-  )
+  useEffect(() => {
+    // タイトルをもう閉じていた（新しいアカウントがログイン・初回設定を経て来た）ときは、すぐ地図に入ったことにする（空から降りる演出はしない）
+    if (loading.hasEntered()) {
+      sound.startBgm()
+      setEntered(true)
+      return
+    }
+    return loading.onEnter(() => {
+      mapRef.current?.intro()
+      sound.startBgm() // 空から降りるのに合わせて BGM（昼）がふわっと始まる（A6）
+      setEntered(true)
+    })
+  }, [])
   useEffect(() => {
     let alive = true
     void mapRef.current?.whenShopsReady().then(() => alive && syncOsm())
