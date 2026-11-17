@@ -8,6 +8,7 @@ import { FRIENDSHIP_MAX, friendshipHearts } from '../domain/gacha.ts'
 import { standArtUrl } from '../infra/gachaApi.ts'
 import { Icon } from '../../ui/Icon.tsx'
 import { Stars } from './GachaScreen.tsx'
+import { AvatarViewer } from './AvatarViewer.tsx'
 
 type Props = {
   owned: ReadonlyMap<number, number> // 持っているガチャのキャラ → ダブった数
@@ -52,7 +53,8 @@ export function CharacterList({ owned, currentId, onPick, onClose }: Props) {
 
       <section className={hearts === FRIENDSHIP_MAX ? 'cl__big is-max' : 'cl__big'} aria-label="選んでいるキャラ">
         <div className="cl__stage" key={c.id}>
-          <img src={standArtUrl(c.id)} alt="" />
+          {/* 3D があるキャラは 3D（回して見られる）、無ければ原画 */}
+          <AvatarViewer id={c.id} fallback={<img src={standArtUrl(c.id)} alt="" />} />
         </div>
         <div className="cl__info">
           {c.rarity ? <Stars n={c.rarity} /> : <span className="cl__first">はじめのなかま</span>}
