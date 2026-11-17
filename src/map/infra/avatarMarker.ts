@@ -6,7 +6,7 @@ import type { Facing } from '../domain/avatar.ts'
 import { distanceMeters } from '../domain/geo.ts'
 import type { LatLng } from '../domain/geo.ts'
 
-// 自分のアバター（お試し版）。今は選んだキャラに関係なく全員、男の子の歩く絵。
+// 自分のアバター（2D）。3D が読めないときの代わり。男の子は歩く絵、ほかのキャラは 1 枚の立ち絵（setStill。2026-11-17 ガチャ）。
 // 8 方向 × 21 コマの横並びシート（art/prototypes/make-walk-sheets.sh で作る）を
 // HTML マーカーの background-position で送る。足元が自分の位置。
 const sheets = import.meta.glob('../../assets/characters/boy-walk/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
@@ -31,6 +31,7 @@ export function createAvatar(map: MapLibreMap) {
   let speed = 0
   let frame = 0
   let clock = 0 // 歩いている間だけ進む時間（ms）
+  let still: string | null = null // 1 枚の立ち絵（あれば歩く絵の代わり）
 
   return {
     // 毎コマ、ならした位置 pos で呼ぶ
@@ -53,11 +54,13 @@ export function createAvatar(map: MapLibreMap) {
         clock = 0
         frame = 0 // 止まったら1コマ目
       }
-      if (facing !== shownFacing) {
-        el.style.backgroundImage = `url(${sheetUrl(facing)})`
-        shownFacing = facing
+      if (still === null) {
+        if (facing !== shownFacing) {
+          el.style.backgroundImage = `url(${sheetUrl(facing)})`
+          shownFacing = facing
+        }
+        el.style.backgroundPosition = `${-frame * FRAME_W}px 0`
       }
-      el.style.backgroundPosition = `${-frame * FRAME_W}px 0`
       marker.setLngLat([pos.lng, pos.lat])
       if (!added) {
         marker.addTo(map)
@@ -67,7 +70,22 @@ export function createAvatar(map: MapLibreMap) {
     // 進んでいる向き（北0・時計回りの度）。まだ進んでいなければ 0
     heading: () => travel ?? 0,
     speed: () => speed, // ならした速さ（m/秒）。3D の男の子の動きの切り替えに使う
-    // 3D の男の子が出ているときは、2D の絵を隠す
+    // 歩く絵の代わりに 1 枚の立ち絵を出す（null で男の子の歩く絵に戻す）
+    setStill(url: string | null) {
+      if (url === still) return
+      still = url
+      shownFacing = null
+      if (url) {
+        el.style.width = `${AVATAR_HEIGHT_PX}px`
+        el.style.backgroundImage = `url(${url})`
+        el.style.backgroundSize = 'contain'
+        el.style.backgroundPosition = '50% 100%'
+      } else {
+        el.style.width = `${FRAME_W}px`
+        el.style.backgroundSize = `${FRAME_W * AVATAR_FRAMES}px ${AVATAR_HEIGHT_PX}px`
+      }
+    },
+    // 3D が出ているときは、2D の絵を隠す
     setHidden(hidden: boolean) {
       el.style.display = hidden ? 'none' : ''
     },

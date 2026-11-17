@@ -11,6 +11,11 @@ import { loadProgress, postCheckin } from '../checkin/infra/checkinApi.ts'
 import { profileRepo } from '../setup/infra/profileRepo.ts'
 import { EXP_NEW, EXP_REVISIT, expFromCounts, levelFor } from '../zukan/domain/level.ts'
 import { loadCoins } from '../mypage/infra/coins.ts'
+import { GachaScreen } from '../gacha/ui/GachaScreen.tsx'
+import { PullScreen } from '../gacha/ui/PullScreen.tsx'
+import { CharacterList } from '../gacha/ui/CharacterList.tsx'
+import { drawGacha, loadGachaState, loadOwned, setCharacter } from '../gacha/infra/gachaApi.ts'
+import type { Draw, DrawType } from '../gacha/domain/gacha.ts'
 import { syncMissions } from '../missions/infra/missionsApi.ts'
 import { nearbyKinds } from '../missions/domain/nearbyKinds.ts'
 import type { Mission, MissionWeek } from '../missions/domain/mission.ts'
@@ -21,7 +26,7 @@ import { MapHud } from '../map/ui/MapHud.tsx'
 import { Record, type RecordTab } from '../record/ui/Record.tsx'
 import { MyPage } from '../mypage/ui/MyPage.tsx'
 import { Settings } from '../settings/ui/Settings.tsx'
-import type { StarterId } from '../setup/infra/profileRepo.ts'
+import type { Profile } from '../setup/infra/profileRepo.ts'
 import { CheckinEffect } from '../checkin/ui/CheckinEffect.tsx'
 import { BuildingSheet } from '../checkin/ui/BuildingSheet.tsx'
 import { ShopSheet } from '../checkin/ui/ShopSheet.tsx'
@@ -338,7 +343,32 @@ export function MapPage() {
   const [recordTab, setRecordTab] = useState<RecordTab | null>(null) // 記録（メニューから開く。マイページからは じっせき で）
   const [myPageOpen, setMyPageOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [profile, setProfile] = useState<{ nickname: string; starterId: StarterId } | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [gachaOpen, setGachaOpen] = useState(false) // ガチャ（A15。メニューから）
+  const [charListOpen, setCharListOpen] = useState(false) // キャラ一覧（左上のキャラから）
+  const [owned, setOwned] = useState<ReadonlyMap<number, number>>(new Map()) // 持っているガチャのキャラ → ダブった数
+  const [pullsSinceFive, setPullsSinceFive] = useState(0)
+  const [drawing, setDrawing] = useState(false)
+  const [drawError, setDrawError] = useState<string | null>(null)
+  const [pulled, setPulled] = useState<Draw[] | null>(null) // まわした結果（引く画面）
+  const refreshGacha = useCallback(() => {
+    loadOwned().then(setOwned).catch(() => {})
+    loadGachaState()
+      .then((st) => st && setPullsSinceFive(st.pullsSinceFive))
+      .catch(() => {})
+  }, [])
+  const draw = async (type: DrawType) => {
+    if (drawing) return
+    setDrawing(true)
+    setDrawError(null)
+    const r = await drawGacha(type)
+    setDrawing(false)
+    if (r?.status === 'ok') setPulled(r.draws)
+    else setDrawError(r?.status === 'insufficient' ? 'コインが足りません' : 'まわせませんでした。もう一度お試しください')
+    // 引けていたかもしれないので、失敗のときもコイン・持ち物・天井を読み直す
+    loadCoins().then(setCoins).catch(() => {})
+    refreshGacha()
+  }
   const [exp, setExp] = useState(0) // プレイヤーの経験値（新しいお店 +10・もう一度 +2。記録から計算）
   const visitedIds = useRef(new Set<string>()) // 行ったことのあるお店（チェックインで +10 か +2 かを決める）
   const refreshStats = useCallback(() => {
@@ -408,17 +438,11 @@ export function MapPage() {
     },
     [refreshStats],
   )
-  const [soonName, setSoonName] = useState<string | null>(null) // まだ作っていない画面の名前（短く出す）
   useEffect(() => {
     if (!userId) return
     profileRepo.load(userId).then(setProfile).catch(() => setProfile(null))
     refreshStats()
   }, [userId, refreshStats])
-  useEffect(() => {
-    if (!soonName) return
-    const t = setTimeout(() => setSoonName(null), 1600)
-    return () => clearTimeout(t)
-  }, [soonName])
   const closeExplore = () => {
     setExploreOpen(false)
     hints.closeSheet()
@@ -522,6 +546,7 @@ export function MapPage() {
       <MapView
         key={attempt}
         ref={mapRef}
+        characterId={profile?.characterId ?? profile?.starterId ?? 101}
         onStatus={dispatch}
         home={home}
         onShopsError={() => setShopsError(true)}
@@ -543,7 +568,7 @@ export function MapPage() {
           pickHint(id)
         }}
         pinsHidden={pinsHidden}
-        paused={recordTab !== null || zukanOpen || myPageOpen || settingsOpen}
+        paused={recordTab !== null || zukanOpen || myPageOpen || settingsOpen || gachaOpen || charListOpen}
       />
       {building && !selected && (
         <BuildingSheet
@@ -683,6 +708,30 @@ export function MapPage() {
           }}
         />
       )}
+      {gachaOpen && (
+        <GachaScreen
+          coins={coins}
+          owned={owned}
+          pullsSinceFive={pullsSinceFive}
+          busy={drawing}
+          error={drawError}
+          onDraw={(type) => void draw(type)}
+          onClose={() => setGachaOpen(false)}
+        />
+      )}
+      {pulled && <PullScreen draws={pulled} onDone={() => setPulled(null)} />}
+      {charListOpen && (
+        <CharacterList
+          owned={owned}
+          currentId={profile?.characterId ?? 101}
+          onPick={async (id) => {
+            const ok = await setCharacter(id)
+            if (ok) setProfile((p) => (p ? { ...p, characterId: id } : p))
+            return ok
+          }}
+          onClose={() => setCharListOpen(false)}
+        />
+      )}
       {myPageOpen && userId && (
         <MyPage
           userId={userId}
@@ -749,7 +798,7 @@ export function MapPage() {
         {shopsError && <p className="location-banner">お店を読み込めませんでした</p>}
         <MapHud
           nickname={profile?.nickname ?? null}
-          starterId={profile?.starterId ?? 101}
+          characterId={profile?.characterId ?? 101}
           level={levelFor(exp).level}
           expInto={levelFor(exp).into}
           expSpan={levelFor(exp).span}
@@ -786,11 +835,20 @@ export function MapPage() {
             closeExplore()
             setSettingsOpen(true)
           }}
-          onSoon={(name) => setSoonName(name)}
+          onGacha={() => {
+            closeExplore()
+            setDrawError(null)
+            refreshGacha()
+            setGachaOpen(true)
+          }}
+          onCharacter={() => {
+            closeExplore()
+            refreshGacha()
+            setCharListOpen(true)
+          }}
           subscribeBearing={subscribeBearing}
           onCompass={() => mapRef.current?.resetNorth()}
         />
-        {soonName && <p className="hud-soon" role="status">{`${soonName}は準備中です`}</p>}
       </div>
     </>
   )

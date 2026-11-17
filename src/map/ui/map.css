@@ -102,6 +102,7 @@
   border-radius: 50%;
   background: #fffdf7;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 0; /* 2026-11-17 押せる（キャラ一覧）ようにボタンにした */
 }
 @property --exp {
   syntax: '<percentage>';
@@ -217,21 +218,6 @@
   font-weight: 800;
   line-height: 1;
 }
-.hud-soon {
-  position: absolute;
-  left: 50%;
-  bottom: 120px;
-  z-index: 40;
-  transform: translateX(-50%);
-  margin: 0;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(74, 59, 44, 0.85);
-  color: #fff;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
 .hud-pins {
   position: absolute;
   right: 12px;

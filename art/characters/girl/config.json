@@ -1,0 +1,157 @@
+{
+ "id": 102,
+ "name": "girl",
+ "type": "humanoid",
+ "sheet": "art/characters/girl/input/",
+ "colors": {
+  "skin": {
+   "h": [
+    0.96,
+    0.072
+   ],
+   "s": [
+    0.18,
+    0.75
+   ],
+   "v": [
+    0.55,
+    1
+   ]
+  },
+  "top": {
+   "h": [
+    0.072,
+    0.16
+   ],
+   "s": [
+    0.05,
+    0.45
+   ],
+   "v": [
+    0.6,
+    1
+   ]
+  }
+ },
+ "generate": {
+  "seed": 123,
+  "steps": 50,
+  "side": "right",
+  "file": "girl_g123_textured_00001_.glb",
+  "gate1": "g123.json",
+  "note": "関門 1 で 3 つの種を比べて 123 を採用（gate1/README.md）"
+ },
+ "landmarks": {
+  "neck": 0.555,
+  "armpit": 0.34,
+  "crotch": 0.22,
+  "hem": 0.185,
+  "skirt_top": 0.27,
+  "sock_top": 0.1,
+  "shoe_line": 0.045,
+  "sole_z": 0.012,
+  "leg_x": 0.06,
+  "leg_r": 0.058,
+  "pack_y": 0.07,
+  "pack_z": [
+   0.255,
+   0.56
+  ],
+  "pack_x": 0.15,
+  "shoulder_x": 0.12,
+  "hipj_up": 0.015,
+  "ankle": 0.04,
+  "elbow_frac": 0.45,
+  "wrist_frac": 0.92,
+  "shoulder_band": 0.03,
+  "leg_top": 0.235,
+  "skirt_r": 0.072
+ },
+ "repaint": {
+  "colors": {
+   "cardigan": [
+    247,
+    227,
+    202
+   ],
+   "hair": [
+    122,
+    80,
+    61
+   ],
+   "skin": [
+    247,
+    207,
+    189
+   ],
+   "pack": [
+    247,
+    167,
+    170
+   ],
+   "shoe": [
+    236,
+    212,
+    192
+   ],
+   "eyes": [
+    60,
+    40,
+    35
+   ],
+   "skirt": [
+    245,
+    231,
+    214
+   ],
+   "socks": [
+    243,
+    225,
+    205
+   ],
+   "strap": [
+    238,
+    146,
+    152
+   ],
+   "red": [
+    212,
+    60,
+    55
+   ],
+   "green": [
+    145,
+    168,
+    95
+   ],
+   "tie": [
+    247,
+    150,
+    145
+   ],
+   "sole": [
+    214,
+    188,
+    168
+   ]
+  },
+  "note": "元の立ち絵 stand-front・side・back の区分けごとの色の中央値（refcol）。肌は顔の肌、髪は中央値より少し明るく（陰を乗せるため）"
+ },
+ "skirt": {
+  "k": 0.5,
+  "top": 0.25,
+  "mid": 0.12,
+  "note": "スカートの点: すそ（hem）で股の骨 50%、top より上は 0。まん中 ±mid/2 で左右をなめらかに分ける（案。関門 3・段 5 で測って決める）"
+ },
+ "hand": {
+  "knuckle_frac": 0.45,
+  "wrist_band": 0.006,
+  "finger_band": 0.017,
+  "thumb_gap": 0.004,
+  "pivot_palm": 0.3,
+  "note": "男の子の値から始める"
+ },
+ "motion": {
+  "legStand": 0.0
+ }
+}

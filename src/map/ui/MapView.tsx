@@ -25,6 +25,7 @@ import type { Shop } from '../../shops/domain/shop.ts'
 import type { Cell } from '../../fog/domain/grid.ts'
 import { createAvatar } from '../infra/avatarMarker.ts'
 import { createAvatarModel } from '../infra/avatarModel.ts'
+import { standArtUrl } from '../../gacha/infra/gachaApi.ts'
 import type { Expression } from '../infra/avatarModel.ts'
 import { attachWorld } from './worldLayers.ts'
 import type { DailyHint } from '../../hints/domain/hint.ts'
@@ -70,8 +71,12 @@ type Props = {
   onHintTap: (hintId: string) => void // 気配のピンが押された
   paused?: boolean // 記録・図鑑など全画面の画面で地図が隠れているあいだ、毎コマの動き（アバター・カメラ・お店の更新）を止めて描かない。位置は受け取り続ける
   pinsHidden?: boolean // 店のピン（1軒・ビル・施設）・名前の札・気配のピンを出さない（2026-11-10 オーナー: 気配のピンも消す）
+  characterId: number // 使っているキャラ（3D があれば 3D、無ければ立ち絵の 2D。2026-11-17 ガチャ）
   ref?: Ref<MapViewHandle>
 }
+
+// 3D が無いキャラは、背景を抜いた立ち絵を 2D で出す。男の子（101）は 3D が無くても歩く絵（null）
+const stillFor = (id: number): string | null => (id === 101 ? null : standArtUrl(id))
 
 const TAP_MAX_MOVE_PX = 10
 const TAP_MAX_MS = 300
@@ -85,7 +90,9 @@ const CHECKIN_WAVE_DELAY_MS = 900 // 紙吹雪のあと、霧の波が走り出�
 
 // 地図・カメラ・位置は MapLibre と ref だけで持ち、React の再描画を起こさない。
 // React に上げるのは位置情報の出来事（onStatus）だけ。
-export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, paused = false, pinsHidden = false, ref }: Props) {
+export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBuilding, onPosition, onHintTap, paused = false, pinsHidden = false, characterId, ref }: Props) {
+  const characterIdRef = useRef(characterId)
+  const avatar2dRef = useRef<ReturnType<typeof createAvatar> | null>(null)
   const pausedRef = useRef(paused)
   pausedRef.current = paused
   const containerRef = useRef<HTMLDivElement>(null)
@@ -100,6 +107,12 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   const avatarModelRef = useRef<ReturnType<typeof createAvatarModel> | null>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const bearingSubs = useRef(new Set<(b: number) => void>())
+  // 使うキャラが替わったら、3D と 2D の両方に伝える
+  useEffect(() => {
+    characterIdRef.current = characterId
+    avatarModelRef.current?.setCharacter(characterId)
+    avatar2dRef.current?.setStill(stillFor(characterId))
+  }, [characterId])
   useEffect(() => {
     pinsHiddenRef.current = pinsHidden
     worldRef.current?.setPinsVisible(!pinsHidden)
@@ -215,8 +228,10 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     })
     if (readyRef.current!.done) newReady()
 
-    const avatar = createAvatar(map) // 自分のアバター（お試し版）
-    const avatarModel = createAvatarModel(map) // 3D の男の子（読めたら 2D の絵の代わりに出す）
+    const avatar = createAvatar(map) // 自分のアバター（2D。3D が読めないときの代わり）
+    avatar2dRef.current = avatar
+    avatar.setStill(stillFor(characterIdRef.current))
+    const avatarModel = createAvatarModel(map, characterIdRef.current) // 3D（読めたら 2D の絵の代わりに出す）
     avatarModelRef.current = avatarModel
 
     // 位置: target が最新の目標、current が画面に出している位置、drawn がサークルを描いた位置
@@ -474,6 +489,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     return () => {
       cancelAnimationFrame(loop.frame)
       avatar.dispose()
+      avatar2dRef.current = null
       clearTimeout(firstFixTimer)
       clearInterval(staleTimer)
       stopWatch()
