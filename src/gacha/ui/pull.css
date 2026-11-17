@@ -141,7 +141,9 @@
   font-weight: 800;
 }
 .pl__stage {
-  width: min(80vw, 340px);
+  flex: none;
+  width: min(84vw, 340px, 52svh);
+  max-width: none;
 }
 .pl__friend {
   position: absolute;
