@@ -3,9 +3,12 @@ import { supabase } from '../../lib/supabase.ts'
 
 export type StarterId = 101 | 102
 
+// characterId: いま使っているキャラ（ガチャのキャラも。SQL 0014 の current_character_id、空なら最初のキャラ）
+export type Profile = { nickname: string; starterId: StarterId; characterId: number }
+
 export type ProfileRepo = {
   exists(userId: string): Promise<boolean>
-  load(userId: string): Promise<{ nickname: string; starterId: StarterId } | null>
+  load(userId: string): Promise<Profile | null>
   create(input: { nickname: string; starterId: StarterId }): Promise<void>
   updateNickname(userId: string, nickname: string): Promise<void>
 }
@@ -19,11 +22,13 @@ export function createProfileRepo(client: SupabaseClient): ProfileRepo {
       return data !== null
     },
     async load(userId) {
-      const { data, error } = await client.from('profiles').select('nickname, starter_character_id').eq('user_id', userId).maybeSingle()
+      // '*' で読む: SQL 0014 を流す前（current_character_id の列が無い）でも読めるように
+      const { data, error } = await client.from('profiles').select('*').eq('user_id', userId).maybeSingle()
       if (error) throw new Error('profiles の読み込みに失敗しました')
       if (!data) return null
       const starterId = data.starter_character_id === 102 ? 102 : 101
-      return { nickname: String(data.nickname), starterId }
+      const current = typeof data.current_character_id === 'number' ? data.current_character_id : null
+      return { nickname: String(data.nickname), starterId, characterId: current ?? starterId }
     },
     async create({ nickname, starterId }) {
       const { error } = await client.from('profiles').insert({ nickname, starter_character_id: starterId })

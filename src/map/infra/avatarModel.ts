@@ -15,11 +15,15 @@ import type { LatLng } from '../domain/geo.ts'
 
 // 使うキャラだけ遅れて読む（URL だけ持ち、ファイルは読み込むときに取りに行く）
 const AVATARS = import.meta.glob<string>('../../assets/characters/*/avatar.glb', { query: '?url', import: 'default', eager: true }) as Record<string, string>
-const CHARACTER_ID = 101 // 今は全員、男の子
+// 3D があるキャラ: src/assets/characters/<番号>/avatar.glb（2026-11-17 ガチャでキャラを替えられるようにした）
+export const hasAvatarModel = (id: number) => `../../assets/characters/${id}/avatar.glb` in AVATARS
 
 export type Expression = 'happy'
 
-export function createAvatarModel(map: MapLibreMap) {
+export function createAvatarModel(map: MapLibreMap, initialId: number) {
+  let characterId = initialId
+  let added = false
+  let loadSeq = 0 // 途中でキャラを替えたら、前の読み込みの結果は捨てる
   const holder = new THREE.Group() // 位置・向き・大きさ（シーンの原点＝自分の位置、単位は m）。模型は身長 1
   holder.matrixAutoUpdate = false
   let ready = false
@@ -46,17 +50,26 @@ export function createAvatarModel(map: MapLibreMap) {
     if (face && face.offset.x !== f / 4) face.offset.x = f / 4
   }
 
-  const layer = threeLayer({
-    id: 'me-avatar-3d',
-    onAdd(scene) {
-      const lights = makeLights(scene, isNight()) // 夜は月明かり。まわりと同じ暗さ（A14・2026-11-17 オーナー）
-      onPhase((n) => lights.apply(n)) // 地図と同じだけ生きるので、外さない
-      scene.add(holder)
-      const url = AVATARS[`../../assets/characters/${CHARACTER_ID}/avatar.glb`]
-      if (!url) return
+
+  const unload = () => {
+    mixer?.stopAllAction()
+    holder.clear()
+    mixer = null
+    actions.clear()
+    face = null
+    playing = null
+    ready = false
+    joyUntil = null
+  }
+  const load = () => {
+    const seq = ++loadSeq
+    unload()
+    const url = AVATARS[`../../assets/characters/${characterId}/avatar.glb`]
+    if (!url) return map.triggerRepaint()
       new GLTFLoader()
         .loadAsync(url)
         .then((gltf) => {
+          if (seq !== loadSeq) return
           gltf.scene.traverse((o) => {
             const mesh = o as THREE.Mesh
             if (!mesh.isMesh) return
@@ -87,16 +100,22 @@ export function createAvatarModel(map: MapLibreMap) {
           ready = true
           map.triggerRepaint()
         })
-        .catch(() => {}) // 読めなければ 2D の男の子のまま
+        .catch(() => {}) // 読めなければ 2D の絵のまま
+  }
+
+  const layer = threeLayer({
+    id: 'me-avatar-3d',
+    onAdd(scene) {
+      const lights = makeLights(scene, isNight()) // 夜は月明かり。まわりと同じ暗さ（A14・2026-11-17 オーナー）
+      onPhase((n) => lights.apply(n)) // 地図と同じだけ生きるので、外さない
+      scene.add(holder)
+      added = true
+      load()
     },
     onRemove() {
-      mixer?.stopAllAction()
-      holder.clear()
-      mixer = null
-      actions.clear()
-      face = null
-      playing = null
-      ready = false
+      loadSeq++
+      added = false
+      unload()
     },
     origin: () => pose?.pos ?? null,
   })
@@ -108,6 +127,12 @@ export function createAvatarModel(map: MapLibreMap) {
   return {
     layer,
     ready: () => ready,
+    // 使うキャラを替える。3D が無いキャラなら ready() が false のまま（2D の絵が出る）
+    setCharacter(id: number) {
+      if (id === characterId) return
+      characterId = id
+      if (added) load()
+    },
     // 毎コマ（止まっていても）。heading は進む向き（北0・時計回りの度）。正面は模型の +z。speed は m/秒、now は ms
     update(pos: LatLng, headingDeg: number, speedMps: number, dtMs: number, now: number) {
       pose = { pos }

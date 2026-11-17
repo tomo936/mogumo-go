@@ -5,9 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { fanPositions } from '../domain/menuFan.ts'
 import { CoinIcon } from '../../ui/CoinIcon.tsx'
 
-const CHARACTERS = import.meta.glob<string>('../../assets/characters/starter-*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>
-const characterUrl = (starterId: number) =>
-  CHARACTERS[starterId === 102 ? '../../assets/characters/starter-girl.webp' : '../../assets/characters/starter-boy.webp']
+import { charArtUrl } from '../../gacha/infra/gachaApi.ts'
 
 const UI_ART = import.meta.glob<string>('../../assets/ui/*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>
 const art = (name: string) => UI_ART[`../../assets/ui/${name}.webp`]
@@ -19,7 +17,9 @@ const BOX_W = 76 // 文字が入る幅（CSS の .hud-fan と同じ）
 
 type Props = {
   nickname: string | null
-  starterId: 101 | 102
+  characterId: number // 使っているキャラ（最初の 2 人かガチャのキャラ）
+  onCharacter: () => void // 左上のキャラを押した: キャラ一覧（A15）
+  onGacha: () => void
   level: number
   expInto: number // 今の Lv に入ってから行ったお店の数（経験値）
   expSpan: number // 次の Lv まで必要な軒数
@@ -34,7 +34,6 @@ type Props = {
   onRecord: () => void
   onMyPage: () => void
   onSettings: () => void
-  onSoon: (name: string) => void
   subscribeBearing: (cb: (bearingDeg: number) => void) => () => void // 地図の回転を受け取る（方位磁針）
   onCompass: () => void // 方位磁針を押した: 北を上に戻す
 }
@@ -44,22 +43,23 @@ export function MapHud(p: Props) {
   const items: { art: string; name: string; run: () => void }[] = [
     { art: 'collection', name: '図鑑', run: () => p.onZukan() },
     { art: 'record', name: '記録', run: () => p.onRecord() },
-    { art: 'gacha', name: 'ガチャ', run: () => p.onSoon('ガチャ') },
+    { art: 'gacha', name: 'ガチャ', run: () => p.onGacha() },
     { art: 'mypage', name: 'マイページ', run: () => p.onMyPage() },
     { art: 'settings', name: '設定', run: () => p.onSettings() },
   ]
   const spots = fanPositions(items.length, 0, 0, FAN_RADIUS)
   return (
     <>
-      <div
+      <button
+        type="button"
         className="hud-player"
-        role="img"
-        aria-label={`${p.nickname ?? 'あなた'} Lv ${p.level} 次のレベルまであと${Math.max(0, p.expSpan - p.expInto)}軒`}
+        onClick={p.onCharacter}
+        aria-label={`${p.nickname ?? 'あなた'} Lv ${p.level} 次のレベルまであと${Math.max(0, p.expSpan - p.expInto)}軒。キャラを変える`}
         style={{ '--exp': `${Math.min(100, Math.max(0, (p.expInto / Math.max(1, p.expSpan)) * 100))}%` } as React.CSSProperties}
       >
-        <img src={characterUrl(p.starterId)} alt="" />
+        <img src={charArtUrl(p.characterId)} alt="" />
         <span className="hud-player__lv">{`Lv ${p.level}`}</span>
-      </div>
+      </button>
 
       {p.coins !== null && (
         <div className="hud-coins" role="img" aria-label={`コイン ${p.coins}`}>

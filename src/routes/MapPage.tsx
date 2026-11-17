@@ -21,7 +21,7 @@ import { MapHud } from '../map/ui/MapHud.tsx'
 import { Record, type RecordTab } from '../record/ui/Record.tsx'
 import { MyPage } from '../mypage/ui/MyPage.tsx'
 import { Settings } from '../settings/ui/Settings.tsx'
-import type { StarterId } from '../setup/infra/profileRepo.ts'
+import type { Profile } from '../setup/infra/profileRepo.ts'
 import { CheckinEffect } from '../checkin/ui/CheckinEffect.tsx'
 import { BuildingSheet } from '../checkin/ui/BuildingSheet.tsx'
 import { ShopSheet } from '../checkin/ui/ShopSheet.tsx'
@@ -338,7 +338,9 @@ export function MapPage() {
   const [recordTab, setRecordTab] = useState<RecordTab | null>(null) // 記録（メニューから開く。マイページからは じっせき で）
   const [myPageOpen, setMyPageOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [profile, setProfile] = useState<{ nickname: string; starterId: StarterId } | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [gachaOpen, setGachaOpen] = useState(false) // ガチャ（A15。メニューから）
+  const [charListOpen, setCharListOpen] = useState(false) // キャラ一覧（左上のキャラから）
   const [exp, setExp] = useState(0) // プレイヤーの経験値（新しいお店 +10・もう一度 +2。記録から計算）
   const visitedIds = useRef(new Set<string>()) // 行ったことのあるお店（チェックインで +10 か +2 かを決める）
   const refreshStats = useCallback(() => {
@@ -408,17 +410,11 @@ export function MapPage() {
     },
     [refreshStats],
   )
-  const [soonName, setSoonName] = useState<string | null>(null) // まだ作っていない画面の名前（短く出す）
   useEffect(() => {
     if (!userId) return
     profileRepo.load(userId).then(setProfile).catch(() => setProfile(null))
     refreshStats()
   }, [userId, refreshStats])
-  useEffect(() => {
-    if (!soonName) return
-    const t = setTimeout(() => setSoonName(null), 1600)
-    return () => clearTimeout(t)
-  }, [soonName])
   const closeExplore = () => {
     setExploreOpen(false)
     hints.closeSheet()
@@ -522,6 +518,7 @@ export function MapPage() {
       <MapView
         key={attempt}
         ref={mapRef}
+        characterId={profile?.characterId ?? profile?.starterId ?? 101}
         onStatus={dispatch}
         home={home}
         onShopsError={() => setShopsError(true)}
@@ -749,7 +746,7 @@ export function MapPage() {
         {shopsError && <p className="location-banner">お店を読み込めませんでした</p>}
         <MapHud
           nickname={profile?.nickname ?? null}
-          starterId={profile?.starterId ?? 101}
+          characterId={profile?.characterId ?? 101}
           level={levelFor(exp).level}
           expInto={levelFor(exp).into}
           expSpan={levelFor(exp).span}
@@ -786,11 +783,17 @@ export function MapPage() {
             closeExplore()
             setSettingsOpen(true)
           }}
-          onSoon={(name) => setSoonName(name)}
+          onGacha={() => {
+            closeExplore()
+            setGachaOpen(true)
+          }}
+          onCharacter={() => {
+            closeExplore()
+            setCharListOpen(true)
+          }}
           subscribeBearing={subscribeBearing}
           onCompass={() => mapRef.current?.resetNorth()}
         />
-        {soonName && <p className="hud-soon" role="status">{`${soonName}は準備中です`}</p>}
       </div>
     </>
   )

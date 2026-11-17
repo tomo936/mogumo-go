@@ -58,3 +58,14 @@ test('1 行も更新されなかったら（行が無い・権限で弾かれた
   const from = vi.fn(() => ({ update: () => ({ eq: () => ({ select: async () => ({ data: [], error: null }) }) }) }))
   await expect(createProfileRepo({ from } as unknown as SupabaseClient).updateNickname('u1', 'もぐ')).rejects.toThrow()
 })
+
+test('読むときは、使っているキャラ（current）を優先し、無ければ最初のキャラ', async () => {
+  const row = (r: Record<string, unknown>) => {
+    const maybeSingle = vi.fn(async () => ({ data: r, error: null }))
+    return createProfileRepo({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }) } as unknown as SupabaseClient)
+  }
+  expect(await row({ nickname: 'もぐ', starter_character_id: 102, current_character_id: 5 }).load('u1')).toEqual({ nickname: 'もぐ', starterId: 102, characterId: 5 })
+  expect(await row({ nickname: 'もぐ', starter_character_id: 102, current_character_id: null }).load('u1')).toEqual({ nickname: 'もぐ', starterId: 102, characterId: 102 })
+  // SQL 0014 を流す前（列が無い）でも読める
+  expect(await row({ nickname: 'もぐ', starter_character_id: 101 }).load('u1')).toEqual({ nickname: 'もぐ', starterId: 101, characterId: 101 })
+})
