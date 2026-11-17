@@ -230,6 +230,34 @@ if STAGE == 2:
     LOG['horn_centers'] = HC
     LOG['collar_z'] = [round(float(np.percentile(z[lab == NI['collar']], p_)), 4) for p_ in (5, 50, 95)]
     LOG['earin_x'] = [[round(float(np.percentile(sg * x[(lab == NI['earin']) & (sg * x > 0)], p_)), 4) for p_ in (5, 95)] for sg in (1, -1)]
+    # キリン: 手先を丸いひづめに整える（元の立ち絵の手は、指・親指・手のひらのくぼみの無い、先が丸い筒の終わり）。
+    # 腕の軸の上の手首の点を中心に、手首から先の点を、だ円体（軸の向きの長さ cap_len × 手首の半径）の面へ写し、まわりをならす
+    PC = L['paw_cap']; CAP = {}
+    for sd, sg in (('L', 1), ('R', -1)):
+        A_ = ARM[sd]; sh = np.array(A_['sh']); a2 = np.array(A_['a'])
+        t = (V - sh) @ a2; zone = ZONES[sd]
+        c0 = sh + a2 * (A_['cuff'] - PC['back'])
+        rel = V - c0; ta = rel @ a2; rad = rel - np.outer(ta, a2); rn = np.linalg.norm(rad, axis=1)
+        ring = zone & (ta > -0.012) & (ta < 0.0)
+        R = float(np.median(rn[ring])) * PC['r_scale']
+        tip = zone & (ta > 0)
+        Lc = float(ta[tip].max()) * PC['len_scale']
+        q = np.stack([ta / Lc, rn / R], 1); qn = np.linalg.norm(q, axis=1)
+        dirr = rad / np.maximum(rn, 1e-9)[:, None]
+        newp = c0 + np.outer(ta / np.maximum(qn, 1e-9), a2) + dirr * (rn / np.maximum(qn, 1e-9))[:, None]   # だ円体の面の上の点（q を長さ 1 にもどす）
+        w = np.clip(ta / PC['blend'], 0, 1)[:, None]                  # 手首の面から blend の間でなめらかに写す
+        idx = np.nonzero(tip)[0]
+        V[idx] = V[idx] * (1 - w[idx]) + newp[idx] * w[idx]
+        CAP[sd] = dict(R=round(R, 4), L=round(Lc, 4), n=int(len(idx)), ta_before=[round(float(ta[tip].min()), 4), round(float(ta[tip].max()), 4)], ta_after=[round(float(((V[idx] - c0) @ a2).min()), 4), round(float(((V[idx] - c0) @ a2).max()), 4)])
+        # ならし（手先と手首の帯だけ。形の大きさは保つよう、ならしたあと だ円体へもう一度寄せる）
+        sm = zone & (ta > -0.015)
+        for _ in range(PC['smooth']):
+            Vn = V.copy()
+            for i in np.nonzero(sm)[0]: Vn[i] = 0.5 * V[i] + 0.5 * V[nbr[i]].mean(0)
+            V = Vn
+        CAP[sd]['ta_smooth'] = round(float(((V[idx] - c0) @ a2).max()), 4)
+    LOG['paw_cap'] = CAP
+    me.vertices.foreach_set('co', V.astype(np.float32).ravel()); me.update(); me.calc_normals() if hasattr(me, 'calc_normals') else None
     me.attributes.new('lab', 'INT', 'POINT').data.foreach_set('value', lab)
     seg = np.array([np.bincount(lab[t], minlength=len(NAMES)).argmax() for t in TRI])
     me.attributes.new('seg', 'INT', 'FACE').data.foreach_set('value', seg)
@@ -853,7 +881,7 @@ if STAGE == 5:
     block = block.replace("A = RUNA if run else 0.28", "A = MO['runSwing'] if run else MO['walkSwing']")
     block = block.replace("p['arm' + s] = -A * c + (0.05 if run else 0.0)", "p['arm' + s] = -A * c + (MO.get('runArmOffset', 0.05) if run else 0.0)")   # 女の子 3 回目: 走りの前の振りを抑える
     assert "runArmOffset" in block
-    block = block.replace("(1.45 + 0.12 * -ce) if run else (0.32 + 0.12 * -ce)", "(MO['runElbow'] + 0.12 * -ce) if run else (MO['walkElbow'] + 0.1 * -ce)")
+    block = block.replace("(1.45 + 0.12 * -ce) if run else (0.32 + 0.12 * -ce)", "(MO['runElbow'] + MO['runElbowAmp'] * -ce) if run else (MO['walkElbow'] + MO['walkElbowAmp'] * -ce)")   # キリン: 腕はまっすぐな筒（ひじ 歩き 0・走り 0.03〜0.13）
     # 3 回目: わきを閉じる（腕の開きの足し分を設定から）。手は軽く握る（指のかたまりを曲げる）。うれしいは前の版と同じ開き・手は開いたまま
     # 4 回目（オーナー: 走りの足をもっとまっすぐ）: 走りは腰のひねりを小さく、ももを内へ戻して、足を前後にまっすぐ振る
     assert "p['hipTwist'] = -(0.12 if run else 0.10) * c" in block
@@ -913,7 +941,7 @@ if STAGE == 5:
         p = {'hipRoll': 0.018 * sw, 'hipTwist': 0.012 * math.sin(T2 * (ph - 0.15)),
              'chestRoll': -0.014 * sw, 'chestLean': -0.018 * br,
              'headPitch': -0.012, 'headTwist': 0.03 * math.sin(T2 * (ph - 0.3)),
-             'armOut': MO['idleOut'] + 0.012 * br, 'elbowL': 0.14 + 0.03 * br, 'elbowR': 0.14 + 0.03 * br,
+             'armOut': MO['idleOut'] + 0.012 * br, 'elbowL': MO['idleElbow'], 'elbowR': MO['idleElbow'],
              'fingersL': MO['fistIdle'], 'fingersR': MO['fistIdle']}
         return p
     ACTS = {'walk': (30, add_tail_ear(lambda ph: ns['gait'](ph, WALK, False), 'walk'), lambda ph: 0.0),
