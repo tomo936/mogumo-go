@@ -458,4 +458,4 @@ if os.environ.get('DUMP'):
     with open(OUT + '.slices.txt', 'w') as fo:
         for z in ZS:
             L = SL[float(z)]
-            fo.write(f'{z:.3f} ' + ' | '.join(f"cx{l['cx']:+.3f} x[{l['x0']:+.3f},{l['x1']:+.3f}] a{l['area']:.5f}" for l in sorted(L, key=lambda l: l['cx'])) + '\n')
+            fo.write(f'{z:.3f} ' + ' | '.join(f"cx{l['cx']:+.3f} x[{l['x0']:+.3f},{l['x1']:+.3f}] y[{l['y0']:+.3f},{l['y1']:+.3f}] a{l['area']:.5f}" for l in sorted(L, key=lambda l: l['cx'])) + '\n')

@@ -47,5 +47,140 @@
   "file": "kirin_k123_textured_00001_.glb",
   "gate1": "k123.json",
   "note": "関門 1 で 3 つの種を比べて 123 を採用（gate1/README.md）"
+ },
+ "landmarks": {
+  "neck": 0.485,
+  "armpit": 0.315,
+  "crotch": 0.105,
+  "hoof_line": 0.033,
+  "crown": 0.87,
+  "horn_base": 0.84,
+  "horn_r": 0.03,
+  "tail": {
+   "z": [
+    0.13,
+    0.27
+   ],
+   "x": 0.06,
+   "y_root": 0.095,
+   "y_tuft": 0.165
+  },
+  "pack_y": 0.06,
+  "collar": [
+   0.035,
+   0.01
+  ],
+  "collar_y": 0.0,
+  "ear_z": [
+   0.7,
+   0.88
+  ],
+  "ear_x": 0.19,
+  "shoulder_x": 0.16,
+  "arm_rmax": 0.07,
+  "note": "関門 1 の輪切り（k123）から: 股 0.105・わき 0.315・首 0.485・頭のまるみの上 0.865〜0.87（その上は角）・耳は |x|>0.19 で z 0.70〜0.88・しっぽは z 0.145〜0.245 で y 0.09〜0.25（根元の茎 y 0.08〜0.12）・ひづめ z<0.033",
+  "arm_x0": 0.17,
+  "shoulder_z": 0.385,
+  "ear_in": 0.75,
+  "ear_in_dx": 0.0,
+  "hipj_up": 0.03,
+  "ankle": 0.036,
+  "elbow_frac": 0.4,
+  "wrist_frac": 0.66,
+  "shoulder_band": 0.03,
+  "leg_top": 0.16,
+  "ear_root": 0.19,
+  "ear_band": 0.025,
+  "tail_band": 0.02,
+  "leg_band": 0.07
+ },
+ "repaint": {
+  "colors": {
+   "fur": [
+    160,
+    215,
+    225
+   ],
+   "earin": [
+    245,
+    178,
+    192
+   ],
+   "paw": [
+    192,
+    142,
+    205
+   ],
+   "hoof": [
+    190,
+    142,
+    202
+   ],
+   "horn": [
+    192,
+    168,
+    218
+   ],
+   "gold": [
+    250,
+    206,
+    112
+   ],
+   "pack": [
+    247,
+    182,
+    198
+   ],
+   "strap": [
+    238,
+    160,
+    184
+   ],
+   "collar": [
+    182,
+    160,
+    224
+   ],
+   "eyes": [
+    160,
+    215,
+    225
+   ],
+   "tuft": [
+    202,
+    152,
+    216
+   ]
+  },
+  "note": "元の立ち絵 stand-front・back の区分けごとの色（中央値）。毛（fur）は段 45 で場所からのグラデーション（案 A、fur_grad）。ここの fur は区分けの確かめ用"
+ },
+ "motion": {
+  "armDown": 0.66,
+  "legStand": 0.0,
+  "twistForearm": 0.0,
+  "twistHand": 0.0
+ },
+ "hand": {
+  "knuckle_frac": 0.45,
+  "wrist_band": 0.006,
+  "finger_band": 0.012,
+  "thumb_gap": 0.004,
+  "pivot_palm": 0.3,
+  "note": "女の子の値から始める（指のかたまりの帯は手が小さいので 0.012）"
+ },
+ "limits": {
+  "note": "関門 3（2026-11-17、armDown 0.66）で破れなかった角度（ラジアン）。動きはこの 8 割まで。足が短く（股 0.105、ひざ 0.093）ひざを曲げると平らな折れ目が出るので、ひざは小さく",
+  "armFront": 0.698,
+  "armBack": 0.524,
+  "elbow": 0.524,
+  "armOut": 0.611,
+  "thighFront": 0.611,
+  "thighBack": 0.436,
+  "knee": 0.436,
+  "tailSwing": 0.314,
+  "tailSwing2": 0.471,
+  "tailLift": 0.262,
+  "earUp": 0.314,
+  "earBack": 0.209
  }
 }
