@@ -105,3 +105,15 @@ test('写真を選ぶと new で送る', async () => {
   await userEvent.click(screen.getByRole('button', { name: '保存' }))
   expect(p.save).toHaveBeenCalledWith(expect.objectContaining({ photo: { kind: 'new', file } }))
 })
+
+test('ゲストは「自分だけ」で保存。公開のスイッチを押すと Google をつなぐ案内を出し、公開にはならない', async () => {
+  const onNeedLink = vi.fn()
+  const p = show({ guest: true, onNeedLink, existing: saved })
+  const sw = screen.getByRole('switch', { name: 'みんなに見せる' })
+  expect(sw).toHaveAttribute('aria-checked', 'false')
+  await userEvent.click(sw)
+  expect(onNeedLink).toHaveBeenCalledTimes(1)
+  expect(sw).toHaveAttribute('aria-checked', 'false')
+  await userEvent.click(screen.getByRole('button', { name: '保存' }))
+  expect(p.save).toHaveBeenCalledWith(expect.objectContaining({ isPublic: false }))
+})

@@ -169,8 +169,16 @@
   font-size: 14px;
   font-weight: 800;
 }
+.rv-ed__note {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 500;
+  opacity: 0.75;
+}
 .rv-ed__public {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   font-weight: 800;

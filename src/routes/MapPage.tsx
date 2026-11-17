@@ -90,7 +90,7 @@ const LOGIN_BONUS_DELAY_MS = 3200 // 地図へ入ってから受け取り画面�
 
 // ゲストに Google をつなぐよう勧める窓の文（A3）
 const LINK_TEXT = {
-  review: { title: '感想は Google をつないでから', text: '感想はみんなに見えるので、Google をつないだ人だけが書けるポコ。つなぐと、いまの記録もそのまま残るよ！', okLabel: 'Google をつなぐ', cancelLabel: 'やめる' },
+  review: { title: 'みんなに見せるのは Google をつないでから', text: 'ゲストの感想は「自分だけ」で残せるポコ。みんなに見せるのは、Google をつないだ人だけポコ。つなぐと、いまの記録もそのまま残るよ！', okLabel: 'Google をつなぐ', cancelLabel: 'やめる' },
   nudge: { title: '記録を守ろう！', text: 'ゲストの記録のかぎは、この端末にしかないポコ。Google をつなぐと、機種を変えても続きから遊べるよ！', okLabel: 'Google をつなぐ', cancelLabel: 'あとで' },
   conflict: { title: 'この Google には別の記録があるよ', text: 'そちらでログインし直すと、いまのゲストの記録は消えます。ゲストのまま続けることもできます。', okLabel: 'そちらでログインし直す', cancelLabel: 'ゲストのまま続ける', danger: true },
   failed: { title: 'Google をつなげませんでした', text: '通信のよい所で、設定の「Google をつないで記録を守る」からもう一度お試しください。', okLabel: 'もう一度', cancelLabel: '閉じる' },
@@ -222,7 +222,6 @@ export function MapPage() {
   // 感想を書く・直す（お店のシートの「✎ 感想」から。いちばん新しい訪問が対象。2026-11-13 オーナー: 浮くボタンはやめてシートに置く）
   const [reviewing, setReviewing] = useState<{ checkinId: string; shopId: string; shopName: string; day: string; existing: Review | null; photoUrl: string | null } | null>(null)
   const openReview = async (shop: Shop) => {
-    if (guest) return setLinkAsk('review') // 感想はゲストには書けない（Google をつないでから。A3）
     try {
       // 合体したお店は、地図の点（mapId）の方に訪問が付いていることがある
       let id = shop.id
@@ -802,6 +801,8 @@ export function MapPage() {
           onSaved={() => setReviewing(null)}
           onDeleted={() => setReviewing(null)}
           onClose={() => setReviewing(null)}
+          guest={guest}
+          onNeedLink={() => setLinkAsk('review')}
         />
       )}
       <div className="map-overlay">

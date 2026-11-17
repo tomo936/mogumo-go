@@ -19,14 +19,17 @@ type Props = {
   onClose: () => void
   save?: typeof saveReview
   remove?: typeof deleteReview
+  // ゲストは「自分だけ」の感想だけ書ける。公開のスイッチを押したら Google をつなぐ案内を出す（2026-11-18 オーナー）
+  guest?: boolean
+  onNeedLink?: () => void
 }
 
 type Photo = { kind: 'keep' } | { kind: 'remove' } | { kind: 'new'; file: File; url: string }
 
-export function ReviewEditor({ shopName, shopId, checkinId, visitDay, existing, existingPhotoUrl, onSaved, onDeleted, onClose, save = saveReview, remove = deleteReview }: Props) {
+export function ReviewEditor({ shopName, shopId, checkinId, visitDay, existing, existingPhotoUrl, onSaved, onDeleted, onClose, save = saveReview, remove = deleteReview, guest = false, onNeedLink }: Props) {
   const [stars, setStars] = useState(existing?.stars ?? 0)
   const [body, setBody] = useState(existing?.body ?? '')
-  const [isPublic, setIsPublic] = useState(existing?.isPublic ?? true)
+  const [isPublic, setIsPublic] = useState(guest ? false : (existing?.isPublic ?? true))
   const [photo, setPhoto] = useState<Photo>({ kind: 'keep' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -141,9 +144,10 @@ export function ReviewEditor({ shopName, shopId, checkinId, visitDay, existing, 
       <div className="rv-ed__box rv-ed__public">
         <span id="rv-ed-public">みんなに見せる</span>
         <span className="rv-ed__mode">{isPublic ? 'みんなが見られます' : '自分だけ'}</span>
-        <button type="button" role="switch" aria-checked={isPublic} aria-labelledby="rv-ed-public" className={`rv-ed__switch${isPublic ? ' rv-ed__switch--on' : ''}`} onClick={() => setIsPublic(!isPublic)}>
+        <button type="button" role="switch" aria-checked={isPublic} aria-labelledby="rv-ed-public" className={`rv-ed__switch${isPublic ? ' rv-ed__switch--on' : ''}`} onClick={() => (guest ? onNeedLink?.() : setIsPublic(!isPublic))}>
           <i />
         </button>
+        {guest && <p className="rv-ed__note">みんなに見せるには Google をつないでね</p>}
       </div>
 
       {error && <p className="rv-ed__warn rv-ed__error" role="alert">{error}</p>}
