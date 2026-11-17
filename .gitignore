@@ -32,3 +32,4 @@ dist-ssr
 # 町の境目を作るときの作業用・出力（リポジトリには入れない。Supabase Storage に置く）
 .towns-out/
 .towns-work/
+art/qa/e2e/

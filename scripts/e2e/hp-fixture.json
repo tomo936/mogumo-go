@@ -1,0 +1,7 @@
+[
+ {"shop_id":"hp:E2E0001","name":"見本ラーメン 経堂店","lat":35.65135,"lng":139.63605,"genre_code":"G013","genre_name":"ラーメン","catch":"結合試験の見本","budget_code":"B001","budget_name":"〜1000円","photo_url":null,"open":"月〜日: 11:00〜23:00"},
+ {"shop_id":"hp:E2E0002","name":"見本カフェ こもれび","lat":35.65105,"lng":139.63650,"genre_code":"G014","genre_name":"カフェ・スイーツ","catch":"結合試験の見本","budget_code":"B001","budget_name":"〜1000円","photo_url":null,"open":"月〜日: 08:00〜22:00"},
+ {"shop_id":"hp:E2E0003","name":"見本居酒屋 たぬき","lat":35.65160,"lng":139.63560,"genre_code":"G001","genre_name":"居酒屋","catch":"結合試験の見本","budget_code":"B003","budget_name":"3001〜4000円","photo_url":null,"open":"月〜日: 00:00〜24:00"},
+ {"shop_id":"hp:E2E0004","name":"見本焼肉 もぐ","lat":35.65080,"lng":139.63700,"genre_code":"G008","genre_name":"焼肉・ホルモン","catch":"結合試験の見本","budget_code":"B004","budget_name":"4001〜5000円","photo_url":null,"open":"月〜日: 00:00〜24:00"},
+ {"shop_id":"hp:E2E0005","name":"見本洋食 ほし","lat":35.65200,"lng":139.63640,"genre_code":"G006","genre_name":"イタリアン・フレンチ","catch":"結合試験の見本","budget_code":"B002","budget_name":"1001〜1500円","photo_url":null,"open":"月〜日: 00:00〜24:00"}
+]
