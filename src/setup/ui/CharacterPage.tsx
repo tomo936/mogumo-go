@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 import boy from '../../assets/characters/starter-boy.webp'
 import girl from '../../assets/characters/starter-girl.webp'
+import { Icon } from '../../ui/Icon.tsx'
 import { loadDraft, saveDraft } from '../infra/draftStore.ts'
 import type { StarterId } from '../infra/profileRepo.ts'
 import './setup.css'
@@ -12,6 +13,7 @@ const STARTERS: { id: StarterId; name: string; image: string; mirrored?: boolean
   { id: 101, name: '男の子', image: boy },
   { id: 102, name: '女の子', image: girl, mirrored: true },
 ]
+// 2026-11-17 見た目を整えた（自宅の設定と同じ手帳。台の上に立つ 2 人・選ぶと橙の枠と ✓）
 
 export function CharacterPage() {
   const navigate = useNavigate()
@@ -26,26 +28,45 @@ export function CharacterPage() {
   }
 
   return (
-    <main className="setup-page">
-      <button type="button" className="setup-back" onClick={() => navigate('/setup/name')}>戻る</button>
+    <main className="setup-page hs cs">
+      <header className="hs__bar">
+        <button type="button" className="hs__back" aria-label="戻る" onClick={() => navigate('/setup/name')}>
+          <Icon name="back" size={20} />
+        </button>
+        <span className="hs__step">2 / 3</span>
+      </header>
       <h1>最初のなかまを選ぼう</h1>
-      <div className="setup-cards">
+      <p className="hs__lead">いっしょに町を歩くなかまだよ</p>
+      <div className="cs__cards">
         {STARTERS.map((s) => (
           <button
             key={s.id}
             type="button"
-            className="setup-card"
+            className="cs__card"
             aria-pressed={picked === s.id}
             onClick={() => setPicked(s.id)}
           >
-            <img src={s.image} alt="" className={s.mirrored ? 'is-mirrored' : undefined} />
-            <span>{s.name}</span>
+            <span className="cs__stage">
+              <img src={s.image} alt="" className={s.mirrored ? 'is-mirrored' : undefined} />
+            </span>
+            <span className="cs__name">{s.name}</span>
+            {picked === s.id && (
+              <span className="cs__check" aria-hidden="true">
+                ✓
+              </span>
+            )}
           </button>
         ))}
       </div>
-      <div className="setup-actions">
-        <button type="button" onClick={submit} disabled={!picked}>次へ</button>
-      </div>
+      <ul className="hs__notes">
+        <li>
+          <Icon name="star" size={18} />
+          <span>ガチャで出会ったなかまとも、あとから入れかえられるよ</span>
+        </li>
+      </ul>
+      <button type="button" className="hs__ok" onClick={submit} disabled={!picked}>
+        次へ
+      </button>
     </main>
   )
 }
