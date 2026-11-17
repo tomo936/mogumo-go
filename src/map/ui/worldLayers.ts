@@ -21,6 +21,8 @@ import { modelPlace, visibleShops } from '../../shops/domain/visibility.ts'
 import { extractFeatures, featuresNear, NEAR_M, SOURCE as MAP_SOURCE } from '../../shops/infra/mapFeatures.ts'
 import type { AreaFeatures } from '../../shops/infra/mapFeatures.ts'
 import { extractMapShops } from '../../shops/infra/mapShops.ts'
+import { nearBox, tileBox } from '../../shops/domain/tileBox.ts'
+import type { TileBox } from '../../shops/domain/tileBox.ts'
 import type { Landmark } from '../../shops/infra/mapShops.ts'
 import { createDebugOverlay, debugOn } from './debugOverlay.ts'
 import { createBuildingPins } from '../../shops/infra/buildingPins.ts'
@@ -204,6 +206,10 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   // 地図のタイルが 1 枚でも届いたか。届く前でも areTilesLoaded は true を返すことがあり、そこで読むと地図のお店が 0 軒のまま
   // 「そろった」になっていた（2026-11-16 実測: 起動 0.25 秒で 0 軒のまま onShopsReady）
   let tilesSeen = false
+  // 前に読んだあとに初めて届いたタイルの範囲。そのまわりのお店と施設は、次の読み直しで置き直す
+  // （建物がタイルの境目にかかると、先に届いた片方のタイルだけの形で置いたまま残り、コルティがたまに 6 軒→4 軒。2026-11-17 オーナー）
+  const tilesKnown = new Set<string>()
+  let newTiles: TileBox[] = []
   const refreshShops = (p: LatLng) => {
     refreshedAt = p
     if (!map.areTilesLoaded()) extractedAt = null // 読めなかった回があれば、読めたあとの最初の更新で必ず読み直す
@@ -228,6 +234,19 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       landmarks = [...lmById.values()]
       shops = mergeShops(mapShops, hpShops)
       if (tilesSeen) ready.map = true
+      if (newTiles.length) {
+        const boxes = newTiles
+        newTiles = []
+        const near = (q: LatLng) => boxes.some((b) => nearBox(q, b, FACILITY_NEAR_M))
+        const stale = facilityCache.filter((f) => f.parts.some((q) => q.ring.some(near)))
+        for (const f of stale) facilityCache.splice(facilityCache.indexOf(f), 1)
+        for (const [id, hit] of placed) {
+          if (near(hit.main) || (hit.facility && stale.includes(hit.facility))) {
+            placed.delete(id)
+            shownKey = null
+          }
+        }
+      }
       // 建物に乗らずに置いたお店は、そこの地図がまだ届いていなかっただけかもしれないので、新しいタイルで置き直す
       // （読めるのは今の画面のタイルだけ。古い置き方を覚えたままで、施設・ビルの数が減っていた。2026-11-16 オーナー「コルティが 6 から 2」）
       for (const [id, hit] of placed) {
@@ -327,7 +346,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   }
 
   // 施設の輪郭の中に、読み込んだ全部の店（霧の中も含む）が2軒以上あるか。店の一覧が変わったときだけ数え直す
-  const facilityFull = new Map<NonNullable<Placed['facility']>, { list: Shop[]; ok: boolean }>()
+  const facilityFull = new WeakMap<NonNullable<Placed['facility']>, { list: Shop[]; ok: boolean }>()
   const hasEnoughShops = (f: NonNullable<Placed['facility']>) => {
     const c = facilityFull.get(f)
     if (c && c.list === shops) return c.ok
@@ -552,6 +571,12 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     if (e.dataType === 'source' && e.sourceId === MAP_SOURCE && e.tile) {
       tilesArrived = true
       tilesSeen = true
+      const c = (e.tile as { tileID?: { canonical?: { z: number; x: number; y: number } } }).tileID?.canonical
+      const k = c && `${c.z}/${c.x}/${c.y}`
+      if (c && k && !tilesKnown.has(k)) {
+        tilesKnown.add(k)
+        newTiles.push(tileBox(c.z, c.x, c.y))
+      }
     }
   }
   map.on('data', onData)
