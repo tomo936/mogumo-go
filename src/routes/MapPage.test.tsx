@@ -53,6 +53,7 @@ let mapShopsNow: Shop[] = []
 let visitsNow: { count: number; firstDay: string; lastDay: string } | null = null
 afterEach(() => vi.useRealTimers())
 beforeEach(() => {
+  loading.reset() // タイトルを閉じたかは前のテストから持ち越さない
   localStorage.clear()
   readTodayHints.mockReset()
   readTodayHints.mockResolvedValue({ ok: true, set: null })
@@ -618,6 +619,22 @@ test('初めての人は、空から降りたあとにポコタンの案内が�
   expect(claimLoginBonus).toHaveBeenCalledTimes(1)
   await act(async () => { vi.advanceTimersByTime(500) })
   expect(screen.getByRole('dialog', { name: 'ログインボーナス' })).toBeInTheDocument() // 案内の後は待たずに出す
+  claimLoginBonus.mockReset()
+  vi.useRealTimers()
+})
+
+test('新しいアカウント: タイトルを閉じたのがログイン・初回設定の前でも、地図に着いたらポコタンの案内が出る（出ていなかった。2026-11-17 オーナー）', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  claimLoginBonus.mockReset()
+  claimLoginBonus.mockResolvedValue({ stampNo: 1, coins: 10, claimedNow: true })
+  act(() => loading.enter()) // ログインの画面でタイトルを閉じた（地図の画面はまだ無い）
+  render(
+    <AuthContext.Provider value={{ session: { user: { id: 'new-user' } } as never, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
+      <MapPage />
+    </AuthContext.Provider>,
+  )
+  await act(async () => { vi.advanceTimersByTime(3300) })
+  expect(screen.getByRole('dialog', { name: 'ポコタンの案内' })).toBeInTheDocument()
   claimLoginBonus.mockReset()
   vi.useRealTimers()
 })
