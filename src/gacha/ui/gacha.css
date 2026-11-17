@@ -58,13 +58,16 @@
 /* 看板（木の板＋コック帽の絵。文字はここで書く） */
 .gc__sign {
   position: relative;
-  width: min(92vw, 400px);
+  width: min(80vw, 330px);
   aspect-ratio: 800 / 391;
+  flex: none;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding-top: 15%;
+  justify-content: flex-start;
+  /* 板は絵の高さの 35〜92%（上はコック帽）。文字のかたまりの真ん中を板の真ん中（63%）に置く。
+     padding の % は幅が基準: 幅 330 で高さ 161、文字の上の端 ≒ 72px ≒ 幅の 22% */
+  padding-top: 21%;
   box-sizing: border-box;
   background: url('../../assets/gacha/ui/02-sign.webp') center / contain no-repeat;
   filter: drop-shadow(0 4px 6px rgba(80, 45, 15, 0.3));
@@ -72,8 +75,9 @@
 }
 .gc__sign h1 {
   margin: 0;
+  line-height: 1.15;
   color: #ffe27a;
-  font-size: clamp(24px, 8vw, 34px);
+  font-size: clamp(20px, 6.4vw, 26px);
   font-weight: 800;
   letter-spacing: 0.02em;
   -webkit-text-stroke: 1.5px #6e3b12;
@@ -97,6 +101,9 @@
   align-items: center;
   width: 100%;
   max-width: 420px;
+  /* 画面の高さに合わせて縮む（ボタンが見切れないように） */
+  flex: 1 1 0;
+  min-height: 0;
   animation: gc-swap 400ms ease-out both;
 }
 @keyframes gc-swap {
@@ -108,14 +115,17 @@
   gap: 2px;
 }
 .gc-stars img {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   filter: drop-shadow(0 2px 2px rgba(120, 70, 10, 0.35));
 }
 .gc__ribbon {
   margin-top: 2px;
   min-width: 230px;
-  padding: 10px 46px 18px;
+  /* 帯のまん中の布は絵の高さの 0〜63%（下は両はしの折り返し）。文字の真ん中を高さの 32% に置く */
+  height: 60px;
+  padding: 6px 48px 0;
+  line-height: 26px;
   box-sizing: border-box;
   background: url('../../assets/gacha/ui/04-ribbon.webp') center / 100% 100% no-repeat;
   color: #fff;
@@ -127,7 +137,10 @@
 }
 .gc__stage {
   position: relative;
-  width: min(78vw, 330px);
+  flex: 1 1 0;
+  min-height: 0;
+  width: auto;
+  max-width: min(84vw, 360px);
   aspect-ratio: 1;
   /* 木の台（絵）。下に置く */
   background: url('../../assets/gacha/ui/03-stage.webp') 50% 100% / 100% auto no-repeat;
@@ -135,19 +148,18 @@
 /* 台の上に立つ光の柱（絵）。キャラの後ろ */
 .gc__glow {
   position: absolute;
-  left: 12%;
-  right: 12%;
-  top: -6%;
-  bottom: 12%;
-  background: url('../../assets/gacha/ui/03-light-pillar.webp') 50% 100% / contain no-repeat;
+  left: 4%;
+  right: 4%;
+  top: -4%;
+  bottom: 14%;
+  background: url('../../assets/gacha/ui/03-light-pillar.webp') 50% 100% / 100% 100% no-repeat;
 }
 .gc__stage > img {
   position: absolute;
-  left: 10%;
-  right: 10%;
-  bottom: 13%;
-  height: 80%;
-  width: 80%;
+  left: 18%;
+  bottom: 20%;
+  height: 70%;
+  width: 64%;
   object-fit: contain;
   object-position: 50% 100%;
 }
