@@ -17,6 +17,30 @@ import type { LatLng } from '../domain/geo.ts'
 const AVATARS = import.meta.glob<string>('../../assets/characters/*/avatar.glb', { query: '?url', import: 'default', eager: true }) as Record<string, string>
 // 3D があるキャラ: src/assets/characters/<番号>/avatar.glb（2026-11-17 ガチャでキャラを替えられるようにした）
 export const hasAvatarModel = (id: number) => `../../assets/characters/${id}/avatar.glb` in AVATARS
+export const avatarModelUrl = (id: number): string | undefined => AVATARS[`../../assets/characters/${id}/avatar.glb`]
+
+// 読んだ模型の材質を整える（地図とキャラ一覧の 3D で共通）。顔のテクスチャ（4 こまの横並び）を返す
+export function prepareAvatarScene(scene: THREE.Object3D): THREE.Texture | null {
+  let face: THREE.Texture | null = null
+  scene.traverse((o) => {
+    const mesh = o as THREE.Mesh
+    if (!mesh.isMesh) return
+    mesh.frustumCulled = false // 骨で動く形は、元の箱のままだと画面の端で消えることがある
+    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+      const std = m as THREE.MeshStandardMaterial
+      std.envMapIntensity = 0 // 店の模型と同じマットな見た目
+      // ファイルに金属っぽさの値が無いと、glTF の決まりで「金属（1）」になり、映す景色が無いので真っ黒になる。
+      // 布や肌なので、金属っぽさ 0 にする（2026-11-10 黒く見えた原因）。粗さはファイルの値（0.9）のまま
+      std.metalness = 0
+      if (std.map) {
+        std.map.colorSpace = THREE.SRGBColorSpace
+        std.map.anisotropy = 8 // 撮影ページと同じ（端末の上限を超える分は three が抑える）
+      }
+      if (std.name === 'face') face = std.map
+    }
+  })
+  return face
+}
 
 export type Expression = 'happy'
 
@@ -70,23 +94,7 @@ export function createAvatarModel(map: MapLibreMap, initialId: number) {
         .loadAsync(url)
         .then((gltf) => {
           if (seq !== loadSeq) return
-          gltf.scene.traverse((o) => {
-            const mesh = o as THREE.Mesh
-            if (!mesh.isMesh) return
-            mesh.frustumCulled = false // 骨で動く形は、元の箱のままだと画面の端で消えることがある
-            for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
-              const std = m as THREE.MeshStandardMaterial
-              std.envMapIntensity = 0 // 店の模型と同じマットな見た目
-              // ファイルに金属っぽさの値が無いと、glTF の決まりで「金属（1）」になり、映す景色が無いので真っ黒になる。
-              // 布や肌なので、金属っぽさ 0 にする（2026-11-10 黒く見えた原因）。粗さはファイルの値（0.9）のまま
-              std.metalness = 0
-              if (std.map) {
-                std.map.colorSpace = THREE.SRGBColorSpace
-                std.map.anisotropy = 8 // 撮影ページと同じ（端末の上限を超える分は three が抑える）
-              }
-              if (std.name === 'face') face = std.map
-            }
-          })
+          face = prepareAvatarScene(gltf.scene)
           holder.add(gltf.scene)
           mixer = new THREE.AnimationMixer(gltf.scene)
           for (const clip of gltf.animations) actions.set(clip.name, mixer.clipAction(clip))
