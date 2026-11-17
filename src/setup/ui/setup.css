@@ -341,3 +341,50 @@
 .cs .hs__notes {
   margin-top: auto;
 }
+
+/* ニックネーム（1/3、2026-11-17 見た目を整えた）。自宅の設定 .hs と同じ手帳 */
+.nm__card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 16px;
+  border-radius: 20px;
+  background: #fffdf7;
+  box-shadow: 0 4px 12px rgba(90, 60, 30, 0.14);
+}
+.nm__label {
+  font-size: 13px;
+  font-weight: 800;
+  color: #8a6a48;
+}
+.nm__input {
+  font: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  padding: 12px 14px;
+  border: 2.5px solid #ead9bb;
+  border-radius: 14px;
+  background: #fff;
+  color: #4a3b2c;
+}
+.nm__input:focus {
+  outline: none;
+  border-color: #e8883a;
+  box-shadow: 0 0 0 3px rgba(232, 136, 58, 0.18);
+}
+.nm__input::placeholder {
+  color: #cdb898;
+}
+.nm__hint {
+  align-self: flex-end;
+  font-size: 13px;
+  font-weight: 700;
+  color: #8a6a48;
+}
+.nm .hs__notes {
+  margin-top: 4px;
+}
+.nm__next {
+  margin-top: auto;
+}
