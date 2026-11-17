@@ -31,3 +31,11 @@ test('最後のページを読み終えてタップすると閉じる', () => {
   }
   expect(onClose).toHaveBeenCalledTimes(1)
 })
+
+test('字が出ている途中でタップして全部出したら、そのあと字が巻き戻って出直さない（2026-11-17 オーナー「残りが一瞬出てすぐてれれれ」）', () => {
+  render(<Guide onClose={vi.fn()} />)
+  act(() => void vi.advanceTimersByTime(200))
+  fireEvent.click(screen.getByRole('dialog', { name: 'ポコタンの案内' }))
+  act(() => void vi.advanceTimersByTime(100))
+  expect(screen.getByText(GUIDE_PAGES[0].text)).toBeInTheDocument()
+})
