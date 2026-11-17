@@ -21,7 +21,7 @@ function renderAt(path: string, auth: Partial<AuthState>) {
     session: null,
     loading: false,
     signInWithGoogle: vi.fn(async () => {}),
-    signInAsGuest: vi.fn(async () => true),
+    signInAsGuest: vi.fn(async (): Promise<true | string> => true),
     linkGoogle: vi.fn(async () => true),
     signOut: vi.fn(async () => {}),
     ...auth,
@@ -78,10 +78,12 @@ test('ログインボタンで signInWithGoogle が呼ばれる', async () => {
 })
 
 test('ゲストではじめる: 確認のキーが無いあいだはトークン無しで signInAsGuest。失敗したら知らせる', async () => {
-  const auth = renderAt('/login', { signInAsGuest: vi.fn(async () => false) })
+  const auth = renderAt('/login', { signInAsGuest: vi.fn(async () => 'captcha verification process failed') })
   await userEvent.click(screen.getByRole('button', { name: 'ゲストではじめる' }))
   expect(auth.signInAsGuest).toHaveBeenCalledWith(null)
   expect(await screen.findByRole('alert')).toHaveTextContent('はじめられませんでした')
+  // 原因を見分けられるよう、理由を小さく添える（2026-11-18 結合試験で原因が分からなかった）
+  expect(screen.getByRole('alert')).toHaveTextContent('captcha verification process failed')
 })
 
 test('ログイン画面から利用規約・プライバシーポリシーへ', async () => {

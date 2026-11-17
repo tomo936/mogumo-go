@@ -11,12 +11,12 @@ async function signInWithGoogle() {
   })
 }
 
-async function signInAsGuest(captchaToken: string | null): Promise<boolean> {
+async function signInAsGuest(captchaToken: string | null): Promise<true | string> {
   try {
     const { error } = await supabase.auth.signInAnonymously(captchaToken ? { options: { captchaToken } } : undefined)
-    return !error
-  } catch {
-    return false
+    return error ? `${error.status ?? ''} ${error.code ?? error.message}`.trim() : true
+  } catch (e) {
+    return e instanceof Error ? e.message : 'error'
   }
 }
 
