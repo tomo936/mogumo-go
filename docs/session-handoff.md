@@ -15,6 +15,7 @@
   - 環境: Docker はサンドボックスの外からだけ使える（サンドボックスの中ではグループが `nogroup` に見える）。`docker version` は外で確認済み（29.7.2）。サンドボックスの外での実行は、そのつどオーナーの許可が要る。
   - 試験の台本は `scripts/e2e/`（これから作る）。Playwright は `/home/otosa/tools/pw/`（読み取り専用なので台本は別の場所に置く）。
   - **2026-11-18 0 時台の状況**: Supabase CLI は入れた（`npm i -D supabase`、3.2.0。サンドボックスの外でだけ動く）。`supabase/config.toml` を作り、匿名ログインと manual linking をオン。`supabase start -x studio,imgproxy,vector,logflare,mailpit,realtime,supavisor,postgres-meta` の取り込み中に **C ドライブが満杯（空き 2.5MB）で Docker が落ちた**（containerd の SIGBUS）。Docker の置き場所を D（KIOXIA、空き 673GB）の `D:\Docker` に移す途中で、Docker Desktop が起動しない。オーナーに C を空けて（NVIDIA の DXCache 17.6GB か Steam のゲームを D へ）→ Docker を終了 → `wsl --shutdown` → 起動 → Disk image location を `D:\Docker` に、と頼んだ。再開は「Docker 確認して」→ `docker version`（サンドボックスの外）→ `supabase start` からやり直す。C の内訳: Steam 132.6GB・EA 72GB・ProgramData 32GB・NVIDIA DXCache 17.6GB・WSL 11.9GB・Docker 6.6GB。
+  - **結合試験の次（オーナー 2026-11-18）**: 本番デプロイの手順をまとめる。**お店は開発と同じ数出す**（地図データのお店 `osm:` ＋ホットペッパー `hp:`。「本番はホットペッパーの店しか出ない」と前に言っていた件を、開発と同じになるよう手順に入れる）。
   - `pokotan-backend-db-1`（ポート 5432）は別件のコンテナ。オーナー「無関係」。触らない。
   - ミシェーラへの再実施の依頼 `handoff/to-shiro/2026-11-18-integration-test-retry.md` は、この方針と合わないので取り下げる。
 
