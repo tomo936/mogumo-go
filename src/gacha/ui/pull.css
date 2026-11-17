@@ -1,0 +1,246 @@
+/* まわしたあとの画面（見本 art/reference/gacha/pull-ref.png）。部品の絵が届くまで CSS の形で仮に描く。
+   光の色: ★3 白っぽい・★4 金・★5 虹（--glow） */
+.pl {
+  --glow: rgba(255, 250, 235, 0.95);
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  box-sizing: border-box;
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+  overflow: hidden;
+  /* 仮の背景: 夕方の空と石畳 */
+  background: linear-gradient(#7fb2e0 0%, #f2c58f 45%, #c99b6c 70%, #8d6a4f 100%);
+  color: #5b3a1e;
+  font-family: 'M PLUS Rounded 1c', system-ui, sans-serif;
+  user-select: none;
+}
+.pl--r4 { --glow: rgba(255, 214, 90, 0.95); }
+.pl--r5 { --glow: rgba(255, 170, 230, 0.95); }
+
+.pl__skip {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 14px;
+  z-index: 3;
+  padding: 6px 16px;
+  border: 2px solid #fff;
+  background: rgba(60, 40, 20, 0.55);
+  color: #fff;
+  font-weight: 800;
+}
+
+/* 鍋とかまど（仮） */
+.pl__pot {
+  position: relative;
+  width: min(80vw, 340px);
+  height: min(110vw, 470px);
+}
+.pl__pot > span { position: absolute; left: 50%; transform: translateX(-50%); }
+.pl__stove {
+  bottom: 0;
+  width: 78%;
+  height: 26%;
+  border-radius: 12px 12px 6px 6px;
+  background: linear-gradient(#6b5a4c, #3f342c);
+  box-shadow: inset 0 6px 0 rgba(255, 255, 255, 0.12);
+}
+.pl__fire {
+  z-index: 1;
+  bottom: 4%;
+  width: 40%;
+  height: 16%;
+  border-radius: 50% 50% 20% 20%;
+  background: radial-gradient(ellipse at 50% 90%, #fff4b0 0 18%, #ffb432 40%, #ff6a1a 70%, transparent 72%);
+  animation: pl-fire 0.35s ease-in-out infinite alternate;
+}
+.pl__body {
+  z-index: 2;
+  bottom: 23%;
+  width: 92%;
+  height: 34%;
+  border-radius: 14% 14% 44% 44%;
+  background: radial-gradient(ellipse at 30% 30%, #7a6a63, #3b302c 70%);
+  box-shadow: inset 0 8px 0 rgba(255, 255, 255, 0.15);
+}
+.pl__lid {
+  z-index: 3;
+  bottom: 56%;
+  width: 84%;
+  height: 22%;
+  border-radius: 50% 50% 8% 8%;
+  background: radial-gradient(ellipse at 35% 30%, #8b7b72, #45392f 70%);
+}
+.pl__lid::before {
+  content: '';
+  position: absolute;
+  top: -16%;
+  left: 50%;
+  width: 16%;
+  height: 22%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: #4a3d34;
+}
+.pl__beam {
+  z-index: 2;
+  bottom: 50%;
+  width: 70%;
+  height: 0;
+  border-radius: 40% 40% 0 0;
+  background: linear-gradient(transparent, var(--glow));
+  filter: blur(8px);
+  opacity: 0;
+}
+.pl--r5 .pl__beam {
+  background: linear-gradient(transparent, #ffd6f5 30%, #fff1a8 55%, #b8f0ff 80%, #fff);
+}
+/* 揺れる → ふたが浮く・光が出る */
+.pl__pot:not(.is-open) .pl__body,
+.pl__pot:not(.is-open) .pl__lid {
+  animation: pl-shake 0.18s ease-in-out infinite alternate;
+}
+.pl__pot.is-open .pl__lid {
+  animation: pl-lid 0.9s ease-out forwards;
+}
+.pl__pot.is-open .pl__beam {
+  animation: pl-beam 1s ease-out forwards;
+}
+@keyframes pl-fire {
+  from { transform: translateX(-50%) scaleY(0.92); }
+  to { transform: translateX(-50%) scaleY(1.08); }
+}
+@keyframes pl-shake {
+  from { transform: translateX(-51%) rotate(-1.2deg); }
+  to { transform: translateX(-49%) rotate(1.2deg); }
+}
+@keyframes pl-lid {
+  to { transform: translateX(-50%) translateY(-60%) rotate(-8deg); }
+}
+@keyframes pl-beam {
+  to { height: 90%; opacity: 1; }
+}
+
+/* 1 体 */
+.pl__one {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: pl-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.pl__one::before {
+  content: '';
+  position: absolute;
+  inset: -20% -30%;
+  z-index: -1;
+  background: radial-gradient(circle, var(--glow), transparent 60%);
+}
+.pl__one--r5::before {
+  background: conic-gradient(from 0deg, #ffd6f5, #fff1a8, #c8ffd6, #b8f0ff, #e2d0ff, #ffd6f5);
+  border-radius: 50%;
+  filter: blur(30px);
+  opacity: 0.85;
+}
+@keyframes pl-pop {
+  from { opacity: 0; transform: translateY(40px) scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
+.pl__count {
+  margin-bottom: 4px;
+  padding: 2px 12px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  font-weight: 800;
+}
+.pl__stage {
+  width: min(80vw, 340px);
+}
+.pl__friend {
+  position: absolute;
+  right: -4%;
+  top: 8%;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: #fff;
+  color: #e0507a;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+.pl__hint {
+  margin: 0;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* 10 体の一覧（5×2） */
+.pl__list {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  width: 100%;
+  max-width: 460px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pl__cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 2px 6px;
+  border: 3px solid #fff;
+  border-radius: 12px;
+  background: #fffbf2;
+  animation: pl-pop 0.4s ease-out both;
+}
+.pl__cell--r4 { border-color: #ffd23f; }
+.pl__cell--r5 { border-color: #ff8ad8; background: linear-gradient(#fff3fb, #fffbe6); }
+.pl__cell img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  mix-blend-mode: multiply;
+}
+.pl__cell span {
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+}
+.pl__cell-new {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  padding: 0 4px;
+  border-radius: 6px;
+  background: #e8883a;
+  color: #fff;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+}
+.pl__done {
+  width: min(100%, 300px);
+  padding: 14px;
+  background: #e8883a;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  box-shadow: 0 4px 0 #b8641f;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pl__pot span,
+  .pl__one,
+  .pl__cell { animation: none !important; }
+  .pl__pot.is-open .pl__beam { height: 90%; opacity: 1; }
+}
