@@ -291,6 +291,9 @@ Mx = None
 LEG_STAND = float(os.environ.get('LEGSTAND', CFG['motion'].get('legStand', 0.0)))
 TWIST_F = float(os.environ.get('TWISTF', CFG['motion'].get('twistForearm', 0.0)))   # 前腕のねじり（ラジアン、+ で手のひらが内側へ）
 TWIST_H = float(os.environ.get('TWISTH', CFG['motion'].get('twistHand', 0.0)))     # 手首のねじり
+TWIST_U = float(os.environ.get('TWISTU', CFG['motion'].get('twistUpper', 0.0)))    # キリン: 上腕のねじり（自分の軸で）
+HAND_IN = float(os.environ.get('HANDIN', CFG['motion'].get('handIn', 0.0)))       # キリン: 手首を体の側へ曲げる
+HAND_COMP = float(os.environ.get('HANDCOMP', CFG['motion'].get('handComp', 0.0)))  # キリン: 前への振りの分だけ手首を戻す割合
 
 
 def reset(rig):
@@ -332,15 +335,26 @@ def apply_pose(rig, p, armDown):
     for s, sg in (('L', 1), ('R', -1)):
         # 腕: まず A ポーズから下ろし（Y 軸）、それから前後に振る（X 軸）
         rot(rig, 'upperarm' + s, ('X', -g('arm' + s)), ('Y', sg * (armDown - g('armOut') - g('armOut' + s))))
+        # キリン: 肉球（手のひら）を体の内側へ。A ポーズで肉球が前・外を向いていて約 130° 回す必要があるので、上腕・前腕・手首に分けてねじる
+        if TWIST_U:
+            ua_ = rig.pose.bones['upperarm' + s]; uav = (ua_.tail - ua_.head).normalized()
+            rot(rig, 'upperarm' + s, (uav, sg * TWIST_U))
         # 女の子（2 回目）: 手のひらを体の内側へ（親指が前）。前腕を自分の軸で TWIST_F、手首で TWIST_H ねじる（1 か所で 90° ねじると細くつぶれるので分ける）。
         # ねじってから、ひじを前へ曲げる（世界の X 軸）
         fa_ = rig.pose.bones['forearm' + s]; axv = (fa_.tail - fa_.head).normalized()
-        rot(rig, 'forearm' + s, ('X', -g('elbow' + s)), (axv, sg * (TWIST_F + g('twist' + s))))
+        rot(rig, 'forearm' + s, ('X', -g('elbow' + s)), (axv, sg * (TWIST_F + g('twist' + s) + (CFG['motion'].get('twistForearmR', 0.0) if s == 'R' else 0.0))))
         from mathutils import Quaternion
         for bn, q in (('hand' + s, Quaternion((0, 1, 0), sg * (TWIST_H + g('handTwist' + s)))), ('fingers' + s, Quaternion((1, 0, 0), g('fingers' + s)))):
             pb_ = rig.pose.bones.get(bn)
             if pb_ is not None: pb_.rotation_quaternion = q
         bpy.context.view_layer.update()
+        # キリン: 手首を体の側へ曲げる（前後の軸で）。肉球は手の先の向きにもあり、ねじるだけでは下向きの分が残るため
+        HI_ = HAND_IN + (CFG['motion'].get('handInR', 0.0) if s == 'R' else 0.0)   # 右手は形が左とちがう（生成の左右差）ので上乗せ
+        if HI_:   # 手首を体の側へ。手首の帯 0.006 ではぎざぎざ、ひじで曲げると手がお腹にめりこんだので、手首の帯を前腕全体に広げて（hand.wrist_band）手の骨で曲げる
+            rot(rig, 'hand' + s, ('Y', sg * HI_))
+        # キリン: 腕を前へ振る・ひじを曲げると肉球が前へ傾くので、その分の HAND_COMP 倍だけ手首を戻す（肉球が前を向かないように）
+        if HAND_COMP:
+            rot(rig, 'hand' + s, ('X', HAND_COMP * max(0.0, g('arm' + s) + g('elbow' + s))))
         # 2 回目: 足の開きの土台 LEG_STAND（元の立ち絵のくるぶしの幅に合わせる。立ち・歩き・走り・喜び すべてに足す）。靴の裏は水平に戻す
         rot(rig, 'thigh' + s, ('Y', -sg * (LEG_STAND + g('legOut'))), ('X', -g('thigh' + s)))
         rot(rig, 'shin' + s, ('X', g('knee' + s)))
@@ -847,6 +861,8 @@ if STAGE == 5:
     block = block.replace("p['armOut'] = 0.12 if run else 0.04", "p['armOut'] = MO['runOut'] if run else MO['walkOut']\n    for s_ in 'LR': p['fingers' + s_] = MO['fistRun'] if run else MO['fistWalk']")
     block = block.replace("p = {'armOut': 0.55 + 0.15 * math.sin(TAU * ph)", "p = {'armOut': MO['joyOut'] + MO['joyOutAmp'] * math.sin(TAU * ph)")   # キリン: 開く上限 0.61 の 8 割まで
     block = block.replace("        p['elbow' + s] = 0.6\n", "        p['elbow' + s] = MO['joyElbow']\n")
+    block = block.replace("        p['arm' + s] = 0.3 + 0.1 * math.sin(TAU * ph)\n", "        p['arm' + s] = MO['joyArm'] + 0.1 * math.sin(TAU * ph)\n")   # キリン: 前に上げると肉球が前を向くので小さく
+    assert "MO['joyArm']" in block
     block = block.replace("        p['knee' + s] = k\n", "        p['knee' + s] = k * MO['joyKneeScale']\n")
     block = block.replace("'armOut': 0.03 + 0.02 * b, 'pack': 0.01 * b}", "'armOut': MO['idleOut'] + 0.02 * b, 'pack': 0.01 * b, 'fingersL': MO['fistIdle'], 'fingersR': MO['fistIdle']}")
     assert block.count("MO['fistRun']") == 1 and block.count("MO['fistIdle']") == 2 and "MO['joyOut']" in block and "MO['joyElbow']" in block and "MO['joyKneeScale']" in block and "MO['walkElbow']" in block
@@ -929,6 +945,21 @@ if STAGE == 5:
         rig.animation_data.action = None
         LOG[f'{name}_y'] = [round(float(ys.min()), 4), round(float(ys.max()), 4)]
     LOG['peak_angles'] = {k: round(v, 3) for k, v in peak.items()}
+    # キリン: 肉球の向き（A ポーズで前・外 (±0.68, −0.73, −0.09) を手の骨で運ぶ）を全コマで数える。前の成分（+ が前）の最大と、内側の成分の最小
+    from mathutils import Vector as V_
+    NR_ = {'L': V_((0.68, -0.73, -0.09)).normalized(), 'R': V_((-0.68, -0.73, -0.09)).normalized()}
+    PALM = {}
+    for name, (N, fn, lift) in ACTS.items():
+        rig.animation_data.action = bpy.data.actions[name]; PALM[name] = {}
+        for sd, sg in (('L', 1), ('R', -1)):
+            fr = []; inn = []
+            for i in range(1, N + 1):
+                bpy.context.scene.frame_set(i)
+                pb = rig.pose.bones['hand' + sd]; n = (pb.matrix @ pb.bone.matrix_local.inverted()).to_3x3() @ NR_[sd]
+                fr.append(-n.y); inn.append(-sg * n.x)
+            PALM[name][sd] = dict(front_max=round(max(fr), 3), inward_min=round(min(inn), 3), inward_mean=round(float(np.mean(inn)), 3))
+        rig.animation_data.action = None
+    LOG['palm'] = PALM; print('PALM', json.dumps(PALM))
     # 3 回目: わきのすき間（腕・手と、胴・持ち物・足の面との、符号つきの距離の最小。負ならめりこみ）を全コマで測る
     from mathutils.bvhtree import BVHTree
     from mathutils import Vector
@@ -965,6 +996,35 @@ if STAGE == 5:
     LOG['arm_gap'] = GAP
     print('GAP', json.dumps(GAP, ensure_ascii=False))
     if os.environ.get('NOEXPORT'): raise SystemExit
+    # 確かめ用（PADDEBUG=1）: 肉球の側（A ポーズで前・外を向く手の面）を赤く塗った GLB を別に書き出す（できあがりには入れない）
+    if os.environ.get('PADDEBUG'):
+        me_ = av.data; img_ = None
+        for n_ in me_.materials[0].node_tree.nodes:
+            if n_.type == 'TEX_IMAGE': img_ = n_.image
+        W_, H_ = img_.size; px_ = np.empty(W_ * H_ * 4, np.float32); img_.pixels.foreach_get(px_); px_ = px_.reshape(H_, W_, 4)
+        gi_ = {g.index: g.name for g in av.vertex_groups}; hv_ = np.zeros(len(me_.vertices), bool)
+        for v in me_.vertices:
+            for g in v.groups:
+                if gi_[g.group][:-1] in ('hand', 'fingers') and g.weight > 0.5: hv_[v.index] = True
+        uvd = me_.uv_layers.active.data; nrest = {1: np.array([0.68, -0.73, -0.09]), -1: np.array([-0.68, -0.73, -0.09])}
+        npad = 0
+        for f in me_.polygons:
+            if f.material_index != 0 or not all(hv_[i] for i in f.vertices): continue
+            sg_ = 1 if f.center.x > 0 else -1
+            if np.dot(np.array(f.normal), nrest[sg_] / np.linalg.norm(nrest[sg_])) < float(os.environ.get('PADDOT', '0.75')): continue
+            npad += 1
+            T = np.array([uvd[li].uv[:] for li in f.loop_indices]) * [W_, H_]
+            x0, y0 = np.floor(T.min(0)).astype(int); x1, y1 = np.ceil(T.max(0)).astype(int) + 2
+            X, Y = np.meshgrid(np.arange(x0, x1) + 0.5, np.arange(y0, y1) + 0.5)
+            (ax_, ay_), (bx_, by_), (cx_, cy_) = T[:3]
+            den = (by_ - cy_) * (ax_ - cx_) + (cx_ - bx_) * (ay_ - cy_)
+            if abs(den) < 1e-9: continue
+            w0 = ((by_ - cy_) * (X - cx_) + (cx_ - bx_) * (Y - cy_)) / den; w1 = ((cy_ - ay_) * (X - cx_) + (ax_ - cx_) * (Y - cy_)) / den
+            ins = (w0 >= -0.3) & (w1 >= -0.3) & (1 - w0 - w1 >= -0.3)
+            sub = px_[y0:y1, x0:x1]; sub[ins[:sub.shape[0], :sub.shape[1]]] = (0.95, 0.1, 0.1, 1)
+        img_.pixels.foreach_set(px_.ravel()); img_.update(); img_.pack()
+        LOG['paddebug_faces'] = npad
+        export(os.path.join(WORK, 'avatar-paddebug.glb'), 'ACTIONS'); print('PADDEBUG', npad); raise SystemExit
     reset(rig)
     bpy.context.scene.frame_start = 1; bpy.context.scene.frame_set(1)
     save('stage5.blend')

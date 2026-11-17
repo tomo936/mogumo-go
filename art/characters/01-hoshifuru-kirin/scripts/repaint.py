@@ -288,7 +288,7 @@ def blobs_mask(Oi, region, lum_t, min_px, grow):
 for i in range(4):
     Oi = FA[:, i * CW:(i + 1) * CW, :3]; d = Oi - Sl; mag = np.abs(d).max(2)
     al = np.clip((mag - t0) / (t1 - t0), 0, 1); al = al * al * (3 - 2 * al)
-    a2 = np.maximum(np.maximum(blobs_mask(Oi, eyem, RC['eye_lum'], RC['min_dark'], 4), blobs_mask(Oi, mouth, RC['mouth_lum'], 40, 3)),
+    a2 = np.maximum(np.maximum(0 * eyem if FC_.get('redraw_eyes') else blobs_mask(Oi, eyem, RC['eye_lum'], RC['min_dark'], 4), blobs_mask(Oi, mouth, RC['mouth_lum'], 40, 3)),   # キリン: 生成の目は使わず、下で形から描く
                     (blobs_mask(Oi, brow, RC['dark_lum'], RC['min_dark'], 2) if RC.get('brows', True) else 0 * eyem)) * inner
     out = base * (1 - blush[:, :, None] * RC['blush_a']) + bcol[None, None] * (blush[:, :, None] * RC['blush_a'])
     d = np.stack([soften(d[:, :, c], RC['feat_soft']) for c in range(3)], -1)   # 目のふちの画素の段・まつげの点線をならす
@@ -298,6 +298,68 @@ for i in range(4):
             im_ = bpy.data.images.new(f'dbg{i}{nm_}', CW, AH); px_ = np.ones((AH, CW, 4), np.float32); px_[:, :, :3] = arr; im_.pixels.foreach_set(px_.ravel())
             im_.filepath_raw = os.path.join(os.environ['FACEDBG'], f'{i}-{nm_}.png'); im_.file_format = 'PNG'; im_.save()   # 目・まゆ・口は、新しい肌に元の差を足す
 FA[:, :, 3] = 1
+# ---------------------------------------------------------------- キリン: 目を形から描く（生成の目は左右で形・大きさがちがい、ふちに黒いにじみ・上にぼやけがあった）
+# 元の立ち絵の目: 縦長のだ円・こげ茶（ふちは濃い）・下に赤茶の半円・左上に白い 4 方向のきらめき（大）・まん中右に小さなひし形・右下に小さな星。
+# 左右の目は同じ形を左右反転する。こま 1 = 半分とじ（上半分をまぶたで）・2 = とじ（∪）・3 = うれしい（∩）。目の外の画素は 4 こまで同じ
+if FC_.get('redraw_eyes'):
+    EY = FC_['eyes']
+    FAt = FA[::-1].copy()                                     # 上から下の並び
+    yy_, xx_ = np.mgrid[0:AH, 0:CW].astype(np.float32) + 0.5
+    def col(c): return np.array(c, np.float32) / 255.0
+    def over(img, a, c):
+        a = np.clip(a, 0, 1)[:, :, None]; return img * (1 - a) + (c if np.ndim(c) == 3 else c[None, None]) * a
+    def star4(u, v, x0, y0, L, w, core):
+        du, dv = np.abs(u - x0), np.abs(v - y0)
+        ray = np.maximum(np.clip((w * (1 - dv / L) - du) * 60, 0, 1) * (dv < L), np.clip((w * (1 - du / (L * 0.75)) - dv) * 60, 0, 1) * (du < L * 0.75))
+        disc = np.clip((core - np.hypot(du, dv)) * 60, 0, 1)
+        return np.maximum(ray, disc)
+    def draw_eye(img, cx, cy, mir, lid=None):
+        rx, ry = EY['rx'], EY['ry']
+        u = (xx_ - cx) / rx * mir; v = (yy_ - cy) / ry; rr = np.hypot(u, v)
+        aa = np.clip((1 - rr) * min(rx, ry) / 1.2, 0, 1)        # ふちのなめらかさ 1.2 画素
+        if lid is not None: aa = aa * np.clip((v - lid) * ry / 1.2, 0, 1)
+        c = np.broadcast_to(col(EY['iris']), img.shape).copy()
+        c = over(c, np.clip((rr - 0.82) / 0.12, 0, 1), col(EY['rim']))                                   # ふちを濃く
+        low = np.clip((EY['low_r'] - np.hypot(u, v - EY['low_y'])) * min(rx, ry) / 2.0, 0, 1) * np.clip((0.93 - rr) * 30, 0, 1)
+        c = over(c, low, col(EY['low']))                                                                  # 下の赤茶の半円
+        hl = star4(u, v, -0.3, -0.32, 0.62, 0.075, 0.17) + 0.0
+        c = over(c, hl, col([255, 255, 255]))                                                             # 左上のきらめき（大）
+        dm = np.clip((0.07 - (np.abs(u - 0.2) + np.abs(v + 0.02))) * 60, 0, 1)
+        c = over(c, dm, col([255, 255, 255]))                                                             # ひし形（小）
+        c = over(c, star4(u, v, 0.36, 0.42, 0.17, 0.03, 0.05), col([255, 255, 255]))                       # 右下の星（小）
+        return over(img, aa, c)
+    def stroke2(img, pts, wid, c):
+        out = img; P = np.array(pts)
+        for (ya, xa), (yb, xb) in zip(P[:-1], P[1:]):
+            vx, vy = xb - xa, yb - ya; L2 = vx * vx + vy * vy + 1e-9
+            t = np.clip(((xx_ - xa) * vx + (yy_ - ya) * vy) / L2, 0, 1)
+            d = np.hypot(xx_ - (xa + t * vx), yy_ - (ya + t * vy))
+            out = over(out, wid / 2 + 0.5 - d, c)
+        return out
+    def arc(img, cx, cy, up):
+        rx, ry = EY['rx'], EY['ry']; xs = np.linspace(cx - rx * 0.85, cx + rx * 0.85, 24); sn = np.sin(np.pi * (xs - xs[0]) / (xs[-1] - xs[0]))
+        ys = (cy + ry * 0.1 - ry * 0.32 * sn) if up else (cy + ry * 0.05 + ry * 0.28 * sn)
+        return stroke2(img, list(zip(ys, xs)), ry * EY['line'], col(EY['ink']))
+    cxs = [(EY['cx'] - EY['dx'], 1.0), (EY['cx'] + EY['dx'], -1.0)]   # 画面の左の目はそのまま、右の目は反転（きらめきが外側の上。元の絵の画面の左の目と同じ）
+    for i in range(4):
+        cell = FAt[:, i * CW:(i + 1) * CW, :3].copy()
+        for cx_, mir in cxs:
+            if i == 0: cell = draw_eye(cell, cx_, EY['cy'], mir)
+            elif i == 1:
+                cell = draw_eye(cell, cx_, EY['cy'], mir, lid=EY['half_lid'])
+                rx, ry = EY['rx'], EY['ry']; xs = np.linspace(cx_ - rx * 0.97, cx_ + rx * 0.97, 24)
+                yl = EY['cy'] + ry * EY['half_lid'] - ry * 0.06 * np.sin(np.pi * (xs - xs[0]) / (xs[-1] - xs[0])) * 0
+                yl = EY['cy'] + ry * EY['half_lid'] + 0 * xs
+                inside = np.clip(1 - ((xs - cx_) / (rx * 0.99)) ** 2, 0, 1)
+                cell = stroke2(cell, list(zip(yl + 0 * inside, xs)), ry * EY['line'], col(EY['ink']))
+            elif i == 2: cell = arc(cell, cx_, EY['cy'], False)
+            else: cell = arc(cell, cx_, EY['cy'], True)
+        FAt[:, i * CW:(i + 1) * CW, :3] = cell
+    # 目の外が 4 こまで同じか（目のだ円を 1.25 倍に広げた外）
+    outm = np.ones((AH, CW), bool)
+    for cx_, _ in cxs: outm &= (((xx_ - cx_) / (EY['rx'] * 1.25)) ** 2 + ((yy_ - EY['cy']) / (EY['ry'] * 1.25)) ** 2) > 1
+    LOG['eyes_outside_changed'] = [int((np.abs(FAt[:, i * CW:(i + 1) * CW, :3] - FAt[:, :CW, :3]).max(2)[outm] > 1e-6).sum()) for i in (1, 2, 3)]
+    FA = FAt[::-1].copy()
 fimg.pixels.foreach_set(FA.ravel()); fimg.update(); fimg.pack()
 fimg.filepath_raw = os.path.join(CH, 'face4.png'); fimg.file_format = 'PNG'; fimg.save()
 # こまの間の差（目・口の枠の外で 0 か）は段 4 と同じ数え方で確かめる
