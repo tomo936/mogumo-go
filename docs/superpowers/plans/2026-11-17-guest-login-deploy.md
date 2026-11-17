@@ -16,7 +16,7 @@
 2. 左のメニューの **Turnstile** →「Add widget」（ウィジェットを追加）。
 3. 名前: `mogumo-go`。
 4. Hostname（ドメイン）に次の 2 つを足す:
-   - dev のサイトのドメイン（例: `mogumo-go-git-dev-xxxx.vercel.app` のような、iPhone で開いているアドレスの `https://` と `/` の間）
+   - dev のサイトのドメイン: **`mogumo-go-dev.vercel.app`**（`https://` と `/` は付けない）
    - `localhost`
 5. Widget Mode は **Managed**（おまかせ）のまま →「Create」。
 6. **Site Key（サイトキー）** と **Secret Key（秘密キー）** が出る。2 つとも控える。
