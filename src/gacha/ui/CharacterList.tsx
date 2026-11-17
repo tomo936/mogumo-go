@@ -9,6 +9,7 @@ import { standArtUrl } from '../infra/gachaApi.ts'
 import { Icon } from '../../ui/Icon.tsx'
 import { Stars } from './GachaScreen.tsx'
 import { AvatarViewer } from './AvatarViewer.tsx'
+import pedestalUrl from '../../assets/gacha/ui/03-stage.webp'
 
 type Props = {
   owned: ReadonlyMap<number, number> // 持っているガチャのキャラ → ダブった数
@@ -52,27 +53,34 @@ export function CharacterList({ owned, currentId, onPick, onClose }: Props) {
       </header>
 
       <section className={hearts === FRIENDSHIP_MAX ? 'cl__big is-max' : 'cl__big'} aria-label="選んでいるキャラ">
-        <div className="cl__stage" key={c.id}>
-          {/* 3D があるキャラは 3D（回して見られる）、無ければ原画 */}
-          <AvatarViewer id={c.id} fallback={<img src={standArtUrl(c.id)} alt="" />} />
+        {/* 台と光は動かさず、上のキャラだけ替える。足は台の上面（高さの 78%）に乗る（AvatarViewer の FEET と同じ） */}
+        <div className="cl__stage">
+          <span className="cl__pillar" aria-hidden="true" />
+          <img className="cl__pedestal" src={pedestalUrl} alt="" />
+          <div className="cl__who" key={c.id}>
+            {/* 3D があるキャラは 3D（回して見られる）、無ければ原画 */}
+            <AvatarViewer id={c.id} fallback={<img className="cl__art" src={standArtUrl(c.id)} alt="" />} />
+          </div>
         </div>
         <div className="cl__info">
-          {c.rarity ? <Stars n={c.rarity} /> : <span className="cl__first">はじめのなかま</span>}
-          <b className="cl__name">{c.name}</b>
-          {hearts !== null && (
-            <span className="cl__hearts" aria-label={`なかよし度 ${hearts}`}>
-              {'♥'.repeat(hearts)}
-              <span className="cl__hearts-off">{'♥'.repeat(FRIENDSHIP_MAX - hearts)}</span>
-            </span>
-          )}
+          <div className="cl__meta">
+            {c.rarity ? <Stars n={c.rarity} /> : <span className="cl__first">はじめのなかま</span>}
+            <b className="cl__name">{c.name}</b>
+            {hearts !== null && (
+              <span className="cl__hearts" aria-label={`なかよし度 ${hearts}`}>
+                {'♥'.repeat(hearts)}
+                <span className="cl__hearts-off">{'♥'.repeat(FRIENDSHIP_MAX - hearts)}</span>
+              </span>
+            )}
+          </div>
+          <button type="button" className="cl__use" disabled={busy || sel === using} onClick={() => void pick()}>
+            {sel === using ? '使っています' : busy ? '少し待ってね…' : 'このキャラにする'}
+          </button>
           {failed && (
             <p className="cl__error" role="alert">
               変えられませんでした。もう一度お試しください
             </p>
           )}
-          <button type="button" className="cl__use" disabled={busy || sel === using} onClick={() => void pick()}>
-            {sel === using ? '使っています' : busy ? '少し待ってね…' : 'このキャラにする'}
-          </button>
         </div>
       </section>
 
