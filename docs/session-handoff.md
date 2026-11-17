@@ -8,6 +8,23 @@
 
 ## いまの状態
 
+- **【2026-11-18 深夜 区切り（最新）】結合試験は手順 1〜12 とも通った（手元の Docker の Supabase ＋ Playwright）。結果 `docs/integration-test-2026-11-18.md`、台本 `scripts/e2e/`（README に回し方）。本番デプロイの手順 `docs/superpowers/plans/2026-11-18-production-deploy.md`。**
+  - 見つけたこと: 【中】ビル・施設の店でチェックインすると戻った一覧の「済み」が古い（`MapPage.tsx` の `checkin` が `building.checked` を読み直さない）、【小】ポコタンの案内 8 ページ目のガチャの文、【小】ゲストのお問い合わせ送信後の「メールアドレスにお送りします」。
+  - 本番で dev と同じ数のお店を出すには `shopSourceEnabled`（`src/shops/infra/hotpepper.ts`）の dev だけの制限を外す（総合レビュー H3。11/6 の Overpass 時代の残り）。手順書の 1。
+  - 待ち（オーナー）: 直すものの決定（上の 3 件・H1 ほか）、手順書 2-1 の SQL の結果（本番にどこまで入っているか）。
+  - 手元の Supabase は Docker で動いたまま（`npx supabase stop` で止める。サンドボックスの外で）。
+
+- **【2026-11-18 結合試験の方針（オーナー決定・最優先）】ミシェーラにもオーナーにもやらせず、Claude Code が手元で自動で回す。**
+  - 理由: ミシェーラの環境では手順 2（ゲスト開始）で止まり、通らなかった。オーナーも試験はやりたくない。
+  - やり方: 手元の Docker に本物と同じ Supabase を立てる（Supabase CLI は `npm i -D supabase`、オーナー承認済み）→ SQL 0001〜0015 と Edge Functions を入れる → Turnstile は手元では切る → ホットペッパーは決まった見本を返す（キー・回数を使わない）→ Playwright で `handoff/to-shiro/2026-11-17-integration-test.md` の**手順 1〜12 を全部**通す（途中で DB の中身も確かめる）。本番・dev のデータには触らない。
+  - 範囲外: Google ログイン（オーナーのアカウントが要る）、iPhone 実機の GPS・重さ（リリース直前にオーナーが 5 分）。
+  - 環境: Docker はサンドボックスの外からだけ使える（サンドボックスの中ではグループが `nogroup` に見える）。`docker version` は外で確認済み（29.7.2）。サンドボックスの外での実行は、そのつどオーナーの許可が要る。
+  - 試験の台本は `scripts/e2e/`（これから作る）。Playwright は `/home/otosa/tools/pw/`（読み取り専用なので台本は別の場所に置く）。
+  - **2026-11-18 0 時台の状況**: Supabase CLI は入れた（`npm i -D supabase`、3.2.0。サンドボックスの外でだけ動く）。`supabase/config.toml` を作り、匿名ログインと manual linking をオン。`supabase start -x studio,imgproxy,vector,logflare,mailpit,realtime,supavisor,postgres-meta` の取り込み中に **C ドライブが満杯（空き 2.5MB）で Docker が落ちた**（containerd の SIGBUS）。Docker の置き場所を D（KIOXIA、空き 673GB）の `D:\Docker` に移す途中で、Docker Desktop が起動しない。オーナーに C を空けて（NVIDIA の DXCache 17.6GB か Steam のゲームを D へ）→ Docker を終了 → `wsl --shutdown` → 起動 → Disk image location を `D:\Docker` に、と頼んだ。再開は「Docker 確認して」→ `docker version`（サンドボックスの外）→ `supabase start` からやり直す。C の内訳: Steam 132.6GB・EA 72GB・ProgramData 32GB・NVIDIA DXCache 17.6GB・WSL 11.9GB・Docker 6.6GB。
+  - **結合試験の次（オーナー 2026-11-18）**: 本番デプロイの手順をまとめる。**お店は開発と同じ数出す**（地図データのお店 `osm:` ＋ホットペッパー `hp:`。「本番はホットペッパーの店しか出ない」と前に言っていた件を、開発と同じになるよう手順に入れる）。
+  - `pokotan-backend-db-1`（ポート 5432）は別件のコンテナ。オーナー「無関係」。触らない。
+  - ミシェーラへの再実施の依頼 `handoff/to-shiro/2026-11-18-integration-test-retry.md` は、この方針と合わないので取り下げる。
+
 - **【2026-11-17 深夜 区切り（最新）】リリース前の確認**
   - 済（オーナー）: SQL 0013・0014・0015 の Run、Manual linking のオン。
   - 済（Claude Code、dev に反映）: 総合レビュー＋セキュリティ（`docs/release-review-2026-11-17.md`、重大なし）。バグ修正 5 件: ポコタンが止まる（Live2D の合成シェーダー約 270 個を使うときだけ作る、`src/vendor/live2d-framework/PATCHES.md`）・起動直後のお店／コルティ 4 軒（タイルの境目。新しいタイルが届いたらまわりを置き直す `tileBox.ts`）・新しいアカウントでポコタンとログインボーナスが出ない（`loading.hasEntered`）・ポコタンのタップ後に字が巻き戻る・dev のサイトでも `?fake=緯度,経度`。

@@ -84,3 +84,18 @@ test('出典ボタンで詳しい出典とリンクが見られる', () => {
   act(() => screen.getByRole('button', { name: '閉じる' }).click())
   expect(screen.queryByRole('link', { name: 'OpenFreeMap' })).not.toBeInTheDocument()
 })
+
+test('行き先を決めている途中（読み込み中…の画面）に押しても、タイトルは消さない。地図の画面ができたらお店の待ちに引き継ぐ（2026-11-18 オーナー「タップすると一瞬マップが見える」）', () => {
+  const release = loading.hold() // ログインの確認中
+  render(<Splash />)
+  act(() => screen.getByRole('button', { name: /タップしてスタート/ }).click())
+  expect(screen.queryByTestId('sky-intro')).not.toBeInTheDocument()
+  expect(screen.getByRole('status')).toHaveTextContent('読み込み中')
+  act(() => {
+    release() // 確認が終わって、同じ描画で地図の画面ができた
+    loading.start()
+  })
+  expect(screen.queryByTestId('sky-intro')).not.toBeInTheDocument()
+  act(() => loading.done())
+  expect(screen.getByTestId('sky-intro')).toBeInTheDocument()
+})

@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router'
 import { nextSetupPath } from '../domain/gate.ts'
 import { SetupStatusProvider } from './SetupStatus.tsx'
 import { useSetupStatus } from './SetupStatusContext.ts'
+import { LoadingStatus } from '../../credits/LoadingStatus.tsx'
 
 export function SetupStatusLayout() {
   return (
@@ -13,7 +14,7 @@ export function SetupStatusLayout() {
 
 function Waiting() {
   const { loading, retry } = useSetupStatus()
-  if (loading) return <p className="status">読み込み中…</p>
+  if (loading) return <LoadingStatus />
   return (
     <main className="page">
       <p>読み込めませんでした</p>

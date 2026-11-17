@@ -6,15 +6,33 @@ let state: State = 'idle'
 let entered = false
 const subs = new Set<() => void>()
 const enterSubs = new Set<() => void>() // タイトルを閉じて地図へ入った（空から降りる演出の合図）
+// 行き先を決めている途中の画面（ログインの確認・初回設定の確認の「読み込み中…」）の数。
+// その間に押されてもタイトルを消さない（消すと、地図の画面ができて待ちが始まるまでの一瞬、後ろが透けて見えた。2026-11-18 オーナー）
+let holds = 0
+const notify = () => {
+  for (const cb of subs) cb()
+}
 const set = (next: State) => {
   state = next
-  for (const cb of subs) cb()
+  notify()
 }
 
 export const loading = {
   start: () => { if (state === 'idle') set('waiting') },
   done: () => set('done'),
-  waiting: () => state === 'waiting',
+  waiting: () => state === 'waiting' || holds > 0,
+  // 出しているあいだタイトルを止める。返り値で外す（何度呼んでも 1 回だけ外す）
+  hold: () => {
+    holds++
+    notify()
+    let held = true
+    return () => {
+      if (!held) return
+      held = false
+      holds--
+      notify()
+    }
+  },
   subscribe: (cb: () => void) => {
     subs.add(cb)
     return () => { subs.delete(cb) }
@@ -30,6 +48,7 @@ export const loading = {
   },
   reset: () => {
     entered = false
+    holds = 0
     set('idle')
   }, // テスト用
 }
