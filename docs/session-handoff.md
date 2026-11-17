@@ -7,6 +7,14 @@
 - **dev のサイトの URL（オーナー 2026-11-17）: https://mogumo-go-dev.vercel.app**（Cloudflare Turnstile のドメインには `mogumo-go-dev.vercel.app` と `localhost`。本番は `mogumo-go.vercel.app`）
 
 ## いまの状態
+
+- **【2026-11-17 夕方 引き継ぎ（最新）】オーナーの作業の状況と次**
+  - 済: ゲストログイン（Cloudflare Turnstile の Site Key を Vercel に、Secret Key を Supabase に入れた。ゲストで入れた）。タイトルの灰色の画面・ズーム（index.html の #boot・touch-action）。読み込み中は右下の端。
+  - 未（オーナー）: SQL 0014・0015 の Run（キャラ選びの保存に必要。0013 は Turnstile・匿名ログインのあとに流す）。Manual linking のオン（後から Google をつなぐのに要る）。
+  - 未（iPhone で確かめ）: ゲストの節目のポコタン・感想の止め・設定の「Google をつなぐ」。キャラ一覧の 3D（男の子・女の子）。
+  - **バグ（次に直す）: ポコタンが出ずに画面が固まった**（オーナー 2026-11-17 夕方）。いつ・どこまで固まったか未確認。候補は初めての案内（`src/guide/`・Live2D）かチェックイン後の節目の窓（`MapPage` の `maybeNudge`）。確かめ方: URL に `?debug` を付けると poko: の状態が出る。
+  - 保留: 星降るキリン（3D は手先が不自然。やり直しはミシェーラに下絵を頼んでから）。ガチャは `GACHA_OPEN = false`（準備中）。
+  - 本番（main）に出すとき: SQL 0009〜0015、退会の関数、匿名ログイン、Turnstile、プライバシーポリシーと利用規約のオーナー確認。
 - 【2026-11-17 昼前 区切り（最新）】dev は送った最後のコミット（main は未反映）。ブランチ `cycle1-building`。
   - **次にやること: A15 ガチャ**（オーナー「ガチャをやろうか」）。3D 素材（最初の 5 体）はまだ届いていない → 届いている 2D の原画（`art/gacha/chars/`、30 体）で先に作り、3D はあとで差し替える案をオーナーに出した（了承はまだ）。決まり: 1 回 100 コイン・★3 70%／★4 25%／★5 5%・10 連は ★4 以上 1 体確定・天井 30 回で ★5・キャラだけ・課金なし（SPEC A15）。**オーナーに聞くこと**: ダブりの扱い（コインに戻す等）、引いたキャラの使い方（左上の絵だけか、地図の 3D アバターもか）、最初の 5 体で始めるか 30 体か、引く画面の演出。抽選とコインは SQL 関数 1 つで（サーバーで決める）。
   - **保留: ゲストのログイン（A3）**。コードは dev に入れた（`961448f`）。**オーナーが昼休みに設定する**: 匿名ログインと manual linking をオン、SQL `0013_guest.sql`、Cloudflare Turnstile のキー（秘密キー → Supabase の CAPTCHA、サイトキー → Vercel と `.env` の `VITE_TURNSTILE_SITE_KEY` → Redeploy）。手順 `docs/superpowers/plans/2026-11-17-guest-login-deploy.md`。設定が済んだら iPhone で確かめる（ゲストで入る・節目のポコタン・感想の止め・Google をつなぐ・別の記録とぶつかる）。設計 `docs/superpowers/specs/2026-11-17-guest-login-design.md`、調査 `2026-11-17-login-methods-research.md`（LINE・X・メール・Apple・パスキーは見送り）。
