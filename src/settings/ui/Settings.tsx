@@ -12,10 +12,13 @@ import { ContactForm } from '../../contact/ui/ContactForm.tsx'
 import { sendInquiry } from '../../contact/infra/contactApi.ts'
 import { DeleteAccount } from '../../account/ui/DeleteAccount.tsx'
 import { deleteAccount } from '../../account/infra/deleteAccount.ts'
+import { LinkPrompt } from '../../auth/ui/LinkPrompt.tsx'
 
 type Props = {
   userId: string
   email: string | null
+  isGuest: boolean // ゲスト（A3）。アカウントの表示とログアウトの確かめが変わる
+  onLinkGoogle: () => void // ゲストに Google をつなぐ
   onDeleted: () => void // 退会できた（ログアウトしてログイン画面へ）
   pinsHidden: boolean
   onTogglePins: () => void
@@ -56,6 +59,7 @@ export function Settings(p: Props) {
   const [privacyOpen, setPrivacyOpen] = useState(false)
   const [creditsOpen, setCreditsOpen] = useState(false)
   const [sub, setSub] = useState<Sub>(null)
+  const [guestLogout, setGuestLogout] = useState(false) // ゲストのログアウトの確かめ
   const snd = useSyncExternalStore(sound.subscribe, sound.prefs) // BGM・効果音の ON/OFF（A6。端末ごと）
   return (
     <section className="st" aria-label="設定">
@@ -76,10 +80,19 @@ export function Settings(p: Props) {
       </Group>
 
       <Group title="アカウント">
-        <div className="st__row">
-          <span><small>Google でログイン中</small>{p.email ?? '—'}</span>
-        </div>
-        <LinkRow label="ログアウト" warn onClick={p.onSignOut} />
+        {p.isGuest ? (
+          <>
+            <div className="st__row">
+              <span>ゲストで遊んでいます<small>記録のかぎはこの端末だけ。Google をつなぐと引き継げます</small></span>
+            </div>
+            <LinkRow label="Google をつないで記録を守る" sub="同じ記録のまま本登録になります" onClick={p.onLinkGoogle} />
+          </>
+        ) : (
+          <div className="st__row">
+            <span><small>Google でログイン中</small>{p.email ?? '—'}</span>
+          </div>
+        )}
+        <LinkRow label="ログアウト" warn onClick={p.isGuest ? () => setGuestLogout(true) : p.onSignOut} />
       </Group>
 
       <Group title="サポート">
@@ -130,8 +143,23 @@ export function Settings(p: Props) {
       {sub === 'contact' && (
         <ContactForm
           email={p.email}
+          guest={p.isGuest}
           send={(kind, body) => sendInquiry(kind, body, `${APP_VERSION}（${__BUILD_ID__}）`)}
           onClose={() => setSub(null)}
+        />
+      )}
+      {guestLogout && (
+        <LinkPrompt
+          title="ゲストのままログアウトしますか？"
+          text="ゲストの記録のかぎはこの端末にしかありません。ログアウトすると、この記録には二度と戻れません。"
+          okLabel="ログアウトする"
+          cancelLabel="やめる"
+          danger
+          onOk={() => {
+            setGuestLogout(false)
+            p.onSignOut()
+          }}
+          onCancel={() => setGuestLogout(false)}
         />
       )}
       {sub === 'delete' && <DeleteAccount remove={() => deleteAccount(p.userId)} onDeleted={p.onDeleted} onClose={() => setSub(null)} />}

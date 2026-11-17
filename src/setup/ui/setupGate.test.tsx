@@ -19,7 +19,7 @@ const session = { user: { id: 'u1' } } as unknown as Session
 function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
   render(
-    <AuthContext.Provider value={{ session, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+    <AuthContext.Provider value={{ session, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
       <RouterProvider router={router} />
     </AuthContext.Provider>,
   )

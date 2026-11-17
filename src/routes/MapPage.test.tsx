@@ -93,7 +93,7 @@ vi.mock('../map/ui/MapView.tsx', async () => {
 
 test('見つからない → もう一度試す で探索中に戻り、地図を作り直す', async () => {
   render(
-    <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+    <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
     </AuthContext.Provider>,
   )
@@ -107,7 +107,7 @@ test('見つからない → もう一度試す で探索中に戻り、地図�
 
 test('お店の取得に失敗すると帯が出る', () => {
   render(
-    <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+    <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
     </AuthContext.Provider>,
   )
@@ -120,7 +120,7 @@ const shop: Shop = { id: 'hp:J1', name: '麺屋もぐも', lat: 35, lng: 139, ki
 const here: LatLng = { lat: 35, lng: 139 }
 const renderPage = () =>
   render(
-    <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+    <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
     </AuthContext.Provider>,
   )
@@ -225,7 +225,7 @@ test('通信中にシートを閉じて失敗 → エラーも出ず、シート
 
 test('地図の画面にはクレジットを出さない（出典は設定の中・スプラッシュ）', () => {
   render(
-    <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+    <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
     </AuthContext.Provider>,
   )
@@ -234,7 +234,7 @@ test('地図の画面にはクレジットを出さない（出典は設定の�
 
 test('一覧で店を選ぶと、一覧が閉じてお店のシートが出る', async () => {
   render(
-    <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+    <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
     </AuthContext.Provider>,
   )
@@ -357,7 +357,7 @@ test('30m に入ると帯「気配の正体は…『○○』！」が出る', a
 test('右上は方位磁針: 押すと北を上に戻す。ピンを出さない設定（端末に覚えた分）は地図に渡る', async () => {
   localStorage.setItem('mogumo.pinsHidden', '1')
   render(
-    <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+    <AuthContext.Provider value={{ session: null, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
     </AuthContext.Provider>,
   )
@@ -553,7 +553,7 @@ test('図鑑を開くと、地図のお店のタイルを送り、地図のお�
   const takoyaki: Shop = { id: 'osm:5', name: 'たこ焼き ころ', lat: 35, lng: 139, kind: 'takoyaki', details: null, mapId: null }
   mapShopsNow = [takoyaki]
   render(
-    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
     </AuthContext.Provider>,
   )
@@ -567,7 +567,7 @@ test('右上のボタンで近くのお店の一覧が開き、お店を押す�
   const ramen: Shop = { id: 'osm:9', name: 'らーめん ちかく', lat: 35.0001, lng: 139, kind: 'ramen', details: null, mapId: null }
   mapShopsNow = [ramen]
   render(
-    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
     </AuthContext.Provider>,
   )
@@ -586,7 +586,7 @@ test('地図へ入ると今日の分を受け取り、少しあとに受け取�
   claimLoginBonus.mockResolvedValueOnce({ stampNo: 2, coins: 10, claimedNow: true })
   localStorage.setItem('mogumo.tutorial.u1', '1') // ポコタンの案内は見たことにする
   render(
-    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
     </AuthContext.Provider>,
   )
@@ -604,7 +604,7 @@ test('初めての人は、空から降りたあとにポコタンの案内が�
   claimLoginBonus.mockReset()
   claimLoginBonus.mockResolvedValue({ stampNo: 1, coins: 10, claimedNow: true })
   render(
-    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
     </AuthContext.Provider>,
   )
@@ -628,7 +628,7 @@ test('ログインボーナスは受け取り済み（claimedNow が false）な
   claimLoginBonus.mockResolvedValueOnce({ stampNo: 2, coins: 0, claimedNow: false })
   localStorage.setItem('mogumo.tutorial.u1', '1')
   render(
-    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
     </AuthContext.Provider>,
   )
@@ -646,7 +646,7 @@ test('チェックインで霧が晴れたら、地図のお店のタイルを�
   postCheckin.mockReset()
   postCheckin.mockResolvedValue({ ok: true, checkinId: 'c1', coins: 30, newCells: [{ x: 1, y: 2 }] })
   render(
-    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signOut: vi.fn() }}>
+    <AuthContext.Provider value={{ session: { user: { id: 'u1' } } as never, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
     </AuthContext.Provider>,
   )
