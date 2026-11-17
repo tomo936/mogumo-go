@@ -12,6 +12,7 @@ import { profileRepo } from '../setup/infra/profileRepo.ts'
 import { EXP_NEW, EXP_REVISIT, expFromCounts, levelFor } from '../zukan/domain/level.ts'
 import { loadCoins } from '../mypage/infra/coins.ts'
 import { GachaScreen } from '../gacha/ui/GachaScreen.tsx'
+import { GACHA_OPEN } from '../gacha/config.ts'
 import { PullScreen } from '../gacha/ui/PullScreen.tsx'
 import { CharacterList } from '../gacha/ui/CharacterList.tsx'
 import { drawGacha, loadGachaState, loadOwned, setCharacter } from '../gacha/infra/gachaApi.ts'
@@ -345,6 +346,12 @@ export function MapPage() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [gachaOpen, setGachaOpen] = useState(false) // ガチャ（A15。メニューから）
+  const [gachaSoon, setGachaSoon] = useState(false) // ガチャを出していないあいだ、押したら「準備中」を短く出す
+  useEffect(() => {
+    if (!gachaSoon) return
+    const t = setTimeout(() => setGachaSoon(false), 1600)
+    return () => clearTimeout(t)
+  }, [gachaSoon])
   const [charListOpen, setCharListOpen] = useState(false) // キャラ一覧（左上のキャラから）
   const [owned, setOwned] = useState<ReadonlyMap<number, number>>(new Map()) // 持っているガチャのキャラ → ダブった数
   const [pullsSinceFive, setPullsSinceFive] = useState(0)
@@ -837,6 +844,7 @@ export function MapPage() {
           }}
           onGacha={() => {
             closeExplore()
+            if (!GACHA_OPEN) return setGachaSoon(true)
             setDrawError(null)
             refreshGacha()
             setGachaOpen(true)
@@ -849,6 +857,7 @@ export function MapPage() {
           subscribeBearing={subscribeBearing}
           onCompass={() => mapRef.current?.resetNorth()}
         />
+        {gachaSoon && <p className="hud-soon" role="status">ガチャは準備中です</p>}
       </div>
     </>
   )
