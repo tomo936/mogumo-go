@@ -158,6 +158,31 @@ test('まわりの地図（道路・建物）がまだ届いていないお店�
   expect(out.map((x) => x.id)).toEqual(['bldg:a'])
 })
 
+test('建物がタイルの境目にかかるとき: 新しいタイルが届いたら、その範囲のお店を置き直す（片方のタイルだけで置いた形のまま残り、コルティがたまに 6 軒→4 軒。2026-11-17 オーナー）', async () => {
+  // 最初は西半分のタイルだけ: a と b は別々の小さい建物に乗る
+  tiles = { transportation: [roadFeature], building: [building(-4, 14, 4, 4), building(5, 18, 4, 4)] }
+  const a: Shop = { id: 'a', name: 'a', lat: home.lat + 14 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe', details: null, mapId: null }
+  const b: Shop = { id: 'b', name: 'b', lat: home.lat + 18 / M, lng: home.lng + 5 / LNG_M, kind: 'ramen', details: null, mapId: null }
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([b, a])) })
+  world.onPosition(home)
+  await flush()
+  runFrames()
+  expect((vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]).map((x) => x.id).sort()).toEqual(['a', 'b'])
+  // 遠くのタイルが届いても置き直さない
+  tiles = { transportation: [roadFeature], building: [building(0, 16, 20, 12)] }
+  dataHandler!({ sourceId: 'openmaptiles', dataType: 'source', tile: { tileID: { canonical: { z: 14, x: 0, y: 0 } } } })
+  idleHandler!()
+  runFrames()
+  expect((vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]).map((x) => x.id).sort()).toEqual(['a', 'b'])
+  // 2 軒を含むタイルが届くと、建物の本当の形（1 つの大きい建物）で置き直して 1 つのビルになる
+  dataHandler!({ sourceId: 'openmaptiles', dataType: 'source', tile: { tileID: { canonical: { z: 0, x: 0, y: 0 } } } })
+  idleHandler!()
+  runFrames()
+  const out = vi.mocked(shopLayer.setShops).mock.lastCall![0] as PlacedShop[]
+  expect(out).toHaveLength(1)
+  expect(out[0]).toMatchObject({ id: 'bldg:a', shopIds: ['a', 'b'] })
+})
+
 test('同じ建物に2軒あれば、ビル1つ（model building・id bldg:a・shopIds [a,b]）を建物の真ん中に置く', async () => {
   tiles = { transportation: [roadFeature], building: [building(0, 16, 20, 12)] }
   const a: Shop = { id: 'a', name: 'a', lat: home.lat + 14 / M, lng: home.lng - 4 / LNG_M, kind: 'cafe', details: null, mapId: null }
