@@ -18,7 +18,7 @@ test('持っている数と、使っているキャラが上に出る', () => {
 
 test('持っていないキャラは押せない', () => {
   setup()
-  expect(screen.getByRole('button', { name: /にじいろキリン/ })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /星降るキリン/ })).toBeDisabled()
 })
 
 test('押すと上が替わり、このキャラにする で onPick', async () => {

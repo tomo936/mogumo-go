@@ -40,7 +40,7 @@ test('出る確率: ★ごとの率と入っているキャラ', async () => {
   setup(0)
   await userEvent.click(screen.getByRole('button', { name: '出る確率' }))
   expect(screen.getByText('5%')).toBeInTheDocument()
-  for (const n of ['にじいろキリン', 'いちごミルクねこ', 'プリンしば', 'クッキーくま', 'みたらし団子うさぎ']) {
+  for (const n of ['星降るキリン', 'いちごミルクねこ', 'プリンしば', 'クッキーくま', 'みたらし団子うさぎ']) {
     expect(screen.getAllByText(new RegExp(n)).length).toBeGreaterThan(0)
   }
 })
