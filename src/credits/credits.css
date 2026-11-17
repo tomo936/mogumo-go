@@ -43,13 +43,11 @@
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.15; transform: scale(0.97); }
 }
-/* お店を読んでいる間: 画面の真ん中にパンケーキ（ミシェーラのローディング）と「読み込み中...」（2026-11-17） */
+/* お店を読んでいる間: 右下の端にパンケーキ（ミシェーラのローディング）と「読み込み中...」（2026-11-17） */
 .splash-loading {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%; /* 画面の縦の真ん中（2026-11-17 オーナー「真ん中へん」） */
-  transform: translateY(-50%);
+  right: calc(12px + env(safe-area-inset-right));
+  bottom: calc(46px + env(safe-area-inset-bottom)); /* 右下の端、出典の 2 行のすぐ上（2026-11-17 オーナー「端に、右下とか」） */
   display: flex;
   flex-direction: column;
   align-items: center;
