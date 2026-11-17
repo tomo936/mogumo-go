@@ -11,6 +11,11 @@ import { loadProgress, postCheckin } from '../checkin/infra/checkinApi.ts'
 import { profileRepo } from '../setup/infra/profileRepo.ts'
 import { EXP_NEW, EXP_REVISIT, expFromCounts, levelFor } from '../zukan/domain/level.ts'
 import { loadCoins } from '../mypage/infra/coins.ts'
+import { GachaScreen } from '../gacha/ui/GachaScreen.tsx'
+import { PullScreen } from '../gacha/ui/PullScreen.tsx'
+import { CharacterList } from '../gacha/ui/CharacterList.tsx'
+import { drawGacha, loadGachaState, loadOwned, setCharacter } from '../gacha/infra/gachaApi.ts'
+import type { Draw, DrawType } from '../gacha/domain/gacha.ts'
 import { syncMissions } from '../missions/infra/missionsApi.ts'
 import { nearbyKinds } from '../missions/domain/nearbyKinds.ts'
 import type { Mission, MissionWeek } from '../missions/domain/mission.ts'
@@ -341,6 +346,29 @@ export function MapPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [gachaOpen, setGachaOpen] = useState(false) // ガチャ（A15。メニューから）
   const [charListOpen, setCharListOpen] = useState(false) // キャラ一覧（左上のキャラから）
+  const [owned, setOwned] = useState<ReadonlyMap<number, number>>(new Map()) // 持っているガチャのキャラ → ダブった数
+  const [pullsSinceFive, setPullsSinceFive] = useState(0)
+  const [drawing, setDrawing] = useState(false)
+  const [drawError, setDrawError] = useState<string | null>(null)
+  const [pulled, setPulled] = useState<Draw[] | null>(null) // まわした結果（引く画面）
+  const refreshGacha = useCallback(() => {
+    loadOwned().then(setOwned).catch(() => {})
+    loadGachaState()
+      .then((st) => st && setPullsSinceFive(st.pullsSinceFive))
+      .catch(() => {})
+  }, [])
+  const draw = async (type: DrawType) => {
+    if (drawing) return
+    setDrawing(true)
+    setDrawError(null)
+    const r = await drawGacha(type)
+    setDrawing(false)
+    if (r?.status === 'ok') setPulled(r.draws)
+    else setDrawError(r?.status === 'insufficient' ? 'コインが足りません' : 'まわせませんでした。もう一度お試しください')
+    // 引けていたかもしれないので、失敗のときもコイン・持ち物・天井を読み直す
+    loadCoins().then(setCoins).catch(() => {})
+    refreshGacha()
+  }
   const [exp, setExp] = useState(0) // プレイヤーの経験値（新しいお店 +10・もう一度 +2。記録から計算）
   const visitedIds = useRef(new Set<string>()) // 行ったことのあるお店（チェックインで +10 か +2 かを決める）
   const refreshStats = useCallback(() => {
@@ -540,7 +568,7 @@ export function MapPage() {
           pickHint(id)
         }}
         pinsHidden={pinsHidden}
-        paused={recordTab !== null || zukanOpen || myPageOpen || settingsOpen}
+        paused={recordTab !== null || zukanOpen || myPageOpen || settingsOpen || gachaOpen || charListOpen}
       />
       {building && !selected && (
         <BuildingSheet
@@ -680,6 +708,30 @@ export function MapPage() {
           }}
         />
       )}
+      {gachaOpen && (
+        <GachaScreen
+          coins={coins}
+          owned={owned}
+          pullsSinceFive={pullsSinceFive}
+          busy={drawing}
+          error={drawError}
+          onDraw={(type) => void draw(type)}
+          onClose={() => setGachaOpen(false)}
+        />
+      )}
+      {pulled && <PullScreen draws={pulled} onDone={() => setPulled(null)} />}
+      {charListOpen && (
+        <CharacterList
+          owned={owned}
+          currentId={profile?.characterId ?? 101}
+          onPick={async (id) => {
+            const ok = await setCharacter(id)
+            if (ok) setProfile((p) => (p ? { ...p, characterId: id } : p))
+            return ok
+          }}
+          onClose={() => setCharListOpen(false)}
+        />
+      )}
       {myPageOpen && userId && (
         <MyPage
           userId={userId}
@@ -785,10 +837,13 @@ export function MapPage() {
           }}
           onGacha={() => {
             closeExplore()
+            setDrawError(null)
+            refreshGacha()
             setGachaOpen(true)
           }}
           onCharacter={() => {
             closeExplore()
+            refreshGacha()
             setCharListOpen(true)
           }}
           subscribeBearing={subscribeBearing}
