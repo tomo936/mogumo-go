@@ -33,7 +33,7 @@ for path, name in jobs:
     img = bpy.data.images.load(path); W, H = img.size
     px = np.array(img.pixels[:], np.float32).reshape(H, W, 4)[::-1]  # 上から下へ
     rgb = (px[:, :, :3] * 255)
-    white = (rgb.min(2) > 232) & ((rgb.max(2) - rgb.min(2)) < 24)
+    white = (rgb.min(2) > 246) & ((rgb.max(2) - rgb.min(2)) < 10)  # 白っぽいもの（綿あめ・白いうさぎ）を残すため厳しめ
     # 縮めて、ふちからつながる白＝背景
     k = W // S
     wsm = white[:S*k, :S*k].reshape(S, k, S, k).all(axis=(1, 3))
@@ -42,10 +42,28 @@ for path, name in jobs:
         g = bg.copy(); g[1:] |= bg[:-1]; g[:-1] |= bg[1:]; g[:, 1:] |= bg[:, :-1]; g[:, :-1] |= bg[:, 1:]; g &= wsm
         if (g == bg).all(): break
         bg = g
+    # 囲まれて残った真っ白なすき間（綿あめと腕のあいだなど）も背景にする。小さな白（目のハイライトなど）は残す
+    strict = ((rgb.min(2) > 250) & ((rgb.max(2) - rgb.min(2)) < 5))[:S*k, :S*k].reshape(S, k, S, k).all(axis=(1, 3)) & ~bg
+    seen = np.zeros_like(strict)
+    for y0_, x0_ in zip(*np.nonzero(strict)):
+        if seen[y0_, x0_]: continue
+        comp = [(y0_, x0_)]; seen[y0_, x0_] = True; i_ = 0
+        while i_ < len(comp):
+            y_, x_ = comp[i_]; i_ += 1
+            for yy_, xx_ in ((y_+1, x_), (y_-1, x_), (y_, x_+1), (y_, x_-1)):
+                if 0 <= yy_ < S and 0 <= xx_ < S and strict[yy_, xx_] and not seen[yy_, xx_]:
+                    seen[yy_, xx_] = True; comp.append((yy_, xx_))
+        if len(comp) >= 300:  # 大きなすき間だけ（目のハイライト・リボンの白は残す）
+            for y_, x_ in comp: bg[y_, x_] = True
     body = label_largest(~bg)
     # 中の穴（腕と胴のすき間の白）は背景として抜けている。元の大きさに戻す
     full = np.repeat(np.repeat(body, k, 0), k, 1)
     fg = np.zeros((H, W), bool); fg[:S*k, :S*k] = full
+    # ふちの白いにじみを消す: 背景から 3px 以内で、白っぽい（明るく色のうすい）画素は透明に
+    near = ~fg
+    for _ in range(3):
+        n2 = near.copy(); n2[1:] |= near[:-1]; n2[:-1] |= near[1:]; n2[:, 1:] |= near[:, :-1]; n2[:, :-1] |= near[:, 1:]; near = n2
+    fg &= ~(near & (rgb.min(2) > 222) & ((rgb.max(2) - rgb.min(2)) < 30))
     ys, xs = np.nonzero(fg); y0, y1, x0, x1 = ys.min(), ys.max(), xs.min(), xs.max()
     crop = px[y0:y1 + 1, x0:x1 + 1].copy(); crop[:, :, 3] = fg[y0:y1 + 1, x0:x1 + 1]
     h, w = crop.shape[:2]; out_h = 360; out_w = max(1, round(w * out_h / h))
