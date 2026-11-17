@@ -23,7 +23,7 @@ function GoogleMark() {
 export function LoginPage() {
   const { session, loading, signInWithGoogle, signInAsGuest } = useAuth()
   const [busy, setBusy] = useState<'google' | 'guest' | null>(null)
-  const [guestFailed, setGuestFailed] = useState(false)
+  const [guestFailed, setGuestFailed] = useState<string | null>(null) // 失敗したときの理由（null = 失敗していない）
   const captchaRef = useRef<HTMLDivElement>(null)
   if (loading) return <p className="status">読み込み中…</p>
   if (session) return <Navigate to="/" replace />
@@ -54,13 +54,13 @@ export function LoginPage() {
           disabled={busy !== null}
           onClick={async () => {
             setBusy('guest')
-            setGuestFailed(false)
+            setGuestFailed(null)
             // 人間かの確認（たいていは見えないまま通る）→ ゲストで入る。入れたら session が変わって地図へ進む
             const ok = await captchaToken(captchaRef.current!)
               .then((t) => signInAsGuest(t))
-              .catch(() => false)
-            if (!ok) {
-              setGuestFailed(true)
+              .catch((e: unknown) => `captcha ${e instanceof Error ? e.message : 'error'}`)
+            if (ok !== true) {
+              setGuestFailed(ok)
               setBusy(null)
             }
           }}
@@ -68,9 +68,10 @@ export function LoginPage() {
           {busy === 'guest' ? '準備しています…' : 'ゲストではじめる'}
         </button>
         <div ref={captchaRef} className="login__captcha" />
-        {guestFailed && (
+        {guestFailed !== null && (
           <p className="login__err" role="alert">
             はじめられませんでした。通信のよい所でもう一度お試しください。
+            <small>（{guestFailed}）</small>
           </p>
         )}
         <p className="login__guest-note">ゲストの記録はこの端末だけに残ります。あとから Google をつなげば引き継げます。</p>

@@ -114,3 +114,10 @@
   font-weight: 700;
   color: #c0392b;
 }
+.login__err small {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.8;
+}
