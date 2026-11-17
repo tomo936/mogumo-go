@@ -1,5 +1,5 @@
 // ガチャの画面（A15）。見本 art/reference/gacha/gacha-screen-ref.png。設計 docs/superpowers/specs/2026-11-17-gacha-design.md
-// ミシェーラの画像（背景・看板・台・帯・★・NEW!）が届くまでは CSS の色と形で仮に描く（gacha.css）
+// 背景・看板・台・光の柱・帯・★・NEW! はミシェーラの絵（gacha.css・src/assets/gacha/ui/）
 import { useEffect, useState } from 'react'
 import './gacha.css'
 import { CHARACTERS } from '../domain/characters.ts'
@@ -9,6 +9,7 @@ import type { DrawType } from '../domain/gacha.ts'
 import { standArtUrl } from '../infra/gachaApi.ts'
 import { Icon } from '../../ui/Icon.tsx'
 import { CoinIcon } from '../../ui/CoinIcon.tsx'
+import starUrl from '../../assets/gacha/ui/05-star.webp'
 
 type Props = {
   coins: number | null
@@ -27,8 +28,16 @@ export function Stars({ n }: { n: number }) {
   return (
     <span className="gc-stars" aria-label={`★${n}`}>
       {Array.from({ length: n }, (_, i) => (
-        <i key={i}>★</i>
+        <img key={i} src={starUrl} alt="" />
       ))}
+    </span>
+  )
+}
+
+export function NewBadge() {
+  return (
+    <span className="gc__new">
+      <span className="gc-sr">NEW!</span>
     </span>
   )
 }
@@ -65,7 +74,7 @@ export function GachaScreen({ coins, owned, pullsSinceFive, busy, error, onDraw,
         <div className="gc__stage">
           <span className="gc__glow" aria-hidden="true" />
           <img src={standArtUrl(c.id)} alt="" />
-          {!owned.has(c.id) && <span className="gc__new">NEW!</span>}
+          {!owned.has(c.id) && <NewBadge />}
         </div>
       </div>
 

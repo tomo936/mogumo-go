@@ -1,13 +1,17 @@
 // まわしたあとの画面（A15）。見本 art/reference/gacha/pull-ref.png（火にかかった鍋）。設計 docs/superpowers/specs/2026-11-17-gacha-design.md の 4
 // 鍋が揺れる → ふたが浮いて光（★3 白・★4 金・★5 虹）→ 1 体ずつ → 10 連は最後に一覧。どこを押しても演出を飛ばす。
-// ミシェーラの部品の絵（背景・鍋・ふた・光）が届くまで CSS の形で仮に描く（pull.css）
+// 背景・鍋とかまど・ふた・湯気・光の柱はミシェーラの絵（pull.css・src/assets/gacha/ui/）
 import { useEffect, useState } from 'react'
 import './pull.css'
 import { characterById } from '../domain/characters.ts'
 import { bestRarity, friendshipHearts } from '../domain/gacha.ts'
 import type { Draw } from '../domain/gacha.ts'
 import { standArtUrl } from '../infra/gachaApi.ts'
-import { Stars } from './GachaScreen.tsx'
+import { NewBadge, Stars } from './GachaScreen.tsx'
+import potUrl from '../../assets/gacha/ui/08-pot.webp'
+import lidUrl from '../../assets/gacha/ui/09-lid.webp'
+import steamUrl from '../../assets/gacha/ui/10-steam.webp'
+import pillarUrl from '../../assets/gacha/ui/03-light-pillar.webp'
 
 type Props = { draws: Draw[]; onDone: () => void }
 type Phase = { k: 'pot' } | { k: 'open' } | { k: 'one'; i: number } | { k: 'list' }
@@ -53,11 +57,12 @@ export function PullScreen({ draws, onDone }: Props) {
 
       {(phase.k === 'pot' || phase.k === 'open') && (
         <div className={phase.k === 'open' ? 'pl__pot is-open' : 'pl__pot'} aria-hidden="true">
-          <span className="pl__beam" />
-          <span className="pl__lid" />
-          <span className="pl__body" />
-          <span className="pl__fire" />
-          <span className="pl__stove" />
+          <img className="pl__beam" src={pillarUrl} alt="" />
+          <img className="pl__steam pl__steam--1" src={steamUrl} alt="" />
+          <img className="pl__steam pl__steam--2" src={steamUrl} alt="" />
+          <img className="pl__steam pl__steam--3" src={steamUrl} alt="" />
+          <img className="pl__body" src={potUrl} alt="" />
+          <img className="pl__lid" src={lidUrl} alt="" />
         </div>
       )}
 
@@ -106,7 +111,7 @@ function One({ d, count }: { d: Draw; count: string | null }) {
         <span className="gc__glow" aria-hidden="true" />
         <img src={standArtUrl(d.characterId)} alt="" />
         {d.isNew ? (
-          <span className="gc__new">NEW!</span>
+          <NewBadge />
         ) : (
           <span className="pl__friend">{`なかよし度 ♥+1（${'♥'.repeat(friendshipHearts(d.friendship))}）`}</span>
         )}

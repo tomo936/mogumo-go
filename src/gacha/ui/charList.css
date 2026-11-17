@@ -93,10 +93,9 @@
   gap: 6px;
   padding-bottom: 4px;
 }
-.cl__info .gc-stars i {
-  font-size: 22px;
-  -webkit-text-stroke-width: 1.5px;
-  text-shadow: 0 2px 0 #a5620c;
+.cl__info .gc-stars img {
+  width: 26px;
+  height: 26px;
 }
 .cl__first {
   padding: 2px 10px;
