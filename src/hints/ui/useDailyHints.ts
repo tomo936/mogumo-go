@@ -22,7 +22,7 @@ type Api = { readTodayHints: typeof readTodayHints; postDailyHints: typeof postD
 
 type Args = {
   userId: string
-  enabled: boolean // 気配を作れる環境か（shopSourceEnabled の結果）
+  enabled: boolean // 気配を作れるか（本番でも常に true。テストで false を渡す）
   me: LatLng | null
   home: LatLng | null
   map: RefObject<MapViewHandle | null>

@@ -103,7 +103,3 @@ export async function fetchHotpepperShops(
   if (typeof result === 'string') throw new Error('shops_unavailable')
   return result
 }
-
-export function shopSourceEnabled(dev: boolean, hostname: string): boolean {
-  return dev || hostname === 'mogumo-go-dev.vercel.app'
-}
