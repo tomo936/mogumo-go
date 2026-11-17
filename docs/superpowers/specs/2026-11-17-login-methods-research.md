@@ -8,7 +8,8 @@
 | **ゲスト（匿名で始める）** | 無料（Supabase の全プランに含まれる） | 中 | ◎ おすすめ。あとから Google などをつなげば記録を引き継げる |
 | **LINE** | LINE ログインは無料。Supabase の「独自の OAuth/OIDC プロバイダー」は無料プランで 3 つまで | 中〜大（試しながら） | ○ 日本の利用者に一番なじみ。ただし動くかは試さないと分からない点がある |
 | メール（ワンタイムのリンク・コード） | Supabase 標準の送信は**プロジェクト全体で 1 時間 2 通**しか送れず、実際に使うには外の送信サービス（SMTP）が要る。送信サービスは**自分のドメイン**が要ることが多い（年 1,000〜2,000 円ほど） | 中 | △ ドメインを買うなら可。完全無料には収まりにくい |
-| X（旧 Twitter）・Discord・GitHub | 無料（Supabase 標準） | 小 | △ 作るのは簡単だが、グルメアプリの利用者層には合いにくい |
+| X（旧 Twitter） | 2026-02 に X の API の無料枠が新規の開発者向けに終わり、使った分だけ払う形が標準になった（ログインでも利用者の情報を読む呼び出しが要る）。メールは利用者が X で確認済みのときだけもらえ、無いとログインに失敗する報告がある | 小〜中 | × 完全無料に収まらない恐れ |
+| Discord・GitHub | 無料（Supabase 標準） | 小 | △ 作るのは簡単だが、グルメアプリの利用者層には合いにくい |
 | Apple | Apple Developer（年 $99）が必須。さらに Web だけで使うには App Store のアプリが要る | — | × 完全無料に反する |
 | パスキー（顔・指紋） | Supabase に入ったばかり（実験的）。**パスキーだけで新規登録はできない**（既存のアカウントに後から足すもの） | 中 | × 今は見送り。将来「次から顔でログイン」の追加として |
 | 電話番号（SMS） | SMS は有料 | — | × |
@@ -39,4 +40,6 @@
 - Supabase パスキー https://supabase.com/docs/guides/auth/passkeys
 - Supabase 料金 https://supabase.com/pricing ・ メール送信 https://supabase.com/docs/guides/auth/auth-smtp
 - LINE ログイン https://developers.line.biz/en/docs/line-login/integrate-line-login/ ・ https://developers.line.biz/en/docs/line-login/verify-id-token/
+- X / Twitter（Supabase）https://supabase.com/docs/guides/auth/social-login/auth-twitter ・ https://supabase.com/blog/x-twitter-oauth-2-provider
+- X API の料金の変更（第三者の記事）https://roboin.io/article/en/2026/02/08/x-transitions-api-to-pay-per-use-model-ending-free-plan/ ・ https://gigazine.net/gsc_news/en/20260209-x-api-pay-per-use
 - Apple https://developer.apple.com/documentation/signinwithapple/configuring-your-environment-for-sign-in-with-apple
