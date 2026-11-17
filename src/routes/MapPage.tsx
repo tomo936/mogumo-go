@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { loading } from '../credits/loadingGate.ts'
-import { useAuth } from '../auth/AuthContext.ts'
+import { isGuest, useAuth } from '../auth/AuthContext.ts'
 import { LocationOverlay } from '../map/ui/LocationOverlay.tsx'
 import { MapView } from '../map/ui/MapView.tsx'
 import type { MapViewHandle } from '../map/ui/MapView.tsx'
@@ -45,6 +45,10 @@ import { TownBanner } from '../towns/ui/TownBanner.tsx'
 import { sound } from '../sound/infra/sound.ts'
 import { NearbyList } from '../nearby/ui/NearbyList.tsx'
 import { Inbox } from '../inbox/ui/Inbox.tsx'
+import { LinkPrompt } from '../auth/ui/LinkPrompt.tsx'
+import { nudgeMilestone } from '../auth/domain/linkNudge.ts'
+import { lastNudge, saveNudge, takeLinkConflict } from '../auth/infra/nudgeStore.ts'
+import { deleteAccount } from '../account/infra/deleteAccount.ts'
 import { claimPresent, loadInbox } from '../inbox/infra/inboxApi.ts'
 import { loadRead, markRead } from '../inbox/infra/readState.ts'
 import { hasDot } from '../inbox/domain/inbox.ts'
@@ -78,8 +82,17 @@ function loadPinsHidden(): boolean {
 
 const LOGIN_BONUS_DELAY_MS = 3200 // 地図へ入ってから受け取り画面を出すまで（空から降りる演出が終わるころ）
 
+// ゲストに Google をつなぐよう勧める窓の文（A3）
+const LINK_TEXT = {
+  review: { title: '感想は Google をつないでから', text: '感想はみんなに見えるので、Google をつないだ人だけが書けるポコ。つなぐと、いまの記録もそのまま残るよ！', okLabel: 'Google をつなぐ', cancelLabel: 'やめる' },
+  nudge: { title: '記録を守ろう！', text: 'ゲストの記録のかぎは、この端末にしかないポコ。Google をつなぐと、機種を変えても続きから遊べるよ！', okLabel: 'Google をつなぐ', cancelLabel: 'あとで' },
+  conflict: { title: 'この Google には別の記録があるよ', text: 'そちらでログインし直すと、いまのゲストの記録は消えます。ゲストのまま続けることもできます。', okLabel: 'そちらでログインし直す', cancelLabel: 'ゲストのまま続ける', danger: true },
+  failed: { title: 'Google をつなげませんでした', text: '通信のよい所で、設定の「Google をつないで記録を守る」からもう一度お試しください。', okLabel: 'もう一度', cancelLabel: '閉じる' },
+} as const
+
 export function MapPage() {
-  const { session, signOut } = useAuth()
+  const { session, signOut, linkGoogle, signInWithGoogle } = useAuth()
+  const guest = isGuest(session) // ゲスト（A3）
   const userId = session?.user.id
   const home = useMemo(() => (userId ? loadHome(userId) : null), [userId])
   useEffect(() => {
@@ -173,9 +186,33 @@ export function MapPage() {
       alive = false
     }
   }, [selectedId])
+  // ゲスト（A3）に Google をつなぐよう勧める窓。review = 感想を書こうとした、nudge = 節目、conflict = その Google に別の記録があった、failed = つなげなかった
+  const [linkAsk, setLinkAsk] = useState<'review' | 'nudge' | 'conflict' | 'failed' | null>(() => (takeLinkConflict() ? 'conflict' : null))
+  const [linkBusy, setLinkBusy] = useState(false)
+  const startLink = async () => {
+    setLinkBusy(true)
+    if (!(await linkGoogle())) {
+      setLinkBusy(false)
+      setLinkAsk('failed')
+    } // つなげたら Google の画面へ移る（戻ってきたら本登録）
+  }
+  // 節目でひと声: チェックインの演出が終わったら、ゲストのチェックインの数を数えて節目なら一度だけ
+  const maybeNudge = () => {
+    if (!guest || !userId) return
+    loadProgress()
+      .then((p) => {
+        const total = [...p.visitsByShop.values()].reduce((n, v) => n + v.count, 0)
+        const m = nudgeMilestone(total, lastNudge(userId))
+        if (m === null) return
+        saveNudge(userId, m)
+        setLinkAsk((cur) => cur ?? 'nudge')
+      })
+      .catch(() => {})
+  }
   // 感想を書く・直す（お店のシートの「✎ 感想」から。いちばん新しい訪問が対象。2026-11-13 オーナー: 浮くボタンはやめてシートに置く）
   const [reviewing, setReviewing] = useState<{ checkinId: string; shopId: string; shopName: string; day: string; existing: Review | null; photoUrl: string | null } | null>(null)
   const openReview = async (shop: Shop) => {
+    if (guest) return setLinkAsk('review') // 感想はゲストには書けない（Google をつないでから。A3）
     try {
       // 合体したお店は、地図の点（mapId）の方に訪問が付いていることがある
       let id = shop.id
@@ -590,6 +627,20 @@ export function MapPage() {
         />
       )}
       {tour === 'open' && <Guide onClose={closeGuide} />}
+      {linkAsk && (
+        <LinkPrompt
+          {...LINK_TEXT[linkAsk]}
+          busy={linkBusy}
+          onOk={() => {
+            if (linkAsk === 'conflict') {
+              // ゲストの記録を消してから、その Google でログインし直す（オーナーに確かめた流れ。設計メモの「Google をつなぐとき」）
+              setLinkBusy(true)
+              void (userId ? deleteAccount(userId) : Promise.resolve(true)).finally(() => void signInWithGoogle())
+            } else void startLink()
+          }}
+          onCancel={() => setLinkAsk(null)}
+        />
+      )}
       {loginBonus && <LoginBonus claim={loginBonus} onClose={() => setLoginBonus(null)} />}
       {inboxOpen && (
         <Inbox
@@ -650,6 +701,8 @@ export function MapPage() {
         <Settings
           userId={userId ?? ''}
           email={session?.user.email ?? null}
+          isGuest={guest}
+          onLinkGoogle={() => void startLink()}
           onDeleted={() => void signOut()} // 退会できた: ログアウトするとログイン画面に戻る
           pinsHidden={pinsHidden}
           onTogglePins={togglePins}
@@ -675,6 +728,7 @@ export function MapPage() {
       )}
       {effect && <CheckinEffect key={effect.key} coins={effect.coins} exp={effect.exp} levelUp={effect.levelUp} reveal={effect.reveal} onDone={() => {
             setEffect(null)
+            maybeNudge()
             if (!selectedRef.current) mapRef.current?.unfocus() // 演出が終わったら選んだ建物の詳しい模型を戻す（カメラはその場所のまま。自分に戻すのは方位磁針）
           }} />}
       {reviewing && (

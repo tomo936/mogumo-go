@@ -1,5 +1,6 @@
 // 図鑑の詳細の「みんなの感想」。他人の公開の感想だけ（RLS が守る）。10 件ずつ、写真は押すと大きく、「⋯」から通報。
-import { useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
+import { AuthContext, isGuest } from '../../auth/AuthContext.ts'
 import './reviews.css'
 import type { Review } from '../domain/review.ts'
 import { loadOthers, loadSummary, photoUrls, reportReview } from '../infra/reviewsApi.ts'
@@ -16,7 +17,7 @@ type Props = {
 const AV_COLORS = ['#e8782f', '#7fb8e6', '#8cc56b', '#c79be0', '#f2a93b']
 const avColor = (userId: string) => AV_COLORS[[...userId].reduce((s, c) => s + c.charCodeAt(0), 0) % AV_COLORS.length]
 
-function Item({ r, url, onZoom, report }: { r: Review; url: string | undefined; onZoom: (u: string) => void; report: typeof reportReview }) {
+function Item({ r, url, onZoom, report, canReport }: { r: Review; url: string | undefined; onZoom: (u: string) => void; report: typeof reportReview; canReport: boolean }) {
   const name = r.nickname ?? 'だれか'
   const [menu, setMenu] = useState<'closed' | 'confirm' | 'sending' | 'done' | 'error'>('closed')
   async function send() {
@@ -59,14 +60,17 @@ function Item({ r, url, onZoom, report }: { r: Review; url: string | undefined; 
         {menu === 'done' && <p className="rv-item__msg">通報しました</p>}
         {menu === 'error' && <p className="rv-item__msg">通報できませんでした</p>}
       </div>
-      <button type="button" className="rv-item__more" aria-label={`${name} さんの感想のメニュー`} onClick={() => setMenu(menu === 'confirm' ? 'closed' : 'confirm')} disabled={menu === 'done' || menu === 'sending'}>
-        ⋯
-      </button>
+      {canReport && (
+        <button type="button" className="rv-item__more" aria-label={`${name} さんの感想のメニュー`} onClick={() => setMenu(menu === 'confirm' ? 'closed' : 'confirm')} disabled={menu === 'done' || menu === 'sending'}>
+          ⋯
+        </button>
+      )}
     </li>
   )
 }
 
 export function ReviewList({ shopId, load = loadOthers, summary = loadSummary, report = reportReview, photos = photoUrls }: Props) {
+  const canReport = !isGuest(useContext(AuthContext)?.session ?? null) // 通報はゲストにはできない（A3。サーバーの決まりも同じ）
   const [items, setItems] = useState<Review[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [page, setPage] = useState(0)
@@ -113,7 +117,7 @@ export function ReviewList({ shopId, load = loadOthers, summary = loadSummary, r
       {items.length > 0 && (
         <ul className="rv-list">
           {items.map((r) => (
-            <Item key={r.id} r={r} url={r.photoPath ? urls.get(r.photoPath) : undefined} onZoom={setZoom} report={report} />
+            <Item key={r.id} r={r} url={r.photoPath ? urls.get(r.photoPath) : undefined} onZoom={setZoom} report={report} canReport={canReport} />
           ))}
         </ul>
       )}

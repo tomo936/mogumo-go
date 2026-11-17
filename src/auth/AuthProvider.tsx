@@ -11,6 +11,26 @@ async function signInWithGoogle() {
   })
 }
 
+async function signInAsGuest(captchaToken: string | null): Promise<boolean> {
+  try {
+    const { error } = await supabase.auth.signInAnonymously(captchaToken ? { options: { captchaToken } } : undefined)
+    return !error
+  } catch {
+    return false
+  }
+}
+
+// 戻ってきたら同じアカウントのまま本登録。その Google がほかのアカウントで使われていたら、
+// 戻り先の URL に error_code=identity_already_exists が付く（MapPage が拾う）
+async function linkGoogle(): Promise<boolean> {
+  try {
+    const { error } = await supabase.auth.linkIdentity({ provider: 'google', options: { redirectTo: window.location.origin } })
+    return !error
+  } catch {
+    return false
+  }
+}
+
 async function signOut() {
   await supabase.auth.signOut()
 }
@@ -37,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ session, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ session, loading, signInWithGoogle, signInAsGuest, linkGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   )

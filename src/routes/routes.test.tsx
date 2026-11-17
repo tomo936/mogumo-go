@@ -21,6 +21,8 @@ function renderAt(path: string, auth: Partial<AuthState>) {
     session: null,
     loading: false,
     signInWithGoogle: vi.fn(async () => {}),
+    signInAsGuest: vi.fn(async () => true),
+    linkGoogle: vi.fn(async () => true),
     signOut: vi.fn(async () => {}),
     ...auth,
   }
@@ -73,6 +75,19 @@ test('ログインボタンで signInWithGoogle が呼ばれる', async () => {
   const auth = renderAt('/login', {})
   await userEvent.click(loginButton()!)
   expect(auth.signInWithGoogle).toHaveBeenCalledTimes(1)
+})
+
+test('ゲストではじめる: 確認のキーが無いあいだはトークン無しで signInAsGuest。失敗したら知らせる', async () => {
+  const auth = renderAt('/login', { signInAsGuest: vi.fn(async () => false) })
+  await userEvent.click(screen.getByRole('button', { name: 'ゲストではじめる' }))
+  expect(auth.signInAsGuest).toHaveBeenCalledWith(null)
+  expect(await screen.findByRole('alert')).toHaveTextContent('はじめられませんでした')
+})
+
+test('ログイン画面から利用規約・プライバシーポリシーへ', async () => {
+  renderAt('/login', {})
+  expect(screen.getByRole('link', { name: '利用規約' })).toHaveAttribute('href', '/terms')
+  expect(screen.getByRole('link', { name: 'プライバシーポリシー' })).toHaveAttribute('href', '/privacy')
 })
 
 test('ログアウトボタンで signOut が呼ばれる', async () => {

@@ -1,0 +1,83 @@
+/* Google をつなぐよう勧める窓（手帳の紙＋ポコタン） */
+.lp {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(40, 28, 16, 0.45);
+}
+.lp__wrap {
+  position: relative;
+  width: min(100%, 360px);
+  animation: lp-pop 260ms ease-out both;
+}
+.lp__box {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 18px 20px 16px;
+  border: 2px solid #ead9bb;
+  border-radius: 22px;
+  background: #fffbf2;
+  color: #4a3b2c;
+  text-align: center;
+}
+@keyframes lp-pop {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp__wrap { animation: none; }
+}
+.lp__poko {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 14px);
+  width: 120px;
+  height: auto;
+  transform: translateX(-50%);
+}
+.lp__box b {
+  display: block;
+  font-size: 17px;
+  color: #6b4a2b;
+}
+.lp__box p {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.lp__ok,
+.lp__cancel {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 99px;
+  font-size: 15px;
+  font-weight: 800;
+}
+.lp__ok {
+  border: 0;
+  background: #e8883a;
+  color: #fff;
+  box-shadow: 0 3px 0 #b8641f;
+}
+.lp__ok.is-danger {
+  background: #d9534f;
+  box-shadow: 0 3px 0 #a93c38;
+}
+.lp__cancel {
+  margin-top: 8px;
+  border: 1.5px solid #d9c6a5;
+  background: transparent;
+  color: #6b4a2b;
+}
+.lp__ok:disabled,
+.lp__cancel:disabled {
+  opacity: 0.55;
+}

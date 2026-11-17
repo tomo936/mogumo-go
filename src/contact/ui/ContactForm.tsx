@@ -8,6 +8,7 @@ import type { InquiryKind, SendResult } from '../domain/inquiry.ts'
 
 type Props = {
   email: string | null // 返事の宛先（見せるだけ。実際の宛先はサーバーが付ける）
+  guest?: boolean // ゲストはメールが無いので返事を送れない
   send: (kind: InquiryKind, body: string) => Promise<SendResult>
   onClose: () => void
 }
@@ -18,7 +19,7 @@ const ERROR: Record<Exclude<SendResult, 'ok'>, string> = {
   failed: '送れませんでした。通信のよい所でもう一度送ってください。',
 }
 
-export function ContactForm({ email, send, onClose }: Props) {
+export function ContactForm({ email, guest, send, onClose }: Props) {
   const [kind, setKind] = useState<InquiryKind>('bug')
   const [body, setBody] = useState('')
   const [busy, setBusy] = useState(false)
@@ -73,7 +74,7 @@ export function ContactForm({ email, send, onClose }: Props) {
           />
           <div className={length > BODY_MAX ? 'ct__count is-over' : 'ct__count'}>{`${length} / ${BODY_MAX}`}</div>
           <p className="ct__note">
-            {`返事の宛先: ${email ?? 'ログインのメールアドレス'}`}
+            {guest ? 'ゲストには返事を送れません。返事が要るときは、設定から Google をつないでから送ってください。' : `返事の宛先: ${email ?? 'ログインのメールアドレス'}`}
             <br />
             アプリの版と端末の種類もいっしょに送ります（不具合を調べるため）。
           </p>

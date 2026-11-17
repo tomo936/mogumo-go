@@ -4,7 +4,7 @@ import { expect, test, vi } from 'vitest'
 import { Settings } from './Settings.tsx'
 
 const show = (o: Partial<Parameters<typeof Settings>[0]> = {}) => {
-  const p = { userId: 'u1', email: 'mogu@example.com', onDeleted: vi.fn(), pinsHidden: false, onTogglePins: vi.fn(), onSignOut: vi.fn(), onGuide: vi.fn(), onClose: vi.fn(), ...o }
+  const p = { userId: 'u1', email: 'mogu@example.com', isGuest: false, onLinkGoogle: vi.fn(), onDeleted: vi.fn(), pinsHidden: false, onTogglePins: vi.fn(), onSignOut: vi.fn(), onGuide: vi.fn(), onClose: vi.fn(), ...o }
   render(<Settings {...p} />)
   return p
 }
@@ -94,4 +94,16 @@ test('BGM と効果音のスイッチは別々に切り替わり、端末に覚�
   expect(bgm).toHaveAttribute('aria-checked', 'true')
   expect(JSON.parse(localStorage.getItem('mogumo.sound')!)).toEqual({ bgm: true, sfx: false })
   await userEvent.click(sfx) // 戻しておく（ほかのテストに残さない）
+})
+
+test('ゲスト: Google をつなぐボタン。ログアウトは確かめてから', async () => {
+  const p = show({ isGuest: true, email: null })
+  expect(screen.getByText('ゲストで遊んでいます')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: /Google をつないで記録を守る/ }))
+  expect(p.onLinkGoogle).toHaveBeenCalled()
+  await userEvent.click(screen.getByRole('button', { name: 'ログアウト' }))
+  expect(p.onSignOut).not.toHaveBeenCalled()
+  expect(screen.getByRole('dialog', { name: 'ゲストのままログアウトしますか？' })).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'ログアウトする' }))
+  expect(p.onSignOut).toHaveBeenCalled()
 })

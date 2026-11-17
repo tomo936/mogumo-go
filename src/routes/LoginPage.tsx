@@ -1,8 +1,9 @@
 // ログイン画面。起動画面（Splash）と同じ絵とロゴの上に、下からログインのカード。
 // ログインすると利用規約・プライバシーポリシーに同意したことになる（/terms・/privacy はログイン前でも読める）
 import { Link, Navigate } from 'react-router'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthContext.ts'
+import { captchaToken } from '../auth/infra/turnstile.ts'
 import titleArt from '../assets/ui/title.webp'
 import logoArt from '../assets/ui/logo.webp'
 import './login.css'
@@ -20,8 +21,10 @@ function GoogleMark() {
 }
 
 export function LoginPage() {
-  const { session, loading, signInWithGoogle } = useAuth()
-  const [busy, setBusy] = useState(false)
+  const { session, loading, signInWithGoogle, signInAsGuest } = useAuth()
+  const [busy, setBusy] = useState<'google' | 'guest' | null>(null)
+  const [guestFailed, setGuestFailed] = useState(false)
+  const captchaRef = useRef<HTMLDivElement>(null)
   if (loading) return <p className="status">読み込み中…</p>
   if (session) return <Navigate to="/" replace />
   return (
@@ -36,15 +39,41 @@ export function LoginPage() {
         <button
           type="button"
           className="login__google"
-          disabled={busy}
+          disabled={busy !== null}
           onClick={() => {
-            setBusy(true)
-            void signInWithGoogle().catch(() => setBusy(false))
+            setBusy('google')
+            void signInWithGoogle().catch(() => setBusy(null))
           }}
         >
           <GoogleMark />
-          <span>{busy ? 'Google に移動しています…' : 'Google でログイン'}</span>
+          <span>{busy === 'google' ? 'Google に移動しています…' : 'Google でログイン'}</span>
         </button>
+        <button
+          type="button"
+          className="login__guest"
+          disabled={busy !== null}
+          onClick={async () => {
+            setBusy('guest')
+            setGuestFailed(false)
+            // 人間かの確認（たいていは見えないまま通る）→ ゲストで入る。入れたら session が変わって地図へ進む
+            const ok = await captchaToken(captchaRef.current!)
+              .then((t) => signInAsGuest(t))
+              .catch(() => false)
+            if (!ok) {
+              setGuestFailed(true)
+              setBusy(null)
+            }
+          }}
+        >
+          {busy === 'guest' ? '準備しています…' : 'ゲストではじめる'}
+        </button>
+        <div ref={captchaRef} className="login__captcha" />
+        {guestFailed && (
+          <p className="login__err" role="alert">
+            はじめられませんでした。通信のよい所でもう一度お試しください。
+          </p>
+        )}
+        <p className="login__guest-note">ゲストの記録はこの端末だけに残ります。あとから Google をつなげば引き継げます。</p>
         <p className="login__agree">
           ログインすると、<Link to="/terms">利用規約</Link>と<Link to="/privacy">プライバシーポリシー</Link>に同意したことになります。
         </p>
