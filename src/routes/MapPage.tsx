@@ -34,7 +34,6 @@ import { ShopSheet } from '../checkin/ui/ShopSheet.tsx'
 import type { CheckinError } from '../checkin/ui/ShopSheet.tsx'
 import type { Visits } from '../checkin/domain/visits.ts'
 import type { Shop } from '../shops/domain/shop.ts'
-import { shopSourceEnabled } from '../shops/infra/hotpepper.ts'
 import { guideShops, hintPosition, matchesShop } from '../hints/domain/hint.ts'
 import { ExploreSheet } from '../hints/ui/ExploreSheet.tsx'
 import { directionName } from '../hints/domain/sheetText.ts'
@@ -136,7 +135,7 @@ export function MapPage() {
   // 図鑑に地図のデータだけのお店を出す（設計 2026-11-12-zukan-osm-shops）: 晴れた場所の地図のお店のタイルを shops-osm に送る。
   // 霧が晴れたとき（チェックイン・町のクリア）・お店がそろったとき・図鑑を開いたとき。時間では送らない（オーナー 2026-11-13）。
   // 失敗しても何もしない（次にまた送る）
-  const osmEnabled = shopSourceEnabled(import.meta.env.DEV, window.location.hostname)
+  const osmEnabled = true // 本番でも dev と同じお店を出す（2026-11-18 オーナー。以前は dev のサイトだけだった）
   const syncOsm = useCallback(() => {
     const inp = mapRef.current?.hintInputs()
     if (!userId || !osmEnabled || !inp) return
@@ -244,7 +243,7 @@ export function MapPage() {
   const [pickedHint, setPickedHint] = useState<string | null>(null)
   const hints = useDailyHints({
     userId: userId ?? '',
-    enabled: shopSourceEnabled(import.meta.env.DEV, window.location.hostname),
+    enabled: true,
     me,
     home,
     map: mapRef,

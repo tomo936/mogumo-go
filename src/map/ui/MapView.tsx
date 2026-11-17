@@ -17,7 +17,7 @@ import { ripplesAt } from '../domain/ripple.ts'
 import type { LatLng } from '../domain/geo.ts'
 import { watchLocation } from '../infra/location.ts'
 import type { LocationEvent } from '../domain/locationStatus.ts'
-import { fetchHotpepperShops, shopSourceEnabled } from '../../shops/infra/hotpepper.ts'
+import { fetchHotpepperShops } from '../../shops/infra/hotpepper.ts'
 import { loadProgress } from '../../checkin/infra/checkinApi.ts'
 import { loadClearedTowns } from '../../towns/infra/townsApi.ts'
 import type { ClearedTown } from '../../towns/domain/shape.ts'
@@ -263,7 +263,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       s.world = attachWorld(map, {
         home,
         fetchHotpepper: fetchHotpepperShops,
-        shopsEnabled: shopSourceEnabled(import.meta.env.DEV, window.location.hostname),
+        shopsEnabled: true,
         onShopsError: () => onShopsErrorRef.current(),
         loadProgress,
         loadTowns: () => loadClearedTowns(),

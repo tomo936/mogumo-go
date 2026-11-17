@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { distanceMeters } from '../../map/domain/geo.ts'
-import { fetchHotpepperShops, roundCenter, shopSourceEnabled } from './hotpepper.ts'
+import { fetchHotpepperShops, roundCenter } from './hotpepper.ts'
 
 const center = { lat: 35.6812, lng: 139.7671 }
 const base = { endpoint: 'https://x.supabase.co/functions/v1/shops-hotpepper', anonKey: 'anon', getToken: () => Promise.resolve('tok'), waitMs: 0 }
@@ -97,13 +97,5 @@ describe('roundCenter', () => {
     const c = roundCenter(center, 250)
     expect(distanceMeters(center, c)).toBeLessThan(180)
     expect(roundCenter(c, 250)).toEqual(c)
-  })
-})
-
-describe('shopSourceEnabled', () => {
-  it('開発中かdevドメインだけ', () => {
-    expect(shopSourceEnabled(true, 'localhost')).toBe(true)
-    expect(shopSourceEnabled(false, 'mogumo-go-dev.vercel.app')).toBe(true)
-    expect(shopSourceEnabled(false, 'mogumo-go.vercel.app')).toBe(false)
   })
 })
