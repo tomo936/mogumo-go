@@ -2,6 +2,7 @@
 // 受け取る: POST { shop_id, lat, lng, far_from_home }（JWT 必須）。ユーザーは JWT からだけ決める。
 // プライバシー: lat/lng・距離・トークン・ユーザーID・店ID をログに出さない・保存しない・返さない（403 の丸めた距離だけ返す）。
 import { withCors } from '../_shared/cors.ts'
+import { overLimit } from '../_shared/rateLimit.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { CHECKIN_M, CLEAR_M, MATCH_M, acceptHpCheckin, activeHints, altForMapId, altHpFor, cellsAround, closestM, distanceM, jstDay, parseMapId } from './core.ts'
 import type { ActiveHintRow } from './core.ts'
@@ -50,6 +51,7 @@ Deno.serve(withCors(async (req: Request) => {
   })
   const { data: auth, error: authError } = await db.auth.getUser(token)
   if (authError || !auth.user) return fail('unauthorized', 401)
+  if (await overLimit(db, auth.user.id, 'checkin')) return fail('rate_limited', 429) // 回数の上限（SQL 0017）
   const userId = auth.user.id
 
   try {

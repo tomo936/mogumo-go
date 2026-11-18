@@ -4,6 +4,7 @@
 // プライバシー: 自宅・現在地・距離は受け取らない。候補の一覧・位置・ユーザーID・トークンをログに出さない・保存しない。
 // ホットペッパーには問い合わせない（鍵は使わない）。shops の控えと地図タイルだけを読む。
 import { withCors } from '../_shared/cors.ts'
+import { overLimit } from '../_shared/rateLimit.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { HINT_MYSTERY_VERIFY_TRIES, composeDraw, dropChains, farEnough, hintRow, jstDay, parseRequest, planDraw, shuffle, toResponse } from './core.ts'
 import type { HintRowOut, ShopLite } from './core.ts'
@@ -45,6 +46,7 @@ Deno.serve(withCors(async (req: Request) => {
   })
   const { data: auth, error: authError } = await db.auth.getUser(token)
   if (authError || !auth.user) return fail('unauthorized', 401)
+  if (await overLimit(db, auth.user.id, 'daily-hints')) return fail('rate_limited', 429) // 回数の上限（SQL 0017）
   const userId = auth.user.id
   const day = jstDay(new Date()) // どの日かの正本はサーバー
 
