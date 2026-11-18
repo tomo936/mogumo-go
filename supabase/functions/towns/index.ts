@@ -8,6 +8,7 @@
 //   more = まだ続きがある（アプリが数秒おいて呼び直す）。
 // プライバシー: ユーザーID・店ID・町ID・位置をログに出さない。
 import { withCors } from '../_shared/cors.ts'
+import { overLimit } from '../_shared/rateLimit.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import {
   CHUNKS_PER_CALL, SHOPS_PER_CALL, TILE_BATCH, TILE_Z, TILES_PER_CALL, TOWN_COINS,
@@ -170,6 +171,7 @@ Deno.serve(withCors(async (req: Request) => {
   })
   const { data: auth, error: authError } = await db.auth.getUser(token)
   if (authError || !auth.user) return fail('unauthorized', 401)
+  if (await overLimit(db, auth.user.id, 'towns')) return fail('rate_limited', 429) // 回数の上限（SQL 0017）
   const userId = auth.user.id
 
   try {

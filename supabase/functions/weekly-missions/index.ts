@@ -8,6 +8,7 @@
 // 設計: docs/superpowers/specs/2026-11-10-weekly-missions-design.md
 // プライバシー: ユーザーID・店ID・位置をログに出さない。
 import { withCors } from '../_shared/cors.ts'
+import { overLimit } from '../_shared/rateLimit.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { countProgress, drawMissions, parseDraw, weekEndMs, weekLastDay, weekStart, weekStartMs } from './core.ts'
 import type { ConditionType, MissionRow, Visit } from './core.ts'
@@ -103,6 +104,7 @@ Deno.serve(withCors(async (req: Request) => {
   })
   const { data: auth, error: authError } = await db.auth.getUser(token)
   if (authError || !auth.user) return fail('unauthorized', 401)
+  if (await overLimit(db, auth.user.id, 'weekly-missions')) return fail('rate_limited', 429) // 回数の上限（SQL 0017）
   const userId = auth.user.id
 
   try {

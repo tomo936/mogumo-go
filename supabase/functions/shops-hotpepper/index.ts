@@ -3,6 +3,7 @@
 // 取れたお店は shops テーブルに保存（サービスロールで upsert）し、そのまま返す。
 // プライバシー: 受け取った位置は保存しない・ログに出さない（console に lat/lng・キーを出さないこと）。
 import { withCors } from '../_shared/cors.ts'
+import { overLimit } from '../_shared/rateLimit.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { dedupeRows, hotpepperError, hotpepperUrl, parseHotpepper, rawShopCount, roundCenter } from './core.ts'
 import type { ShopRow } from './core.ts'
@@ -29,6 +30,7 @@ Deno.serve(withCors(async (req: Request) => {
   })
   const { data: auth, error: authError } = await db.auth.getUser(token)
   if (authError || !auth.user) return reply('unauthorized', 401)
+  if (await overLimit(db, auth.user.id, 'shops-hotpepper')) return reply('rate_limited', 429) // 回数の上限（SQL 0017）
 
   let lat: unknown
   let lng: unknown

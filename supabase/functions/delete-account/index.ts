@@ -5,6 +5,7 @@
 // 設計: docs/superpowers/specs/2026-11-17-settings-legal-contact-design.md
 // プライバシー: ユーザーID・トークンをログに出さない。
 import { withCors } from '../_shared/cors.ts'
+import { overLimit } from '../_shared/rateLimit.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const CORS = {
@@ -30,6 +31,7 @@ Deno.serve(withCors(async (req: Request) => {
   })
   const { data: auth, error: authError } = await db.auth.getUser(token)
   if (authError || !auth.user) return json({ error: 'unauthorized' }, 401)
+  if (await overLimit(db, auth.user.id, 'delete-account')) return json({ error: 'rate_limited' }, 429) // 回数の上限（SQL 0017）
   const userId = auth.user.id
 
   try {

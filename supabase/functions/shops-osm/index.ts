@@ -4,6 +4,7 @@
 // プライバシー: タイルの番号は保存しない・ログに出さない。書くのは公開の地図データ（shops）だけ。
 // 設計: docs/superpowers/specs/2026-11-12-zukan-osm-shops-design.md
 import { withCors } from '../_shared/cors.ts'
+import { overLimit } from '../_shared/rateLimit.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { parseTiles, rowsFromPois } from './core.ts'
 import { readTilePois, UpstreamError } from './osmTile.ts'
@@ -27,6 +28,7 @@ Deno.serve(withCors(async (req: Request) => {
   })
   const { data: auth, error: authError } = await db.auth.getUser(token)
   if (authError || !auth.user) return fail('unauthorized', 401)
+  if (await overLimit(db, auth.user.id, 'shops-osm')) return fail('rate_limited', 429) // 回数の上限（SQL 0017）
 
   let body: unknown
   try {
