@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="UTF-8"><title>shop spike</title>
+<style>html,body{margin:0;background:#cfe8f7}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"./package/build/three.module.js","three/addons/":"./package/examples/jsm/"}}</script>
+</head><body>
+<script type="module">
+// 試作: コードで組む「かわいいお店」の 3D 模型（ラーメン屋・寿司屋）
+import * as THREE from 'three'
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
+
+const W = 780, H = 780
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
+renderer.setPixelRatio(1); renderer.setSize(W, H)
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap
+document.body.appendChild(renderer.domElement)
+const scene = new THREE.Scene()
+scene.background = new THREE.Color('#eaf3e4')
+
+// アニメ調の陰影（3段階）
+const grad = new THREE.DataTexture(new Uint8Array([195, 195, 205, 255, 232, 232, 238, 255, 255, 255, 255, 255]), 3, 1)
+grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true
+const mat = (c, extra = {}) => new THREE.MeshToonMaterial({ color: c, gradientMap: grad, ...extra })
+const OUTLINE = new THREE.MeshBasicMaterial({ color: '#5b3b5e', side: THREE.BackSide })
+
+// 部品を置く（輪郭線つき: 裏返した少し大きい形を重ねる＝イラストの線）
+function add(parent, geo, m, x, y, z, { line = true, s = 1.035, rot } = {}) {
+  const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); mesh.castShadow = mesh.receiveShadow = true
+  if (rot) mesh.rotation.set(...rot)
+  parent.add(mesh)
+  if (line) { const o = new THREE.Mesh(geo, OUTLINE); o.scale.setScalar(s); mesh.add(o) }
+  return mesh
+}
+const rbox = (w, h, d, r = 0.06) => new RoundedBoxGeometry(w, h, d, 3, r)
+
+// 文字や柄の絵（看板・のれん）。本番ではシロの絵に差し替える部分
+function texture(draw, w = 256, h = 128) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h
+  draw(c.getContext('2d'), w, h)
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t
+}
+const sign = (text, bg, fg) => texture((g, w, h) => {
+  g.fillStyle = bg; g.beginPath(); g.roundRect(4, 4, w - 8, h - 8, 22); g.fill()
+  g.lineWidth = 0; g.strokeStyle = 'transparent'; g.stroke()
+  g.fillStyle = fg; g.font = 'bold ' + (text.length > 3 ? 54 : 70) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, w / 2, h / 2 + 4)
+})
+const noren = (bg, mark) => texture((g, w, h) => {
+  g.fillStyle = bg; g.fillRect(0, 0, w, h)
+  g.fillStyle = 'rgba(255,255,255,0.95)'
+  if (mark === 'bowl') { g.beginPath(); g.arc(w / 2, h * 0.42, 34, 0, Math.PI); g.fill(); g.fillRect(w / 2 - 42, h * 0.42 - 6, 84, 8); g.fillRect(w / 2 - 14, h * 0.42 + 30, 28, 8) }
+  else { g.font = 'bold 64px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(mark, w / 2, h * 0.45) }
+}, 128, 128)
+
+// しま模様（ひさし用）
+const stripes = (c1, c2, n = 6) => texture((g, w, h) => { for (let i = 0; i < n; i++) { g.fillStyle = i % 2 ? c2 : c1; g.fillRect((i * w) / n, 0, w / n + 1, h) } }, 256, 64)
+
+// ポップなお店の共通の形: 丸い台座・ずんぐりした角の丸い壁・厚くて丸い屋根・しまのひさし・大きな目印
+function popShop({ wall, roof, ridge, awn, sign: sg, norenBg, norenMark, plate }) {
+  const g = new THREE.Group()
+  add(g, new THREE.CylinderGeometry(1.75, 1.85, 0.22, 48), mat(plate), 0, 0.11, 0)          // 丸い台座
+  add(g, new THREE.CylinderGeometry(1.6, 1.6, 0.04, 48), mat('#ffffff'), 0, 0.235, 0, { line: false })
+  add(g, rbox(2.0, 1.3, 1.6, 0.2), mat(wall), 0, 0.88, 0)                                     // ずんぐりした壁
+  // 厚くて丸い屋根（切妻を丸く）
+  add(g, rbox(2.3, 0.24, 1.0, 0.11), mat(roof), 0, 1.72, 0.36, { rot: [0.62, 0, 0] })
+  add(g, rbox(2.3, 0.24, 1.0, 0.11), mat(roof), 0, 1.72, -0.36, { rot: [-0.62, 0, 0] })
+  add(g, new THREE.CylinderGeometry(0.15, 0.15, 2.4, 16), mat(ridge), 0, 2.06, 0, { rot: [0, 0, Math.PI / 2] })
+  for (const x of [-1.2, 1.2]) add(g, new THREE.SphereGeometry(0.17, 16, 12), mat(ridge), x, 2.06, 0)
+  // 入口（明るいガラス）と丸い窓
+  add(g, rbox(0.72, 0.72, 0.08, 0.12), mat('#fff6cf', { emissive: '#ffd36b', emissiveIntensity: 0.6 }), 0, 0.64, 0.8)
+  for (const x of [-0.68, 0.68]) add(g, new THREE.CylinderGeometry(0.2, 0.2, 0.06, 28), mat('#fff6cf', { emissive: '#ffd36b', emissiveIntensity: 0.6 }), x, 0.82, 0.81, { rot: [Math.PI / 2, 0, 0] })
+  // しまのひさし（前に少し傾ける）
+  const awnMat = new THREE.MeshToonMaterial({ map: stripes(awn[0], awn[1]), gradientMap: grad })
+  add(g, rbox(1.9, 0.08, 0.42, 0.04), awnMat, 0, 1.12, 0.95, { rot: [0.45, 0, 0] })
+  for (let i = 0; i < 6; i++) add(g, new THREE.SphereGeometry(0.085, 12, 8), mat(i % 2 ? awn[1] : awn[0]), -0.79 + i * 0.316, 1.02, 1.14, { line: false }) // 波のふち
+  // のれん
+  const m = new THREE.MeshBasicMaterial({ map: noren(norenBg, norenMark), side: THREE.DoubleSide })
+  add(g, new THREE.PlaneGeometry(0.6, 0.3), m, 0, 0.88, 0.85, { line: false })
+  // 看板（屋根の前に立てる）
+  add(g, rbox(1.25, 0.42, 0.12, 0.12), new THREE.MeshBasicMaterial({ map: sign(sg[0], sg[1], sg[2]) }), 0, 1.42, 0.9)
+  return g
+}
+
+function ramen() {
+  const g = popShop({ wall: '#ffd56b', roof: '#ff5b57', ridge: '#e0403f', awn: ['#ff6f61', '#ffffff'], sign: ['ラーメン', '#ffffff', '#ff4a45'], norenBg: '#2f5fd0', norenMark: 'bowl', plate: '#7fd8a8' })
+  for (const x of [-1.12, 1.12]) { const l = add(g, new THREE.SphereGeometry(0.2, 20, 14), mat('#ff5247', { emissive: '#ff6a4d', emissiveIntensity: 0.4 }), x, 0.95, 0.75); l.scale.set(1, 1.2, 1) }
+  // 大きなどんぶり
+  const bowl = new THREE.Group(); bowl.position.set(0, 2.18, 0); bowl.scale.setScalar(1.45); g.add(bowl)
+  const pts = []; for (let i = 0; i <= 10; i++) { const t = i / 10; pts.push(new THREE.Vector2(0.18 + Math.sin(t * Math.PI / 2) * 0.32, t * 0.36)) }
+  add(bowl, new THREE.LatheGeometry(pts, 32), mat('#ffffff', { side: THREE.DoubleSide }), 0, 0, 0, { line: false })
+  add(bowl, new THREE.TorusGeometry(0.48, 0.045, 8, 40), mat('#ff4a45'), 0, 0.33, 0, { line: false, rot: [Math.PI / 2, 0, 0] })
+  add(bowl, new THREE.CylinderGeometry(0.47, 0.47, 0.03, 32), mat('#ffb84d'), 0, 0.32, 0, { line: false })
+  add(bowl, new THREE.CylinderGeometry(0.14, 0.14, 0.05, 20), mat('#ffffff'), -0.2, 0.35, 0.06, { line: false })
+  add(bowl, new THREE.TorusGeometry(0.055, 0.02, 6, 16), mat('#ff6f9a'), -0.2, 0.38, 0.06, { line: false, rot: [Math.PI / 2, 0, 0] })
+  const egg = add(bowl, new THREE.SphereGeometry(0.13, 16, 10), mat('#fffaf0'), 0.17, 0.35, -0.1, { line: false }); egg.scale.set(1, 0.5, 1.2)
+  add(bowl, new THREE.SphereGeometry(0.065, 12, 8), mat('#ffb000'), 0.17, 0.4, -0.1, { line: false })
+  add(bowl, rbox(0.3, 0.035, 0.18, 0.015), mat('#c8774a'), 0.1, 0.35, 0.2, { line: false, rot: [0, 0.4, 0] })
+  add(bowl, new THREE.SphereGeometry(0.05, 10, 8), mat('#5ccf6b'), -0.05, 0.35, -0.22, { line: false })
+  return g
+}
+
+function sushi() {
+  const g = popShop({ wall: '#ffffff', roof: '#33b6e8', ridge: '#1f95c9', awn: ['#ff8fb1', '#ffffff'], sign: ['すし', '#2f5fd0', '#ffffff'], norenBg: '#ff8fb1', norenMark: '鮨', plate: '#ffd86b' })
+  // 大きなにぎり（サーモン）
+  const n = new THREE.Group(); n.position.set(0, 2.35, 0); n.rotation.y = 0.35; n.scale.setScalar(1.35); g.add(n)
+  add(n, rbox(0.8, 0.34, 0.44, 0.17), mat('#ffffff'), 0, 0, 0)
+  add(n, rbox(0.95, 0.14, 0.54, 0.07), mat('#ff8a5c'), 0, 0.22, 0)
+  for (let i = 0; i < 4; i++) add(n, rbox(0.035, 0.145, 0.54, 0.015), mat('#ffd9c4'), -0.3 + i * 0.2, 0.23, 0, { line: false })
+  add(n, rbox(0.16, 0.36, 0.46, 0.04), mat('#2b3a3a'), 0, 0.05, 0, { line: false, s: 1 }) // のり
+  return g
+}
+
+// 地面（平らな地図のつもり）と配置
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshToonMaterial({ color: '#f3f8ec', gradientMap: grad }))
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground)
+const road = new THREE.Mesh(new THREE.PlaneGeometry(30, 1.3), mat('#fffaf0')); road.rotation.x = -Math.PI / 2; road.position.set(0, 0.005, 2.0); scene.add(road)
+const r1 = ramen(); r1.position.set(-2.0, 0, 0); scene.add(r1)
+const s1 = sushi(); s1.position.set(2.0, 0, 0.1); s1.rotation.y = -0.15; scene.add(s1)
+
+// 光: 空の色の環境光＋斜め上の太陽（影を落とす）
+scene.add(new THREE.HemisphereLight('#ffffff', '#e8f0ff', 2.0))
+const sun = new THREE.DirectionalLight('#fff4e0', 2.2); sun.position.set(-4, 8, 6); sun.castShadow = true
+sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6 }); scene.add(sun)
+
+// 地図を斜め55°から見下ろす角度に合わせたカメラ
+const cam = new THREE.PerspectiveCamera(30, W / H, 0.1, 100)
+const dist = 14, pitch = THREE.MathUtils.degToRad(55)
+const yaw = THREE.MathUtils.degToRad(Number(new URLSearchParams(location.search).get('yaw') ?? 35))
+cam.position.set(Math.sin(yaw) * Math.sin(pitch) * dist, Math.cos(pitch) * dist + 0.8, Math.cos(yaw) * Math.sin(pitch) * dist)
+cam.lookAt(0, 0.9, 0)
+renderer.render(scene, cam)
+window.__done = true
+</script></body></html>

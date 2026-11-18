@@ -1,0 +1,106 @@
+// 確認用（git 管理外）: お店を「そこにあるように」置く計算。
+// 本番では domain（純粋な計算）と infra（地図からデータを取る）に分ける。
+import type { Map as MapLibreMap } from 'maplibre-gl'
+
+type P = { x: number; y: number } // m（東・北）
+export type Placement = { lng: number; lat: number; facingDeg: number; sizeM: number; footprint: boolean }
+
+const M_LAT = 111195
+const ROAD_CLASSES = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor', 'service', 'street', 'path', 'pedestrian'])
+
+function proj(lng0: number, lat0: number) {
+  const mLng = M_LAT * Math.cos((lat0 * Math.PI) / 180)
+  return {
+    to: (lng: number, lat: number): P => ({ x: (lng - lng0) * mLng, y: (lat - lat0) * M_LAT }),
+    back: (p: P): [number, number] => [lng0 + p.x / mLng, lat0 + p.y / M_LAT],
+  }
+}
+const closestOnSeg = (p: P, a: P, b: P): P => {
+  const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy
+  const t = l2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2)) : 0
+  return { x: a.x + t * dx, y: a.y + t * dy }
+}
+const inside = (p: P, ring: P[]) => {
+  let c = false
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const a = ring[i], b = ring[j]
+    if ((a.y > p.y) !== (b.y > p.y) && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) c = !c
+  }
+  return c
+}
+const bearing = (v: P) => ((Math.atan2(v.x, v.y) * 180) / Math.PI + 360) % 360 // 北=0・時計回り
+
+/** 店の点から: 一番近い道路へ正面を向け、建物の輪郭があればその真ん中・その辺の向き・その大きさに合わせる */
+export function placeShop(map: MapLibreMap, lng: number, lat: number, minSizeM = 14, maxSizeM = 30): Placement {
+  const pr = proj(lng, lat), p0: P = { x: 0, y: 0 }
+  // 1) 一番近い道路の点
+  let road: P | null = null, best = Infinity
+  for (const f of map.querySourceFeatures('openmaptiles', { sourceLayer: 'transportation' })) {
+    if (!ROAD_CLASSES.has(String(f.properties.class))) continue
+    const g = f.geometry
+    const lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : []
+    for (const line of lines) for (let i = 1; i < line.length; i++) {
+      const c = closestOnSeg(p0, pr.to(line[i - 1][0], line[i - 1][1]), pr.to(line[i][0], line[i][1]))
+      const d = Math.hypot(c.x, c.y)
+      if (d < best) { best = d; road = c }
+    }
+  }
+  // 2) 店の点を含む建物の輪郭
+  let ring: P[] | null = null
+  for (const f of map.querySourceFeatures('openmaptiles', { sourceLayer: 'building' })) {
+    const g = f.geometry
+    const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : []
+    for (const poly of polys) {
+      const r = poly[0].map(([x, y]) => pr.to(x, y))
+      if (inside(p0, r)) { ring = r; break }
+    }
+    if (ring) break
+  }
+  const roadDir = road && best > 0.5 ? road : { x: 0, y: -1 }
+  if (!ring) {
+    // 建物が見つからない: 道路に正面を向け、道路にかからないよう道路から下がった所に置く
+    const d = Math.hypot(roadDir.x, roadDir.y) || 1, need = minSizeM / 2 + 4
+    const back = road && best < need ? need - best : 0
+    const [l2, a2] = pr.back({ x: (-roadDir.x / d) * back, y: (-roadDir.y / d) * back })
+    return { lng: l2, lat: a2, facingDeg: bearing(roadDir), sizeM: minSizeM, footprint: false }
+  }
+
+  // 3) 輪郭の真ん中・道路に一番向いている辺の外向き＝正面・その向きでの幅と奥行き
+  const c = ring.slice(0, -1).reduce((s, q) => ({ x: s.x + q.x, y: s.y + q.y }), { x: 0, y: 0 })
+  c.x /= ring.length - 1; c.y /= ring.length - 1
+  const toRoad = { x: roadDir.x - c.x, y: roadDir.y - c.y }
+  const area = ring.slice(1).reduce((s, q, i) => s + (ring![i].x * q.y - q.x * ring![i].y), 0) / 2
+  let face = toRoad, score = -Infinity
+  for (let i = 1; i < ring.length; i++) {
+    const a = ring[i - 1], b = ring[i], ex = b.x - a.x, ey = b.y - a.y, l = Math.hypot(ex, ey)
+    if (l < 2) continue
+    const n = area > 0 ? { x: ey / l, y: -ex / l } : { x: -ey / l, y: ex / l } // 外向き
+    const s = (n.x * toRoad.x + n.y * toRoad.y) / (Math.hypot(toRoad.x, toRoad.y) || 1) + l * 0.002
+    if (s > score) { score = s; face = n }
+  }
+  const fx = face.x, fy = face.y, sx = fy, sy = -fx // 正面方向と横方向
+  let minF = Infinity, maxF = -Infinity, minS = Infinity, maxS = -Infinity
+  for (const q of ring) {
+    const u = (q.x - c.x) * fx + (q.y - c.y) * fy, v = (q.x - c.x) * sx + (q.y - c.y) * sy
+    minF = Math.min(minF, u); maxF = Math.max(maxF, u); minS = Math.min(minS, v); maxS = Math.max(maxS, v)
+  }
+  const size = Math.max(minSizeM, Math.min(maxSizeM, Math.min(maxF - minF, maxS - minS)))
+  const [clng, clat] = pr.back(c)
+  return { lng: clng, lat: clat, facingDeg: bearing(face), sizeM: size, footprint: true }
+}
+
+/** 試作用: 中心の近くの建物から、店がありそうな点（建物の中・少しずらす）を選ぶ */
+export function samplePoints(map: MapLibreMap, lng: number, lat: number, n: number, radiusM: number): [number, number][] {
+  const pr = proj(lng, lat), picked: P[] = []
+  for (const f of map.querySourceFeatures('openmaptiles', { sourceLayer: 'building' })) {
+    if (f.geometry.type !== 'Polygon') continue
+    const r = f.geometry.coordinates[0].map(([x, y]) => pr.to(x, y))
+    const c = r.slice(0, -1).reduce((s, q) => ({ x: s.x + q.x / (r.length - 1), y: s.y + q.y / (r.length - 1) }), { x: 0, y: 0 })
+    const area = Math.abs(r.slice(1).reduce((s, q, i) => s + (r[i].x * q.y - q.x * r[i].y), 0) / 2)
+    if (area < 80 || area > 600 || Math.hypot(c.x, c.y) > radiusM || !inside(c, r)) continue
+    if (picked.some((q) => Math.hypot(q.x - c.x, q.y - c.y) < 55)) continue
+    picked.push({ x: c.x + 1.5, y: c.y - 1 })
+    if (picked.length >= n) break
+  }
+  return picked.map((q) => pr.back(q))
+}

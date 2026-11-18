@@ -17,6 +17,9 @@ export function CreditsButton() {
           <p>
             データ: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a>
           </p>
+          <p>
+            お店の情報: <a href="https://webservice.recruit.co.jp/" target="_blank" rel="noreferrer">Powered by ホットペッパーグルメ Webサービス</a>
+          </p>
           <button type="button" onClick={() => setOpen(false)}>閉じる</button>
         </div>
       )}

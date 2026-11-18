@@ -1,14 +1,551 @@
-import { useReducer, useState } from 'react'
-import { useAuth } from '../auth/AuthContext.ts'
-import { CreditsButton } from '../credits/CreditsButton.tsx'
-import { LocationOverlay } from '../map/LocationOverlay.tsx'
-import { MapView } from '../map/MapView.tsx'
-import { nextStatus } from '../map/locationStatus.ts'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { loading } from '../credits/loadingGate.ts'
+import { isGuest, useAuth } from '../auth/AuthContext.ts'
+import { LocationOverlay } from '../map/ui/LocationOverlay.tsx'
+import { MapView } from '../map/ui/MapView.tsx'
+import type { MapViewHandle } from '../map/ui/MapView.tsx'
+import { distanceMeters } from '../map/domain/geo.ts'
+import type { LatLng } from '../map/domain/geo.ts'
+import { farFromHome } from '../checkin/domain/far.ts'
+import { loadProgress, postCheckin } from '../checkin/infra/checkinApi.ts'
+import { profileRepo } from '../setup/infra/profileRepo.ts'
+import { EXP_NEW, EXP_REVISIT, expFromCounts, levelFor } from '../zukan/domain/level.ts'
+import { loadCoins } from '../mypage/infra/coins.ts'
+import { GachaScreen } from '../gacha/ui/GachaScreen.tsx'
+import { GACHA_OPEN } from '../gacha/config.ts'
+import { PullScreen } from '../gacha/ui/PullScreen.tsx'
+import { CharacterList } from '../gacha/ui/CharacterList.tsx'
+import { drawGacha, loadGachaState, loadOwned, setCharacter } from '../gacha/infra/gachaApi.ts'
+import type { Draw, DrawType } from '../gacha/domain/gacha.ts'
+import { syncMissions } from '../missions/infra/missionsApi.ts'
+import { nearbyKinds } from '../missions/domain/nearbyKinds.ts'
+import type { Mission, MissionWeek } from '../missions/domain/mission.ts'
+import { MissionTickets } from '../missions/ui/MissionTickets.tsx'
+import type { MissionsState } from '../missions/ui/MissionTickets.tsx'
+import { MissionBanner } from '../missions/ui/MissionBanner.tsx'
+import { MapHud } from '../map/ui/MapHud.tsx'
+import { Record, type RecordTab } from '../record/ui/Record.tsx'
+import { MyPage } from '../mypage/ui/MyPage.tsx'
+import { Settings } from '../settings/ui/Settings.tsx'
+import type { Profile } from '../setup/infra/profileRepo.ts'
+import { CheckinEffect } from '../checkin/ui/CheckinEffect.tsx'
+import { BuildingSheet } from '../checkin/ui/BuildingSheet.tsx'
+import { ShopSheet } from '../checkin/ui/ShopSheet.tsx'
+import type { CheckinError } from '../checkin/ui/ShopSheet.tsx'
+import type { Visits } from '../checkin/domain/visits.ts'
+import type { Shop } from '../shops/domain/shop.ts'
+import { guideShops, hintPosition, matchesShop } from '../hints/domain/hint.ts'
+import { ExploreSheet } from '../hints/ui/ExploreSheet.tsx'
+import { directionName } from '../hints/domain/sheetText.ts'
+import { Zukan } from '../zukan/ui/Zukan.tsx'
+import { zukanToShop } from '../zukan/domain/zukan.ts'
+import { HintSheet } from '../hints/ui/HintSheet.tsx'
+import { RevealBanner } from '../hints/ui/RevealBanner.tsx'
+import { useDailyHints } from '../hints/ui/useDailyHints.ts'
+import { loadHome } from '../setup/infra/homeStore.ts'
+import { nextStatus } from '../map/domain/locationStatus.ts'
+import { syncUntilSettled } from '../towns/infra/townsApi.ts'
+import type { TownNews, TownSync } from '../towns/domain/progress.ts'
+import { TownBanner } from '../towns/ui/TownBanner.tsx'
+import { sound } from '../sound/infra/sound.ts'
+import { NearbyList } from '../nearby/ui/NearbyList.tsx'
+import { Inbox } from '../inbox/ui/Inbox.tsx'
+import { LinkPrompt } from '../auth/ui/LinkPrompt.tsx'
+import { nudgeMilestone } from '../auth/domain/linkNudge.ts'
+import { lastNudge, saveNudge, takeLinkConflict } from '../auth/infra/nudgeStore.ts'
+import { deleteAccount } from '../account/infra/deleteAccount.ts'
+import { claimPresent, loadInbox } from '../inbox/infra/inboxApi.ts'
+import { loadRead, markRead } from '../inbox/infra/readState.ts'
+import { hasDot } from '../inbox/domain/inbox.ts'
+import type { Notice, Present } from '../inbox/domain/inbox.ts'
+import { LoginBonus } from '../loginbonus/ui/LoginBonus.tsx'
+import { Guide } from '../guide/ui/Guide.tsx'
+import { guideSeen, markGuideSeen } from '../guide/infra/seen.ts'
+import { preloadPoko } from '../guide/infra/poko.ts'
+import { setPlace } from '../daynight/infra/phase.ts'
+import { claimLoginBonus } from '../loginbonus/infra/loginBonusApi.ts'
+import type { Claim } from '../loginbonus/domain/loginBonus.ts'
+import { ReviewEditor } from '../reviews/ui/ReviewEditor.tsx'
+import { loadLatest, loadMine, loadSummary, photoUrls } from '../reviews/infra/reviewsApi.ts'
+import { targetCheckin } from '../reviews/domain/review.ts'
+import { syncOsmShops } from '../zukan/infra/osmSync.ts'
+import type { HintOrigin } from '../zukan/domain/hintText.ts'
+import type { Review } from '../reviews/domain/review.ts'
+import { jstDay } from '../checkin/domain/day.ts'
+
+const SHOPS_ERROR_BANNER_MS = 6000
+const PINS_HIDDEN_KEY = 'mogumo.pinsHidden' // ピンを出さない設定（その端末だけ。読めなくても動く）
+
+function loadPinsHidden(): boolean {
+  try {
+    return localStorage.getItem(PINS_HIDDEN_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+
+const LOGIN_BONUS_DELAY_MS = 3200 // 地図へ入ってから受け取り画面を出すまで（空から降りる演出が終わるころ）
+
+// ゲストに Google をつなぐよう勧める窓の文（A3）
+const LINK_TEXT = {
+  review: { title: 'みんなに見せるのは Google をつないでから', text: 'ゲストの感想は「自分だけ」で残せるポコ。みんなに見せるのは、Google をつないだ人だけポコ。つなぐと、いまの記録もそのまま残るよ！', okLabel: 'Google をつなぐ', cancelLabel: 'やめる' },
+  nudge: { title: '記録を守ろう！', text: 'ゲストの記録のかぎは、この端末にしかないポコ。Google をつなぐと、機種を変えても続きから遊べるよ！', okLabel: 'Google をつなぐ', cancelLabel: 'あとで' },
+  conflict: { title: 'この Google には別の記録があるよ', text: 'そちらでログインし直すと、いまのゲストの記録は消えます。ゲストのまま続けることもできます。', okLabel: 'そちらでログインし直す', cancelLabel: 'ゲストのまま続ける', danger: true },
+  failed: { title: 'Google をつなげませんでした', text: '通信のよい所で、設定の「Google をつないで記録を守る」からもう一度お試しください。', okLabel: 'もう一度', cancelLabel: '閉じる' },
+} as const
 
 export function MapPage() {
-  const { signOut } = useAuth()
+  const { session, signOut, linkGoogle, signInWithGoogle } = useAuth()
+  const guest = isGuest(session) // ゲスト（A3）
+  const userId = session?.user.id
+  const home = useMemo(() => (userId ? loadHome(userId) : null), [userId])
+  useEffect(() => {
+    if (home) setPlace(home) // 現在地が分かるまでは自宅の日の入り・日の出で昼と夜を決める（A14）
+  }, [home])
+  const [shopsError, setShopsError] = useState(false)
+  // 帯は数秒で消える
+  useEffect(() => {
+    if (!shopsError) return
+    const t = setTimeout(() => setShopsError(false), SHOPS_ERROR_BANNER_MS)
+    return () => clearTimeout(t)
+  }, [shopsError])
   const [status, dispatch] = useReducer(nextStatus, 'searching')
   const [attempt, setAttempt] = useState(0)
+  const [pinsHidden, setPinsHidden] = useState(loadPinsHidden)
+  const togglePins = () => {
+    const next = !pinsHidden
+    setPinsHidden(next)
+    try {
+      localStorage.setItem(PINS_HIDDEN_KEY, next ? '1' : '0')
+    } catch {
+      // 保存できなくても、この画面の間は切りかわる
+    }
+  }
+
+  const mapRef = useRef<MapViewHandle>(null)
+  const subscribeBearing = useCallback((cb: (b: number) => void) => mapRef.current?.subscribeBearing(cb) ?? (() => {}), [])
+  const [selected, setSelected] = useState<Shop | null>(null)
+  const [building, setBuilding] = useState<{ shops: Shop[]; checked: ReadonlySet<string>; title: string | null } | null>(null)
+  const [me, setMe] = useState<LatLng | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [checkinError, setCheckinError] = useState<CheckinError | null>(null)
+  const [effect, setEffect] = useState<{ coins: 0 | 30 | 40; reveal: string | null; key: number; exp: number; levelUp: number | null } | null>(null)
+  const [doneToday, setDoneToday] = useState(false)
+  // 図鑑に地図のデータだけのお店を出す（設計 2026-11-12-zukan-osm-shops）: 晴れた場所の地図のお店のタイルを shops-osm に送る。
+  // 霧が晴れたとき（チェックイン・町のクリア）・お店がそろったとき・図鑑を開いたとき。時間では送らない（オーナー 2026-11-13）。
+  // 失敗しても何もしない（次にまた送る）
+  const osmEnabled = true // 本番でも dev と同じお店を出す（2026-11-18 オーナー。以前は dev のサイトだけだった）
+  const syncOsm = useCallback(() => {
+    const inp = mapRef.current?.hintInputs()
+    if (!userId || !osmEnabled || !inp) return
+    void syncOsmShops(userId, inp.cleared)
+  }, [userId, osmEnabled])
+  // 起動時のスプラッシュは、お店がそろうまで「読み込み中」で出しておく（最大 8 秒。src/credits/loadingGate.ts）
+  // タイトルの読み込みはお店だけを待つ。お店がそろったら、案内がまだの人はポコタン（A5）を裏で読み始める
+  // （「タップしてスタート」を押すまでと空から降りる 3.2 秒のあいだに読み終える。お店とは重ねない。2026-11-17 オーナー「B で」）
+  const firstGuide = useRef(userId ? !guideSeen(userId) : false)
+  useEffect(() => {
+    loading.start()
+    void mapRef.current?.whenShopsReady().then(() => {
+      loading.done()
+      if (firstGuide.current) void preloadPoko()
+    })
+  }, [])
+  // ログインボーナス（A4）の受け取り画面と、地図へ入ったか
+  const [entered, setEntered] = useState(false)
+  const [loginBonus, setLoginBonus] = useState<Claim | null>(null)
+  // ポコタンの案内（A5）: 初めての人は空から降りたあとに出す。ログインボーナスは案内が終わってから
+  const [tour, setTour] = useState<'wait' | 'open' | 'done'>('wait')
+  // タイトルを閉じて地図へ入ったら、カメラを空から降ろす（2026-11-16 オーナー「空から来たような感じ」）
+  useEffect(() => {
+    // タイトルをもう閉じていた（新しいアカウントがログイン・初回設定を経て来た）ときは、すぐ地図に入ったことにする（空から降りる演出はしない）
+    if (loading.hasEntered()) {
+      sound.startBgm()
+      setEntered(true)
+      return
+    }
+    return loading.onEnter(() => {
+      mapRef.current?.intro()
+      sound.startBgm() // 空から降りるのに合わせて BGM（昼）がふわっと始まる（A6）
+      setEntered(true)
+    })
+  }, [])
+  useEffect(() => {
+    let alive = true
+    void mapRef.current?.whenShopsReady().then(() => alive && syncOsm())
+    return () => {
+      alive = false
+    }
+  }, [syncOsm])
+  const [nearbyInput, setNearbyInput] = useState<{ shops: readonly Shop[]; cleared: ReadonlySet<string>; checked: ReadonlySet<string> } | null>(null) // 近くのお店の一覧（A11）。開いている間だけ
+  const [zukanInput, setZukanInput] = useState<{ mapShops: readonly Shop[]; cleared: ReadonlySet<string> } | null>(null)
+  // 「？」のヒントは今いる場所から（図鑑を開いている間も位置は受け取り続けるので、歩けば測り直す）。まだ無ければ自宅から
+  const hintOrigin = useMemo<HintOrigin | null>(() => (me ? { pos: me, from: 'here' } : home ? { pos: home, from: 'home' } : null), [me, home])
+  // お店のシートの「みんなの感想」。シートを開いたときだけ読み、店が替われば古い返事は捨てる
+  const [sheetReviews, setSheetReviews] = useState<{ shopId: string; summary: { avg: number; count: number } | null; latest: Review[] } | null>(null)
+  const selectedId = selected?.id ?? null
+  useEffect(() => {
+    if (!selectedId) return
+    let alive = true
+    Promise.all([loadSummary(selectedId), loadLatest(selectedId)])
+      .then(([summary, latest]) => alive && setSheetReviews({ shopId: selectedId, summary, latest }))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [selectedId])
+  // ゲスト（A3）に Google をつなぐよう勧める窓。review = 感想を書こうとした、nudge = 節目、conflict = その Google に別の記録があった、failed = つなげなかった
+  const [linkAsk, setLinkAsk] = useState<'review' | 'nudge' | 'conflict' | 'failed' | null>(() => (takeLinkConflict() ? 'conflict' : null))
+  const [linkBusy, setLinkBusy] = useState(false)
+  const startLink = async () => {
+    setLinkBusy(true)
+    if (!(await linkGoogle())) {
+      setLinkBusy(false)
+      setLinkAsk('failed')
+    } // つなげたら Google の画面へ移る（戻ってきたら本登録）
+  }
+  // 節目でひと声: チェックインの演出が終わったら、ゲストのチェックインの数を数えて節目なら一度だけ
+  const maybeNudge = () => {
+    if (!guest || !userId) return
+    loadProgress()
+      .then((p) => {
+        const total = [...p.visitsByShop.values()].reduce((n, v) => n + v.count, 0)
+        const m = nudgeMilestone(total, lastNudge(userId))
+        if (m === null) return
+        saveNudge(userId, m)
+        setLinkAsk((cur) => cur ?? 'nudge')
+      })
+      .catch(() => {})
+  }
+  // 感想を書く・直す（お店のシートの「✎ 感想」から。いちばん新しい訪問が対象。2026-11-13 オーナー: 浮くボタンはやめてシートに置く）
+  const [reviewing, setReviewing] = useState<{ checkinId: string; shopId: string; shopName: string; day: string; existing: Review | null; photoUrl: string | null } | null>(null)
+  const openReview = async (shop: Shop) => {
+    try {
+      // 合体したお店は、地図の点（mapId）の方に訪問が付いていることがある
+      let id = shop.id
+      let mine = await loadMine(id)
+      if (mine.visits.length === 0 && shop.mapId) {
+        id = shop.mapId
+        mine = await loadMine(id)
+      }
+      const t = targetCheckin(mine.visits, mine.mine)
+      const visit = t ? mine.visits.find((v) => v.checkinId === t.checkinId) : undefined
+      if (!t || !visit) return
+      const photoUrl = t.existing?.photoPath ? ((await photoUrls([t.existing.photoPath])).get(t.existing.photoPath) ?? null) : null
+      setReviewing({ checkinId: t.checkinId, shopId: id, shopName: shop.name, day: jstDay(new Date(visit.checkedInAt)), existing: t.existing, photoUrl })
+    } catch {
+      // 読めなければ開かない（シートはそのまま）
+    }
+  }
+  const [record, setRecord] = useState<{ visits: Visits | null; ready: boolean }>({ visits: null, ready: false })
+  const [exploreOpen, setExploreOpen] = useState(false)
+  const [pickedHint, setPickedHint] = useState<string | null>(null)
+  const hints = useDailyHints({
+    userId: userId ?? '',
+    enabled: true,
+    me,
+    home,
+    map: mapRef,
+  })
+  // 町のクリア・コンプリート。新しく取れたものを帯の列に入れ（1つずつ出す）、クリアした町の霧を晴らす
+  const [townNews, setTownNews] = useState<TownNews[]>([])
+  const townSeen = useRef(new Set<string>())
+  const aliveRef = useRef(true)
+  useEffect(() => {
+    aliveRef.current = true
+    return () => {
+      aliveRef.current = false // 画面を離れたら、町の呼び直しを止める
+    }
+  }, [])
+  const [coins, setCoins] = useState<number | null>(null) // 持っているコイン（地図の上に出す）
+  const onTownSync = useCallback((s: TownSync) => {
+    const fresh = s.newly.filter((n) => !townSeen.current.has(`${n.id}:${n.kind}`))
+    if (fresh.length === 0) return
+    for (const n of fresh) {
+      townSeen.current.add(`${n.id}:${n.kind}`)
+      if (n.kind === 'clear' && n.town) mapRef.current?.addTown(n.town)
+    }
+    if (fresh.some((n) => n.kind === 'clear')) syncOsm() // 町のクリアで霧が晴れた
+    setTownNews((q) => [...q, ...fresh])
+    if (fresh.some((n) => n.coins > 0)) loadCoins().then(setCoins).catch(() => {}) // 町のコインを数字に反映
+  }, [syncOsm])
+  const busyRef = useRef(false)
+  const effectSeq = useRef(0)
+  const selectedRef = useRef<Shop | null>(null)
+  useEffect(() => {
+    selectedRef.current = selected
+  })
+  const closeHintSheet = hints.closeSheet
+  const select = useCallback((shop: Shop | null) => {
+    if (busyRef.current && shop) return // チェックイン中は別のお店にシートを入れ替えない（閉じるのは可）
+    if (shop) {
+      // シートは同時に1つ。探索・ヒントのシートは閉じる
+      setExploreOpen(false)
+      setPickedHint(null)
+      closeHintSheet()
+    }
+    setSelected(shop)
+    // 今日もうチェックインしたお店かは、板を開いたときに地図に聞いておく（描画中に ref を読まない）
+    setDoneToday(shop ? (mapRef.current?.isCheckedToday(shop) ?? false) : false)
+    setRecord({ visits: shop ? (mapRef.current?.visitsFor(shop) ?? null) : null, ready: mapRef.current?.progressReady() ?? false })
+    setCheckinError(null)
+    if (!shop) mapRef.current?.unfocus() // 板を閉じたらカメラを自分に戻す
+  }, [closeHintSheet])
+
+  // ビルの一覧（済みの印は開いたときに地図に聞いておく）
+  const selectBuilding = useCallback((shops: Shop[] | null, title?: string | null) => {
+    if (busyRef.current && shops) return
+    setBuilding(shops ? { shops, checked: mapRef.current?.checked() ?? new Set<string>(), title: title ?? null } : null)
+    if (shops) {
+      setSelected(null)
+      setExploreOpen(false)
+      setPickedHint(null)
+      closeHintSheet()
+    }
+  }, [closeHintSheet])
+
+  // 週ミッション（気配のシートの下）。開いたときは出題つき、チェックインのあとは数え直しだけ
+  const [missions, setMissions] = useState<MissionsState>({ status: 'loading' })
+  const [missionNews, setMissionNews] = useState<Mission[]>([]) // 達成の帯の順番待ち
+  const missionSeen = useRef(new Set<string>())
+  const missionOpen = useRef(new Set<string>()) // 見たときにまだ達成していなかったもの（チェックイン後の呼び出しが失敗しても、次に読んだときに帯を出す）
+  const applyMissions = useCallback((w: MissionWeek) => {
+    setMissions({ status: 'ready', week: w })
+    const fresh = w.missions.filter((m) => m.completed && (w.newly.includes(m.id) || missionOpen.current.has(m.id)) && !missionSeen.current.has(m.id))
+    for (const m of w.missions) if (!m.completed) missionOpen.current.add(m.id)
+    if (fresh.length === 0) return
+    for (const m of fresh) missionSeen.current.add(m.id)
+    setMissionNews((q) => [...q, ...fresh])
+    loadCoins().then(setCoins).catch(() => {})
+  }, [])
+  const loadMissions = useCallback(async () => {
+    setMissions((cur) => (cur.status === 'ready' ? cur : { status: 'loading' }))
+    // まわりのお店がそろうのを少しだけ待つ（そろわなければ、ジャンル指定なしで出題される）
+    const handle = mapRef.current
+    if (handle) await Promise.race([handle.whenShopsReady().catch(() => {}), new Promise((r) => setTimeout(r, 4000))])
+    const shops = mapRef.current?.hintInputs()?.shops ?? []
+    const w = await syncMissions({ kinds: nearbyKinds(shops, home, me), hasHome: home !== null })
+    if (!aliveRef.current) return
+    if (w) applyMissions(w)
+    else setMissions((cur) => (cur.status === 'ready' ? cur : { status: 'error' }))
+  }, [home, me, applyMissions])
+
+  // 探索シート
+  const openExplore = () => {
+    if (busyRef.current) return
+    setSelected(null)
+    setBuilding(null)
+    setPickedHint(null)
+    mapRef.current?.unfocus()
+    setExploreOpen(true)
+    hints.openSheet()
+    void loadMissions()
+  }
+  const [zukanOpen, setZukanOpen] = useState(false) // 図鑑（メニューから開く）
+  const [recordTab, setRecordTab] = useState<RecordTab | null>(null) // 記録（メニューから開く。マイページからは じっせき で）
+  const [myPageOpen, setMyPageOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [gachaOpen, setGachaOpen] = useState(false) // ガチャ（A15。メニューから）
+  const [gachaSoon, setGachaSoon] = useState(false) // ガチャを出していないあいだ、押したら「準備中」を短く出す
+  useEffect(() => {
+    if (!gachaSoon) return
+    const t = setTimeout(() => setGachaSoon(false), 1600)
+    return () => clearTimeout(t)
+  }, [gachaSoon])
+  const [charListOpen, setCharListOpen] = useState(false) // キャラ一覧（左上のキャラから）
+  const [owned, setOwned] = useState<ReadonlyMap<number, number>>(new Map()) // 持っているガチャのキャラ → ダブった数
+  const [pullsSinceFive, setPullsSinceFive] = useState(0)
+  const [drawing, setDrawing] = useState(false)
+  const [drawError, setDrawError] = useState<string | null>(null)
+  const [pulled, setPulled] = useState<Draw[] | null>(null) // まわした結果（引く画面）
+  const refreshGacha = useCallback(() => {
+    loadOwned().then(setOwned).catch(() => {})
+    loadGachaState()
+      .then((st) => st && setPullsSinceFive(st.pullsSinceFive))
+      .catch(() => {})
+  }, [])
+  const draw = async (type: DrawType) => {
+    if (drawing) return
+    setDrawing(true)
+    setDrawError(null)
+    const r = await drawGacha(type)
+    setDrawing(false)
+    if (r?.status === 'ok') setPulled(r.draws)
+    else setDrawError(r?.status === 'insufficient' ? 'コインが足りません' : 'まわせませんでした。もう一度お試しください')
+    // 引けていたかもしれないので、失敗のときもコイン・持ち物・天井を読み直す
+    loadCoins().then(setCoins).catch(() => {})
+    refreshGacha()
+  }
+  const [exp, setExp] = useState(0) // プレイヤーの経験値（新しいお店 +10・もう一度 +2。記録から計算）
+  const visitedIds = useRef(new Set<string>()) // 行ったことのあるお店（チェックインで +10 か +2 かを決める）
+  const refreshStats = useCallback(() => {
+    loadProgress()
+      .then((p) => {
+        setExp(expFromCounts([...p.visitsByShop.values()].map((v) => v.count)))
+        visitedIds.current = new Set(p.visitsByShop.keys())
+      })
+      .catch(() => {})
+    loadCoins().then(setCoins).catch(() => {})
+  }, [])
+  // ポコタンの案内（A5）: まだ見ていなければ、空から降りる演出が終わったころに出す
+  const guideShown = useRef(false) // 案内を出した後のログインボーナスは、待たずに出す
+  useEffect(() => {
+    if (!entered || !userId || tour !== 'wait') return
+    if (guideSeen(userId)) return setTour('done')
+    // ポコタンは裏で読んである（間に合わなければ案内の画面が続きを待つ）。空から降りる演出（3.2 秒）が終わったら出す
+    const t = setTimeout(() => setTour('open'), LOGIN_BONUS_DELAY_MS)
+    return () => clearTimeout(t)
+  }, [entered, userId, tour])
+  const closeGuide = useCallback(() => {
+    guideShown.current = true
+    if (userId) markGuideSeen(userId)
+    setTour('done')
+  }, [userId])
+  // ログインボーナス（A4）: 地図へ入ったら今日の分を受け取り、空から降りる演出（または案内）が終わったころに画面を出す
+  useEffect(() => {
+    if (!entered || !userId || tour !== 'done') return
+    let alive = true
+    let timer: ReturnType<typeof setTimeout> | undefined
+    void claimLoginBonus().then((c) => {
+      if (!alive || !c?.claimedNow) return
+      refreshStats() // コインの数字を読み直す
+      timer = setTimeout(() => alive && setLoginBonus(c), guideShown.current ? 400 : LOGIN_BONUS_DELAY_MS)
+    })
+    return () => {
+      alive = false
+      clearTimeout(timer)
+    }
+  }, [entered, userId, tour, refreshStats])
+  // お知らせ・プレゼント（A7）: 地図に入ったとき・アプリに戻ったとき・画面を閉じたときに読み直す（赤い点のため）
+  const [inbox, setInbox] = useState<{ notices: Notice[]; presents: Present[] }>({ notices: [], presents: [] })
+  const [readIds, setReadIds] = useState<ReadonlySet<number>>(() => (userId ? loadRead(userId) : new Set()))
+  const [inboxOpen, setInboxOpen] = useState(false)
+  const refreshInbox = useCallback(() => {
+    if (!userId) return
+    void loadInbox().then((r) => aliveRef.current && setInbox(r))
+  }, [userId])
+  useEffect(() => {
+    if (!entered || !userId) return
+    refreshInbox()
+    const onVisible = () => !document.hidden && refreshInbox()
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [entered, userId, refreshInbox])
+  const seenNotices = useCallback(() => {
+    if (userId) setReadIds(markRead(userId, inbox.notices.map((n) => n.id)))
+  }, [userId, inbox.notices])
+  const onClaimPresent = useCallback(
+    async (id: number) => {
+      const r = await claimPresent(id)
+      if (r && (r.status === 'ok' || r.status === 'already')) {
+        setInbox((b) => ({ ...b, presents: b.presents.map((p) => (p.id === id ? { ...p, claimed: true } : p)) }))
+        if (r.status === 'ok') refreshStats() // コインの数字を読み直す
+      }
+      return r
+    },
+    [refreshStats],
+  )
+  useEffect(() => {
+    if (!userId) return
+    profileRepo.load(userId).then(setProfile).catch(() => setProfile(null))
+    refreshStats()
+  }, [userId, refreshStats])
+  const closeExplore = () => {
+    setExploreOpen(false)
+    hints.closeSheet()
+    mapRef.current?.unfocus()
+  }
+  // 気配を押した（ピンも、探索シートの行も同じ）。明かし済み・達成は店のシート、それ以外はカメラを寄せてヒントのシート
+  const pickHint = (id: string) => {
+    if (busyRef.current) return
+    const h = hints.set?.hints.find((x) => x.id === id)
+    if (!h) return
+    const all = mapRef.current?.hintInputs()?.shops ?? []
+    const at = hints.positions.get(id) ?? hintPosition(h, all)
+    if (h.completed || hints.revealed.has(id)) {
+      const found = all.find((s) => matchesShop(h, s))
+      if (found) {
+        mapRef.current?.focusAt(at)
+        select(found)
+        return
+      }
+    }
+    setExploreOpen(false)
+    setSelected(null)
+    setBuilding(null)
+    hints.closeSheet()
+    setPickedHint(id)
+    mapRef.current?.focusAt(at)
+  }
+  const closeHint = () => {
+    setPickedHint(null)
+    mapRef.current?.unfocus()
+  }
+
+  const checkin = async () => {
+    if (!selected || !me || busyRef.current) return
+    busyRef.current = true // 連打を state の反映より前に止める
+    setBusy(true)
+    setCheckinError(null)
+    const posted = selected
+    const maskedBefore = hints.isMasked(posted) // 伏せたままチェックインしたら、演出で正体を出す
+    const result = await postCheckin({ shopId: posted.id, me, farFromHome: farFromHome(home, me), ...(posted.mapId ? { mapId: posted.mapId } : {}) })
+    busyRef.current = false
+    setBusy(false)
+    if (result.ok) {
+      setSelected((cur) => (cur?.id === posted.id ? null : cur))
+      // 経験値: 初めてのお店 +10、行ったことのあるお店 +2（コインを受け取り済みの日は 0）
+      const isNew = !(visitedIds.current.has(posted.id) || (posted.mapId !== null && visitedIds.current.has(posted.mapId)))
+      const gain = result.coins === 0 ? 0 : isNew ? EXP_NEW : EXP_REVISIT
+      visitedIds.current.add(posted.id)
+      const before = levelFor(exp).level
+      const after = levelFor(exp + gain).level
+      setExp(exp + gain)
+      setEffect({ coins: result.coins, reveal: maskedBefore ? posted.name : null, key: ++effectSeq.current, exp: gain, levelUp: after > before ? after : null })
+      if (result.wasHint) hints.markCompleted(posted)
+      mapRef.current?.checkin(posted, result.newCells)
+      // ビルの一覧から来ていても、お店 1 軒のときと同じく全部閉じて、地図の演出を見せる（2026-11-18 オーナー「複合施設もお店単体と同じ動きに。メニューを戻して出すのではなく」）
+      setBuilding(null)
+      syncOsm() // チェックインで霧が晴れた
+      // 3D の男の子が喜ぶ。レベルが上がるのはチェックインのときだけなので、両方でも 1 回
+      mapRef.current?.express('happy')
+      // 町の進み具合をサーバーに確かめる（失敗しても、チェックインはそのまま）
+      refreshStats() // コインとレベルの数字を読み直す
+      void syncMissions(null).then((w) => {
+        if (w && aliveRef.current && w.missions.length > 0) applyMissions(w)
+      })
+      void syncUntilSettled(onTownSync, { alive: () => aliveRef.current })
+    } else {
+      if (selectedRef.current?.id === posted.id) setCheckinError(result.reason)
+    }
+  }
+
+  // 探索シート・ヒントのシートに出す、気配までの距離と、気配なしの日の案内
+  const distances = useMemo(() => {
+    const m = new Map<string, number>()
+    if (me) for (const [id, p] of hints.positions) m.set(id, distanceMeters(me, p))
+    return m
+  }, [me, hints.positions])
+  const directions = useMemo(() => {
+    const m = new Map<string, string | null>()
+    if (me) for (const [id, p] of hints.positions) m.set(id, directionName(me, p))
+    return m
+  }, [me, hints.positions])
+  const pickedHintData = pickedHint ? (hints.set?.hints.find((h) => h.id === pickedHint) ?? null) : null
+  // 正体がまだ伏せられている気配の店（一覧に出すと名前が分かってしまうので出さない）
+  const maskedShopIds = useMemo<ReadonlySet<string>>(
+    () => new Set((hints.set?.hints ?? []).filter((h) => !h.completed && !hints.revealed.has(h.id)).map((h) => h.shopId)),
+    [hints.set, hints.revealed],
+  )
+  const noHints = exploreOpen && hints.status === 'ready' && hints.set !== null && hints.set.hints.length === 0
+  const guide = (() => {
+    if (!noHints || !me) return []
+    const inputs = mapRef.current?.hintInputs()
+    if (!inputs) return []
+    return guideShops(inputs.near, inputs.checked, me).map((shop) => ({ shop, distanceM: distanceMeters(me, shop) }))
+  })()
 
   const retry = () => {
     dispatch({ type: 'retry' })
@@ -17,15 +554,316 @@ export function MapPage() {
 
   return (
     <>
-      <MapView key={attempt} onStatus={dispatch} />
+      <MapView
+        key={attempt}
+        ref={mapRef}
+        characterId={profile?.characterId ?? profile?.starterId ?? 101}
+        onStatus={dispatch}
+        home={home}
+        onShopsError={() => setShopsError(true)}
+        onSelectShop={(shop) => {
+          sound.play('tap') // 地図のピンはボタンではないので、ここで「ぽこっ」（A6）
+          setBuilding(null) // 地図で別のお店を押したら、ビルの一覧からは外れる
+          select(shop)
+        }}
+        onSelectBuilding={(shops, title) => {
+          if (shops) sound.play('tap')
+          selectBuilding(shops, title)
+        }}
+        onPosition={(p) => {
+          setMe(p)
+          setPlace(p) // 昼と夜（A14）は今いる場所の日の入り・日の出で決める
+        }}
+        onHintTap={(id) => {
+          sound.play('tap')
+          pickHint(id)
+        }}
+        pinsHidden={pinsHidden}
+        paused={recordTab !== null || zukanOpen || myPageOpen || settingsOpen || gachaOpen || charListOpen}
+      />
+      {building && !selected && (
+        <BuildingSheet
+          shops={building.shops}
+          checkedIds={building.checked}
+          maskedIds={new Set(building.shops.filter((x) => hints.isMasked(x)).map((x) => x.id))}
+          hintIds={new Set(building.shops.filter((x) => hints.hintFor(x)).map((x) => x.id))}
+          title={building.title}
+          onPick={(shop) => select(shop) /* ビルの一覧は残しておき、お店のシートの「‹ ビル名」で戻れる */}
+          onClose={() => {
+            setBuilding(null)
+            mapRef.current?.unfocus()
+          }}
+        />
+      )}
+      {selected && me && (
+        <ShopSheet
+          key={selected.id}
+          shop={selected}
+          visits={record.visits}
+          recordReady={record.ready}
+          distanceM={distanceMeters(me, selected)}
+          doneToday={doneToday}
+          hint={hints.hintFor(selected)}
+          masked={hints.isMasked(selected)}
+          onReview={() => void openReview(selected)}
+          reviews={sheetReviews?.shopId === selected.id ? sheetReviews : null}
+          busy={busy}
+          error={checkinError}
+          onCheckin={() => void checkin()}
+          onClose={() => {
+            setBuilding(null)
+            select(null)
+          }}
+          backLabel={building ? (building.title ?? 'このビル') : null}
+          onBack={
+            building
+              ? () => {
+                  // ビルの一覧に戻る。済みの印はチェックインを反映して読み直す
+                  setSelected(null)
+                  setBuilding((b) => (b ? { ...b, checked: mapRef.current?.checked() ?? b.checked } : b))
+                }
+              : undefined
+          }
+        />
+      )}
+      {exploreOpen && (
+        <ExploreSheet
+          status={hints.status}
+          set={hints.set}
+          revealed={hints.revealed}
+          distances={distances}
+          directions={directions}
+          regenVisible={hints.regenVisible}
+          fast={hints.fast}
+          notice={hints.notice}
+          guide={guide}
+          onPickHint={pickHint}
+          onPickShop={(shop) => {
+            mapRef.current?.focusAt(shop)
+            select(shop)
+          }}
+          onRegen={hints.regen}
+          onRetry={hints.retry}
+          placement="top"
+          onClose={closeExplore}
+          extra={<MissionTickets state={missions} onRetry={() => void loadMissions()} />}
+        />
+      )}
+      {zukanOpen && (
+        <Zukan
+          mapShops={zukanInput?.mapShops}
+          cleared={zukanInput?.cleared}
+          origin={hintOrigin}
+          onLocate={(z) => {
+            setZukanOpen(false)
+            mapRef.current?.focusAt(z) // 詳細の「地図で見る」: 視点をお店へ寄せて、シートを開く
+            select(zukanToShop(z))
+          }}
+          onClose={() => setZukanOpen(false)}
+        />
+      )}
+      {tour === 'open' && <Guide onClose={closeGuide} />}
+      {linkAsk && (
+        <LinkPrompt
+          {...LINK_TEXT[linkAsk]}
+          busy={linkBusy}
+          onOk={() => {
+            if (linkAsk === 'conflict') {
+              // ゲストの記録を消してから、その Google でログインし直す（オーナーに確かめた流れ。設計メモの「Google をつなぐとき」）
+              setLinkBusy(true)
+              void (userId ? deleteAccount(userId) : Promise.resolve(true)).finally(() => void signInWithGoogle())
+            } else void startLink()
+          }}
+          onCancel={() => setLinkAsk(null)}
+        />
+      )}
+      {loginBonus && <LoginBonus claim={loginBonus} onClose={() => setLoginBonus(null)} />}
+      {inboxOpen && (
+        <Inbox
+          notices={inbox.notices}
+          presents={inbox.presents}
+          read={readIds}
+          onSeenNotices={seenNotices}
+          onClaim={onClaimPresent}
+          onClose={() => {
+            setInboxOpen(false)
+            refreshInbox()
+          }}
+        />
+      )}
+      {nearbyInput && (
+        <NearbyList
+          shops={nearbyInput.shops}
+          me={me}
+          cleared={nearbyInput.cleared}
+          checked={nearbyInput.checked}
+          hiddenIds={maskedShopIds}
+          onPick={(shop) => {
+            setNearbyInput(null)
+            mapRef.current?.focusAt(shop) // お店を押したときと同じ寄せ。シートを閉じたら自分に戻る
+            select(shop)
+          }}
+          onClose={() => setNearbyInput(null)}
+        />
+      )}
+      {recordTab && (
+        <Record
+          home={home}
+          initialTab={recordTab}
+          onTownSync={onTownSync}
+          onClose={() => setRecordTab(null)}
+          onLocate={(shop) => {
+            setRecordTab(null) // 記録とワールドマップを閉じて、図鑑の「地図で見る」と同じく、そのお店へ寄せてシートを開く
+            mapRef.current?.focusAt(shop)
+            select(shop)
+          }}
+        />
+      )}
+      {gachaOpen && (
+        <GachaScreen
+          coins={coins}
+          owned={owned}
+          pullsSinceFive={pullsSinceFive}
+          busy={drawing}
+          error={drawError}
+          onDraw={(type) => void draw(type)}
+          onClose={() => setGachaOpen(false)}
+        />
+      )}
+      {pulled && <PullScreen draws={pulled} onDone={() => setPulled(null)} />}
+      {charListOpen && (
+        <CharacterList
+          owned={owned}
+          currentId={profile?.characterId ?? 101}
+          onPick={async (id) => {
+            const ok = await setCharacter(id)
+            if (ok) setProfile((p) => (p ? { ...p, characterId: id } : p))
+            return ok
+          }}
+          onClose={() => setCharListOpen(false)}
+        />
+      )}
+      {myPageOpen && userId && (
+        <MyPage
+          userId={userId}
+          nickname={profile?.nickname ?? null}
+          starterId={profile?.starterId ?? 101}
+          home={home}
+          onNicknameChanged={(nickname) => setProfile((p) => (p ? { ...p, nickname } : p))}
+          onOpenBadges={() => {
+            setMyPageOpen(false)
+            setRecordTab('badges')
+          }}
+          onClose={() => setMyPageOpen(false)}
+        />
+      )}
+      {settingsOpen && (
+        <Settings
+          userId={userId ?? ''}
+          email={session?.user.email ?? null}
+          isGuest={guest}
+          onLinkGoogle={() => void startLink()}
+          onDeleted={() => void signOut()} // 退会できた: ログアウトするとログイン画面に戻る
+          pinsHidden={pinsHidden}
+          onTogglePins={togglePins}
+          onSignOut={() => void signOut()}
+          onGuide={() => {
+            setSettingsOpen(false) // 地図に戻って、ポコタンの案内を最初から
+            setTour('open')
+          }}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
+      {pickedHintData && (
+        <HintSheet hint={pickedHintData} distanceM={distances.get(pickedHintData.id) ?? null} direction={directions.get(pickedHintData.id) ?? null} onClose={closeHint} />
+      )}
+      {hints.newlyRevealed && (
+        <RevealBanner key={hints.newlyRevealed.id} name={hints.newlyRevealed.shop.name} onDone={hints.clearNewly} />
+      )}
+      {townNews.length > 0 && (
+        <TownBanner key={`${townNews[0].id}:${townNews[0].kind}`} news={townNews[0]} onDone={() => setTownNews((q) => q.slice(1))} />
+      )}
+      {!effect && townNews.length === 0 && missionNews.length > 0 && (
+        <MissionBanner key={missionNews[0].id} mission={missionNews[0]} onDone={() => setMissionNews((q) => q.slice(1))} />
+      )}
+      {effect && <CheckinEffect key={effect.key} coins={effect.coins} exp={effect.exp} levelUp={effect.levelUp} reveal={effect.reveal} onDone={() => {
+            setEffect(null)
+            maybeNudge()
+            if (!selectedRef.current) mapRef.current?.unfocus() // 演出が終わったら選んだ建物の詳しい模型を戻す（カメラはその場所のまま。自分に戻すのは方位磁針）
+          }} />}
+      {reviewing && (
+        <ReviewEditor
+          shopName={reviewing.shopName}
+          shopId={reviewing.shopId}
+          checkinId={reviewing.checkinId}
+          visitDay={reviewing.day}
+          existing={reviewing.existing}
+          existingPhotoUrl={reviewing.photoUrl}
+          onSaved={() => setReviewing(null)}
+          onDeleted={() => setReviewing(null)}
+          onClose={() => setReviewing(null)}
+          guest={guest}
+          onNeedLink={() => setLinkAsk('review')}
+        />
+      )}
       <div className="map-overlay">
         <LocationOverlay status={status} onRetry={retry} onReload={() => window.location.reload()} />
-        <div className="map-actions">
-          <CreditsButton />
-          <button type="button" onClick={() => void signOut()}>
-            ログアウト
-          </button>
-        </div>
+        {shopsError && <p className="location-banner">お店を読み込めませんでした</p>}
+        <MapHud
+          nickname={profile?.nickname ?? null}
+          characterId={profile?.characterId ?? 101}
+          level={levelFor(exp).level}
+          expInto={levelFor(exp).into}
+          expSpan={levelFor(exp).span}
+          coins={coins}
+          hintsRemaining={hints.set ? hints.set.hints.filter((h) => !h.completed).length : null}
+          hintOpen={exploreOpen}
+          onHintTap={() => (exploreOpen ? closeExplore() : openExplore())}
+          onZukan={() => {
+            closeExplore()
+            const inp = mapRef.current?.hintInputs()
+            setZukanInput({ mapShops: inp?.shops ?? [], cleared: inp?.cleared ?? new Set() })
+            syncOsm()
+            setZukanOpen(true)
+          }}
+          onNearby={() => {
+            closeExplore()
+            const inp = mapRef.current?.hintInputs()
+            setNearbyInput({ shops: inp?.shops ?? [], cleared: inp?.cleared ?? new Set(), checked: inp?.checked ?? new Set() })
+          }}
+          onInbox={() => {
+            closeExplore()
+            setInboxOpen(true)
+          }}
+          inboxDot={hasDot(inbox.notices, readIds, inbox.presents)}
+          onRecord={() => {
+            closeExplore()
+            setRecordTab('record')
+          }}
+          onMyPage={() => {
+            closeExplore()
+            setMyPageOpen(true)
+          }}
+          onSettings={() => {
+            closeExplore()
+            setSettingsOpen(true)
+          }}
+          onGacha={() => {
+            closeExplore()
+            if (!GACHA_OPEN) return setGachaSoon(true)
+            setDrawError(null)
+            refreshGacha()
+            setGachaOpen(true)
+          }}
+          onCharacter={() => {
+            closeExplore()
+            refreshGacha()
+            setCharListOpen(true)
+          }}
+          subscribeBearing={subscribeBearing}
+          onCompass={() => mapRef.current?.resetNorth()}
+        />
+        {gachaSoon && <p className="hud-soon" role="status">ガチャは準備中です</p>}
       </div>
     </>
   )

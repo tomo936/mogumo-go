@@ -1,0 +1,632 @@
+/* 気配のピン（仮。シロのアイコンが届いたら中身を差し替える）。MapLibre のマーカーなので absolute のまま（relative だと流れに乗って並びずれる） */
+.hint-pin {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.hint-pin::after {
+  /* ぼかした影（地面に落ちる） */
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 22px;
+  height: 7px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: rgba(31, 42, 55, 0.22);
+  filter: blur(2px);
+}
+.hint-pin__face {
+  display: block;
+  width: 40px;
+  height: 40px;
+}
+.hint-pin__img {
+  display: block;
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 2px 3px rgba(31, 42, 55, 0.3));
+  pointer-events: none;
+  user-select: none;
+}
+.hint-pin__mark {
+  /* 正体が分かった印（右上の緑の丸） */
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #3ecf8e;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+.hint-pin--bounce .hint-pin__face {
+  animation: hint-pin-bounce 0.4s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+@keyframes hint-pin-bounce {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.5);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 探索ボタン（地図の下の真ん中） */
+.explore-button {
+  position: absolute;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  white-space: nowrap;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  background: #4aa8ff;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(74, 168, 255, 0.5);
+  font-size: 16px;
+  font-weight: 800;
+}
+.explore-button__count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #ff8a75;
+  border: 2px solid #fff;
+  color: #fff;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+/* 探索シート・ヒントのシート（枠は .shop-sheet を使う） */
+.explore-sheet {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.explore-sheet__status {
+  margin: 10px 0 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #5b6b7b;
+}
+.explore-sheet__notice {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #eef6ff;
+  color: #3d6f9e;
+  font-size: 13px;
+}
+.explore-sheet__retry,
+.explore-sheet__regen {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #4aa8ff;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+.explore-sheet__regen:disabled {
+  background: #cfe3f7;
+  color: #6b8299;
+}
+.hint-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.hint-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 16px;
+  background: #f4f9ff;
+  color: inherit;
+  text-align: left;
+}
+.hint-row--done {
+  background: #effaf4;
+}
+.hint-row__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hint-row__title {
+  font-size: 16px;
+  font-weight: 800;
+}
+.hint-row__sub {
+  font-size: 13px;
+  color: #3d4a5c;
+}
+.hint-row__dist {
+  font-size: 12px;
+  color: #6b7a8c;
+}
+.hint-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 3px solid #bfe0ff;
+  border-radius: 50%;
+  background: #fff;
+  box-sizing: border-box;
+  color: #4aa8ff;
+  font-size: 20px;
+  font-weight: 900;
+}
+.hint-badge--mystery {
+  border-color: #cdbdf5;
+  background: #f1ebff;
+  color: #8e6ee0;
+}
+.hint-badge--open {
+  border-color: #3ecf8e;
+  color: #3ecf8e;
+}
+.hint-lines {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+  font-weight: 700;
+}
+.hint-lines li {
+  margin-top: 4px;
+}
+.hint-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #6b7a8c;
+}
+.hint-credit {
+  display: block;
+  margin-top: 10px;
+  font-size: 10px;
+  color: #6b7a8c;
+}
+
+/* 明かしの帯（画面の上） */
+.reveal-banner {
+  position: fixed;
+  top: calc(64px + env(safe-area-inset-top));
+  left: 12px;
+  right: 12px;
+  z-index: 25;
+  padding: 12px 16px;
+  border-radius: 20px;
+  background: #fff;
+  border: 3px solid #3ecf8e;
+  box-sizing: border-box;
+  color: #1f2a37;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(62, 207, 142, 0.35);
+  animation: reveal-banner-in 0.35s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+@keyframes reveal-banner-in {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 「気配の店 +10」の札 */
+.hint-tag {
+  display: inline-block;
+  margin: 2px 0 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #ff8a75;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* 人が地図を指で動かしている間は、気配のピンも隠す（ビルのピンと同じ合図 .pins-moving。2026-11-09 本人） */
+.pins-moving .hint-pin {
+  visibility: hidden;
+}
+
+/* 上の気配ボタンから降りる（2026-11-10） */
+.explore-sheet--top {
+  top: 0;
+  bottom: auto;
+  border-radius: 0 0 22px 22px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-top: calc(16px + env(safe-area-inset-top));
+  box-shadow: 0 8px 22px rgba(74, 168, 255, 0.25);
+  animation: explore-drop 0.28s ease-out;
+}
+@keyframes explore-drop {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+/* 「ピン」ボタンで出さないとき */
+.hint-pin[hidden] {
+  display: none;
+}
+
+/* ---- 気配のシート（2026-11-10 作り直し・気配が主役）。お店のシートと同じ手帳風 ----
+   お店のシートの規則（checkin.css の .shop-sheet:not(...)）に負けないよう、クラスを3つ重ねる。
+   設計 docs/superpowers/specs/2026-11-10-hint-sheet-and-weekly-mission-placement.md */
+.shop-sheet.explore-sheet.explore-sheet--top {
+  top: -28px; /* 上の端は画面の外へ（下から出るお店のシートと逆向き） */
+  bottom: auto;
+  left: 0;
+  right: 0;
+  max-height: calc(78vh + 28px);
+  padding: calc(28px + 12px + env(safe-area-inset-top)) 14px 14px;
+  border-width: 0 0 2.5px;
+  border-radius: 0 0 22px 22px;
+  box-shadow: 0 3px 0 rgba(122, 74, 38, 0.18);
+}
+.shop-sheet.explore-sheet.explore-sheet--top {
+  padding-bottom: 4px;
+}
+/* 中身が長いときは中だけスクロール（シートの枠・飾りは動かさない。お店のシートの touch-action:none を中だけ戻す） */
+.explore-sheet__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -4px;
+  padding: 3px 4px 0; /* 選んだチケットの縁取りが切れないように */
+}
+/* 下のつまみ（上へスライド・タップでしまう） */
+.explore-sheet__grip {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 0 4px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.explore-sheet__grip span {
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: #c9b896;
+}
+.shop-sheet.explore-sheet.explore-sheet--top::before {
+  top: -10px;
+  bottom: 4px;
+  border-radius: 0 0 17px 17px;
+}
+.explore-sheet--top .shop-sheet__close {
+  top: calc(28px + 10px + env(safe-area-inset-top));
+}
+.explore-sheet__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px;
+  padding-right: 44px;
+}
+.explore-sheet__head .shop-sheet__name {
+  margin: 0;
+  font-size: 22px;
+}
+.explore-sheet__meta {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: right;
+  color: #8a6a48;
+}
+.explore-sheet__meta b {
+  color: #c2652a;
+}
+.explore-sheet__status {
+  color: #7a6450;
+}
+.explore-sheet__notice {
+  border: 1.5px solid #e3cfaa;
+  background: #fff;
+  color: #7a4a26;
+}
+.explore-sheet__retry,
+.explore-sheet__regen {
+  border: 2px solid #7a4a26;
+  border-radius: 14px;
+  background: #fff;
+  color: #7a4a26;
+  box-shadow: 0 3px 0 #7a4a26;
+}
+.explore-sheet__regen:disabled {
+  border-color: #c9b28d;
+  background: #f1e4cc;
+  color: #9c8466;
+  box-shadow: 0 3px 0 #c9b28d;
+}
+.hint-note {
+  color: #8a6a48;
+}
+/* 気配のカード */
+.hint-card {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 2px solid #7a4a26;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 3px 0 rgba(122, 74, 38, 0.35);
+  color: #4a3b2c;
+  text-align: left;
+  overflow: hidden;
+}
+.hint-card--mystery {
+  background: #f6f0ff;
+}
+.hint-card--done {
+  background: #fffaf0;
+}
+.hint-card__window {
+  position: relative;
+  flex: none;
+  width: 76px;
+  height: 76px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 60%, #cfe6ff, #9cc8f2);
+  box-shadow: 0 0 0 2px #7a4a26;
+}
+.hint-card--mystery .hint-card__window {
+  background: radial-gradient(circle at 50% 60%, #ddcdff, #a88ae0);
+}
+.hint-card--open .hint-card__window {
+  background: #ffe9c4;
+}
+.hint-card__window img {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 56px;
+  transform: translate(-50%, -50%);
+  filter: blur(3px) saturate(0.8);
+  opacity: 0.85;
+}
+.hint-card--open .hint-card__window img {
+  filter: none;
+  opacity: 1;
+}
+.hint-card__puff {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 2px rgba(156, 200, 242, 0.7);
+}
+.hint-card__puff--a { left: -10px; top: 46px; width: 46px; height: 36px; }
+.hint-card__puff--b { left: 34px; top: 52px; width: 52px; height: 40px; }
+.hint-card__puff--c { left: 46px; top: -14px; width: 36px; height: 30px; opacity: 0.9; }
+.hint-card__q {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 30px;
+  font-weight: 900;
+  color: #c2652a;
+  text-shadow: 0 2px 0 #fff, 0 0 6px #fff;
+}
+.hint-card--mystery .hint-card__q {
+  color: #7b4fd0;
+}
+.hint-card__done {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  display: flex;
+}
+.hint-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+  padding-right: 34px;
+}
+.hint-card__genre {
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.15;
+  color: #c2652a;
+}
+.hint-card--mystery .hint-card__genre {
+  color: #7b4fd0;
+}
+.hint-card__name {
+  font-size: 16px;
+  font-weight: 900;
+}
+.hint-card__sub {
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: #5a4634;
+}
+.hint-card__chip {
+  align-self: flex-start;
+  padding: 0 7px;
+  border: 1.5px solid #7a4a26;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #7a4a26;
+}
+.hint-card__dist {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+  font-size: 12.5px;
+  font-weight: 900;
+  color: #2f7d5a;
+}
+.hint-card__reward {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px 1px 4px;
+  border: 1.5px solid #7a4a26;
+  border-radius: 999px;
+  background: #fff3c4;
+  font-size: 11px;
+  font-weight: 900;
+  color: #4a3b2c;
+}
+.hint-card__stamp {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 0 8px;
+  border: 2.5px solid #d6452f;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  color: #d6452f;
+  font-size: 13px;
+  font-weight: 900;
+  transform: rotate(-10deg);
+}
+
+/* ---- 気配1つのシート（地図の気配のピンを押したとき。2026-11-10 手帳風）。一覧のカードを大きくした形 ---- */
+.hint-one {
+  padding-top: 16px;
+}
+.hint-one__top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-right: 40px;
+}
+.hint-card__window.hint-one__window {
+  width: 104px;
+  height: 104px;
+}
+.hint-one__window img {
+  width: 78px;
+}
+.hint-one__window .hint-card__puff--a { left: -12px; top: 64px; width: 62px; height: 48px; }
+.hint-one__window .hint-card__puff--b { left: 46px; top: 70px; width: 70px; height: 54px; }
+.hint-one__window .hint-card__puff--c { left: 64px; top: -18px; width: 48px; height: 40px; }
+.hint-one__window .hint-card__q {
+  font-size: 40px;
+}
+.hint-one--mystery .hint-one__window {
+  background: radial-gradient(circle at 50% 60%, #ddcdff, #a88ae0);
+}
+.hint-one--mystery .hint-card__q {
+  color: #7b4fd0;
+}
+.hint-one__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.hint-one__kicker {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  color: #8a6a48;
+}
+.hint-one__genre {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1.15;
+  color: #c2652a;
+}
+.hint-one--mystery .hint-one__genre {
+  color: #7b4fd0;
+}
+.hint-one__catch {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #5a4634;
+}
+.hint-one__facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1.5px dashed #e3cfaa;
+}
+.hint-one__dist {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 15px;
+  font-weight: 900;
+  color: #2f7d5a;
+}
+.hint-one__reward {
+  padding: 2px 10px;
+  border: 1.5px solid #7a4a26;
+  border-radius: 999px;
+  background: #f6c453;
+  font-size: 12px;
+  font-weight: 900;
+  color: #4a3b2c;
+}
+.hint-one__note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  color: #8a6a48;
+}

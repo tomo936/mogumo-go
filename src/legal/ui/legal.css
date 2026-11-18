@@ -1,0 +1,41 @@
+/* プライバシーポリシー・利用規約の本文 */
+.lg {
+  margin-top: 8px;
+  padding: 16px 16px 20px;
+  border-radius: 14px;
+  background: #fffdf7;
+  box-shadow: 0 2px 6px rgba(107, 74, 43, 0.06);
+  font-size: 14px;
+  line-height: 1.75;
+  color: #4a3b2c;
+  overflow-wrap: anywhere;
+}
+.lg h3 {
+  margin: 20px 0 6px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #6b4a2b;
+}
+.lg p {
+  margin: 0 0 8px;
+}
+.lg ul,
+.lg ol {
+  margin: 0 0 8px;
+  padding-left: 1.4em;
+}
+.lg li {
+  margin-bottom: 4px;
+}
+.lg b {
+  color: #6b4a2b;
+}
+.lg__date {
+  margin-top: 20px !important;
+  text-align: right;
+  font-size: 12px;
+  color: #8a6a48;
+}
+.lg__nowrap {
+  white-space: nowrap;
+}

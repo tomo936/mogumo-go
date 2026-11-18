@@ -1,0 +1,69 @@
+# LOG — 受け渡し履歴
+
+- 2026-11-06: 連携フォルダを新設（シロ）。今後の依頼・素材・報告はこのフォルダ経由にする。
+- 2026-11-06: Claude Code が連携フォルダを確認。CLAUDE.md に確認の決まりを追加。ピンのアイコン13種の依頼を `to-shiro/2026-11-06-shop-pin-icons.md` に移した（状態: 対応中）。
+- 2026-11-06: push の方式A（オーナー決定、シロ経由）を反映。`.claude/settings.json` の sandbox.excludedCommands に `git push` / `git push *` を追加（オーナーが実行）。cycle1-fog-shops は origin と一致（31ab92e）を確認（Claude Code）。
+- 2026-11-06: チェックイン演出の素材4種（紙ふぶき・帯の飾り・コイン・ピンのチェック印）の依頼を `to-shiro/2026-11-06-checkin-effect-art.md` に書いた（状態: 未対応）（Claude Code）。
+- 2026-11-06 Claude Code → シロ: 複数のお店が入るビルの見本画像を依頼（handoff/to-shiro/2026-11-06-multi-shop-building.md）
+- 2026-11-07 シロ → Claude Code: ビルの見本を確定し依頼を完了に更新（形はオーナー最終決定の実在構造）。画像本体はテキスト経由で送れないためオーナーがセッションで直接渡す。あわせて「その他」建物のレストラン風見本も同様に渡す。ビルの形について意見があれば to-shiro へ（`to-claude/2026-11-07-building-and-other-shop.md`）。
+- 2026-11-07 Claude Code: ビルと「その他」の見本画像を art/reference/shops/ に配置。ビルの形への返事を to-shiro/2026-11-07-building-feedback.md に書いた（形は賛成、ショーケースの中身はどの店にも見える形にしたい相談）。to-claude/2026-11-07-building-and-other-shop.md は対応中
+- 2026-11-07 Claude Code: 「その他」の建物を見本 shop-other-restaurant.png に合わせて模型を作り直し、アプリに反映（オーナー確認済み）。ビルは未着手のため to-claude/2026-11-07-building-and-other-shop.md は対応中のまま。
+- 2026-11-07 シロ → Claude Code: ショーケース中身の相談への返事。オーナー判断は「Claude Code に任せる」（汎用の中身で進めてよい）（`to-claude/2026-11-07-building-showcase-reply.md`）。
+- 2026-11-07 Claude Code: ショーケース中身の返事を受け取った（汎用の中身で作る）。to-claude/2026-11-07-building-showcase-reply.md と to-shiro/2026-11-07-building-feedback.md を完了に。ビルの模型と仕組みはこれから。
+- 2026-11-07 Claude Code → シロ: 大きい施設のピンの絵1種と、施設を立体にしたときの見た目の見本を依頼（`to-shiro/2026-11-07-large-facility-art.md`、状態: 未対応）。
+- 2026-11-07 シロ: 大きい施設の依頼に納品（オーナー承認済み）。施設ピン（クローシュ＋フォーク＋ナイフ、128×128透明PNG）、見本1（L字の大きい施設）、見本2（細くて高い飲食ビル）。画像本体はセッション経由で送付し、配置先は依頼ファイルの納品メモに記載。依頼は完了に更新。
+- 2026-11-07 Claude Code: 大きい施設の素材3点を配置（art/pins/facility.png、art/reference/shops/facility-large.png・facility-large-2.png）。チャット経由で届いたため見本2は 1000×2000 に縮んでいる（元は 1120×2240）。
+- 2026-11-07 Claude Code: ビル（同じ建物に複数のお店）を `cycle1-building` に実装（模型・ピン・一覧）。to-claude/2026-11-07-building-and-other-shop.md を完了に。オーナーの確認事項を to-shiro/2026-11-07-building-owner-check.md に書いた（状態: 未対応）。大きい施設の素材3点は配置済みを確認（ffeedc7）、使うのは次の段。dev への反映はオーナーの OK 待ち。
+- 2026-11-07 Claude Code: オーナー OK でビルを dev に反映（14b1e0a）。模型・ピン・ビルの多さは実機で見てから決める（to-shiro/2026-11-07-building-owner-check.md は対応中）。
+- 2026-11-07 Claude Code: 実機確認を受けて、大型かどうかを建物の広さ（2,500m² 以上）で決めるように変更（オーナー OK）。小さいビルは何軒でもビル＋ピン5つ＋「+N」。dev に反映。
+- 2026-11-07 Claude Code: 実機の指摘で、ビルのピンをカメラに合わせて縮め、ビルの屋根の上・ビルの幅に収まるようにした。dev に反映。オーナー「他は問題なさそう」。
+- 2026-11-07 Claude Code: 実機確認（経堂）で、施設が複数の建物に分かれる問題（コルティ）と駅ナカの見せ方が宿題に。次の大型施設の段で扱う（session-handoff に記録）。
+- 2026-11-07 Claude Code: 経堂コルティが分かれた原因は地図タイルの区切りで切られた建物のかけら。点を含む輪郭のうち一番大きいものを使うように直して dev に反映。
+- 2026-11-07 Claude Code: ビルの段を区切り（オーナー実機確認済み）。to-shiro/2026-11-07-building-owner-check.md を完了に。次は大型施設の段（新しい会話）。
+- 2026-11-07 Claude Code → シロ: 駅舎の見本を依頼（to-shiro/2026-11-07-station-art.md、状態: 未対応）。大型施設の段の設計 docs/superpowers/specs/2026-11-07-large-facility-design.md。
+- 2026-11-07 Claude Code: 大型施設（実際の輪郭の立体・散らばるピン・駅舎）を cycle1-building に実装し dev に反映。オーナーの実機確認待ち。
+- 2026-11-07 Claude Code → シロ: 駅の立体の見本を依頼（to-shiro/2026-11-07-station-shape-art.md、状態: 未対応）。駅舎の模型の依頼（2026-11-07-station-art.md）は取り下げ。
+- 2026-11-07 Claude Code: 区切りの線を消す・駅は輪郭どおり立体（仮の色）・大型施設と駅の名前の札（駅は駅名標の形）を dev に反映。駅の見た目はシロの見本待ち。
+
+- 2026-11-07 シロ: 駅の立体の見本3枚を納品（オーナー承認済み）。細長い駅／大きい駅／L字の駅。共通の決まりは明るいグレーの壁＋屋根のふちの緑の帯＋縦長の窓＋丸時計＋駅名標の形（文字なし）。画像本体はセッション経由で送付、配置先は依頼ファイルの納品メモに記載。依頼は完了に更新。
+- 2026-11-07 Claude Code: 駅の立体の見本3枚を配置（art/reference/shops/station-shape-1〜3.webp。チャット経由で webp で届いたので拡張子は .webp）。アプリの駅の見た目に反映する。
+- 2026-11-07 Claude Code: シロの駅の見本（station-shape-1〜3）をアプリの駅の見た目に反映（グレーの壁・緑の帯2段・木枠の縦長の窓・赤白の丸いひさし・丸時計）。dev に反映。
+- 2026-11-07 Claude Code: 今回の会話のトークンの使い方の報告を送付（handoff/to-shiro/2026-11-07-token-usage-report.md、オーナーの依頼）。
+
+- 2026-11-07 シロ → Claude Code: トークン使い方の改善案を相談（to-claude/2026-11-07-token-usage-proposal.md、状態: 未対応）。妥当と判断したら運用ルールとして反映し、判断と反映内容を to-shiro へ返すよう依頼。
+- 2026-11-07 Claude Code: シロのトークン改善案3つを採用し CLAUDE.md「トークンの節約」に反映（compact 前のバックアップはオーナー追加）。返事は to-shiro/2026-11-07-token-usage-reply.md。
+- 2026-11-09 シロ → Claude Code: エージェント構成の最適化を相談（to-claude/2026-11-09-agent-config-proposal.md、状態: 未対応）。妥当と判断したら反映し、判断と反映内容を to-shiro へ返すよう依頼。懸念があれば反映せず懸念を返すこと。再開後の最初の作業として他の作業より先の判断を依頼。
+- 2026-11-09 Claude Code: シロのエージェント構成の相談を妥当と判断し反映（designer/implementer 削除、サブは文脈の境界で切る、既定 Sonnet）。返事は to-shiro/2026-11-09-agent-config-reply.md。
+- 2026-11-09 Claude Code: オーナーの指示でエージェント構成の相談を公式資料で検証。妥当として反映を維持し、資料に合わせて CLAUDE.md を補正（返事に追記）。
+- 2026-11-09 シロ: お店のピンのアイコン13種を納品（オーナー承認済み）。採用はオーナーが ChatGPT で作ったセット。ジャンルごとに色分けした完成形（512×512）・128×128版・高画質の元データを同送。「？」は黄色いキラキラなし。画像本体はセッション経由で送付し、配置先は依頼ファイルの納品メモに記載。依頼は完了に更新。
+- 2026-11-09 Claude Code: シロのピン（色分けの完成形）5種を受け取り art/pins/colored/ に配置（ramen・sushi・soba・washoku・izakaya）。残り8種（chinese・yakiniku・western・curry・cafe・cake・bakery・mystery）は未着。
+- 2026-11-09 Claude Code: 色分けピン cake・bakery・mystery を art/pins/colored/ に配置（計8種）。chinese・yakiniku・western・curry・cafe の5枚は作業中に届いたためファイルとして保存できず、再送待ち。
+- 2026-11-09 Claude Code: 色分けピン chinese・yakiniku・western・curry・cafe を配置。13種そろった（art/pins/colored/）。依頼 2026-11-06-shop-pin-icons は完了。アプリのピンへの差し替えに進む。
+- 2026-11-09 Claude Code: アイコン単体（128×128）ramen・sushi・soba・washoku・izakaya を art/pins/ に配置（13種のうち5種）。
+- 2026-11-09 Claude Code: アイコン単体 chinese・yakiniku・western・curry・cafe を art/pins/ に配置（13種のうち10種）。
+- 2026-11-09 Claude Code: アイコン単体 cake（pin-sweets.png の中身）・bakery・mystery を配置。単体13種・色分け13種ともそろった。
+- 2026-11-09 Claude Code: 高画質の元データ ramen・sushi・soba・washoku・izakaya を art/pins/hires/ に配置（13種のうち5種）。
+- 2026-11-09 Claude Code: 高画質の元データ chinese・yakiniku・western・curry・cafe を art/pins/hires/ に配置（13種のうち10種）。
+- 2026-11-09 Claude Code: 「その他（ジャンル不明）」のピンの絵を依頼（to-shiro/2026-11-09-other-pin.md）。気配の「？」と同じ絵ではだめ、とオーナー決定。
+- 2026-11-09 Claude Code: お店の種類を4つ増やす（donburi・burger・ethnic・konamon）ためのピンの絵と建物の見本を依頼（to-shiro/2026-11-09-new-shop-kinds-art.md）。
+- 2026-11-09 Claude Code: 新しい種類の依頼を更新。粉もの（konamon）を お好み焼き（okonomiyaki）と たこ焼き（takoyaki）に分けた（オーナー決定）。全5種類。
+- 2026-11-09 Claude Code: ミシェーラのピンの枠19・アイコン19・建物の見本5を受け取り配置。依頼2件を完了に。返事 to-shiro/2026-11-09-pin-art-received.md。
+- 2026-11-09 Claude Code: 女の子の歩く絵（8方向×21コマ）を依頼（to-shiro/2026-11-09-girl-walk-art.md）。男の子の歩く絵でアバターのお試し版を作っている。
+- 2026-11-09 Claude Code: お店のシートの飾り（ポラロイドの枠3種・テープ・窓の背景）を依頼（to-shiro/2026-11-09-shop-sheet-art.md）。
+- 2026-11-10 Claude Code: 実績のメダルの正式な絵（台5・リボン5・ジャンル以外の絵15）を依頼（to-shiro/2026-11-10-badge-art.md）。今は SVG のメダルで動いている。
+- 2026-11-11 Claude Code（Fable）: 3D のアバター用の絵（三面図・色の見本・顔の絵 6 種）を依頼（to-shiro/2026-11-11-avatar-3d-art.md）。着手は設計メモ（docs/superpowers/specs/2026-11-11-avatar-design.md）にオーナーの OK が出てから。
+- 2026-11-11 Claude Code（Fable）: 3D のアバター用の絵の依頼を見直し（to-shiro/2026-11-11-avatar-3d-art.md）。オーナーの参考画像（art/reference/avatar/boy/）があるので三面図・色の見本は取り下げ。男の子の試作に OK が出たあとに、顔の参考 2 枚と女の子の参考画像 6 枚だけ。
+- 2026-11-11 Claude Code（Fable）: 3D のアバター用の絵の依頼から、男の子の顔の参考（おいしい・ねむい）を取り下げ（オーナー決定で表情は ふつう・うれしい の 2 つだけ）。残るのは女の子の参考画像だけ（to-shiro/2026-11-11-avatar-3d-art.md、着手は OK のあと）。
+- 2026-11-12 メニューアイコン 8 点とグルメコインを受領（art/ui/menu/・art/ui/coin/）。返信 handoff/to-shiro/2026-11-12-menu-icons-received.md
+- 2026-11-12 Claude Code: メニューアイコン 8 点とグルメコインを地図の画面に反映（src/assets/ui/*.webp、変換は art/ui/convert-ui.sh、MapHud・CoinIcon）。
+- 2026-11-16 ブランディング素材のうちローディングアニメ（WebM・PNG 連番）を受領（art/loading/）、アプリ用 WebP を作ってタイトル画面に反映。アイコン・スプラッシュ・WebP・ロゴ単体のファイルは受け取り待ち。返信 handoff/to-shiro/2026-11-16-branding-received.md
+- 2026-11-16 ブランディング素材の再送（zip）を受領: アプリアイコン（public/ に縮小して反映）・スプラッシュ（art/branding/ に保管）・ローディング本命 WebP（art/loading/）。返信 handoff/to-shiro/2026-11-16-branding-received.md（完了）
+- 2026-11-16 バー（ジャンル追加）・ガチャのキャラ原画 30 枚・ログインボーナスのパネルを受領（art/pins/frames/pin-bar.png・art/pins/icons/bar.png・art/reference/shops/bar-v1.png・art/gacha/chars/・art/ui/login-bonus-panel.png）。返信 handoff/to-shiro/2026-11-16-bar-gacha-loginbonus-received.md（対応中。着手の順番はオーナー待ち）
+- 2026-11-17 Claude Code: ジャンル「バー」（bar）を実装して dev に反映（判定・ピン・図鑑・実績・週ミッション・3D 模型）。返信 handoff/to-shiro/2026-11-16-bar-gacha-loginbonus-received.md
+- 2026-11-17 Claude Code: ガチャ画面・引く画面の素材 10 枚をお願い（handoff/to-shiro/2026-11-17-gacha-screens-art.md、見本 art/reference/gacha/）
+- 2026-11-17 ガチャ開始 5 体＋スターター女の子の 3D 用の絵を受領（art/characters/<番号-名前>/ref/・art/characters/girl/ref/）。返信 handoff/to-shiro/2026-11-17-chars3d-received.md（対応中）
+- 2026-11-17 ガチャ画面・引く画面の素材 11 点を受領（art/gacha/ui/）。返信 handoff/to-shiro/2026-11-17-gacha-ui-parts-received.md（完了）
+- 2026-11-17 Claude Code: 結合試験をお願い（handoff/to-shiro/2026-11-17-integration-test.md。dev のサイトで ?fake=緯度,経度 の歩いたふりを使えるようにした）
+- 2026-11-18 結合試験の結果を受領（handoff/to-claude/2026-11-18-integration-test-result.md、art/qa/2026-11-18/）。手順 2（ゲストで始める）で停止。原因を調べる
+- 2026-11-18 結合試験は Claude Code が手元の Docker で自動で回す方針に変更（再実施の依頼は取り下げ）。
+- 2026-11-18 Claude Code: 本番デプロイ手順をお願い（handoff/to-shiro/2026-11-18-production-deploy-guide.md。オーナーが 1 人でできる粒度。ミシェーラが 1 ステップずつ案内）

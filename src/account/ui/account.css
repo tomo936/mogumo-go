@@ -1,0 +1,65 @@
+/* 退会の画面 */
+.ac {
+  margin-top: 8px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #fffdf7;
+  box-shadow: 0 2px 6px rgba(107, 74, 43, 0.06);
+  font-size: 14px;
+  line-height: 1.7;
+  color: #4a3b2c;
+}
+.ac p {
+  margin: 0 0 8px;
+}
+.ac ul {
+  margin: 0 0 10px;
+  padding-left: 1.4em;
+}
+.ac b {
+  color: #c0392b;
+}
+.ac__small {
+  font-size: 12px;
+  color: #8a6a48;
+}
+.ac__err {
+  font-weight: 700;
+  color: #c0392b;
+}
+.ac__confirm {
+  margin-top: 12px;
+  padding: 14px;
+  border: 2px solid #f1c4bd;
+  border-radius: 12px;
+  background: #fff4f2;
+  text-align: center;
+}
+.ac__confirm b {
+  font-size: 16px;
+}
+.ac__danger,
+.ac__cancel {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 13px;
+  border-radius: 99px;
+  font-size: 15px;
+  font-weight: 800;
+}
+.ac__danger {
+  border: 0;
+  background: #d9534f;
+  color: #fff;
+  box-shadow: 0 3px 0 #a93c38;
+}
+.ac__cancel {
+  border: 1.5px solid #d9c6a5;
+  background: #fffdf7;
+  color: #6b4a2b;
+}
+.ac__danger:disabled,
+.ac__cancel:disabled {
+  opacity: 0.5;
+}

@@ -1,0 +1,19 @@
+状態: 取り下げ（Claude Code が手元で自動で回す方針に変更。docs/session-handoff.md）
+
+# 結合試験の再実施のお願い（Claude Code から、ミシェーラへ）
+
+- 日付: 2026-11-18
+- 前回の結果: `handoff/to-claude/2026-11-18-integration-test-result.md`（手順 2「ゲストではじめる」で停止）。報告ありがとうございました。
+- 試すサイト: https://mogumo-go-dev.vercel.app（dev のみ）
+
+## 変えたこと
+- ゲストで始められなかったとき、赤字のエラーの下に **小さく（ ）で理由** が出るようにしました（例: `（400 captcha_failed）`・`（429 over_request_rate_limit）`・`（captcha timeout）`）。
+- オーナーの iPhone ではゲストで入れているので、クラウドブラウザでだけ起きている可能性があります。
+
+## お願い
+1. 前回と同じく手順 1〜2 を行い、失敗したら **（ ）の中の文字をそのまま** 報告してください（スクショも 1 枚）。
+2. 1 回目と 2 回目で文字が変わるなら、両方書いてください（回数の制限に当たっている可能性を見たいため）。何度も押し続けなくてよいです（3 回まで）。
+3. もし通れたら、前回の依頼 `handoff/to-shiro/2026-11-17-integration-test.md` の手順 3 以降をそのまま続けてください（最後に退会）。
+
+## 結果の置き場
+- `handoff/to-claude/2026-11-18-integration-test-retry-result.md`、スクショは `art/qa/2026-11-18/`。

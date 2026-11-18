@@ -1,0 +1,663 @@
+// アバターの方式くらべ（試作）。アプリのソースは使わず、three だけで描く。
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import * as maplibregl from 'maplibre-gl'
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+
+const BASE = '/.superpowers/preview/avatar/'
+const DPR = 2
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
+const loader = new GLTFLoader()
+
+// ---------- 表情（顔の絵は canvas に描く。横に 5 つ並べた 1 枚）----------
+export const EXPRS = ['normal', 'happy', 'surprised', 'yummy', 'sleepy'] as const
+type Expr = (typeof EXPRS)[number]
+const EXPR_JA: Record<Expr, string> = { normal: 'ふつう', happy: 'うれしい', surprised: 'びっくり', yummy: 'おいしい', sleepy: 'ねむい' }
+const C = 256
+const EYE = '#3d2418'
+
+function drawFace(g: CanvasRenderingContext2D, e: Expr, bold: number) {
+  const ex = [128 - 58, 128 + 58]
+  const ey = 136
+  g.lineCap = 'round'
+  g.lineJoin = 'round'
+  // ほっぺ
+  g.fillStyle = e === 'happy' || e === 'yummy' ? 'rgba(255,120,140,0.75)' : 'rgba(255,140,150,0.5)'
+  for (const x of [34, 222]) {
+    g.beginPath()
+    g.ellipse(x, 180, 22 * bold, 13 * bold, 0, 0, Math.PI * 2)
+    g.fill()
+  }
+  const rx = 24 * bold
+  const ry = 31 * bold
+  for (const x of ex) {
+    if (e === 'normal') {
+      g.fillStyle = EYE
+      g.beginPath()
+      g.ellipse(x, ey, rx, ry, 0, 0, Math.PI * 2)
+      g.fill()
+      g.fillStyle = 'rgba(190,120,80,0.55)'
+      g.beginPath()
+      g.ellipse(x, ey + ry * 0.45, rx * 0.6, ry * 0.35, 0, 0, Math.PI * 2)
+      g.fill()
+      g.fillStyle = '#fff'
+      g.beginPath()
+      g.ellipse(x - rx * 0.3, ey - ry * 0.38, rx * 0.32, ry * 0.3, 0, 0, Math.PI * 2)
+      g.fill()
+    } else if (e === 'happy') {
+      // にっこり閉じた目（山の形）
+      g.strokeStyle = EYE
+      g.lineWidth = 11 * bold
+      g.beginPath()
+      g.arc(x, ey + 12, rx * 1.05, Math.PI * 1.12, Math.PI * 1.88)
+      g.stroke()
+    } else if (e === 'surprised') {
+      g.fillStyle = '#fff'
+      g.strokeStyle = EYE
+      g.lineWidth = 7 * bold
+      g.beginPath()
+      g.ellipse(x, ey - 4, rx * 1.15, ry * 1.15, 0, 0, Math.PI * 2)
+      g.fill()
+      g.stroke()
+      g.fillStyle = EYE
+      g.beginPath()
+      g.arc(x, ey - 4, 8 * bold, 0, Math.PI * 2)
+      g.fill()
+    } else if (e === 'yummy') {
+      // うっとり閉じた目（谷の形）
+      g.strokeStyle = EYE
+      g.lineWidth = 11 * bold
+      g.beginPath()
+      g.arc(x, ey - 10, rx * 1.05, Math.PI * 0.12, Math.PI * 0.88)
+      g.stroke()
+    } else {
+      // 半分閉じた目
+      g.fillStyle = EYE
+      g.beginPath()
+      g.ellipse(x, ey + 4, rx, ry * 0.8, 0, 0, Math.PI)
+      g.fill()
+      g.strokeStyle = EYE
+      g.lineWidth = 9 * bold
+      g.beginPath()
+      g.moveTo(x - rx * 1.1, ey + 4)
+      g.lineTo(x + rx * 1.1, ey + 4)
+      g.stroke()
+    }
+  }
+  // 口
+  g.strokeStyle = '#a14d2c'
+  g.lineWidth = 7 * bold
+  if (e === 'normal') {
+    g.beginPath()
+    g.arc(128, 174, 17 * bold, Math.PI * 0.15, Math.PI * 0.85)
+    g.stroke()
+  } else if (e === 'happy') {
+    g.fillStyle = '#b8402f'
+    g.beginPath()
+    g.moveTo(128 - 26 * bold, 176)
+    g.quadraticCurveTo(128, 176 + 52 * bold, 128 + 26 * bold, 176)
+    g.closePath()
+    g.fill()
+    g.fillStyle = '#ff9aa5'
+    g.beginPath()
+    g.ellipse(128, 176 + 20 * bold, 11 * bold, 7 * bold, 0, 0, Math.PI * 2)
+    g.fill()
+  } else if (e === 'surprised') {
+    g.fillStyle = '#b8402f'
+    g.beginPath()
+    g.ellipse(128, 192, 12 * bold, 15 * bold, 0, 0, Math.PI * 2)
+    g.fill()
+  } else if (e === 'yummy') {
+    g.beginPath()
+    g.arc(128, 172, 20 * bold, Math.PI * 0.1, Math.PI * 0.9)
+    g.stroke()
+    g.fillStyle = '#ff8f9c' // ぺろっと出した舌
+    g.beginPath()
+    g.ellipse(128 + 15 * bold, 190 + 4 * bold, 10 * bold, 12 * bold, -0.4, 0, Math.PI * 2)
+    g.fill()
+  } else {
+    g.beginPath()
+    g.ellipse(128, 190, 7 * bold, 5 * bold, 0, 0, Math.PI * 2)
+    g.stroke()
+  }
+}
+
+function faceAtlas(bold: number) {
+  const cv = document.createElement('canvas')
+  cv.width = C * EXPRS.length
+  cv.height = C
+  const g = cv.getContext('2d')!
+  EXPRS.forEach((e, i) => {
+    g.save()
+    g.translate(i * C, 0)
+    drawFace(g, e, bold)
+    g.restore()
+  })
+  const t = new THREE.CanvasTexture(cv)
+  t.flipY = false
+  t.colorSpace = THREE.SRGBColorSpace
+  t.repeat.set(1 / EXPRS.length, 1)
+  t.anisotropy = 4
+  return t
+}
+
+// 頭の上のしるし（漫画の記号）
+function markTexture(e: Expr) {
+  const cv = document.createElement('canvas')
+  cv.width = cv.height = 128
+  const g = cv.getContext('2d')!
+  g.lineJoin = 'round'
+  g.lineCap = 'round'
+  const outline = (draw: () => void, fill: string) => {
+    g.strokeStyle = '#fff'
+    g.lineWidth = 16
+    draw()
+    g.stroke()
+    g.fillStyle = fill
+    draw()
+    g.fill()
+  }
+  if (e === 'happy') {
+    // 音符
+    outline(() => {
+      g.beginPath()
+      g.ellipse(46, 96, 22, 16, -0.3, 0, Math.PI * 2)
+      g.rect(60, 24, 10, 72)
+      g.moveTo(60, 24)
+      g.lineTo(104, 40)
+      g.lineTo(104, 62)
+      g.lineTo(60, 46)
+      g.closePath()
+    }, '#ff8a3c')
+  } else if (e === 'surprised') {
+    outline(() => {
+      g.beginPath()
+      g.moveTo(50, 14)
+      g.lineTo(78, 14)
+      g.lineTo(72, 78)
+      g.lineTo(56, 78)
+      g.closePath()
+      g.moveTo(76, 104)
+      g.arc(64, 104, 12, 0, Math.PI * 2)
+    }, '#ff5a4d')
+  } else if (e === 'yummy') {
+    outline(() => {
+      g.beginPath()
+      g.moveTo(64, 110)
+      g.bezierCurveTo(8, 70, 20, 18, 64, 44)
+      g.bezierCurveTo(108, 18, 120, 70, 64, 110)
+      g.closePath()
+    }, '#ff6f91')
+  } else if (e === 'sleepy') {
+    const z = (x: number, y: number, s: number) => {
+      g.moveTo(x, y)
+      g.lineTo(x + s, y)
+      g.lineTo(x, y + s)
+      g.lineTo(x + s, y + s)
+    }
+    g.strokeStyle = '#fff'
+    g.lineWidth = 22
+    g.beginPath()
+    z(18, 56, 44)
+    z(76, 16, 30)
+    g.stroke()
+    g.strokeStyle = '#5d8fe0'
+    g.lineWidth = 11
+    g.beginPath()
+    z(18, 56, 44)
+    z(76, 16, 30)
+    g.stroke()
+  }
+  const t = new THREE.CanvasTexture(cv)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
+}
+
+// ---------- 動き（全キャラ共通の計算。関節の角度だけを返す）----------
+type Mode = 'idle' | 'walk' | 'run' | 'joy' | 'surprise' | 'yummy' | 'sleepy'
+type Pose = { legL: number; legR: number; armL: number; armR: number; armOut: number; y: number; lean: number; sway: number; headX: number; headZ: number; stretch: number }
+function poseFor(mode: Mode, ph: number): Pose {
+  const s = Math.sin(ph * Math.PI * 2)
+  const p: Pose = { legL: 0, legR: 0, armL: 0, armR: 0, armOut: 0.05, y: 0, lean: 0, sway: 0, headX: 0, headZ: 0, stretch: 1 }
+  if (mode === 'idle') {
+    p.stretch = 1 + 0.015 * s
+    p.armOut = 0.06 + 0.03 * s
+  } else if (mode === 'walk' || mode === 'run') {
+    const a = mode === 'walk' ? 0.55 : 0.95
+    p.legL = -a * s
+    p.legR = a * s
+    p.armL = a * 0.8 * s
+    p.armR = -a * 0.8 * s
+    p.y = (mode === 'walk' ? 0.02 : 0.06) * Math.abs(Math.cos(ph * Math.PI * 2))
+    p.lean = mode === 'walk' ? 0.04 : 0.22
+    p.sway = 0.05 * s
+    p.headZ = -0.04 * s
+    if (mode === 'run') p.armOut = 0.25
+  } else if (mode === 'joy') {
+    p.y = 0.22 * Math.abs(s)
+    p.armOut = 2.3
+    p.legL = 0.25 * Math.abs(s)
+    p.legR = -0.25 * Math.abs(s)
+    p.stretch = 1 + 0.05 * Math.abs(s)
+    p.headX = -0.12
+  } else if (mode === 'surprise') {
+    p.y = 0.07
+    p.armOut = 1.1
+    p.stretch = 1.07
+    p.lean = -0.1
+    p.headX = -0.08
+  } else if (mode === 'yummy') {
+    p.headZ = 0.14 * s
+    p.sway = 0.05 * s
+    p.armOut = 0.5
+    p.armL = p.armR = -0.9
+  } else {
+    p.headX = 0.08
+    p.headZ = 0.16
+    p.lean = 0.05
+    p.armOut = 0.02
+    p.stretch = 0.985
+  }
+  return p
+}
+
+type Rig = { root: THREE.Group; parts: Record<string, THREE.Object3D>; face: THREE.Texture | null; mark: THREE.Sprite | null; tris: number }
+
+function applyPose(r: Rig, p: Pose) {
+  const q = r.parts
+  if (!q.body) return
+  q.legL!.rotation.x = p.legL
+  q.legR!.rotation.x = p.legR
+  q.armL!.rotation.set(p.armL, 0, p.armOut)
+  q.armR!.rotation.set(p.armR, 0, -p.armOut)
+  q.body!.rotation.set(p.lean, 0, p.sway)
+  q.body!.position.y = q.body!.userData.y0 + p.y
+  q.body!.scale.set(1 / Math.sqrt(p.stretch), p.stretch, 1 / Math.sqrt(p.stretch))
+  q.head!.rotation.set(p.headX, 0, p.headZ)
+  q.face!.rotation.set(p.headX, 0, p.headZ)
+}
+
+function setExpr(r: Rig, e: Expr) {
+  if (r.face) r.face.offset.x = EXPRS.indexOf(e) / EXPRS.length
+  if (r.mark) {
+    r.mark.visible = e !== 'normal'
+    if (e !== 'normal') {
+      ;(r.mark.material as THREE.SpriteMaterial).map = markTexture(e)
+      r.mark.material.needsUpdate = true
+    }
+  }
+}
+
+function countTris(o: THREE.Object3D) {
+  let n = 0
+  o.traverse((m) => {
+    const g = (m as THREE.Mesh).geometry
+    if (g) n += (g.index ? g.index.count : g.attributes.position!.count) / 3
+  })
+  return n
+}
+
+async function loadChibi(who: 'boy' | 'girl', bold = 1): Promise<Rig> {
+  const gltf = await loader.loadAsync(`${BASE}chibi-${who}.glb`)
+  const root = new THREE.Group()
+  root.add(gltf.scene)
+  const parts: Record<string, THREE.Object3D> = {}
+  const face = faceAtlas(bold)
+  gltf.scene.traverse((o) => {
+    parts[o.name] = o
+    const m = o as THREE.Mesh
+    if (!m.isMesh) return
+    if (o.name === 'face') {
+      m.material = new THREE.MeshBasicMaterial({ map: face, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })
+      m.renderOrder = 2
+    } else {
+      m.material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 })
+    }
+  })
+  parts.body!.userData.y0 = parts.body!.position.y
+  // 足元の丸い影
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(0.24, 24), new THREE.MeshBasicMaterial({ color: '#82481f', transparent: true, opacity: 0.22, depthWrite: false }))
+  sh.rotation.x = -Math.PI / 2
+  sh.position.y = 0.003
+  root.add(sh)
+  const mark = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false }))
+  mark.scale.set(0.36, 0.36, 1)
+  mark.position.set(0.3, 1.0, 0)
+  mark.visible = false
+  root.add(mark)
+  return { root, parts, face, mark, tris: countTris(gltf.scene) }
+}
+
+async function loadAI(clean: boolean, url = '/src/assets/characters/avatar3d.glb'): Promise<Rig> {
+  const gltf = await loader.loadAsync(url)
+  const tex = clean ? await new THREE.TextureLoader().loadAsync(`${BASE}ai-tex-clean.png`) : null
+  if (tex) {
+    tex.flipY = false
+    tex.colorSpace = THREE.SRGBColorSpace
+    tex.anisotropy = 4
+  }
+  gltf.scene.traverse((o) => {
+    const m = o as THREE.Mesh
+    if (!m.isMesh) return
+    const std = m.material as THREE.MeshStandardMaterial
+    std.metalness = 0
+    std.roughness = 0.85
+    if (m.geometry.attributes.color) std.vertexColors = true
+    if (tex) {
+      std.map = tex
+      m.geometry.deleteAttribute('normal')
+      m.geometry = mergeVertices(m.geometry, 1e-4)
+      m.geometry.computeVertexNormals()
+    }
+  })
+  const box = new THREE.Box3().setFromObject(gltf.scene)
+  const s = 1 / (box.max.y - box.min.y)
+  const root = new THREE.Group()
+  gltf.scene.scale.setScalar(s)
+  gltf.scene.position.y = -box.min.y * s
+  root.add(gltf.scene)
+  return { root, parts: {}, face: null, mark: null, tris: countTris(gltf.scene) }
+}
+
+// ---------- 撮る ----------
+const scene = new THREE.Scene()
+scene.add(new THREE.HemisphereLight('#ffffff', '#e6dccf', 2.2))
+const sun = new THREE.DirectionalLight('#fff2e4', 2.4)
+sun.position.set(-0.6, 0.8, 0.55)
+scene.add(sun)
+const holder = new THREE.Group()
+scene.add(holder)
+const cam = new THREE.OrthographicCamera()
+const ELEV = (35 * Math.PI) / 180 // 地図の傾き 55 度のときの見下ろし
+
+// r を、見た目の高さ heightPx（CSS px）で、w×h の枠に描いて canvas を返す
+function shot(r: Rig, w: number, h: number, heightPx: number, yawDeg = 20, foot = 0.14, bg = '#fbf1d6') {
+  holder.clear()
+  holder.add(r.root)
+  r.root.rotation.y = (yawDeg * Math.PI) / 180
+  r.root.updateMatrixWorld(true)
+  const up = new THREE.Vector3(0, Math.cos(ELEV), -Math.sin(ELEV))
+  const projH = Math.cos(ELEV) * 1.0 // 高さ 1 の物の見た目の高さ（頭の奥行きは無視）
+  const upp = projH / heightPx
+  cam.left = (-w / 2) * upp
+  cam.right = (w / 2) * upp
+  cam.top = (h / 2) * upp
+  cam.bottom = (-h / 2) * upp
+  cam.near = -10
+  cam.far = 10
+  const centerUp = (h / 2 - h * foot) * upp // 足元を枠の下から 14% に
+  const target = up.clone().multiplyScalar(centerUp)
+  cam.position.copy(target).add(new THREE.Vector3(0, Math.sin(ELEV), Math.cos(ELEV)))
+  cam.up.set(0, 1, 0)
+  cam.lookAt(target)
+  cam.updateProjectionMatrix()
+  renderer.setPixelRatio(1)
+  renderer.setSize(w * DPR, h * DPR, false)
+  renderer.setClearColor(bg, 1)
+  renderer.render(scene, cam)
+  const cv = document.createElement('canvas')
+  cv.width = w * DPR
+  cv.height = h * DPR
+  cv.style.width = `${w}px`
+  cv.style.height = `${h}px`
+  cv.getContext('2d')!.drawImage(renderer.domElement, 0, 0)
+  return cv
+}
+
+// canvas を n 倍に、にじませずに拡大（小さい表示の見え方を確かめる用）
+function magnify(src: HTMLCanvasElement, n: number) {
+  const cv = document.createElement('canvas')
+  cv.width = src.width * n
+  cv.height = src.height * n
+  cv.style.width = `${cv.width / DPR}px`
+  cv.style.height = `${cv.height / DPR}px`
+  const g = cv.getContext('2d')!
+  g.imageSmoothingEnabled = false
+  g.drawImage(src, 0, 0, cv.width, cv.height)
+  return cv
+}
+
+// 今の 2D のコマ絵（正面の 1 コマ目）を高さ heightPx で
+async function spriteShot(w: number, h: number, heightPx: number, frame = 0, dir = 'front') {
+  const img = new Image()
+  img.src = `/src/assets/characters/boy-walk/${dir}.webp`
+  await img.decode()
+  const fw = img.width / 21
+  const cv = document.createElement('canvas')
+  cv.width = w * DPR
+  cv.height = h * DPR
+  cv.style.width = `${w}px`
+  cv.style.height = `${h}px`
+  const g = cv.getContext('2d')!
+  g.fillStyle = '#fbf1d6'
+  g.fillRect(0, 0, cv.width, cv.height)
+  g.imageSmoothingQuality = 'high'
+  const dh = heightPx * DPR
+  const dw = (dh * fw) / img.height
+  g.drawImage(img, frame * fw, 0, fw, img.height, (cv.width - dw) / 2, cv.height * 0.86 - dh, dw, dh)
+  return cv
+}
+
+const app = document.getElementById('app')!
+function sheet(id: string, title: string, note: string) {
+  const d = document.createElement('div')
+  d.className = 'sheet'
+  d.id = id
+  d.innerHTML = `<h2>${title}</h2><p class="note">${note}</p>`
+  app.append(d, document.createElement('br'))
+  return d
+}
+function row(parent: HTMLElement, label: string) {
+  const r = document.createElement('div')
+  r.className = 'row'
+  if (label) r.innerHTML = `<div class="lab">${label}</div>`
+  parent.append(r)
+  return r
+}
+function tile(parent: HTMLElement, cv: HTMLCanvasElement, label = '', sub = '') {
+  const t = document.createElement('div')
+  t.className = 'tile'
+  t.append(cv)
+  if (label) t.append(label)
+  if (sub) {
+    const s = document.createElement('div')
+    s.className = 'sub'
+    s.textContent = sub
+    t.append(s)
+  }
+  parent.append(t)
+}
+
+async function main() {
+  await document.fonts.load('12px MP')
+  const ai = await loadAI(false)
+  const aiClean = await loadAI(true)
+  const aiRepaint = await loadAI(false, `${BASE}ai-repaint.glb`)
+  const boy = await loadChibi('boy')
+  const girl = await loadChibi('girl')
+  const boyBold = await loadChibi('boy', 1.3)
+  const idle = poseFor('idle', 0)
+  applyPose(boy, idle)
+  applyPose(girl, idle)
+  applyPose(boyBold, idle)
+
+  // 1. 見た目のくらべ
+  const s1 = sheet('look', '見た目のくらべ（男の子）', '左から: 今の 3D（AI が作ったまま）／ AI の 3D の色の絵をならしたもの ／ AI の 3D の形をなめらかにして少ない色で塗り直したもの ／ 組み立て式（試作）')
+  const cols: [string, (w: number, h: number, px: number, yaw: number) => Promise<HTMLCanvasElement> | HTMLCanvasElement][] = [
+    ['今の 3D', (w, h, px, yaw) => shot(ai, w, h, px, yaw)],
+    ['AI＋色ならし', (w, h, px, yaw) => shot(aiClean, w, h, px, yaw)],
+    ['AI＋形ならし＋塗り直し', (w, h, px, yaw) => shot(aiRepaint, w, h, px, yaw)],
+    ['組み立て式', (w, h, px, yaw) => shot(boy, w, h, px, yaw)],
+  ]
+  let r = row(s1, '大きく<br>（高さ 260px）')
+  for (const [name, f] of cols) tile(r, await f(230, 330, 260, 20), name)
+  r = row(s1, 'うしろ姿')
+  for (const [name, f] of cols) tile(r, await f(230, 330, 260, 160), name)
+  r = row(s1, '実際の大きさ<br>80px（寄り）')
+  for (const [name, f] of cols) tile(r, await f(230, 110, 80, 20), name)
+  r = row(s1, '実際の大きさ<br>40px（標準）')
+  for (const [name, f] of cols) tile(r, await f(230, 60, 40, 20), name)
+  r = row(s1, '40px を<br>5 倍に拡大')
+  for (const [name, f] of cols) tile(r, magnify(await f(46, 56, 40, 20), 5), name)
+  r = row(s1, '実際の大きさ<br>20px（引き）')
+  for (const [name, f] of cols) tile(r, await f(230, 36, 20, 20), name)
+
+  // 2. 表情
+  const s2 = sheet('expr', '表情（5 種類）', '顔の絵を貼り替える ＋ 体のポーズ ＋ 頭の上のしるし の 3 つで伝える。下の段は実際の大きさ')
+  const modes: Record<Expr, Mode> = { normal: 'idle', happy: 'joy', surprised: 'surprise', yummy: 'yummy', sleepy: 'sleepy' }
+  for (const [who, rig] of [['男の子', boy], ['女の子', girl]] as const) {
+    r = row(s2, `${who}<br>大きく`)
+    for (const e of EXPRS) {
+      setExpr(rig, e)
+      applyPose(rig, poseFor(modes[e], 0.25))
+      tile(r, shot(rig, 190, 300, 185, 0, 0.1), EXPR_JA[e])
+    }
+  }
+  r = row(s2, '顔だけ<br>（正面）')
+  for (const e of EXPRS) {
+    setExpr(boy, e)
+    applyPose(boy, idle)
+    boy.mark!.visible = false
+    tile(r, shot(boy, 190, 170, 420, 0, -1.02), EXPR_JA[e])
+  }
+  for (const [label, px, rig] of [['80px（寄り）', 80, boy], ['40px（標準）', 40, boy], ['40px・顔を太く', 40, boyBold], ['20px（引き）', 20, boy]] as const) {
+    r = row(s2, `実際の大きさ<br>${label}`)
+    for (const e of EXPRS) {
+      setExpr(rig, e)
+      applyPose(rig, poseFor(modes[e], 0.25))
+      tile(r, shot(rig, 190, px * 1.75, px, 0))
+    }
+  }
+  r = row(s2, '40px を<br>4 倍に拡大')
+  for (const e of EXPRS) {
+    setExpr(boyBold, e)
+    applyPose(boyBold, poseFor(modes[e], 0.25))
+    tile(r, magnify(shot(boyBold, 47, 70, 40, 0), 4), EXPR_JA[e], '顔を太くした版')
+  }
+  r = row(s2, 'しるし無し<br>40px を 4 倍')
+  for (const e of EXPRS) {
+    setExpr(boyBold, e)
+    boyBold.mark!.visible = false
+    applyPose(boyBold, idle)
+    tile(r, magnify(shot(boyBold, 47, 70, 40, 0), 4), EXPR_JA[e], '顔の絵だけ')
+  }
+  for (const rig of [boy, girl, boyBold]) setExpr(rig, 'normal')
+
+  // 3. 動き
+  const s3 = sheet('motion', '動き（計算で動かす。コマ絵は使わない）', '関節（頭・体・両うで・両あし）を角度の計算で動かすので、どの向きでも・どのキャラでも同じ動きが使える')
+  for (const [label, mode] of [['歩き', 'walk'], ['走り', 'run']] as const) {
+    r = row(s3, label)
+    for (const ph of [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75]) {
+      applyPose(boy, poseFor(mode, ph))
+      tile(r, shot(boy, 130, 190, 130, 70))
+    }
+  }
+  r = row(s3, '女の子・歩き')
+  for (const ph of [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75]) {
+    applyPose(girl, poseFor('walk', ph))
+    tile(r, shot(girl, 130, 190, 130, 70))
+  }
+  r = row(s3, '向き<br>（8 方向の例）')
+  applyPose(boy, poseFor('walk', 0.25))
+  for (const yaw of [0, 45, 90, 135, 180, 225, 270, 315]) tile(r, shot(boy, 112, 170, 110, yaw), `${yaw}°`)
+  r = row(s3, '実際の大きさ<br>40px・歩き')
+  for (const ph of [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75]) {
+    applyPose(boy, poseFor('walk', ph))
+    tile(r, shot(boy, 130, 64, 40, 70))
+  }
+  applyPose(boy, idle)
+
+
+  // 4. 大きさ（地図の上の m で固定したとき、お店とくらべてどう見えるか）
+  const s4 = sheet('size', '大きさ（地図の上の高さを固定）', 'となりは 15m のお店（ラーメン屋）。左の列は今のやり方（引くほど巨人になる）。右の 4 列は高さを m で固定した案')
+  const shopG = await loader.loadAsync('/src/assets/shops/ramen.glb')
+  const sb = new THREE.Box3().setFromObject(shopG.scene)
+  const shop = new THREE.Group()
+  shop.add(shopG.scene)
+  shopG.scene.traverse((o) => {
+    const m = o as THREE.Mesh
+    if (m.isMesh) for (const mm of Array.isArray(m.material) ? m.material : [m.material]) (mm as THREE.MeshStandardMaterial).metalness = 0
+  })
+  shop.scale.setScalar(15 / (sb.max.x - sb.min.x))
+  const mpp = (z: number) => (78271.51696 * Math.cos((35.65 * Math.PI) / 180)) / 2 ** z
+  const sizeShot = (rig: Rig, hM: number, zoom: number, w: number, h: number) => {
+    holder.clear()
+    holder.add(rig.root, shop)
+    rig.root.rotation.y = 0.35
+    rig.root.scale.setScalar(hM)
+    rig.root.position.set(9, 0, 0)
+    shop.position.set(-9, 0, 0)
+    shop.rotation.y = 0.5
+    const upp = mpp(zoom)
+    cam.left = (-w / 2) * upp
+    cam.right = (w / 2) * upp
+    cam.top = (h / 2) * upp
+    cam.bottom = (-h / 2) * upp
+    cam.near = -500
+    cam.far = 500
+    const up = new THREE.Vector3(0, Math.cos(ELEV), -Math.sin(ELEV))
+    const target = up.clone().multiplyScalar((h / 2 - h * 0.12) * upp)
+    cam.position.copy(target).add(new THREE.Vector3(0, Math.sin(ELEV), Math.cos(ELEV)))
+    cam.lookAt(target)
+    cam.updateProjectionMatrix()
+    renderer.setSize(w * DPR, h * DPR, false)
+    renderer.setClearColor('#fbf1d6', 1)
+    renderer.render(scene, cam)
+    const cv = document.createElement('canvas')
+    cv.width = w * DPR
+    cv.height = h * DPR
+    cv.style.width = `${w}px`
+    cv.style.height = `${h}px`
+    cv.getContext('2d')!.drawImage(renderer.domElement, 0, 0)
+    rig.root.scale.setScalar(1)
+    rig.root.position.set(0, 0, 0)
+    return cv
+  }
+  for (const [zl, z, th] of [['引き（ズーム 16）', 16, 90], ['標準（ズーム 17）', 17, 100], ['寄り（ズーム 18）', 18, 150]] as const) {
+    r = row(s4, zl)
+    const nowM = 40 * 2 * mpp(z) // 今の式（縮尺を 2 倍に見ている）
+    tile(r, sizeShot(ai, nowM, z, 150, th), `今: ${nowM.toFixed(0)}m`, `画面で約 ${((nowM * Math.cos(ELEV)) / mpp(z)).toFixed(0)}px`)
+    for (const hM of [12, 16, 20, 24]) tile(r, sizeShot(boy, hM, z, 150, th), `${hM}m`, `画面で約 ${((hM * Math.cos(ELEV)) / mpp(z)).toFixed(0)}px`)
+  }
+
+  // 5. 重さの実測（この PC の画面なしブラウザでの値。iPhone の値ではない）
+  const stats: Record<string, unknown> = {}
+  for (const [name, rig] of [['ai', ai], ['ai-repaint', aiRepaint], ['chibi-boy', boy], ['chibi-girl', girl]] as const) {
+    shot(rig, 200, 200, 150)
+    renderer.info.reset()
+    const t0 = performance.now()
+    const N = 200
+    for (let i = 0; i < N; i++) {
+      if (rig.parts.body) applyPose(rig, poseFor('walk', i / 30))
+      renderer.render(scene, cam)
+    }
+    renderer.getContext().finish()
+    const ms = (performance.now() - t0) / N
+    renderer.info.reset()
+    renderer.render(scene, cam)
+    stats[name] = { tris: rig.tris, drawCalls: renderer.info.render.calls, msPerFrame: Number(ms.toFixed(3)), textures: renderer.info.memory.textures, geometries: renderer.info.memory.geometries }
+  }
+  // 関節の計算だけの時間
+  const t1 = performance.now()
+  for (let i = 0; i < 100000; i++) applyPose(boy, poseFor('walk', i / 30))
+  stats.poseMicroSec = Number((((performance.now() - t1) / 100000) * 1000).toFixed(3))
+
+  // 地図の縮尺の実測: ズーム 17・傾き 0 で、東へ 100m 離れた 2 点が画面で何 px 離れるか
+  const md = document.createElement('div')
+  md.style.cssText = 'width:390px;height:400px;position:absolute;left:-9999px'
+  document.body.append(md)
+  const map = new maplibregl.Map({ container: md, style: { version: 8, sources: {}, layers: [] }, center: [139.6358, 35.65], zoom: 17, pitch: 0 })
+  const dLng = 100 / (111320 * Math.cos((35.65 * Math.PI) / 180))
+  const a = map.project([139.6358, 35.65])
+  const b2 = map.project([139.6358 + dLng, 35.65])
+  stats.mapMetersPerPxZoom17 = Number((100 / (b2.x - a.x)).toFixed(4))
+  stats.codeFormulaZoom17 = Number(((156543.03392 * Math.cos((35.65 * Math.PI) / 180)) / 2 ** 17).toFixed(4))
+  map.remove()
+  applyPose(boy, idle)
+  ;(window as unknown as { __stats: unknown }).__stats = stats
+  document.body.dataset.ready = '1'
+}
+main().catch((e) => {
+  document.body.append(String(e))
+  console.error(e)
+})

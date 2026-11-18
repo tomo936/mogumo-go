@@ -9,7 +9,10 @@ import { routes } from './router.tsx'
 
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }))
 // 地図（WebGL）はテスト環境で描けないので、器だけの偽物にする
-vi.mock('../map/MapView.tsx', () => ({ MapView: () => <div data-testid="map-view" /> }))
+// 初回設定は済んでいる人として扱う
+vi.mock('../setup/infra/profileRepo.ts', () => ({ profileRepo: { exists: async () => true, load: async () => null, create: async () => {}, updateNickname: async () => {} } }))
+vi.mock('../setup/infra/homeStore.ts', () => ({ loadHome: () => ({ lat: 35, lng: 139 }), saveHome: () => {} }))
+vi.mock('../map/ui/MapView.tsx', () => ({ MapView: () => <div data-testid="map-view" /> }))
 
 const session = { user: { id: 'u1' } } as unknown as Session
 
@@ -18,6 +21,8 @@ function renderAt(path: string, auth: Partial<AuthState>) {
     session: null,
     loading: false,
     signInWithGoogle: vi.fn(async () => {}),
+    signInAsGuest: vi.fn(async (): Promise<true | string> => true),
+    linkGoogle: vi.fn(async () => true),
     signOut: vi.fn(async () => {}),
     ...auth,
   }
@@ -48,20 +53,22 @@ test('読み込み中はログイン画面へ飛ばさない', () => {
   expect(loginButton()).not.toBeInTheDocument()
 })
 
-test('ログイン済みで / を開くと地図とログアウト', () => {
+test('ログイン済みで / を開くと地図とログアウト', async () => {
   renderAt('/', { session })
-  expect(screen.getByTestId('map-view')).toBeInTheDocument()
+  expect(await screen.findByTestId('map-view')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'メニュー' }))
+  await userEvent.click(screen.getByRole('button', { name: /設定/ }))
   expect(screen.getByRole('button', { name: 'ログアウト' })).toBeInTheDocument()
 })
 
-test('ログイン済みで /setup を開くと仮の初回設定', () => {
+test('初回設定が済んだ人が /setup を開くと地図へ戻る', async () => {
   renderAt('/setup', { session })
-  expect(screen.getByText('初回設定（準備中）')).toBeInTheDocument()
+  expect(await screen.findByTestId('map-view')).toBeInTheDocument()
 })
 
-test('ログイン済みで /login を開くと地図へ戻る', () => {
+test('ログイン済みで /login を開くと地図へ戻る', async () => {
   renderAt('/login', { session })
-  expect(screen.getByTestId('map-view')).toBeInTheDocument()
+  expect(await screen.findByTestId('map-view')).toBeInTheDocument()
 })
 
 test('ログインボタンで signInWithGoogle が呼ばれる', async () => {
@@ -70,8 +77,25 @@ test('ログインボタンで signInWithGoogle が呼ばれる', async () => {
   expect(auth.signInWithGoogle).toHaveBeenCalledTimes(1)
 })
 
+test('ゲストではじめる: 確認のキーが無いあいだはトークン無しで signInAsGuest。失敗したら知らせる', async () => {
+  const auth = renderAt('/login', { signInAsGuest: vi.fn(async () => 'captcha verification process failed') })
+  await userEvent.click(screen.getByRole('button', { name: 'ゲストではじめる' }))
+  expect(auth.signInAsGuest).toHaveBeenCalledWith(null)
+  expect(await screen.findByRole('alert')).toHaveTextContent('はじめられませんでした')
+  // 原因を見分けられるよう、理由を小さく添える（2026-11-18 結合試験で原因が分からなかった）
+  expect(screen.getByRole('alert')).toHaveTextContent('captcha verification process failed')
+})
+
+test('ログイン画面から利用規約・プライバシーポリシーへ', async () => {
+  renderAt('/login', {})
+  expect(screen.getByRole('link', { name: '利用規約' })).toHaveAttribute('href', '/terms')
+  expect(screen.getByRole('link', { name: 'プライバシーポリシー' })).toHaveAttribute('href', '/privacy')
+})
+
 test('ログアウトボタンで signOut が呼ばれる', async () => {
   const auth = renderAt('/', { session })
-  await userEvent.click(screen.getByRole('button', { name: 'ログアウト' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'メニュー' }))
+  await userEvent.click(screen.getByRole('button', { name: /設定/ }))
+  await userEvent.click(await screen.findByRole('button', { name: 'ログアウト' }))
   expect(auth.signOut).toHaveBeenCalledTimes(1)
 })

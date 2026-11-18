@@ -1,0 +1,108 @@
+/* ポコタンの案内（A5・案A ノベル型）。見本 art/prototypes/pokotan-guide/mock.html */
+.guide {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer; /* iPhone の Safari は、これが無いと div のタップで click が来ない */
+  touch-action: manipulation;
+}
+.guide__dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(40, 25, 10, 0.45);
+}
+.guide__hole {
+  position: absolute;
+  border-radius: 50%;
+  border: 4px dashed #fff;
+  box-shadow: 0 0 0 200vmax rgba(40, 25, 10, 0.5);
+  transition: left 0.35s ease, top 0.35s ease, width 0.35s ease, height 0.35s ease;
+}
+.guide__skip {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 14px);
+  right: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #7a5a3a;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 99px;
+}
+.guide__poko {
+  position: absolute;
+  left: 8px;
+  bottom: calc(env(safe-area-inset-bottom) + 170px); /* 窓の上の線の裏まで下げて、体の切れ目を窓で隠す */
+  width: min(58vw, 240px);
+  height: min(76vw, 312px);
+  pointer-events: none;
+}
+.guide__poko canvas,
+.guide__poko img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+.guide__box {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(env(safe-area-inset-bottom) + 28px);
+  min-height: 150px;
+  box-sizing: border-box;
+  background: #fffaf0;
+  border: 4px solid #8a5a32;
+  border-radius: 22px;
+  padding: 24px 18px 30px;
+  box-shadow: 0 6px 0 #8a5a32;
+}
+.guide__name {
+  position: absolute;
+  top: -16px;
+  left: 18px;
+  background: #ff8fb1;
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+  padding: 4px 14px;
+  border-radius: 99px;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.guide__say {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.6;
+  color: #4a3320;
+  white-space: pre-wrap;
+}
+.guide__next {
+  position: absolute;
+  right: 16px;
+  bottom: 8px;
+  color: #e8782f;
+  font-size: 18px;
+  animation: guide-next 1s infinite;
+}
+@keyframes guide-next {
+  50% {
+    transform: translateY(4px);
+  }
+}
+.guide__debug {
+  position: absolute;
+  left: 18px;
+  bottom: 6px;
+  font: 11px/1.2 ui-monospace, monospace;
+  color: #8a5a32;
+}
+.guide__poko canvas[hidden] {
+  display: none;
+}

@@ -1,0 +1,51 @@
+{
+ "run_max": {
+  "thigh": 0.8,
+  "knee": 1.443,
+  "limits": {
+   "note": "関門 3 で破れなかった角度（ラジアン）。動きはこの 8 割まで",
+   "armFront": 1.047,
+   "armBack": 0.698,
+   "armSide": 1.571,
+   "elbow": 1.571,
+   "thighFront": 1.047,
+   "thighBack": 0.524,
+   "knee": 1.92
+  }
+ },
+ "walk_y": [
+  0.011,
+  0.0335
+ ],
+ "run_y": [
+  0.0037,
+  0.0391
+ ],
+ "idle_y": [
+  0.0,
+  0.0
+ ],
+ "joy_y": [
+  -0.0038,
+  0.0485
+ ],
+ "peak_angles": {
+  "arm-": 0.398,
+  "arm+": 0.498,
+  "thigh+": 0.808,
+  "thigh-": 0.38,
+  "knee+": 1.513,
+  "elbow+": 1.17
+ },
+ "export": {
+  "bytes": 1691492,
+  "tris": 29994,
+  "bones": 14,
+  "actions": [
+   "idle",
+   "joy",
+   "run",
+   "walk"
+  ]
+ }
+}

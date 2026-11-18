@@ -1,0 +1,28 @@
+import { open, text, shot, go, settle } from './lib.mjs'
+const { ctx, p, log } = await open({ geo: { latitude: 35.6512, longitude: 139.6362 } })
+await go(p, '/?fake=35.6512,139.6362&debug', 3000); console.log('settled', await settle(p))
+const later = p.getByRole('button', { name: 'あとで' }); if (await later.count()) await later.click()
+// 週ミッション
+await p.locator('.hud-hint').click()
+const ex = p.locator('[aria-label="探索"]')
+let t = 0; for (; t < 40 && /ミッションを読んでいます/.test(await ex.innerText()); t++) await p.waitForTimeout(1000)
+await ex.locator('.explore-sheet__scroll').evaluate((e) => e.scrollTo(0, e.scrollHeight)).catch(() => {}); await p.waitForTimeout(800)
+await shot(p, '8b-missions')
+const all = (await ex.innerText()).replace(/\s+/g, ' '); console.log(`[8 ミッション] ${t}s:`, all.slice(all.indexOf('今週のミッション'), all.indexOf('今週のミッション') + 260))
+await ex.getByRole('button', { name: /閉じる/ }).first().click(); await p.waitForTimeout(1500)
+// 3 軒目のチェックイン（町の判定）
+await p.getByRole('button', { name: '近くのお店' }).click(); await p.waitForTimeout(2000)
+await p.getByText('タリーズコーヒー').first().click(); await p.waitForTimeout(2000)
+console.log('[sheet]', (await text(p)).match(/タリーズコーヒー.{0,80}/)?.[0])
+await p.getByRole('button', { name: /^チェックイン$/ }).first().click(); await p.waitForTimeout(15000)
+await shot(p, '8c-town-after-checkin'); console.log('[after]', (await text(p)).slice(0, 240), '| coins', await p.locator('.hud-coins').getAttribute('aria-label'))
+// お知らせのタブ
+await p.locator('.hud-inbox').click(); await p.waitForTimeout(2500)
+const ib = p.locator('[aria-label="お知らせとプレゼント"]')
+await ib.getByText(/^お知らせ/).first().click(); await p.waitForTimeout(2000); await shot(p, '9d-notice-tab')
+console.log('[9 お知らせタブ]', (await ib.innerText()).replace(/\s+/g, ' ').slice(0, 200))
+await ib.getByText('結合試験のお知らせ').first().click().catch((e) => console.log('  no notice', String(e).slice(0, 60))); await p.waitForTimeout(1500)
+console.log('  開いた:', (await ib.innerText()).replace(/\s+/g, ' ').slice(0, 200))
+await ib.getByRole('button', { name: '戻る' }).click(); await p.waitForTimeout(2500)
+console.log('  inbox btn:', await p.locator('.hud-inbox').getAttribute('aria-label'))
+await ctx.close(); console.log(log.slice(0, 10).join('\n'))

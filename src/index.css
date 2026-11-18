@@ -5,6 +5,10 @@
   background: #ffffff;
 }
 
+html {
+  touch-action: manipulation; /* ダブルタップで拡大しない（2026-11-17） */
+}
+
 body {
   margin: 0;
   min-height: 100svh;

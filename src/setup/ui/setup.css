@@ -1,0 +1,390 @@
+.setup-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100svh;
+  box-sizing: border-box;
+  padding: calc(24px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right))
+    calc(24px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left));
+  background: #ffffff;
+}
+
+.setup-page h1 {
+  margin: 8px 0 0;
+  font-size: 24px;
+}
+
+.setup-note {
+  margin: 0;
+  font-size: 14px;
+  color: #5b6b62;
+}
+
+.setup-error {
+  margin: 0;
+  font-size: 14px;
+  color: #c2410c;
+}
+
+.setup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.setup-field input {
+  font: inherit;
+  font-size: 18px;
+  padding: 12px 14px;
+  border: 2px solid #cfe5c2;
+  border-radius: 14px;
+}
+
+.setup-field input:focus {
+  outline: none;
+  border-color: #4aa8ff;
+}
+
+.setup-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.setup-actions button {
+  flex: 1;
+  padding-inline: 12px;
+  white-space: nowrap;
+}
+
+.setup-page button:disabled {
+  opacity: 0.4;
+}
+
+.setup-back {
+  align-self: flex-start;
+  padding: 6px 14px;
+  font-size: 14px;
+  background: #eef6e8;
+  color: #2f4a3a;
+}
+
+.setup-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.setup-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 3px solid transparent;
+  border-radius: 20px;
+  background: #f6faf2;
+  color: #2f4a3a;
+}
+
+.setup-card[aria-pressed='true'] {
+  border-color: #4aa8ff;
+  background: #eef6ff;
+}
+
+.setup-card img {
+  width: 100%;
+  border-radius: 14px;
+}
+
+.setup-card img.is-mirrored {
+  transform: scaleX(-1);
+}
+
+.setup-home .setup-map {
+  position: relative;
+  flex: 1;
+  min-height: 320px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #e4f4d8;
+}
+
+.home-picker,
+.home-picker .home-picker-map {
+  /* 地図の部品の CSS（.maplibregl-map の position: relative）より強くして、枠いっぱいに広げる */
+  position: absolute;
+  inset: 0;
+}
+
+/* 家の印（画面中央に固定。先端が中心を指す） */
+.home-pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  transform: translate(-50%, -100%) rotate(45deg);
+  transform-origin: center;
+  border-radius: 50% 50% 0 50%;
+  background: #ff8a65;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+.home-pin::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+/* 自宅の設定（2026-11-17 見た目を整えた）。設定・一覧と同じ「明るい昼の手帳」 */
+.setup-page.hs {
+  gap: 12px;
+  padding-top: calc(10px + env(safe-area-inset-top));
+  background-color: #f3e9d6;
+  background-image: radial-gradient(rgba(120, 90, 50, 0.07) 1px, transparent 1px);
+  background-size: 14px 14px;
+  color: #4a3b2c;
+}
+.hs__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+}
+.hs__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  background: #fffdf7;
+  box-shadow: 0 2px 6px rgba(90, 60, 30, 0.18);
+  color: #6b4a2b;
+}
+.hs__step {
+  margin-left: auto;
+  padding: 4px 12px;
+  border-radius: 99px;
+  background: #e6d6b8;
+  font-size: 13px;
+  font-weight: 800;
+  color: #8a6a48;
+}
+.setup-page.hs h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: #6b4a2b;
+}
+.hs__lead {
+  margin: -4px 0 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #8a6a48;
+}
+.setup-home .setup-map.hs__map {
+  border: 4px solid #fffdf7;
+  box-shadow: 0 4px 14px rgba(90, 60, 30, 0.18);
+}
+.hs__here {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 2px solid #fff;
+  background: #fffdf7;
+  color: #6b4a2b;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.hs__notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fffdf7;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #6b4a2b;
+}
+.hs__notes li {
+  display: flex;
+  gap: 8px;
+}
+.hs__notes svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #e8883a;
+}
+.hs__ok {
+  width: 100%;
+  padding: 15px;
+  background: #e8883a;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  box-shadow: 0 3px 0 #b8641f;
+}
+
+/* キャラ選び（2/3、2026-11-17 見た目を整えた）。自宅の設定 .hs と同じ手帳 */
+.cs__cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+}
+.cs__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px 12px;
+  border: 3px solid #fffdf7;
+  border-radius: 22px;
+  background: #fffdf7;
+  color: #6b4a2b;
+  box-shadow: 0 4px 12px rgba(90, 60, 30, 0.14);
+  transition: transform 160ms ease-out, border-color 160ms, box-shadow 160ms;
+}
+.cs__card[aria-pressed='true'] {
+  border-color: #e8883a;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 18px rgba(184, 100, 31, 0.28);
+}
+/* 足元の台（クリームの楕円）。絵の白い背景は multiply で紙に溶かす */
+.cs__stage {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 16px;
+  background: radial-gradient(ellipse 40% 6% at 50% 91%, #ecd9b4 0 98%, transparent 100%),
+    linear-gradient(#fff6e4, #fffdf7 70%);
+}
+.cs__stage img {
+  /* 絵は正方形で余白が多いので、135% に広げて足元を台に合わせる */
+  position: absolute;
+  left: -17.5%;
+  bottom: 2%;
+  width: 135%;
+  height: auto;
+  mix-blend-mode: multiply;
+  transform-origin: 50% 92%;
+}
+.cs__stage img.is-mirrored {
+  transform: scaleX(-1);
+}
+.cs__card[aria-pressed='true'] .cs__stage img {
+  animation: cs-hop 420ms ease-out;
+}
+.cs__card[aria-pressed='true'] .cs__stage img.is-mirrored {
+  animation-name: cs-hop-mirrored;
+}
+@keyframes cs-hop {
+  0% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-8%) scale(1.03); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes cs-hop-mirrored {
+  0% { transform: scaleX(-1) translateY(0); }
+  40% { transform: scaleX(-1) translateY(-8%) scale(1.03); }
+  100% { transform: scaleX(-1) translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs__card { transition: none; }
+  .cs__card[aria-pressed='true'] .cs__stage img { animation: none; }
+}
+.cs__name {
+  padding: 4px 16px;
+  border-radius: 99px;
+  background: #f3e9d6;
+  font-size: 16px;
+  font-weight: 800;
+}
+.cs__card[aria-pressed='true'] .cs__name {
+  background: #e8883a;
+  color: #fff;
+}
+.cs__check {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 3px solid #fffdf7;
+  border-radius: 50%;
+  background: #e8883a;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
+}
+.cs .hs__notes {
+  margin-top: auto;
+}
+
+/* ニックネーム（1/3、2026-11-17 見た目を整えた）。自宅の設定 .hs と同じ手帳 */
+.nm__card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 16px;
+  border-radius: 20px;
+  background: #fffdf7;
+  box-shadow: 0 4px 12px rgba(90, 60, 30, 0.14);
+}
+.nm__label {
+  font-size: 13px;
+  font-weight: 800;
+  color: #8a6a48;
+}
+.nm__input {
+  font: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  padding: 12px 14px;
+  border: 2.5px solid #ead9bb;
+  border-radius: 14px;
+  background: #fff;
+  color: #4a3b2c;
+}
+.nm__input:focus {
+  outline: none;
+  border-color: #e8883a;
+  box-shadow: 0 0 0 3px rgba(232, 136, 58, 0.18);
+}
+.nm__input::placeholder {
+  color: #cdb898;
+}
+.nm__hint {
+  align-self: flex-end;
+  font-size: 13px;
+  font-weight: 700;
+  color: #8a6a48;
+}
+.nm .hs__notes {
+  margin-top: 4px;
+}
+.nm__next {
+  margin-top: auto;
+}

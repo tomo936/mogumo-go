@@ -1,0 +1,274 @@
+/* キャラ一覧（左上のキャラから）。上半分に大きく・下半分に全身の一覧。手帳の紙の色に、ガチャと同じ丸い字 */
+.cl {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 0;
+  background-color: #f3e9d6;
+  background-image: radial-gradient(rgba(120, 90, 50, 0.07) 1px, transparent 1px);
+  background-size: 14px 14px;
+  color: #4a3b2c;
+  font-family: 'M PLUS Rounded 1c', system-ui, sans-serif;
+  animation: gc-in 220ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cl { animation: none; }
+}
+.cl__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+.cl__bar h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #6b4a2b;
+}
+.cl__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  background: #fffdf7;
+  box-shadow: 0 2px 6px rgba(90, 60, 30, 0.18);
+  color: #6b4a2b;
+}
+.cl__count {
+  margin-left: auto;
+  padding: 4px 12px;
+  border-radius: 99px;
+  background: #e6d6b8;
+  font-size: 13px;
+  font-weight: 800;
+  color: #8a6a48;
+}
+
+/* 上半分: 台の上のキャラ（ガチャと同じ木の台）＋その下に名前とボタン */
+.cl__big {
+  display: flex;
+  flex-direction: column;
+  height: 46svh;
+  min-height: 300px;
+  margin-top: 6px;
+  overflow: hidden;
+  border: 4px solid #fffdf7;
+  border-radius: 24px;
+  background:
+    radial-gradient(ellipse 55% 45% at 50% 62%, rgba(255, 244, 205, 0.95), transparent 72%),
+    linear-gradient(#cfeaf8, #fff4dc 75%);
+  box-shadow: 0 4px 14px rgba(90, 60, 30, 0.16);
+}
+.cl__big.is-max {
+  border-color: #ffd23f;
+}
+.cl__stage {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+}
+/* 木の台。上面の真ん中（絵の高さの 28%）を、足の線（上から 78%）に合わせる */
+.cl__pedestal {
+  position: absolute;
+  left: 50%;
+  top: 78%;
+  width: min(72%, 300px);
+  transform: translate(-50%, -28%);
+  pointer-events: none;
+}
+.cl__who {
+  position: absolute;
+  inset: 0;
+  animation: cl-pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+/* 原画（3D の無いキャラ）: 足もとを同じ線に */
+.cl__art {
+  position: absolute;
+  left: 50%;
+  bottom: 21%;
+  height: 64%;
+  max-width: 80%;
+  transform: translateX(-50%);
+  object-fit: contain;
+  object-position: 50% 100%;
+}
+/* 下の帯: 名前・★・なかよし度 と ボタン */
+.cl__info {
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 10px 14px 12px;
+  background: rgba(255, 253, 247, 0.92);
+  border-top: 2px solid #f0e2c8;
+}
+.cl__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+.cl__info .gc-stars img {
+  width: 20px;
+  height: 20px;
+}
+.cl__first {
+  padding: 1px 10px;
+  border-radius: 99px;
+  background: #f3e9d6;
+  font-size: 11px;
+  font-weight: 800;
+  color: #8a6a48;
+}
+.cl__name {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: #6b4a2b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.cl__hearts {
+  color: #ff6f98;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+.cl__hearts-off {
+  color: #e6d6b8;
+}
+.cl__error {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 12px;
+  color: #c2410c;
+}
+.cl__use {
+  padding: 12px 16px;
+  background: #e8883a;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 3px 0 #b8641f;
+}
+.cl__use:disabled {
+  background: #d9c6a5;
+  box-shadow: 0 3px 0 #b9a27c;
+}
+
+/* 下半分 */
+.cl__tabs {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0 8px;
+}
+.cl__tabs button {
+  flex: 1;
+  padding: 7px 0;
+  background: #fffdf7;
+  color: #8a6a48;
+  font-size: 14px;
+  font-weight: 800;
+}
+.cl__tabs button.is-on {
+  background: #6b4a2b;
+  color: #fff;
+}
+.cl__list {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-content: start;
+  gap: 10px;
+  margin: 0 -4px;
+  padding: 4px 4px calc(20px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  list-style: none;
+}
+.cl__cell {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  padding: 0;
+  overflow: hidden;
+  border: 3px solid #fffdf7;
+  border-radius: 18px;
+  background: linear-gradient(#fffdf7, #fff4e0);
+  box-shadow: 0 2px 6px rgba(90, 60, 30, 0.12);
+}
+.cl__cell img {
+  position: absolute;
+  inset: 8% 8% 6%;
+  width: 84%;
+  height: 86%;
+  object-fit: contain;
+  object-position: 50% 100%;
+}
+.cl__cell.is-sel {
+  border-color: #e8883a;
+}
+.cl__cell.is-max:not(.is-sel) {
+  border-color: #ffd23f;
+}
+.cl__cell.is-locked {
+  background: #e9dcc3;
+}
+.cl__cell.is-locked img {
+  filter: brightness(0);
+  opacity: 0.16;
+}
+.cl__cell:disabled {
+  opacity: 1;
+}
+.cl__using {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  padding: 1px 8px;
+  border-radius: 99px;
+  background: #e8883a;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+.cl__r {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 0 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  font-weight: 800;
+  color: #b8740f;
+}
+.cl__r--5 { color: #d9479a; }
+@keyframes cl-pop {
+  from { opacity: 0; transform: translateY(24px) scale(0.85); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 3D の表示（AvatarViewer）。読み込み中は原画を下に出しておく */
+.av3d {
+  position: absolute;
+  inset: 0;
+}
+.av3d canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}

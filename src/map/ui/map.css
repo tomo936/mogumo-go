@@ -1,0 +1,357 @@
+.map-view {
+  position: fixed;
+  inset: 0;
+  height: 100svh;
+  touch-action: none;
+}
+
+.map-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.map-overlay button,
+.map-overlay .credits-panel,
+.map-overlay .location-screen {
+  pointer-events: auto;
+}
+
+.location-banner {
+  position: absolute;
+  top: calc(16px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+}
+
+.location-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: env(safe-area-inset-top) calc(24px + env(safe-area-inset-right)) env(safe-area-inset-bottom) calc(24px + env(safe-area-inset-left));
+  background: #ffffff;
+  text-align: center;
+}
+
+.map-actions {
+  position: absolute;
+  top: calc(16px + env(safe-area-inset-top));
+  right: calc(16px + env(safe-area-inset-right));
+  display: flex;
+  gap: 8px;
+}
+
+/* ホットペッパーのクレジット（規約でいつも表示する。文字の形） */
+.hp-credit {
+  position: absolute;
+  top: calc(64px + env(safe-area-inset-top));
+  right: calc(16px + env(safe-area-inset-right));
+  font-size: 10px;
+  color: #1f2a37;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 2px 6px;
+  border-radius: 8px;
+  pointer-events: auto;
+}
+
+/* ピンを出す・出さないの丸いボタン（「出典」の左） */
+.pins-toggle {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* 自分のアバター（お試し版）。マーカーは absolute のまま（relative にすると他のマーカーを押し下げる） */
+.me-avatar {
+  position: absolute;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  transform-origin: 50% 100%;
+}
+/* 立っている間の「待機」の動き。少し上下する（息をする感じ）。
+   MapLibre が transform で位置を書くので、別のプロパティ（translate）で動かす。
+   scale は使わない（transform の位置ごと縮んで、地図の左上へずれるため） */
+.me-avatar--idle {
+  animation: me-avatar-idle 1.6s ease-in-out infinite;
+}
+@keyframes me-avatar-idle {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 1px; }
+}
+
+/* ---- 作り直し（2026-11-10）: 左上のキャラ札・上の気配・下の扇メニュー ---- */
+.hud-player {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  z-index: 5;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #fffdf7;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 0; /* 2026-11-17 押せる（キャラ一覧）ようにボタンにした */
+}
+@property --exp {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+.hud-player {
+  transition: --exp 0.8s ease-out; /* 経験値が増えたら輪がのびる */
+  /* 経験値のゲージ: キャラの丸のまわりの輪（次の Lv までの進み具合） */
+  background: conic-gradient(#c2652a var(--exp, 0%), #efe6d2 0);
+  padding: 4px;
+  box-sizing: border-box;
+}
+.hud-player img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 20%;
+  background: #eef6ff;
+}
+.hud-player__lv {
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #c2652a;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+.hud-hint {
+  padding: 0;
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  z-index: 5;
+  transform: translateX(-50%);
+  width: 76px;
+  height: 76px;
+  border: 0;
+  background: none;
+}
+.hud-hint img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+.hud-menu {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  z-index: 5;
+  width: 0;
+  height: 76px;
+}
+.hud-toggle {
+  padding: 0;
+  position: absolute;
+  left: -38px;
+  bottom: 0;
+  width: 76px;
+  height: 76px;
+  border: 0;
+  background: none;
+}
+.hud-fan {
+  position: absolute;
+  width: 76px; /* 丸の下の文字が入る幅（MapHud.tsx の BOX_W） */
+  padding: 0;
+  border: 0;
+  background: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #6b4a2b;
+}
+.hud-fan__disc {
+  display: block;
+  width: 64px; /* MapHud.tsx の DISC。絵に丸と枠が入っている */
+  height: 64px;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.2));
+  pointer-events: none;
+}
+.hud-fan small {
+  margin-top: 3px;
+  height: 16px; /* MapHud.tsx の LABEL_BLOCK = 16 + 3 */
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(255, 253, 247, 0.92);
+  color: #4a3b2c;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  white-space: nowrap;
+}
+.hud-pins svg {
+  flex: none;
+}
+.hud-pins {
+  flex-direction: column;
+  gap: 1px;
+}
+.hud-pins small {
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+.hud-pins {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 5;
+  box-sizing: border-box;
+  width: 46px; /* 小さめ（2026-11-10 オーナー）。左のキャラの丸より控えめに */
+  height: 46px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: #fffdf7;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  color: #6b4a2b;
+}
+.hud-pins[aria-pressed='true'] {
+  background: #efe9dc;
+}
+
+
+.hud-toggle__art {
+  display: block;
+  width: 76px;
+  height: 76px;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22));
+  pointer-events: none;
+}
+
+
+/* コイン: キャラの丸の右どなり */
+.hud-coins {
+  position: absolute;
+  left: 78px;
+  top: 14px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px 5px 7px;
+  border-radius: 999px;
+  background: #fffdf7;
+  box-shadow: 0 2px 6px rgba(90, 60, 30, 0.18);
+  color: #4a3b2c;
+  font-size: 14px;
+  line-height: 1;
+}
+.hud-coins svg {
+  flex: none;
+}
+
+/* 右上の方位磁針（ピンのボタンの代わり。2026-11-12） */
+.hud-compass {
+  position: absolute;
+  right: 14px;
+  top: 16px; /* 右上（ピンのボタンと同じ並び） */
+  z-index: 5;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.hud-compass img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.18));
+}
+.hud-compass .hud-compass__needle {
+  position: absolute;
+  inset: 0;
+  filter: none; /* 土台の影だけ。針の影を重ねると二重になる */
+}
+
+/* 近くのお店の一覧のボタン（方位磁針の下）。丸い絵そのもの */
+.hud-nearby {
+  position: absolute;
+  right: 14px;
+  top: 78px;
+  z-index: 5;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+/* お知らせ・プレゼントのボタン（近くのお店の下。A7） */
+.hud-inbox {
+  position: absolute;
+  right: 14px;
+  top: 140px;
+  z-index: 5;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.hud-nearby img,
+.hud-inbox img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.18));
+}
+.hud-inbox__dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 13px;
+  height: 13px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #e5484d;
+}
+
+/* 準備中のものを押したときの短いお知らせ（ガチャ。2026-11-17） */
+.hud-soon {
+  position: absolute;
+  left: 50%;
+  bottom: 120px;
+  z-index: 40;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(74, 59, 44, 0.85);
+  color: #fff;
+  font-size: 12px;
+  white-space: nowrap;
+}

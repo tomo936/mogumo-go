@@ -1,0 +1,154 @@
+/* 近くのお店の一覧（全画面）。設定・記録と同じ「明るい昼の手帳」 */
+.nb {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  padding: calc(10px + env(safe-area-inset-top)) 14px 0;
+  background-color: #f3e9d6;
+  background-image: radial-gradient(rgba(120, 90, 50, 0.07) 1px, transparent 1px);
+  background-size: 14px 14px;
+  color: #4a3b2c;
+}
+.nb__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.nb__bar h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #6b4a2b;
+}
+.nb__bar small {
+  margin-left: auto;
+  font-size: 12px;
+  color: #8a735a;
+}
+.nb__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fffdf7;
+  box-shadow: 0 2px 6px rgba(90, 60, 30, 0.18);
+  color: #6b4a2b;
+}
+.nb__chips {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0 10px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.nb__chips::-webkit-scrollbar {
+  display: none;
+}
+.nb__chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border: 1.5px solid #d9c6a5;
+  border-radius: 99px;
+  background: #fffdf7;
+  color: #6b4a2b;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.nb__chip img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+.nb__chip.is-on {
+  border-color: #e8883a;
+  background: #ffe9cf;
+  color: #a2561b;
+}
+.nb__list {
+  flex: 1;
+  margin: 0;
+  padding: 0 0 calc(24px + env(safe-area-inset-bottom));
+  list-style: none;
+  overflow-y: auto;
+}
+.nb__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 14px;
+  background: #fffdf7;
+  box-shadow: 0 1px 4px rgba(90, 60, 30, 0.14);
+  color: inherit;
+  text-align: left;
+}
+.nb__icon {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.nb__body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+.nb__body b {
+  overflow: hidden;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nb__body small {
+  font-size: 12px;
+  color: #8a735a;
+}
+.nb__dist {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #a2561b;
+}
+.nb__empty {
+  margin: 40px 12px;
+  text-align: center;
+  line-height: 1.7;
+  color: #8a735a;
+}
+
+/* 右から滑って出る・右へ滑って閉じる（2026-11-16 オーナー）。動きを減らす設定のときは出し入れだけ */
+.nb {
+  animation: nb-in 220ms ease-out;
+}
+.nb--leaving {
+  animation: nb-out 220ms ease-in forwards;
+}
+@keyframes nb-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes nb-out {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nb, .nb--leaving {
+    animation: none;
+  }
+}

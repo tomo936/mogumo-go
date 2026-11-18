@@ -1,0 +1,1089 @@
+.shop-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 18px rgba(74, 168, 255, 0.25);
+  color: #1f2a37;
+}
+.shop-sheet__close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: #eef6ff;
+  color: #4aa8ff;
+  font-size: 20px;
+}
+.shop-sheet__head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding-right: 40px;
+}
+.shop-sheet__badge {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px #dbeafe;
+}
+.shop-sheet__name {
+  margin: 0;
+  font-size: 18px;
+}
+.shop-sheet__open {
+  /* 長い営業時間は2行まで */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.shop-sheet__open,
+.shop-sheet__distance {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #5b6b7b;
+}
+.shop-sheet__error {
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #fff0f0;
+  color: #c0392b;
+  font-size: 13px;
+}
+/* 「地図で見る」: 図鑑の詳細（.zd__locate）と同じ見た目（2026-11-17 オーナー「見た目合わせよう」） */
+.shop-sheet__locate {
+  display: block;
+  width: 100%;
+  height: 52px;
+  margin-top: 12px;
+  margin-bottom: 5px; /* 下の影のぶん */
+  border: 2.5px solid #8a5a32;
+  border-radius: 99px;
+  background: #e8782f;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 5px 0 #8a5a32;
+}
+.shop-sheet__go {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #4aa8ff;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+}
+.shop-sheet__go:disabled {
+  background: #cfe3f7;
+  color: #6b8299;
+}
+
+/* チェックイン演出 */
+.checkin-effect {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+.checkin-effect__confetti {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.checkin-effect__banner {
+  flex-wrap: wrap;
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  background: #3ecf8e;
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(62, 207, 142, 0.45);
+  opacity: 0;
+  animation: checkin-banner-in 0.35s 0.6s cubic-bezier(0.2, 1.2, 0.4, 1) forwards;
+}
+.checkin-effect__check {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #fff;
+  color: #3ecf8e;
+  font-size: 20px;
+  font-weight: 900;
+}
+.checkin-effect__title {
+  flex: 1;
+  font-size: 20px;
+  font-weight: 800;
+}
+.checkin-effect__reveal {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+}
+.checkin-effect__coin {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+}
+.checkin-effect__coin-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffd23f;
+  box-shadow: inset 0 0 0 3px #ffb703;
+}
+/* コイン・経験値・レベルアップ（帯の2段目に横に並べる） */
+.checkin-effect__chips {
+  flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.checkin-effect__title { flex: 1; min-width: 0; }
+.checkin-effect__exp,
+.checkin-effect__levelup {
+  flex: none;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.checkin-effect__levelup {
+  background: #fff;
+  color: #c2652a;
+  animation: checkin-levelup 0.5s 1s cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+}
+@keyframes checkin-levelup {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes checkin-banner-in {
+  from { opacity: 0; transform: translateY(30px) scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .checkin-effect__banner { animation: none; opacity: 1; }
+}
+
+/* 指で動かしている間・「ピンを出さない」のときは、ビル・施設のピンと名前の札を隠す（地図の入れ物に class が付く） */
+.pins-moving .bldg-pins,
+.pins-off .bldg-pins {
+  visibility: hidden;
+}
+/* 引き（倍率 17.7 未満）は、ビルの並べたピンを隠す（中のお店はまとめのピンに入る）。
+   施設・駅の「6/6」とピンは 17 未満だけ隠し、名前の札は残す（17〜17.7 は前の表記。2026-11-16 オーナー） */
+.pins-far .bldg-pins:not(.bldg-pins--facility) .bldg-pin,
+.pins-far .bldg-pins:not(.bldg-pins--facility) .bldg-pin__more,
+.pins-far-big .bldg-pin,
+.pins-far-big .bldg-pin__more {
+  visibility: hidden;
+}
+
+/* ビルの上のピン。お店ごとのピンはシロの色分けの絵（src/assets/pins/）、まとめたピンは白い丸。
+   外枠は MapLibre のマーカーなので absolute のまま（relative にすると文書の流れに乗り、前の気配のピンの高さ分だけ下へずれる） */
+.bldg-pins {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+.bldg-pin {
+  position: absolute;
+  left: -15px;
+  bottom: 0;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+/* シロのピンの絵（先が下の真ん中に来るよう、ボタンの下端に合わせる） */
+.bldg-pin--icon {
+  left: -18px;
+  width: 36px;
+  height: 36px;
+}
+.bldg-pin__img {
+  display: block;
+  width: 36px;
+  height: 36px;
+  filter: drop-shadow(0 2px 2px rgba(31, 42, 55, 0.25));
+  pointer-events: none;
+  user-select: none;
+}
+.bldg-pin__mark {
+  /* 済みの印。1つのお店のピン（checkBadge.ts）と同じ: 絵の幅の 34% の丸を、右上の角の内側（2%）に */
+  position: absolute;
+  top: 2%;
+  right: 2%;
+  width: 34%;
+  height: 34%;
+  pointer-events: none;
+}
+.bldg-pin__mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.bldg-pin__head {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 3px solid #f0907a;
+  border-radius: 50% 50% 50% 0;
+  background: var(--pin-color, #fff);
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 4px rgba(31, 42, 55, 0.25);
+  box-sizing: border-box;
+  font-size: 14px;
+  font-weight: 900;
+  color: #3ecf8e;
+}
+.bldg-pin__label {
+  /* 中の文字（✓・絵）はまっすぐに見せる */
+  transform: rotate(45deg);
+}
+.bldg-pin__count {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #ff8a75;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* ビルのお店の一覧 */
+.bldg-sheet__head {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding-right: 40px;
+}
+.bldg-sheet__done {
+  color: #6b7a8c;
+  font-size: 14px;
+  font-weight: 700;
+}
+.bldg-sheet__list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.bldg-sheet__row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 1px solid #eef2f7;
+  background: none;
+  color: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: left;
+}
+.bldg-sheet__badge {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #dbeafe;
+}
+.bldg-sheet__name {
+  flex: 1;
+}
+.bldg-sheet__check {
+  color: #3ecf8e;
+  font-weight: 900;
+}
+.bldg-pin__more {
+  position: absolute;
+  bottom: 44px;
+  left: 0;
+  transform: translateX(-50%);
+  padding: 2px 9px;
+  border: 0;
+  border-radius: 999px;
+  background: #ff8a75;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.bldg-pins__scale {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  transform-origin: 0 100%;
+}
+
+/* 大型施設・駅の名前の札 */
+.bldg-name {
+  position: absolute;
+  bottom: 62px;
+  left: 0;
+  transform: translateX(-50%);
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: #fff;
+  color: #3d4a5c;
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(31, 42, 55, 0.25);
+  pointer-events: none;
+}
+/* 駅は駅名標の形（白い板＋緑の帯。実在の鉄道会社の色は使わない） */
+.bldg-name--station {
+  border: 2px solid #3d4a5c;
+  border-radius: 5px;
+  padding: 2px 12px 0;
+  border-bottom: 7px solid #6faf62;
+}
+
+/* ---- 2段のシート（2026-11-09）。見た目は仮。ミシェーラの枠・テープが来たら差しかえ ---- */
+.shop-sheet {
+  touch-action: none; /* 上下のスライドを地図に渡さない */
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box; /* 高さ（px）に余白も含める。含めないと全画面で上が切れる */
+  overflow: clip; /* hidden だと文字選びなどでシート自体が内側にずれることがある */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.shop-sheet--settling {
+  transition: height 0.28s cubic-bezier(0.2, 0.8, 0.3, 1), background-color 0.28s; /* SETTLE_MS と合わせる */
+}
+.shop-sheet--settling .shop-sheet__body,
+.shop-sheet--settling .shop-sheet__head {
+  transition: opacity 0.28s, transform 0.28s;
+}
+.shop-sheet__grab {
+  display: block;
+  width: 64px;
+  height: 18px;
+  margin: -12px auto 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  position: relative;
+}
+.shop-sheet__grab::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 6px;
+  height: 5px;
+  border-radius: 3px;
+  background: #d5dce8;
+}
+.shop-sheet--full {
+  border-radius: 0;
+  background: #fffaf2;
+  padding-top: calc(18px + env(safe-area-inset-top));
+}
+.shop-sheet--full .shop-sheet__close {
+  top: calc(8px + env(safe-area-inset-top));
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  z-index: 2;
+}
+.shop-sheet__stage {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+.shop-sheet__foot {
+  flex: none;
+}
+.shop-sheet__body {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  padding-bottom: 8px;
+}
+.shop-sheet__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.shop-tag {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.shop-tag--genre {
+  background: #ffe7d6;
+  color: #c2541b;
+}
+.shop-tag--budget {
+  background: #e6f0ff;
+  color: #2f62c0;
+}
+.shop-sheet__count {
+  margin-left: 8px;
+  color: #2d8a4a;
+}
+.shop-sheet__more {
+  margin: 6px 0 0;
+  text-align: center;
+  font-size: 11px;
+  color: #8a96b0;
+}
+.shop-sheet__name--big {
+  margin-top: 14px;
+  font-size: 22px;
+}
+.shop-sheet__catch {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #33415c;
+}
+.shop-sheet__hp {
+  display: block;
+  margin-top: 8px;
+  padding: 10px;
+  border: 2px solid #ffb38a;
+  border-radius: 999px;
+  color: #d0601f;
+  font-weight: 700;
+  font-size: 14px;
+  text-align: center;
+  text-decoration: none;
+}
+.shop-sheet__credit {
+  margin: 6px 0 0;
+  text-align: center;
+  font-size: 10px;
+  color: #a0aac0;
+}
+
+/* 写真のシール（ポラロイド風） */
+.shop-sticker {
+  flex: none;
+  position: relative;
+  background: #fff;
+  padding: 3px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transform: rotate(-4deg);
+}
+.shop-sticker__window {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 85%, #fff6e0 0 30%, #d7ecfb 75%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.shop-sticker__window img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.shop-sticker__window img.shop-sticker__model {
+  object-fit: contain;
+}
+.shop-sticker--big {
+  /* ホットペッパーの写真は 238px 四方が最大。のばしすぎないよう小さめに（2026-11-09 オーナー） */
+  width: min(58%, 220px);
+  margin: 22px auto 0;
+  padding: 10px 10px 30px;
+  border-radius: 6px;
+  transform: rotate(-2deg);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.shop-sticker--big .shop-sticker__window {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1; /* 写真が正方形なので切らずに出す */
+  border-radius: 3px;
+}
+.shop-sticker__tape {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  width: 72px;
+  height: 20px;
+  margin-left: -36px;
+  background: rgba(255, 207, 168, 0.8);
+  transform: rotate(4deg);
+}
+.shop-sticker__label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 7px;
+  text-align: center;
+  font-size: 12px;
+  color: #8a96b0;
+}
+.shop-sticker--silver {
+  box-shadow: 0 0 0 3px #c9d3e2, 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.shop-sticker--gold {
+  box-shadow: 0 0 0 3px #f2c94c, 0 4px 14px rgba(242, 180, 0, 0.35);
+}
+
+/* わたしの記録 */
+.shop-record {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f4f8fc;
+}
+.shop-record__title {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #5a6785;
+}
+.shop-record__stats {
+  display: flex;
+  gap: 8px;
+}
+.shop-record__stats div {
+  flex: 1;
+  padding: 8px 4px;
+  border-radius: 12px;
+  background: #fff;
+  text-align: center;
+  font-size: 11px;
+  color: #6b7a99;
+}
+.shop-record__stats b {
+  display: block;
+  font-size: 18px;
+  color: #33415c;
+}
+.shop-record__next {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #6b7a99;
+}
+.shop-record__next b {
+  color: #d0601f;
+}
+.shop-record__bar {
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 4px;
+  background: #e1e7f0;
+  overflow: hidden;
+}
+.shop-record__bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #ffb27a, #ff7a3d);
+}
+
+/* ---- 手帳風（2026-11-10 A 改）。AI っぽさを減らす: 茶色の線＋点線のステッチ、平らな色、線の厚み ----
+   設計 docs/superpowers/specs/2026-11-10-shop-sheet-notebook-design.md */
+.shop-sheet {
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  background: #fffaf0;
+  border: 2.5px solid #7a4a26;
+  border-radius: 22px;
+  box-shadow: 0 4px 0 rgba(122, 74, 38, 0.25);
+  color: #4a3b2c;
+}
+.shop-sheet::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1.5px dashed #e3cfaa;
+  border-radius: 17px;
+  pointer-events: none;
+}
+.shop-sheet--full {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-width: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: #fffaf0;
+}
+.shop-sheet--full::before {
+  display: none;
+}
+.shop-sheet__grab::after {
+  background: #d8c09a;
+}
+.shop-sheet__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  border: 2px solid #7a4a26;
+  background: #fff;
+  color: #7a4a26;
+  z-index: 3;
+}
+.shop-sheet__back {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 55%;
+  padding: 4px 10px 4px 6px;
+  border: 2px solid #7a4a26;
+  border-radius: 999px;
+  background: #fff;
+  color: #7a4a26;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.shop-sheet--full .shop-sheet__back {
+  top: calc(8px + env(safe-area-inset-top));
+}
+.shop-sheet__back + .shop-sheet__stage .shop-sheet__head {
+  margin-top: 36px;
+}
+.shop-sheet__head {
+  align-items: flex-start;
+  gap: 14px;
+}
+.shop-sheet__name {
+  margin: 6px 0 0;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1.25;
+  color: #4a3b2c;
+}
+.shop-sheet__name--big {
+  font-size: 23px;
+}
+.shop-tag {
+  border: 1.5px solid #7a4a26;
+  border-radius: 6px;
+  background: #fff;
+  color: #7a4a26;
+  font-weight: 800;
+}
+.shop-tag--genre {
+  background: #ffd9a8;
+  color: #7a4a26;
+}
+.shop-tag--budget {
+  background: #fff;
+  color: #7a4a26;
+}
+.shop-sheet__open,
+.shop-sheet__distance {
+  color: #7a6450;
+}
+/* 小さい段の1行（距離・営業時間・回数）。箱に入れず、線の絵と文字で */
+.shop-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin: 12px 2px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #4a3b2c;
+}
+.shop-facts span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.shop-facts svg {
+  flex: none;
+}
+.shop-facts__near {
+  color: #2f7d5a;
+}
+.shop-facts__open {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.shop-facts__new {
+  color: #c2652a;
+}
+.shop-sheet__go {
+  height: 52px;
+  border: 2.5px solid #7a4a26;
+  border-radius: 14px;
+  background: #e57a35;
+  box-shadow: 0 4px 0 #7a4a26;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+.shop-sheet__go:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #7a4a26;
+}
+.shop-sheet__go:disabled {
+  border-color: #c9b28d;
+  background: #f1e4cc;
+  box-shadow: 0 3px 0 #c9b28d;
+  color: #9c8466;
+  font-size: 15px;
+  letter-spacing: 0;
+  opacity: 1;
+}
+.shop-sheet__more {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px auto 0;
+  padding: 2px 6px;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 800;
+  color: #7a4a26;
+}
+.shop-sheet__more span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #7a4a26;
+  border-radius: 50%;
+  font-size: 10px;
+  line-height: 1;
+}
+.shop-sheet__catch {
+  padding: 10px 12px;
+  border: 1.5px solid #e3cfaa;
+  border-radius: 12px;
+  background: #fff;
+  color: #4a3b2c;
+}
+.shop-sheet__hp {
+  border: 2px solid #7a4a26;
+  background: #fff;
+  color: #7a4a26;
+  box-shadow: 0 3px 0 #7a4a26;
+}
+/* 写真のシール: 茶色の線のポラロイド＋黄色いマスキングテープ（地図だけのお店は水色のテープ） */
+.shop-sticker {
+  padding: 5px 5px 16px;
+  border: 2px solid #7a4a26;
+  border-radius: 4px;
+  box-shadow: none;
+}
+.shop-sticker--card .shop-sticker__window {
+  width: 84px;
+  height: 84px;
+  border-radius: 2px;
+  background: #f3b77a;
+}
+.shop-sticker--map .shop-sticker__window {
+  background: #cfe3f6;
+}
+.shop-sticker--card .shop-sticker__window img.shop-sticker__model {
+  width: 72%;
+  height: 72%;
+}
+.shop-sticker__tape {
+  top: -9px;
+  width: 44px;
+  height: 14px;
+  margin-left: -22px;
+  background: rgba(244, 215, 122, 0.9);
+  transform: rotate(5deg);
+}
+.shop-sticker--map .shop-sticker__tape {
+  background: rgba(169, 211, 232, 0.9);
+}
+.shop-sticker--big {
+  padding: 10px 10px 30px;
+  border-width: 2.5px;
+  box-shadow: none;
+}
+.shop-sticker--big .shop-sticker__tape {
+  width: 72px;
+  height: 20px;
+  margin-left: -36px;
+}
+.shop-sticker--silver {
+  border-color: #8f97a6;
+  box-shadow: 0 0 0 3px #dfe4ec;
+}
+.shop-sticker--gold {
+  border-color: #b07d0a;
+  box-shadow: 0 0 0 3px #f6d66a;
+}
+.shop-record {
+  border: 1.5px solid #e3cfaa;
+  background: #fff;
+}
+.shop-facts__open.is-open {
+  color: #2f7d5a;
+}
+.shop-facts__open.is-closed {
+  color: #9c8466;
+}
+.shop-record__title {
+  color: #4a3b2c;
+}
+.shop-record__stats b {
+  color: #c2652a;
+}
+.shop-record__stats div,
+.shop-record__next {
+  color: #7a6450;
+}
+.shop-record__bar {
+  background: #efe3cc;
+}
+.shop-record__bar i {
+  background: #e57a35;
+}
+
+/* 2026-11-10 オーナー「ちょっとでかい」「上にあげるカードのように、画面外にまだあるようなイメージ」:
+   小さい段は一回り小さく、下の端は画面の外まで（下のふちを見せない）。
+   （続きの頭をのぞかせる白い箱は「変」で取りやめ。戻すときの高さもずれたため） */
+.shop-sheet:not(.shop-sheet--full) {
+  bottom: -28px;
+  padding: 10px 14px calc(28px + env(safe-area-inset-bottom));
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -3px 0 rgba(122, 74, 38, 0.18);
+}
+.shop-sheet:not(.shop-sheet--full)::before {
+  bottom: -10px;
+  border-radius: 17px 17px 0 0;
+}
+.shop-sheet__head {
+  gap: 12px;
+}
+.shop-sticker--card {
+  padding: 4px 4px 12px;
+}
+.shop-sticker--card .shop-sticker__window {
+  width: 62px;
+  height: 62px;
+}
+.shop-sticker--card .shop-sticker__tape {
+  width: 34px;
+  height: 11px;
+  margin-left: -17px;
+  top: -7px;
+}
+.shop-sheet__head .shop-sheet__name {
+  margin-top: 2px;
+  font-size: 18px;
+}
+.shop-sheet__head .shop-tag {
+  font-size: 11px;
+  padding: 0 6px;
+}
+.shop-facts {
+  margin: 8px 2px 10px;
+  font-size: 12.5px;
+}
+.shop-sheet:not(.shop-sheet--full) .shop-sheet__go {
+  height: 46px;
+  font-size: 17px;
+}
+.shop-sheet:not(.shop-sheet--full) .shop-sheet__go:disabled {
+  font-size: 14px;
+}
+/* 横幅いっぱい（2026-11-10 オーナー「ちょっとズレてる」「横幅もいっぱいでいい」）。左右の線は無し、上のふちだけ */
+.shop-sheet:not(.shop-sheet--full) {
+  left: 0;
+  right: 0;
+  border-width: 2.5px 0 0;
+}
+.shop-sheet:not(.shop-sheet--full)::before {
+  left: 6px;
+  right: 6px;
+}
+/* 小さい段も全画面も同じカードの形（スライドの途中で角・ふち・位置が切りかわらないように。2026-11-10 オーナー「スライドした時に違和感ないように」） */
+.shop-sheet,
+.shop-sheet.shop-sheet--full {
+  left: 0;
+  right: 0;
+  bottom: -28px; /* ShopSheet.tsx の BELOW_PX */
+  border-width: 2.5px 0 0;
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -3px 0 rgba(122, 74, 38, 0.18);
+  background: #fffaf0;
+}
+.shop-sheet::before,
+.shop-sheet.shop-sheet--full::before {
+  display: block;
+  left: 6px;
+  right: 6px;
+  bottom: -10px;
+  border-radius: 17px 17px 0 0;
+}
+.shop-sheet.shop-sheet--full {
+  padding-bottom: calc(28px + 14px + env(safe-area-inset-bottom));
+}
+/* 全画面は画面の外の 28px（BELOW_PX）ぶん高くなるので、上限もそのぶん足す */
+.shop-sheet {
+  max-height: calc(100dvh + 28px);
+}
+/* ビルの一覧（2026-11-10）: 色の丸をやめて、地図と同じジャンルのピンの絵。手帳の色に */
+.bldg-sheet__pin {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.bldg-sheet__done {
+  color: #8a6a48;
+}
+.bldg-sheet__row {
+  padding: 8px 4px;
+  border-bottom: 1.5px dashed #ead9bb;
+  color: #4a3b2c;
+  font-size: 15px;
+}
+.bldg-sheet__check {
+  color: #2f7d5a;
+}
+.bldg-sheet__check {
+  display: flex;
+  filter: drop-shadow(0 1px 1px rgba(31, 42, 55, 0.25));
+}
+
+/* お店のシートの「みんなの感想」（2026-11-12） */
+.shop-reviews {
+  margin-top: 12px;
+}
+.shop-reviews__list {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.shop-reviews__list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+.shop-reviews__list li + li {
+  border-top: 1px dashed rgba(138, 90, 50, 0.3);
+}
+.shop-reviews__name {
+  font-weight: 700;
+}
+.shop-reviews__stars {
+  color: #ffaa22;
+  font-size: 12px;
+}
+.shop-reviews__body {
+  width: 100%;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.5;
+}
+
+/* チェックインのとなりの「✎ 感想」（行ったお店だけ。2026-11-13）。同じ高さ・同じ線で、色は控えめ */
+.shop-sheet__actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+.shop-sheet__actions .shop-sheet__go {
+  margin-top: 0;
+}
+.shop-sheet__actions .shop-sheet__go {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+.shop-sheet__review {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 92px;
+  height: 52px;
+  padding: 0;
+  border: 2.5px solid #7a4a26;
+  border-radius: 14px;
+  background: #fff8ec;
+  box-shadow: 0 4px 0 #7a4a26;
+  color: #7a4a26;
+  font-size: 16px;
+  font-weight: 900;
+}
+.shop-sheet__review:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #7a4a26;
+}
+.shop-sheet:not(.shop-sheet--full) .shop-sheet__review {
+  height: 46px;
+}

@@ -1,12 +1,25 @@
 <!doctype html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mogumo-go</title>
+    <!-- アプリアイコン（ミシェーラ appicon-kuma-v1、2026-11-14 オーナー採用。元は art/branding/、縮小だけ） -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-title" content="もぐもGO" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>もぐもGO</title>
+    <!-- 起動してすぐ（アプリの読み込み前）からタイトルの絵とロゴを出す。何も無い画面をダブルタップして拡大されるのを防ぐ（2026-11-17）。
+         アプリのタイトル（src/credits/Splash.tsx）が出たら消す。絵は src/assets/ui/ の写し（public/boot/） -->
+    <style>
+      html, body { margin: 0; background: #ffffff; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+      #boot { position: fixed; inset: 0; z-index: 200; background: #ffffff url(/boot/title.webp) center bottom / cover no-repeat; }
+      #boot img { position: absolute; left: 50%; top: calc(15vh + env(safe-area-inset-top)); width: min(84vw, 420px); transform: translateX(-50%); filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.18)); }
+    </style>
   </head>
   <body>
+    <div id="boot" aria-hidden="true"><img src="/boot/logo.webp" alt="" /></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
