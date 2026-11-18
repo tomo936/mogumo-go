@@ -66,3 +66,4 @@
 - 2026-11-17 Claude Code: 結合試験をお願い（handoff/to-shiro/2026-11-17-integration-test.md。dev のサイトで ?fake=緯度,経度 の歩いたふりを使えるようにした）
 - 2026-11-18 結合試験の結果を受領（handoff/to-claude/2026-11-18-integration-test-result.md、art/qa/2026-11-18/）。手順 2（ゲストで始める）で停止。原因を調べる
 - 2026-11-18 結合試験は Claude Code が手元の Docker で自動で回す方針に変更（再実施の依頼は取り下げ）。
+- 2026-11-18 Claude Code: 本番デプロイ手順をお願い（handoff/to-shiro/2026-11-18-production-deploy-guide.md。オーナーが 1 人でできる粒度。ミシェーラが 1 ステップずつ案内）
