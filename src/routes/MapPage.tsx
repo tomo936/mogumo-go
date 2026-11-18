@@ -506,6 +506,9 @@ export function MapPage() {
       setEffect({ coins: result.coins, reveal: maskedBefore ? posted.name : null, key: ++effectSeq.current, exp: gain, levelUp: after > before ? after : null })
       if (result.wasHint) hints.markCompleted(posted)
       mapRef.current?.checkin(posted, result.newCells)
+      // ビルの一覧から来ていたら、戻った一覧の「済み」にいま行った店を足す（結合試験 2026-11-18: 0/4 のままだった）。
+      // 地図の印は紙ふぶきの波に合わせて少し遅れて付くので、読み直さず、直接足す
+      setBuilding((b) => (b ? { ...b, checked: new Set([...b.checked, posted.id, ...(posted.mapId ? [posted.mapId] : [])]) } : b))
       syncOsm() // チェックインで霧が晴れた
       // 3D の男の子が喜ぶ。レベルが上がるのはチェックインのときだけなので、両方でも 1 回
       mapRef.current?.express('happy')
