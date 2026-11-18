@@ -1,4 +1,4 @@
-状態: 未対応
+状態: 対応中（残り 2 つ: 町のデータ・ホットペッパーのキー。下の「残りの 2 つ」）
 
 # 本番デプロイ手順（Claude Code から、ミシェーラへ）
 
@@ -230,3 +230,33 @@ update public.app_status set maintenance = true, message = 'ただいま調整�
 
 - 終わったら、この依頼の状態を「完了」にして、`handoff/LOG.md` に 1 行足してください。
 - つまずいて進めなくなったときは、`handoff/to-claude/` に、いつ・どの手順・何を押して何が出たか（スクリーンショットのファイル名）を書いてください。
+
+---
+
+## 【2026-11-18 追記】残りの 2 つ（ギルベルトの報告を受けて。ほかは全部済み・本番公開済み）
+
+ギルベルトの報告: 本番 Supabase（`jaypeaejbzkeudwvvrnb`）に SQL・ログイン設定・関数 7 本・Turnstile・Google・Vercel・`dev`→`main`（PR #1）まで済み。https://mogumo-go.vercel.app で公開中。
+
+**いまの本番で起きること**: ホットペッパーのキーが無いので、ホットペッパーのお店が出ない（「お店を読み込めませんでした」が出ることがある。地図データのお店は出る）。町のデータが無いので、町の判定・クリアが動かない。**この 2 つを入れれば完了**。
+
+### A. ホットペッパーのキー（画面で入れる。おすすめ）
+- Claude Code はこのキーの値を**知らない**（`.env` は読まない決まり）。開発用の Supabase の Secrets も値は見えない（伏せ字）。
+- キーの探し方（どれか）: ① リクルート WEB サービスに登録したときのメール（件名に「APIキー」など）② https://webservice.recruit.co.jp/ でもう一度登録すると、すぐ新しいキーがメールで届く（無料・数分）③ パソコンの `\\wsl$\Ubuntu\home\otosa\mogumo-go\.env` をメモ帳で開き、`HOTPEPPER` の行があれば、その値（無ければ ① か ②）。
+- 入れ方: Supabase → **本番 `mogumo-go`**（左上の名前を確かめる）→ Edge Functions → **Secrets** → 名前 `HOTPEPPER_API_KEY`・値 = キー → Save。**チャットには貼らない**。
+- 確かめ方: 本番のサイトを開き直して、地図に写真付きのお店（ホットペッパーの店）が出る。出なければ Edge Functions → `shops-hotpepper` → Logs に `hotpepper error response` が出ていないか見る（出ていればキーの写し間違い）。
+
+### B. 町のデータ（Ubuntu のターミナルで、コマンド 3 つ。5〜10 分）
+`towns` バケット（非公開）は作成済み。Ubuntu を開いて、1 行ずつ打つ:
+```
+cd ~/mogumo-go
+npx supabase login
+npx supabase storage cp -r .towns-out/g ss:///towns/g --experimental --remote=jaypeaejbzkeudwvvrnb --jobs 8
+```
+- 2 行目: ブラウザが開く（または URL が出る）→ Supabase にログイン → 画面の確認コードをターミナルに入れる。
+- 3 行目: `Uploading: … => /towns/g/…` が 1,025 行流れて、最後に `"uploaded":[…]` が出れば完了（数分）。途中で止まったら、同じ 3 行目をもう一度打つ（上書きされるだけ）。
+- 確かめ方: Supabase（本番）→ Storage → `towns` → `g` の中に **`index.json`** と `…json.gz` が並ぶ。そのあと本番のアプリで 1 軒チェックインして、記録の「町」に町の名前が出る。
+- 終わったら（任意）`npx supabase logout`（作業用のログインを消す）。
+- （画面でやる場合）Storage → `towns` を開き、エクスプローラーで `\\wsl$\Ubuntu\home\otosa\mogumo-go\.towns-out` の **`g` フォルダごと**ドラッグ。
+
+### C. 完了処理（A と B のあと）
+- このファイルの 1 行目を `状態: 完了` にして、`handoff/LOG.md` に「本番デプロイ完了」の 1 行を足す。
