@@ -59,11 +59,19 @@ function ensure(): AudioContext | null {
   sfxOut = c.createGain()
   sfxOut.gain.value = SFX_VOLUME
   sfxOut.connect(c.destination)
-  // アプリを閉じたら止め、戻ったら続ける
-  document.addEventListener('visibilitychange', () => void (document.hidden ? c.suspend() : c.resume()).catch(() => {}))
+  // アプリを閉じたら止め、戻ったら続ける。iPhone は裏から戻ると音の仕組みが固まって鳴らないことがあるので、
+  // 戻ったあとの最初の操作で作り直す（2026-11-18 オーナー「再度開くと音が消える」）
+  const onVis = () => {
+    if (ctx !== c) return document.removeEventListener('visibilitychange', onVis) // 作り直した古いもの
+    if (document.hidden) {
+      void c.suspend().catch(() => {})
+      stale = true
+    } else void c.resume().catch(() => {})
+  }
+  document.addEventListener('visibilitychange', onVis)
   for (const { name, data } of raw) {
     void data
-      .then((b) => (b ? c.decodeAudioData(b) : null))
+      .then((b) => (b ? c.decodeAudioData(b.slice(0)) : null)) // 作り直したときにもう一度ほどけるよう、写しをほどく
       .then((buf) => {
         if (!buf) return
         buffers.set(name, buf)
@@ -74,6 +82,21 @@ function ensure(): AudioContext | null {
       .catch(() => {})
   }
   return c
+}
+
+// 裏から戻ったあと（stale）の最初の操作で、音の仕組みを作り直す。BGM を鳴らしていたら新しい方で続ける
+let stale = false
+function rebuild() {
+  stale = false
+  const old = ctx
+  ctx = null
+  sfxOut = null
+  bgmOut = null
+  bgmSrc = null
+  buffers.clear()
+  if (old) void old.close().catch(() => {})
+  ensure()
+  applyBgm()
 }
 
 function applyBgm() {
@@ -164,6 +187,7 @@ function play(name: SfxName) {
 export const sound = {
   // タップの中で呼ぶ。最初の 1 回で音の用意をして、止まっていれば動かす
   unlock() {
+    if (stale && ctx) rebuild()
     const c = ensure()
     if (c && c.state !== 'running') void c.resume().catch(() => {})
   },
@@ -208,4 +232,8 @@ export function installTapSound() {
     },
     true,
   )
+  // 地図をさわる操作は click にならない（地図が止める）ので、指を離したときにも音を動かす（iPhone は touchend の中なら再開できる）
+  const wake = () => sound.unlock()
+  document.addEventListener('touchend', wake, { capture: true, passive: true })
+  document.addEventListener('pointerup', wake, { capture: true, passive: true })
 }

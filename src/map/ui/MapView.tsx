@@ -486,7 +486,31 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', onUp)
 
+    // iPhone はアプリを裏に回すと、地図の絵（WebGL）を捨てることがある。捨てられたまま戻ると地図が真っ白になる
+    // （2026-11-18 オーナー「再度開くと白くなる」）。three の層まで作り直すのは難しいので、戻ったときに読み込み直す。
+    // 捨てられていなければ、描き直しだけを頼む
+    const glState = { lost: false }
+    const canvas = map.getCanvas()
+    const onLost = () => {
+      glState.lost = true
+      if (!document.hidden) window.location.reload()
+    }
+    const onVisible = () => {
+      if (document.hidden) return
+      // 合図（webglcontextlost）が来ないまま捨てられていることもあるので、戻ったときに直接確かめる（同じ種類の getContext は今の絵を返す）
+      const gl = (canvas.getContext('webgl2') ?? canvas.getContext('webgl')) as WebGLRenderingContext | null
+      if (glState.lost || gl?.isContextLost()) return window.location.reload()
+      map.resize()
+      map.triggerRepaint()
+    }
+    canvas.addEventListener('webglcontextlost', onLost)
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('pageshow', onVisible)
+
     return () => {
+      canvas.removeEventListener('webglcontextlost', onLost)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('pageshow', onVisible)
       cancelAnimationFrame(loop.frame)
       avatar.dispose()
       avatar2dRef.current = null
