@@ -506,9 +506,8 @@ export function MapPage() {
       setEffect({ coins: result.coins, reveal: maskedBefore ? posted.name : null, key: ++effectSeq.current, exp: gain, levelUp: after > before ? after : null })
       if (result.wasHint) hints.markCompleted(posted)
       mapRef.current?.checkin(posted, result.newCells)
-      // ビルの一覧から来ていたら、戻った一覧の「済み」にいま行った店を足す（結合試験 2026-11-18: 0/4 のままだった）。
-      // 地図の印は紙ふぶきの波に合わせて少し遅れて付くので、読み直さず、直接足す
-      setBuilding((b) => (b ? { ...b, checked: new Set([...b.checked, posted.id, ...(posted.mapId ? [posted.mapId] : [])]) } : b))
+      // ビルの一覧から来ていても、お店 1 軒のときと同じく全部閉じて、地図の演出を見せる（2026-11-18 オーナー「複合施設もお店単体と同じ動きに。メニューを戻して出すのではなく」）
+      setBuilding(null)
       syncOsm() // チェックインで霧が晴れた
       // 3D の男の子が喜ぶ。レベルが上がるのはチェックインのときだけなので、両方でも 1 回
       mapRef.current?.express('happy')
