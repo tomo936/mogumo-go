@@ -1,6 +1,7 @@
 // Supabase Edge Function（Deno）。チェックイン。
 // 受け取る: POST { shop_id, lat, lng, far_from_home }（JWT 必須）。ユーザーは JWT からだけ決める。
 // プライバシー: lat/lng・距離・トークン・ユーザーID・店ID をログに出さない・保存しない・返さない（403 の丸めた距離だけ返す）。
+import { withCors } from '../_shared/cors.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { CHECKIN_M, CLEAR_M, MATCH_M, acceptHpCheckin, activeHints, altForMapId, altHpFor, cellsAround, closestM, distanceM, jstDay, parseMapId } from './core.ts'
 import type { ActiveHintRow } from './core.ts'
@@ -16,7 +17,7 @@ const json = (body: unknown, status: number) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 const fail = (error: string, status: number) => json({ error }, status)
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
   if (req.method !== 'POST') return fail('bad_request', 400)
 
@@ -154,4 +155,4 @@ Deno.serve(async (req: Request) => {
     console.error('checkin failed')
     return fail('internal_error', 500)
   }
-})
+}))

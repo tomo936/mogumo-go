@@ -3,6 +3,7 @@
 // ここで地図のタイルを読んで飲食店の点を取り出す（作り物のお店は入らない）。
 // プライバシー: タイルの番号は保存しない・ログに出さない。書くのは公開の地図データ（shops）だけ。
 // 設計: docs/superpowers/specs/2026-11-12-zukan-osm-shops-design.md
+import { withCors } from '../_shared/cors.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { parseTiles, rowsFromPois } from './core.ts'
 import { readTilePois, UpstreamError } from './osmTile.ts'
@@ -16,7 +17,7 @@ const json = (body: unknown, status: number) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 const fail = (error: string, status: number) => json({ error }, status)
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
   if (req.method !== 'POST') return fail('bad_request', 400)
   const token = (req.headers.get('Authorization') ?? '').match(/^Bearer\s+(.+)$/i)?.[1]
@@ -48,4 +49,4 @@ Deno.serve(async (req: Request) => {
     console.error('shops-osm failed')
     return fail('server_error', 500)
   }
-})
+}))
