@@ -7,6 +7,8 @@
 //         newly: [{ id, name, kind: 'clear'|'complete', coins, town: { city, area_m2, boundary, at } | null }], more }
 //   more = まだ続きがある（アプリが数秒おいて呼び直す）。
 // プライバシー: ユーザーID・店ID・町ID・位置をログに出さない。
+import { withCors } from '../_shared/cors.ts'
+import { overLimit } from '../_shared/rateLimit.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import {
   CHUNKS_PER_CALL, SHOPS_PER_CALL, TILE_BATCH, TILE_Z, TILES_PER_CALL, TOWN_COINS,
@@ -157,7 +159,7 @@ async function countTown(db: Db, town: TownDbRow, now: string): Promise<boolean>
   return true
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
   if (req.method !== 'POST') return fail('bad_request', 400)
 
@@ -169,6 +171,7 @@ Deno.serve(async (req: Request) => {
   })
   const { data: auth, error: authError } = await db.auth.getUser(token)
   if (authError || !auth.user) return fail('unauthorized', 401)
+  if (await overLimit(db, auth.user.id, 'towns')) return fail('rate_limited', 429) // 回数の上限（SQL 0017）
   const userId = auth.user.id
 
   try {
@@ -250,4 +253,4 @@ Deno.serve(async (req: Request) => {
     console.error('towns failed')
     return fail('internal_error', 500)
   }
-})
+}))

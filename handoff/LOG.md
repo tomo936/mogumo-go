@@ -67,3 +67,5 @@
 - 2026-11-18 結合試験の結果を受領（handoff/to-claude/2026-11-18-integration-test-result.md、art/qa/2026-11-18/）。手順 2（ゲストで始める）で停止。原因を調べる
 - 2026-11-18 結合試験は Claude Code が手元の Docker で自動で回す方針に変更（再実施の依頼は取り下げ）。
 - 2026-11-18 Claude Code: 本番デプロイ手順をお願い（handoff/to-shiro/2026-11-18-production-deploy-guide.md。オーナーが 1 人でできる粒度。ミシェーラが 1 ステップずつ案内）
+- 2026-11-18 ギルベルト: 本番デプロイ（SQL・Auth・関数 7 本・Turnstile・Google・Vercel・PR #1 dev→main）。https://mogumo-go.vercel.app 公開。残り: ホットペッパーのキーと町のデータ（手順書に追記、オーナーが実施）
+- 2026-11-18 本番デプロイ完了（オーナーがホットペッパーのキーと町のデータを入れた。handoff/to-shiro/2026-11-18-production-deploy-guide.md）

@@ -7,6 +7,8 @@
 // 返す: { week_start, week_end, missions: [{ mission_id, difficulty, condition_type, params, target, progress, reward, completed }], newly: [mission_id] }
 // 設計: docs/superpowers/specs/2026-11-10-weekly-missions-design.md
 // プライバシー: ユーザーID・店ID・位置をログに出さない。
+import { withCors } from '../_shared/cors.ts'
+import { overLimit } from '../_shared/rateLimit.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { countProgress, drawMissions, parseDraw, weekEndMs, weekLastDay, weekStart, weekStartMs } from './core.ts'
 import type { ConditionType, MissionRow, Visit } from './core.ts'
@@ -83,7 +85,7 @@ async function countFog(db: Db, userId: string, fromIso: string, toIso: string):
   return count ?? 0
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
   if (req.method !== 'POST') return fail('bad_request', 400)
 
@@ -102,6 +104,7 @@ Deno.serve(async (req: Request) => {
   })
   const { data: auth, error: authError } = await db.auth.getUser(token)
   if (authError || !auth.user) return fail('unauthorized', 401)
+  if (await overLimit(db, auth.user.id, 'weekly-missions')) return fail('rate_limited', 429) // 回数の上限（SQL 0017）
   const userId = auth.user.id
 
   try {
@@ -157,4 +160,4 @@ Deno.serve(async (req: Request) => {
     console.error('weekly-missions: failed')
     return fail('server_error', 500)
   }
-})
+}))

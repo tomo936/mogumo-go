@@ -1,0 +1,12 @@
+# 依存の更新の知らせ（2026-11-18 セキュリティ診断の 5）。週 1 回、まとめて PR を作る
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

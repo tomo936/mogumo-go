@@ -1,0 +1,33 @@
+# セキュリティの自動検査（2026-11-18 セキュリティ診断の 4・5）。push と PR のたび、と毎週月曜。
+# - 秘密の混入: gitleaks（pre-commit の scripts/check-secrets.sh が無い環境でも、ここで止める）
+# - 依存の脆弱性: 本番で配る部品（--omit=dev）は high 以上で失敗。開発用の道具は記録だけ
+name: security
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  schedule:
+    - cron: '0 0 * * 1'
+permissions:
+  contents: read
+jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 本番で配る部品（high 以上で失敗）
+        run: npm audit --omit=dev --audit-level=high
+      - name: 開発用の道具も含めた全体（記録だけ）
+        run: npm audit || true
