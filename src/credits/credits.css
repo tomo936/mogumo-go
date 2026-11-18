@@ -1,9 +1,6 @@
 .splash {
   position: fixed;
-  left: 0;
-  top: 0;
-  height: 100vh;
-  height: 100lvh; /* 起動直後に画面の高さが変わっても、絵の大きさ・位置が動かないように（index.html の #boot と同じ。2026-11-18 オーナー） */
+  inset: 0;
   z-index: 100;
   display: block;
   width: 100%;
