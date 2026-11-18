@@ -8,6 +8,12 @@
 
 ## いまの状態
 
+- **【2026-11-18 夜 区切り（最新・トークン切れの前）】本番デプロイはオーナーが 1 人でやる。手順書 `handoff/to-shiro/2026-11-18-production-deploy-guide.md`（ミシェーラが案内）。** 本番に出す中身は `dev`（`main` は 906 コミット遅れ・衝突なし）。順番: 本番 Supabase（SQL・ログイン設定・町データ・キー・関数 7 本）→ Turnstile・Google → Vercel の環境変数 → `dev`→`main` の PR。本番でも dev と同じお店が出るよう `shopSourceEnabled` の制限は外し済み。
+  - 今日 dev に入れたもの: ゲストの「自分だけ」の感想（SQL 0016）・タイトル／メニュー／近くのお店／お知らせ／方位磁針の新しい絵・タイトルをタップしたとき一瞬後ろが見える件の修正・ビルの一覧の「済み」の修正（行った店を直接足す）。
+  - 戻したもの: 起動直後のタイトルの絵が一瞬ずれる件の直し（`100lvh`）は、iPhone で絵が拡大されて下の出典が切れたので **revert**（`b6cf1a2` より前）。この件は未解決（iPhone の起動の白い画面・絵のずれ）。
+  - 残り（小）: ポコタンの案内 8 ページ目のガチャの文、ゲストのお問い合わせ送信後の文。
+  - 手元の Docker の Supabase は動いたまま（`npx supabase stop` はサンドボックスの外で）。台本 `scripts/e2e/`。
+
 - **【2026-11-18 深夜 区切り（最新）】結合試験は手順 1〜12 とも通った（手元の Docker の Supabase ＋ Playwright）。結果 `docs/integration-test-2026-11-18.md`、台本 `scripts/e2e/`（README に回し方）。本番デプロイの手順 `docs/superpowers/plans/2026-11-18-production-deploy.md`。**
   - 見つけたこと: 【中】ビル・施設の店でチェックインすると戻った一覧の「済み」が古い（`MapPage.tsx` の `checkin` が `building.checked` を読み直さない）、【小】ポコタンの案内 8 ページ目のガチャの文、【小】ゲストのお問い合わせ送信後の「メールアドレスにお送りします」。
   - 本番で dev と同じ数のお店を出すには `shopSourceEnabled`（`src/shops/infra/hotpepper.ts`）の dev だけの制限を外す（総合レビュー H3。11/6 の Overpass 時代の残り）。手順書の 1。
