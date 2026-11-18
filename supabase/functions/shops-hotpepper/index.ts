@@ -2,6 +2,7 @@
 // キー（HOTPEPPER_API_KEY）はここだけで読む。受け取るのは { lat, lng } だけで、250m に丸めて問い合わせる。
 // 取れたお店は shops テーブルに保存（サービスロールで upsert）し、そのまま返す。
 // プライバシー: 受け取った位置は保存しない・ログに出さない（console に lat/lng・キーを出さないこと）。
+import { withCors } from '../_shared/cors.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { dedupeRows, hotpepperError, hotpepperUrl, parseHotpepper, rawShopCount, roundCenter } from './core.ts'
 import type { ShopRow } from './core.ts'
@@ -17,7 +18,7 @@ const CORS = {
 const reply = (body: string, status: number, type = 'text/plain') =>
   new Response(body, { status, headers: { ...CORS, 'Content-Type': type } })
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
   if (req.method !== 'POST') return reply('bad_request', 400)
   // ログインしたユーザーだけ（チェックインと同じく、サービスロールのクライアントでトークンを確かめる）
@@ -80,4 +81,4 @@ Deno.serve(async (req: Request) => {
     }
   }
   return reply(JSON.stringify(unique), 200, 'application/json')
-})
+}))
