@@ -2,15 +2,16 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&display=swap">
 <style>
-/* 空色×白のパステル。判断待ちを上に、1枚ずつタップで答える */
-:root{--bg:#eef6fc;--card:#fff;--fg:#1f3347;--sub:#5d7488;--line:#d5e4f0;--accent:#2f8fd8;--accent-fg:#fff;--ok:#2e9d6a;--okbg:#e2f5ec;--warn:#d9822b;--warnbg:#fdf0df;--hi:#d9484a;--hibg:#fde7e7;--hold:#7a6bb8;--holdbg:#ece8f8;--font:'M PLUS Rounded 1c','Hiragino Maru Gothic ProN','Hiragino Sans',sans-serif}
+/* 空色×白のパステル。リスクの高いものから上に。1件ごとに証拠・推奨・確信度・待ち時間。答えは即保存して Claude に送る */
+:root{--bg:#eef6fc;--card:#fff;--fg:#1f3347;--sub:#5d7488;--line:#d5e4f0;--accent:#2f8fd8;--accent-fg:#fff;--ok:#2e9d6a;--okbg:#e2f5ec;--warn:#c9741f;--warnbg:#fdf0df;--hi:#d9484a;--hibg:#fde7e7;--hold:#7a6bb8;--holdbg:#ece8f8;--font:'M PLUS Rounded 1c','Hiragino Maru Gothic ProN','Hiragino Sans',sans-serif}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1b27;--card:#172636;--fg:#e6eff7;--sub:#93a9bb;--line:#27405a;--accent:#5eb0ee;--accent-fg:#06202f;--ok:#58c995;--okbg:#14352a;--warn:#f0a65a;--warnbg:#3a2a14;--hi:#f27d7f;--hibg:#3d1d1e;--hold:#a99be0;--holdbg:#27223f;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#0f1b27;--card:#172636;--fg:#e6eff7;--sub:#93a9bb;--line:#27405a;--accent:#5eb0ee;--accent-fg:#06202f;--ok:#58c995;--okbg:#14352a;--warn:#f0a65a;--warnbg:#3a2a14;--hi:#f27d7f;--hibg:#3d1d1e;--hold:#a99be0;--holdbg:#27223f;color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.65;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 main{max-width:640px;margin:0 auto}
 h1{font-size:20px;margin:0 0 4px;text-wrap:balance}
-.lead{color:var(--sub);font-size:13px;margin:0 0 14px}
+.lead{color:var(--sub);font-size:13px;margin:0 0 12px}
+.sync{font-size:12px;color:var(--sub);margin:0 0 12px}
 .tabs{display:flex;gap:8px;margin:0 0 16px;flex-wrap:wrap}
 .tab{border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;font-size:14px;padding:8px 14px;border-radius:999px;min-height:40px}
 .tab[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
@@ -18,36 +19,44 @@ h1{font-size:20px;margin:0 0 4px;text-wrap:balance}
 .list{display:flex;flex-direction:column;gap:14px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;min-width:0}
 .top{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-.chip{font-size:12px;padding:2px 10px;border-radius:999px;font-weight:700}
-.imp-高{background:var(--hibg);color:var(--hi)}.imp-中{background:var(--warnbg);color:var(--warn)}.imp-低{background:var(--holdbg);color:var(--hold)}
-.chip.risk{background:var(--bg);color:var(--sub);font-weight:500}
-.st-decided{background:var(--okbg);color:var(--ok)}.st-hold{background:var(--holdbg);color:var(--hold)}
+.chip{font-size:12px;padding:2px 10px;border-radius:999px;font-weight:700;background:var(--bg);color:var(--sub)}
+.tier-高{background:var(--hibg);color:var(--hi)}.tier-中{background:var(--warnbg);color:var(--warn)}.tier-低{background:var(--holdbg);color:var(--hold)}
+.chip.age{font-weight:500;font-variant-numeric:tabular-nums}
+.chip.esc{background:var(--hibg);color:var(--hi)}
 .card h2{font-size:17px;margin:0 0 6px;text-wrap:balance}
 .body{white-space:pre-wrap;margin:0 0 10px;overflow-wrap:anywhere}
+.ev{margin:0 0 10px;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:13px}
+.ev li{background:var(--bg);border-radius:10px;padding:6px 10px;overflow-wrap:anywhere}
+.ev b{color:var(--sub);font-weight:500;margin-right:6px}
+.ev a{color:var(--accent)}
 .rec{background:var(--bg);border-radius:12px;padding:10px 12px;font-size:14px;margin:0 0 12px;overflow-wrap:anywhere}
 .rec b{color:var(--accent)}
+.need{font-size:12.5px;color:var(--sub);margin:0 0 10px}
 .opts{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
 .opt{text-align:left;font:inherit;border:1.5px solid var(--line);background:var(--card);color:var(--fg);border-radius:14px;padding:10px 14px;min-height:48px;width:100%}
 .opt small{display:block;color:var(--sub);font-size:12.5px;line-height:1.5}
 .opt.first{border-color:var(--accent)}
-.opt:active,.opt:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.opt.sel{background:var(--okbg);border-color:var(--ok)}
+.opt:focus-visible,.ghost:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 textarea{width:100%;font:inherit;font-size:15px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-height:64px;resize:vertical}
 .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .ghost{font:inherit;font-size:14px;border:1px solid var(--line);background:transparent;color:var(--sub);border-radius:999px;padding:8px 14px;min-height:40px}
-.ans{background:var(--okbg);color:var(--fg);border-radius:12px;padding:10px 12px;font-size:14px;overflow-wrap:anywhere}
-.ans b{color:var(--ok)}
+.ghost.no{color:var(--hi);border-color:var(--hi)}
+.ans{background:var(--okbg);border-radius:12px;padding:10px 12px;font-size:14px;overflow-wrap:anywhere}
+.ans.rej{background:var(--hibg)}
+.ans b{color:var(--ok)}.ans.rej b{color:var(--hi)}
 .meta{color:var(--sub);font-size:12px;margin-top:6px}
 .empty{color:var(--sub);text-align:center;padding:36px 8px;border:1px dashed var(--line);border-radius:18px}
-.err{color:var(--hi);font-size:13px;margin:8px 0 0}
+.msg{font-size:13px;margin:8px 0 0;color:var(--sub)}.msg.err{color:var(--hi)}
 button{cursor:pointer;-webkit-tap-highlight-color:transparent}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+button:disabled{opacity:.5}
 </style>
 <main>
   <h1>もぐもGO 判断ボード</h1>
-  <p class="lead">判断してほしいことが上に出ます。ボタンを1回押せば答えになります。ひとこと足したいときは、先に枠に書いてから押してください。</p>
+  <p class="lead">リスクの高いものが上に出ます。証拠と Claude のおすすめを見て、ボタン1つで答えてください。答えはすぐ保存され、Claude に届きます。</p>
+  <p class="sync" id="sync"></p>
   <div class="tabs" role="group" aria-label="表示">
     <button class="tab" id="t-pending" aria-pressed="true">判断待ち<b id="n-pending">0</b></button>
+    <button class="tab" id="t-auto" aria-pressed="false">自動で決めた<b id="n-auto">0</b></button>
     <button class="tab" id="t-hold" aria-pressed="false">保留<b id="n-hold">0</b></button>
     <button class="tab" id="t-decided" aria-pressed="false">決定済み<b id="n-decided">0</b></button>
   </div>
@@ -55,69 +64,85 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 </main>
 <script>
 (function(){
-  var IMP={'高':0,'中':1,'低':2}, docs=[], tab='pending', col=null, drafts={}
+  var TIER={'高':0,'中':1,'低':2}, TABS=['pending','auto','hold','decided'], docs=[], tab='pending', col=null, cm=null, drafts={}
   var listEl=document.getElementById('list')
   function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
-  function fmt(s){try{var d=new Date(s);return (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}catch(e){return ''}}
-  function setTab(t){tab=t;['pending','hold','decided'].forEach(function(k){document.getElementById('t-'+k).setAttribute('aria-pressed',String(k===t))});render()}
-  ['pending','hold','decided'].forEach(function(k){document.getElementById('t-'+k).onclick=function(){setTab(k)}})
-  async function save(d,patch,btn){
+  function age(s){var ms=Date.now()-new Date(s).getTime();if(!(ms>=0))return '';var m=Math.floor(ms/60000);if(m<60)return m+'分待ち';var h=Math.floor(m/60);if(h<48)return h+'時間待ち';return Math.floor(h/24)+'日待ち'}
+  function fmt(s){var d=new Date(s);if(isNaN(d))return '';return (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}
+  function setTab(t){tab=t;TABS.forEach(function(k){document.getElementById('t-'+k).setAttribute('aria-pressed',String(k===t))});render(true)}
+  TABS.forEach(function(k){document.getElementById('t-'+k).onclick=function(){setTab(k)}})
+  // 答えを保存し、Claude のセッションへ送る（届けば即反映。届かなければ Claude が次の返事の最初に読む）
+  async function answer(d,patch,btn,cardEl){
     if(!col)return
-    var f=document.getElementById('f-'+d.id); if(f)f.textContent=''
-    try{ if(btn)btn.disabled=true; await col.doc(d.id).update(Object.assign({updatedAt:new Date().toISOString(),answeredBy:'owner'},patch)) }
-    catch(e){ if(btn)btn.disabled=false; var m=document.getElementById('f-'+d.id); if(m)m.textContent=(e&&e.code==='not_granted')?'この画面からは答えられません（オーナーの権限が要ります）。':'保存できませんでした。もう一度押してください。' }
+    var m=document.getElementById('m-'+d.id); if(m){m.className='msg';m.textContent='保存しています…'}
+    if(btn)btn.disabled=true
+    var now=new Date().toISOString()
+    try{ await col.doc(d.id).update(Object.assign({answeredAt:now,updatedAt:now},patch)) }
+    catch(e){ if(btn)btn.disabled=false; if(m){m.className='msg err';m.textContent=(e&&e.code==='not_granted')?'答えられるのは編集できる人だけです。':'保存できませんでした。もう一度押してください。'} return }
+    var line='判断ボード '+d.id.toUpperCase()+'「'+d.title+'」: '+(patch.status==='decided'?'決定「'+patch.answer+'」':patch.status==='rejected'?'却下':patch.status==='hold'?'保留':patch.status==='pending'?'判断待ちに戻す':patch.status)+(patch.reason?'／理由: '+patch.reason:'')+'。BOARD.md に反映してください。'
+    try{
+      if(cm && (await cm.canSendToClaude())==='available'){ var a=await cm.anchorFor(cardEl); await cm.sendToClaude({anchor:a,text:line}); if(m){m.className='msg';m.textContent='保存して Claude に送りました。'} }
+      else if(m){m.textContent='保存しました（Claude には次の返事で届きます）。'}
+    }catch(e){ if(m){m.textContent='保存しました（Claude への送信はできませんでした。次の返事で届きます）。'} }
   }
   function card(d){
     var c=el('article','card'), top=el('div','top')
-    top.appendChild(el('span','chip imp-'+d.importance,'重要度 '+d.importance))
-    if(d.risk)top.appendChild(el('span','chip risk','リスク '+d.risk))
-    if(d.due)top.appendChild(el('span','chip risk',d.due))
-    if(d.status==='decided')top.appendChild(el('span','chip st-decided','決定済み'))
-    if(d.status==='hold')top.appendChild(el('span','chip st-hold','保留'))
+    top.appendChild(el('span','chip tier-'+d.tier,'リスク '+d.tier))
+    if(d.importance)top.appendChild(el('span','chip','重要度 '+d.importance))
+    if(d.confidence)top.appendChild(el('span','chip','確信度 '+d.confidence))
+    if(d.escalated)top.appendChild(el('span','chip esc','3回失敗で上げた'))
+    if(d.status==='pending'||d.status==='hold')top.appendChild(el('span','chip age',age(d.createdAt)))
     c.appendChild(top)
     c.appendChild(el('h2','',d.id.toUpperCase()+' '+d.title))
     if(d.body)c.appendChild(el('p','body',d.body))
-    if(d.recommend){var r=el('div','rec');r.appendChild(el('b','','おすすめ '));r.appendChild(document.createTextNode(d.recommend));c.appendChild(r)}
-    if(d.status==='decided'||d.status==='hold'){
-      if(d.status==='decided'){var a=el('div','ans');a.appendChild(el('b','','あなたの答え '));a.appendChild(document.createTextNode(d.answer||''));if(d.note){a.appendChild(document.createElement('br'));a.appendChild(document.createTextNode(d.note))}c.appendChild(a)}
-      else if(d.note){c.appendChild(el('div','ans',d.note))}
-      c.appendChild(el('div','meta',fmt(d.updatedAt)+' に更新'))
-      var row=el('div','row'),b=el('button','ghost','判断待ちに戻す');b.onclick=function(){save(d,{status:'pending',answer:'',note:''},b)};row.appendChild(b);c.appendChild(row)
-    } else {
-      var opts=el('div','opts'), ta=el('textarea');ta.id='n-'+d.id;ta.placeholder='ひとこと（なくてOK）';ta.value=drafts[d.id]||'';ta.oninput=function(){drafts[d.id]=ta.value}
+    if(d.evidence&&d.evidence.length){var ul=el('ul','ev');d.evidence.forEach(function(v){var li=el('li');li.appendChild(el('b','',v.label));if(/^https:\/\//.test(v.ref||'')){var a=el('a','',v.ref);a.href=v.ref;a.target='_blank';a.rel='noopener';li.appendChild(a)}else li.appendChild(document.createTextNode(v.ref||''));ul.appendChild(li)});c.appendChild(ul)}
+    if(d.recommend){var r=el('div','rec');r.appendChild(el('b','',d.status==='auto'?'Claude が決めたこと ':'おすすめ '));r.appendChild(document.createTextNode(d.recommend));c.appendChild(r)}
+    if(d.needs)c.appendChild(el('p','need','判断する人: '+d.needs))
+    var msg=el('div','msg');msg.id='m-'+d.id
+    if(d.status==='pending'){
+      var opts=el('div','opts'), ta=el('textarea');ta.id='n-'+d.id;ta.placeholder='ひとこと・却下の理由（却下のときは必須）';ta.value=drafts[d.id]||'';ta.oninput=function(){drafts[d.id]=ta.value}
       ;(d.options||[]).forEach(function(o,i){
-        var b=el('button','opt'+(i===0?' first':''));b.appendChild(document.createTextNode((i===0?'おすすめで決める：':'')+o.label))
-        if(o.desc){b.appendChild(el('small','',o.desc))}
-        b.onclick=function(){save(d,{status:'decided',answer:o.label,note:ta.value.trim()},b);delete drafts[d.id]}
+        var b=el('button','opt'+(i===0?' first':''));b.appendChild(document.createTextNode((i===0?'おすすめで決める：':'')+o.label));if(o.desc)b.appendChild(el('small','',o.desc))
+        b.onclick=function(){answer(d,{status:'decided',answer:o.label,reason:ta.value.trim()},b,c);delete drafts[d.id]}
         opts.appendChild(b)
       })
       c.appendChild(opts);c.appendChild(ta)
-      var row2=el('div','row'),h=el('button','ghost','あとで（保留）');h.onclick=function(){save(d,{status:'hold',answer:'',note:ta.value.trim()},h);delete drafts[d.id]}
-      var o2=el('button','ghost','別の答え（上の枠に書く）');o2.onclick=function(){var t=ta.value.trim();if(!t){ta.focus();return}save(d,{status:'decided',answer:'別案',note:t},o2);delete drafts[d.id]}
-      row2.appendChild(o2);row2.appendChild(h);c.appendChild(row2)
-      var f=el('div','err');f.id='f-'+d.id;c.appendChild(f)
+      var row=el('div','row')
+      var no=el('button','ghost no','却下（理由を書く）');no.onclick=function(){var t=ta.value.trim();if(!t){ta.focus();msg.className='msg err';msg.textContent='却下の理由を枠に書いてから押してください。';return}answer(d,{status:'rejected',answer:'却下',reason:t},no,c);delete drafts[d.id]}
+      var h=el('button','ghost','あとで（保留）');h.onclick=function(){answer(d,{status:'hold',reason:ta.value.trim()},h,c);delete drafts[d.id]}
+      row.appendChild(no);row.appendChild(h);c.appendChild(row)
+    } else {
+      if(d.status==='decided'||d.status==='rejected'){var a=el('div','ans'+(d.status==='rejected'?' rej':''));a.appendChild(el('b','',d.status==='rejected'?'却下 ':'決定 '));a.appendChild(document.createTextNode(d.answer||''));if(d.reason){a.appendChild(document.createElement('br'));a.appendChild(document.createTextNode(d.reason))}c.appendChild(a)}
+      else if(d.reason)c.appendChild(el('div','ans',d.reason))
+      c.appendChild(el('div','meta',(d.answeredAt?fmt(d.answeredAt)+' に答えた':'')+(d.syncedAt?'・'+fmt(d.syncedAt)+' に BOARD.md へ反映':'・BOARD.md へ未反映')))
+      var row2=el('div','row'),b2=el('button','ghost',d.status==='auto'?'覆す（判断待ちに戻す）':'判断待ちに戻す');b2.onclick=function(){answer(d,{status:'pending',answer:'',reason:''},b2,c)};row2.appendChild(b2);c.appendChild(row2)
     }
+    c.appendChild(msg)
     return c
   }
-  function render(){
-    var by={pending:[],hold:[],decided:[]}
-    docs.forEach(function(d){(by[d.status]||by.pending).push(d)})
-    ;['pending','hold','decided'].forEach(function(k){document.getElementById('n-'+k).textContent=by[k].length})
-    var items=by[tab].slice().sort(function(a,b){return (IMP[a.importance]-IMP[b.importance])||String(a.id).localeCompare(String(b.id))})
-    if(tab==='decided')items.sort(function(a,b){return String(b.updatedAt).localeCompare(String(a.updatedAt))})
-    // 入力中の文字を守るため、枠にフォーカスがあるときは描き直さない
-    if(document.activeElement&&document.activeElement.tagName==='TEXTAREA'&&listEl.contains(document.activeElement))return
+  function render(force){
+    var by={pending:[],auto:[],hold:[],decided:[]}
+    docs.forEach(function(d){var k=d.status==='rejected'?'decided':d.status;(by[k]||by.pending).push(d)})
+    TABS.forEach(function(k){document.getElementById('n-'+k).textContent=by[k].length})
+    var items=by[tab].slice()
+    if(tab==='pending'||tab==='hold')items.sort(function(a,b){return (TIER[a.tier]-TIER[b.tier])||String(a.createdAt).localeCompare(String(b.createdAt))})
+    else items.sort(function(a,b){return String(b.answeredAt||b.createdAt).localeCompare(String(a.answeredAt||a.createdAt))})
+    var last=docs.reduce(function(m,d){return d.syncedAt&&d.syncedAt>m?d.syncedAt:m},'')
+    document.getElementById('sync').textContent=last?'BOARD.md（正本）への最後の反映: '+fmt(last):''
+    if(!force&&document.activeElement&&document.activeElement.tagName==='TEXTAREA'&&listEl.contains(document.activeElement))return
     listEl.textContent=''
-    if(!items.length){listEl.appendChild(el('div','empty',tab==='pending'?'判断待ちはありません。Claude が積むとここに出ます。':tab==='hold'?'保留はありません。':'まだ決定済みはありません。'));return}
+    if(!items.length){listEl.appendChild(el('div','empty',{pending:'判断待ちはありません。',auto:'Claude が自動で決めたものはまだありません。',hold:'保留はありません。',decided:'まだ決定済みはありません。'}[tab]));return}
     items.forEach(function(d){listEl.appendChild(card(d))})
   }
+  setInterval(function(){render(false)},60000) // 待ち時間の表示を進める
   function boot(){
     if(!window.claude||!window.claude.use){listEl.textContent='';listEl.appendChild(el('div','empty','この画面では保存できません。'));return}
-    var timer=setTimeout(function(){if(!docs.length)listEl.firstChild&&(listEl.firstChild.textContent='読み込めませんでした。開き直してください。')},10000)
+    var timer=setTimeout(function(){if(!docs.length){listEl.textContent='';listEl.appendChild(el('div','empty','読み込めませんでした。開き直してください。'))}},10000)
+    window.claude.use('comments').then(function(c){cm=c}).catch(function(){})
     window.claude.use('db').then(function(db){
       if(!db){clearTimeout(timer);listEl.textContent='';listEl.appendChild(el('div','empty','ログインすると見られます。'));return}
       col=db.collection('decisions')
-      col.onSnapshot(function(s){clearTimeout(timer);docs=s.docs.map(function(x){return Object.assign({id:x.id},x.data())});render()},function(){clearTimeout(timer);listEl.textContent='';listEl.appendChild(el('div','empty','読み込めませんでした。開き直してください。'))})
+      col.onSnapshot(function(s){clearTimeout(timer);docs=s.docs.map(function(x){return Object.assign({id:x.id},x.data())});render(false)},function(){clearTimeout(timer);listEl.textContent='';listEl.appendChild(el('div','empty','読み込めませんでした。開き直してください。'))})
     })
   }
   boot()
