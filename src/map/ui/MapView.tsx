@@ -8,6 +8,7 @@ import './map.css'
 import {
   CIRCLE_RADIUS_M, RIPPLE_COLOR, RIPPLE_COUNT, RIPPLE_FILL_COLOR, RIPPLE_FILL_OPACITY, RIPPLE_PERIOD_MS, FIRST_FIX_TIMEOUT_MS, INITIAL_ZOOM, MAP_THEME, MAX_ZOOM, MIN_ZOOM, PITCH, STYLE_URL,
   IDLE_FPS,
+  MAP_MAX_PIXEL_RATIO,
   IDLE_SPEED_MPS,
 } from '../config.ts'
 import { recolor, themeStyle } from '../infra/theme.ts'
@@ -194,9 +195,13 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     // 色の案は標準（MAP_THEME）。見比べたいときだけ URL の ?theme= で選ぶ
     const theme = currentTheme(window.location.search, MAP_THEME) // 夜は夜の色（A14）
     container.style.visibility = 'hidden' // 最初の位置が取れるまで地図は見せない
+    // 描く細かさ: ?dpr=N で試せる。無ければ config の上限（null なら端末のまま）
+    const dprParam = Number(new URLSearchParams(window.location.search).get('dpr')) || null
+    const dprCap = dprParam ?? MAP_MAX_PIXEL_RATIO
     const map = new MapLibreMap({
       container,
       style: STYLE_URL,
+      ...(dprCap ? { pixelRatio: Math.min(window.devicePixelRatio || 1, dprCap) } : {}),
       transformStyle: (_prev, next) => themeStyle(next, theme),
       pitch: PITCH,
       zoom: INITIAL_ZOOM,
