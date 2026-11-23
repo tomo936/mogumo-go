@@ -30,9 +30,14 @@ type Props = {
 export function ZukanDetail({ shop, no, onBack, onLocate }: Props) {
   const v = shop.visits
   const [shareMsg, setShareMsg] = useState<string | null>(null)
+  const [sharing, setSharing] = useState(false) // 共有の画面が出ている間は、もう一度押せない（iPhone は 2 回目が失敗になる）
   const share = async () => {
+    if (sharing) return
+    setSharing(true)
+    setShareMsg(null)
     const r = await shareOut(zukanShareText({ shopName: shop.name, kindLabel: KIND_LABEL[shop.kind] ?? null, visits: v?.count ?? 1 }))
     setShareMsg(r === 'copied' ? '文をコピーしました' : r === 'failed' ? '共有できませんでした' : null)
+    setSharing(false)
   }
   const tier = v ? frameTier(v.count) : 'normal'
   return (
@@ -91,7 +96,7 @@ export function ZukanDetail({ shop, no, onBack, onLocate }: Props) {
           <button type="button" className="zd__locate" onClick={onLocate}>
             地図で見る
           </button>
-          <button type="button" className="zd__share" onClick={() => void share()}>
+          <button type="button" className="zd__share" disabled={sharing} onClick={() => void share()}>
             共有する
           </button>
           {shareMsg && (

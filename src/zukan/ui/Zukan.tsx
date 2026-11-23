@@ -55,17 +55,20 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null, ini
   const byKind = useMemo(() => (state.status === 'ready' ? buildZukan(state.shops) : null), [state])
   // お店のシートから来たときは、読み込めたらそのお店の種類を選び、カードの詳細を開く（1 回だけ）
   const [jumped, setJumped] = useState(false)
+  const [missing, setMissing] = useState(false) // お店のシートから来たのに、図鑑にそのお店が見つからなかった
   useEffect(() => {
     if (jumped || !initialShopId || !byKind) return
     setJumped(true)
+    // 地図のお店（osm:）とホットペッパーのお店が 1 枚にまとまっていると id が違うので、地図の番号でも探す
     for (const [k, list] of byKind) {
-      const i = list.findIndex((s) => s.id === initialShopId)
+      const i = list.findIndex((s) => s.id === initialShopId || s.mapId === initialShopId)
       if (i < 0) continue
       setKind(k)
       setPage(Math.floor(i / PAGE_SIZE))
       setDetail({ shop: list[i], no: cardNo(i) })
       return
     }
+    setMissing(true)
   }, [jumped, initialShopId, byKind])
   const all = useMemo(() => (byKind ? [...byKind.values()].flat() : []), [byKind])
   const list = byKind?.get(kind) ?? []
@@ -115,6 +118,11 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null, ini
       </header>
 
       {state.status === 'loading' && <p className="zukan__note">図鑑を開いています…</p>}
+      {missing && (
+        <p className="zukan__note" role="status">
+          このお店のカードは、まだ図鑑に入っていません。少しあとで開き直してください
+        </p>
+      )}
       {state.status === 'error' && <p className="zukan__note" role="alert">図鑑を読み込めませんでした</p>}
 
       {byKind && (

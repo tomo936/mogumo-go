@@ -9,9 +9,10 @@ export type ShareText = { title: string; text: string; url: string }
 export function zukanShareText({ shopName, kindLabel, visits }: ShareInput): ShareText {
   const kind = kindLabel ? `（${kindLabel}）` : ''
   const times = visits >= 2 ? `${visits}回目の` : ''
+  // 1 回目: 「…にチェックインをしたよ」、2 回目から: 「…に3回目のチェックインをしたよ」
   return {
     title: 'もぐもGO',
-    text: `${shopName}${kind}に${times}チェックインしたよ。霧を晴らしてまちのおいしいお店を集めよう #もぐもGO`,
+    text: `${shopName}${kind}に${times}チェックインをしたよ。霧を晴らしてまちのおいしいお店を集めよう #もぐもGO`,
     url: APP_URL,
   }
 }

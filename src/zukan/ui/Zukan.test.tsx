@@ -159,7 +159,20 @@ test('行ったお店の詳細には「共有する」。共有の画面が無�
   await screen.findByLabelText('図鑑カード詳細')
   await userEvent.click(screen.getByRole('button', { name: '共有する' }))
   await waitFor(() => expect(writeText).toHaveBeenCalled())
-  expect(writeText.mock.calls[0][0]).toContain('麺屋A（ラーメン）に2回目のチェックインしたよ')
+  expect(writeText.mock.calls[0][0]).toContain('麺屋A（ラーメン）に2回目のチェックインをしたよ')
   expect(writeText.mock.calls[0][0]).toContain('https://mogumo-go.vercel.app')
   expect(screen.getByText('文をコピーしました')).toBeInTheDocument()
+})
+
+test('お店のシートの地図のお店（osm:）が、図鑑でホットペッパーのお店とまとまっていても、そのカードが開く', async () => {
+  load.mockResolvedValueOnce([{ ...visited, mapId: 'osm:9' }])
+  render(<Zukan onLocate={() => {}} onClose={() => {}} initialShopId="osm:9" />)
+  expect(await screen.findByLabelText('図鑑カード詳細')).toBeInTheDocument()
+})
+
+test('図鑑にそのお店が無ければ、一覧のまま一言出す', async () => {
+  load.mockResolvedValueOnce([visited])
+  render(<Zukan onLocate={() => {}} onClose={() => {}} initialShopId="hp:NONE" />)
+  expect(await screen.findByText(/まだ図鑑に入っていません/)).toBeInTheDocument()
+  expect(screen.queryByLabelText('図鑑カード詳細')).not.toBeInTheDocument()
 })

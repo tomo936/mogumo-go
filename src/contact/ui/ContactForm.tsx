@@ -38,7 +38,11 @@ export function ContactForm({ email, guest, send, onClose }: Props) {
       {result === 'ok' ? (
         <div className="ct__done" role="status">
           <b>届きました。ありがとうございます！</b>
-          <p>返事が必要なものは、ログインのメールアドレスにお送りします。数日かかることがあります。</p>
+          <p>
+            {guest
+              ? 'ゲストには返事を送れません。いただいた内容は、アプリを良くするために使わせていただきます。'
+              : '返事が必要なものは、ログインのメールアドレスにお送りします。数日かかることがあります。'}
+          </p>
           <button type="button" className="ct__send" onClick={onClose}>
             設定に戻る
           </button>

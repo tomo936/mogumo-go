@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, test } from 'vitest'
 import { GUIDE_PAGES, guideKey, holeAround, mouthAt, onTap, shownChars, unionRect } from './guide.ts'
 
 describe('ポコタンの案内の決まり', () => {
@@ -34,11 +34,11 @@ describe('ポコタンの案内の決まり', () => {
     expect(guideKey('u1')).toBe('mogumo.tutorial.u1')
   })
 
-  it('霧はチェックインで晴れる・目標は町のクリア・ガチャでキャラを変えられる、を言う', () => {
+  it('霧はチェックインで晴れる・目標は町のクリア・キャラを変えられる、を言う', () => {
     const all = GUIDE_PAGES.map((p) => p.text).join('')
     expect(all).toContain('チェックインすると、まわりの霧がパーッと晴れる')
     expect(all).toContain('目指すのは町のクリア')
-    expect(all).toContain('ガチャ')
+    expect(all).toContain('お気に入りのキャラに変えられる')
     expect(all).not.toContain('歩くと晴れ')
   })
 
@@ -50,4 +50,11 @@ describe('ポコタンの案内の決まり', () => {
   it('抜く丸は部品の真ん中に、部品より少し大きく', () => {
     expect(holeAround({ left: 100, top: 20, width: 60, height: 40 }, 12)).toEqual({ cx: 130, cy: 40, r: 42 })
   })
+})
+
+test('ガチャが準備中の間は、案内で「ガチャを引く」と言わない（2026-11-24）', async () => {
+  const { GACHA_OPEN } = await import('../../gacha/config.ts')
+  const { GUIDE_PAGES: pages } = await import('./guide.ts')
+  const said = pages.some((p) => p.text.includes('ガチャを引く'))
+  expect(said).toBe(GACHA_OPEN)
 })

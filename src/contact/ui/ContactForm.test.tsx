@@ -24,3 +24,14 @@ test('送りすぎ・失敗はそのまま書き直せるように知らせる',
   expect(await screen.findByRole('alert')).toHaveTextContent('1 日 5 件')
   expect(screen.getByLabelText('内容')).toHaveValue('x')
 })
+
+test('ゲストが送ったあとは「メールアドレスにお送りします」と言わない（2026-11-24）', async () => {
+  const send = vi.fn(async () => 'ok' as const)
+  render(<ContactForm email={null} guest send={send} onClose={vi.fn()} />)
+  await userEvent.type(screen.getByLabelText('内容'), 'たのしい')
+  await userEvent.click(screen.getByRole('button', { name: '送る' }))
+  const done = await screen.findByRole('status')
+  expect(done).toHaveTextContent('届きました')
+  expect(done).not.toHaveTextContent('メールアドレスにお送りします')
+  expect(done).toHaveTextContent('ゲストには返事を送れません')
+})

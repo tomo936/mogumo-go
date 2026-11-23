@@ -397,6 +397,14 @@ export function MapPage() {
   }
   const [zukanOpen, setZukanOpen] = useState(false) // 図鑑（メニューから開く）
   const [zukanShopId, setZukanShopId] = useState<string | null>(null) // お店のシートから開いたとき、そのお店のカードを出す
+  // 図鑑を開く（メニューからも、お店のシートの「図鑑のカードを見る」からも同じ準備: 今の地図のお店と晴れたマスを渡し、地図のお店を送る）
+  const openZukan = (shopId: string | null) => {
+    const inp = mapRef.current?.hintInputs()
+    setZukanInput({ mapShops: inp?.shops ?? [], cleared: inp?.cleared ?? new Set() })
+    syncOsm()
+    setZukanShopId(shopId)
+    setZukanOpen(true)
+  }
   const [recordTab, setRecordTab] = useState<RecordTab | null>(null) // 記録（メニューから開く。マイページからは じっせき で）
   const [myPageOpen, setMyPageOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -661,10 +669,7 @@ export function MapPage() {
           hint={hints.hintFor(selected)}
           masked={hints.isMasked(selected)}
           onReview={() => void openReview(selected)}
-          onZukan={() => {
-            setZukanShopId(selected.id)
-            setZukanOpen(true)
-          }}
+          onZukan={() => openZukan(selected.id)}
           reviews={sheetReviews?.shopId === selected.id ? sheetReviews : null}
           busy={busy}
           error={checkinError}
@@ -886,11 +891,7 @@ export function MapPage() {
           onHintTap={() => (exploreOpen ? closeExplore() : openExplore())}
           onZukan={() => {
             closeExplore()
-            const inp = mapRef.current?.hintInputs()
-            setZukanInput({ mapShops: inp?.shops ?? [], cleared: inp?.cleared ?? new Set() })
-            syncOsm()
-            setZukanShopId(null)
-            setZukanOpen(true)
+            openZukan(null)
           }}
           onNearby={() => {
             closeExplore()
