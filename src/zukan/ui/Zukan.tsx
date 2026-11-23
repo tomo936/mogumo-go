@@ -146,12 +146,17 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null, ini
             ))}
           </nav>
 
+          {/* 選んだジャンルの進み具合（2026-11-24 外のレビューの案 mock-c: 種類の絵＋大きな数字＋棒） */}
           <div className="zukan__summary">
+            <img src={kindIcon(kind)} alt="" />
             <span>{KIND_NAME[kind]}</span>
             <b aria-label={`${filledCount(list)}/${list.length} 訪問済み`}>
               {filledCount(list)}
               <small>{` / ${list.length}`}</small>
             </b>
+            <i className="zukan__summary-bar" aria-hidden="true">
+              <i style={{ width: `${list.length ? Math.round((filledCount(list) / list.length) * 100) : 0}%` }} />
+            </i>
           </div>
 
           {list.length === 0 ? (

@@ -167,16 +167,46 @@
   object-fit: contain;
 }
 .zukan__tab--on {
-  background: #8a5a32;
-  border-color: #8a5a32;
+  /* 選んだジャンルは橙の塗りで強く（2026-11-24 mock-c。前はこげ茶）。白い字との明るさの差 4.79（明るい橙 #e8782f だと 2.93 で本番より読みにくい） */
+  background: #b8561c;
+  border-color: #9a4615;
   color: #fff;
 }
 .zukan__summary {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 2px 18px 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0 14px 8px;
+  padding: 8px 14px 10px;
+  border: 2px solid #ead7b8;
+  border-radius: 14px;
+  background: #fffdf7;
   font-weight: 800;
+}
+.zukan__summary img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+.zukan__summary b {
+  margin-left: auto;
+  color: #c2652a; /* 明るさの差 3.9（大きい字の基準 3 以上。#e8782f は 2.88） */
+}
+/* 進み具合の棒（記録の「次の枠まで」の棒と同じ色） */
+.zukan__summary-bar {
+  display: block;
+  flex-basis: 100%;
+  height: 6px;
+  border-radius: 99px;
+  background: #f1e4cc;
+  overflow: hidden;
+}
+.zukan__summary-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: #e8782f;
 }
 .zukan__summary b {
   font-size: 20px;

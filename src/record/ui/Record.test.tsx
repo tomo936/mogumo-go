@@ -131,7 +131,7 @@ test('じっせきのタブに切りかえるとバッジが出る', async () =>
   render(<Record home={null} onClose={() => {}} />)
   await userEvent.click(await screen.findByRole('tab', { name: 'じっせき' }))
   expect(screen.getByRole('img', { name: 'はじめてのラーメン' })).toBeInTheDocument()
-  expect(screen.getByText(/とった実績 \d+ \/ \d+/)).toBeInTheDocument()
+  expect(screen.getByLabelText(/とった実績 \d+ \/ \d+/)).toBeInTheDocument()
 })
 
 test('はじめから じっせき のタブで開ける', async () => {

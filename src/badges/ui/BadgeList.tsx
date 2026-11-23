@@ -37,7 +37,17 @@ export function BadgeList({ states, hasHome }: { states: BadgeState[]; hasHome: 
   const earned = states.filter((s) => s.earnedAt !== null).length
   return (
     <div className="bd">
-      <p className="bd__total">{`とった実績 ${earned} / ${states.length}`}</p>
+      {/* 全体の進み具合の札（2026-11-24 外のレビューの案 mock-a・c: 大きな数字＋棒） */}
+      <div className="bd__total" aria-label={`とった実績 ${earned} / ${states.length}`}>
+        <span>とった実績</span>
+        <b>
+          {earned}
+          <small>{` / ${states.length}`}</small>
+        </b>
+        <i className="bd__total-bar" aria-hidden="true">
+          <i style={{ width: `${states.length ? Math.round((earned / states.length) * 100) : 0}%` }} />
+        </i>
+      </div>
       {GROUP_ORDER.map((g) => {
         const list = states.filter((s) => s.def.group === g)
         if (list.length === 0) return null
