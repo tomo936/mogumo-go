@@ -9,9 +9,11 @@ import { MyReviews } from '../../reviews/ui/MyReviews.tsx'
 import { ReviewList } from '../../reviews/ui/ReviewList.tsx'
 import { cardUrl, kindIcon } from './cardArt.ts'
 import { Icon } from '../../ui/Icon.tsx'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { zukanShareText } from '../../share/domain/shareText.ts'
-import { shareOut } from '../../share/infra/share.ts'
+import { shareOut, shareImage } from '../../share/infra/share.ts'
+import { drawShareCard } from '../../share/infra/shareCard.ts'
+import { loadMine, photoUrls } from '../../reviews/infra/reviewsApi.ts'
 
 // 段の呼び名は 銅（1〜2 回）・銀（3〜9 回）・金（10 回〜）。2026-11-12 オーナー「金銀銅」
 const TIER_CHIP = { normal: '銅の枠', silver: '銀の枠', gold: '金の枠' } as const
@@ -31,12 +33,37 @@ export function ZukanDetail({ shop, no, onBack, onLocate }: Props) {
   const v = shop.visits
   const [shareMsg, setShareMsg] = useState<string | null>(null)
   const [sharing, setSharing] = useState(false) // 共有の画面が出ている間は、もう一度押せない（iPhone は 2 回目が失敗になる）
+  // 共有の画像（2026-11-24 B-21「感想の文と画像つきで、このアプリ独自の見た目の画像で」）。
+  // iPhone は押した直後でないと共有の画面を出せないので、詳細を開いたときに先に作っておく。作れなければ文だけで共有する
+  const [card, setCard] = useState<Blob | 'none' | null>(null)
+  useEffect(() => {
+    if (!v) return
+    let alive = true
+    void (async () => {
+      try {
+        const { mine } = await loadMine(shop.id).catch(() => ({ mine: [] as Awaited<ReturnType<typeof loadMine>>['mine'] }))
+        const latest = [...mine].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null
+        const own = latest?.photoPath ? (await photoUrls([latest.photoPath]).catch(() => new Map<string, string>())).get(latest.photoPath) ?? null : null
+        const blob = await drawShareCard(
+          { shopName: shop.name, kindLabel: KIND_LABEL[shop.kind] ?? null, visits: v.count, stars: latest?.stars ?? null, comment: latest?.body ?? null, photo: own ? 'own' : 'kind' },
+          own ?? cardUrl(shop.kind), // 写真が無ければ図鑑のカードの絵（お店の建物）
+        )
+        if (alive) setCard(blob)
+      } catch {
+        if (alive) setCard('none')
+      }
+    })()
+    return () => {
+      alive = false
+    }
+  }, [shop.id, shop.name, shop.kind, v])
   const share = async () => {
     if (sharing) return
     setSharing(true)
     setShareMsg(null)
-    const r = await shareOut(zukanShareText({ shopName: shop.name, kindLabel: KIND_LABEL[shop.kind] ?? null, visits: v?.count ?? 1 }))
-    setShareMsg(r === 'copied' ? '文をコピーしました' : r === 'failed' ? '共有できませんでした' : null)
+    const text = zukanShareText({ shopName: shop.name, kindLabel: KIND_LABEL[shop.kind] ?? null, visits: v?.count ?? 1 })
+    const r = card instanceof Blob ? await shareImage(card, text) : await shareOut(text)
+    setShareMsg(r === 'copied' ? '文をコピーしました' : r === 'saved' ? '画像を保存しました' : r === 'failed' ? '共有できませんでした' : null)
     setSharing(false)
   }
   const tier = v ? frameTier(v.count) : 'normal'
@@ -96,8 +123,8 @@ export function ZukanDetail({ shop, no, onBack, onLocate }: Props) {
           <button type="button" className="zd__locate" onClick={onLocate}>
             地図で見る
           </button>
-          <button type="button" className="zd__share" disabled={sharing} onClick={() => void share()}>
-            共有する
+          <button type="button" className="zd__share" disabled={sharing || card === null} onClick={() => void share()}>
+            {card === null ? '共有の画像を作っています…' : '共有する'}
           </button>
           {shareMsg && (
             <p className="zd__share-msg" role="status">

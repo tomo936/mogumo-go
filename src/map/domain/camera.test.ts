@@ -20,3 +20,15 @@ test('あいだは寄るほど傾きが大きくなり、逆戻りしない', ()
   expect(pitchForZoom(18, stops)).toBeGreaterThan(55)
   expect(pitchForZoom(18, stops)).toBeLessThan(72)
 })
+
+test('本物の設定（config の PITCH_BY_ZOOM）も、寄るほど傾きが大きく、上限を超えない', async () => {
+  const { PITCH_BY_ZOOM, MAX_PITCH, PITCH, INITIAL_ZOOM } = await import('../config.ts')
+  let prev = -1
+  for (let z = 13; z <= 19.5; z += 0.05) {
+    const p = pitchForZoom(z, PITCH_BY_ZOOM)
+    expect(p).toBeGreaterThanOrEqual(prev)
+    expect(p).toBeLessThanOrEqual(MAX_PITCH)
+    prev = p
+  }
+  expect(pitchForZoom(INITIAL_ZOOM, PITCH_BY_ZOOM)).toBe(PITCH)
+})

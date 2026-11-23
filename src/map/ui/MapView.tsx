@@ -7,7 +7,7 @@ import type { GeoJSONSource } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './map.css'
 import {
-  CIRCLE_RADIUS_M, RIPPLE_COLOR, RIPPLE_COUNT, RIPPLE_FILL_COLOR, RIPPLE_FILL_OPACITY, RIPPLE_PERIOD_MS, FIRST_FIX_TIMEOUT_MS, INITIAL_ZOOM, MAP_THEME, MAX_ZOOM, MIN_ZOOM, PITCH, STYLE_URL, PITCH_BY_ZOOM, MAX_PITCH, AVATAR_PAD_TOP,
+  CIRCLE_RADIUS_M, RIPPLE_COLOR, RIPPLE_COUNT, RIPPLE_FILL_COLOR, RIPPLE_FILL_OPACITY, RIPPLE_PERIOD_MS, FIRST_FIX_TIMEOUT_MS, INITIAL_ZOOM, MAP_THEME, MAX_ZOOM, MIN_ZOOM, STYLE_URL, PITCH_BY_ZOOM, MAX_PITCH, AVATAR_PAD_TOP,
   IDLE_FPS,
   MAP_MAX_PIXEL_RATIO,
   IDLE_SPEED_MPS,
@@ -252,11 +252,17 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       world: ReturnType<typeof attachWorld> | null
     } = { loaded: false, target: null, current: null, lastFix: null, drawn: null, shown: null, acceptedAt: 0, rejectedAt: null, world: null }
     // 主人公（地図の真ん中）を画面の少し下に置く。画面の大きさが変わったら合わせ直す（2026-11-24）
-    const pad = () => map.setPadding({ top: Math.round(container.clientHeight * AVATAR_PAD_TOP), bottom: 0, left: 0, right: 0 })
+    // setPadding は中で jumpTo を呼び、寄せる動き（easeTo）を止めてしまうので、高さが変わったときだけ・動きの最中は終わってから
+    let padTop = -1
+    const pad = () => {
+      const top = Math.round(container.clientHeight * AVATAR_PAD_TOP)
+      if (top === padTop) return
+      if (map.isMoving()) return void map.once('moveend', pad)
+      padTop = top
+      map.setPadding({ top, bottom: 0, left: 0, right: 0 })
+    }
     pad()
     map.on('resize', pad)
-    // はじめの倍率がはじめの傾きと違うとき（前に寄せた倍率のまま開いたなど）も、倍率に合った傾きにそろえる
-    map.once('load', () => map.jumpTo({ zoom: map.getZoom() }))
     map.on('load', () => {
       map.addSource('me-circle', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addSource('me-shadow', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
@@ -450,7 +456,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       const finish = () => {
         introCancel = null
         progress = 1
-        map.jumpTo({ zoom, pitch: PITCH })
+        map.jumpTo({ zoom }) // 傾きは倍率で決まる（transformCameraUpdate）
         map.setMinZoom(MIN_ZOOM)
         if (!ended) {
           ended = true
@@ -465,7 +471,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         progress = Math.min(1, progress + dt / INTRO_MS)
         if (progress >= 1) return finish()
         const e = ease(progress)
-        map.jumpTo({ zoom: from + (zoom - from) * e, pitch: PITCH * e })
+        map.jumpTo({ zoom: from + (zoom - from) * e }) // 傾きは倍率で決まる（14 で真上 → 17 で 55 度）
         requestAnimationFrame(step)
       }
       void Promise.resolve(ready).then(() => {

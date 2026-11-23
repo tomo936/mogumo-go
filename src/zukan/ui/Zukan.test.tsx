@@ -157,7 +157,8 @@ test('行ったお店の詳細には「共有する」。共有の画面が無�
   load.mockResolvedValueOnce([visited])
   render(<Zukan onLocate={() => {}} onClose={() => {}} initialShopId="hp:A" />)
   await screen.findByLabelText('図鑑カード詳細')
-  await userEvent.click(screen.getByRole('button', { name: '共有する' }))
+  // 画像は詳細を開いたときに作る（テストの環境は canvas が無いので作れず、文の共有になる）
+  await userEvent.click(await screen.findByRole('button', { name: '共有する' }))
   await waitFor(() => expect(writeText).toHaveBeenCalled())
   expect(writeText.mock.calls[0][0]).toContain('麺屋A（ラーメン）に2回目のチェックインをしたよ')
   expect(writeText.mock.calls[0][0]).toContain('https://mogumo-go.vercel.app')
