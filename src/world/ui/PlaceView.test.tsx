@@ -68,7 +68,7 @@ test('onLocate が無ければ「地図で見る」は出さない', () => {
 })
 
 test('旗から開いた町は、進み具合の札（軒数・%・クリアまであと何軒）を出す（2026-11-24）', () => {
-  const town = { id: 't1', name: '経堂', city: '世田谷区', visited: 3, total: 10, clearedAt: null, completedAt: null, counting: false }
+  const town = { id: 't1', name: '経堂', city: '世田谷区', visited: 3, total: 10, clearedAt: null, completedAt: null, counting: false, lastAt: 0 }
   render(<PlaceView center={{ lat: 35, lng: 139 }} zoom={15} cells={[]} towns={[]} visits={[]} home={null} onBack={() => {}} onReturn={() => {}} town={town} />)
   expect(screen.getByLabelText('経堂 3 / 10 軒')).toBeInTheDocument()
   expect(screen.getByText(/クリアまであと/)).toHaveTextContent('クリアまであと 2 軒')

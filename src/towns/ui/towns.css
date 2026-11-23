@@ -226,3 +226,13 @@
 .town-row__goal--complete b {
   color: #9a6a00;
 }
+
+/* 町のクリアの紙ふぶき（2026-11-24）。画面全体の上に、押せないで重ねる */
+.town-banner__confetti {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 31; /* 帯と同じ段（帯はこの後に置くので帯が上） */
+  pointer-events: none;
+}
