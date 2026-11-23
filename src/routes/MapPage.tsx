@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
-import { loading } from '../credits/loadingGate.ts'
+import { loading, LOADING_MAX_WAIT_MS } from '../credits/loadingGate.ts'
 import { isGuest, useAuth } from '../auth/AuthContext.ts'
 import { LocationOverlay } from '../map/ui/LocationOverlay.tsx'
 import { MapView } from '../map/ui/MapView.tsx'
@@ -175,27 +175,54 @@ export function MapPage() {
   }, [inputLocked])
   // タイトルを閉じて地図へ入ったら、カメラを空から降ろす（2026-11-16 オーナー「空から来たような感じ」）
   useEffect(() => {
-    // タイトルをもう閉じていた（新しいアカウントがログイン・初回設定を経て来た）ときは、すぐ地図に入ったことにする（空から降りる演出はしない）
-    if (loading.hasEntered()) {
-      sound.startBgm()
-      setEntered(true)
+    // 地図へ入る流れ（2026-11-23 オーナー）: タイトルタップ → ローディング → 地図 → 空から降りる → （初めての人は）ポコタン。
+    // 降りているあいだは全部さわれない（下の inputLocked）。時間では決めず、降り終わった合図だけで次へ進む。
+    // 降り終わった合図の中で、初めての人は案内を見せる状態にもする（同じ描き直しで見せる。別の描き直しに分けると、その分遅れる。実測 2026-11-23）
+    const done = () => {
+      loading.markMapShown()
       setIntroDone(true)
-      return
+      if (firstGuide.current) setTour((t) => (t === 'wait' ? 'open' : t))
     }
-    return loading.onEnter(() => {
-      // 地図へ入る流れ（2026-11-23 オーナー）: タイトルタップ → ローディング → 地図 → 空から降りる → （初めての人は）ポコタン。
-      // 降りているあいだは全部さわれない（下の inputLocked）。時間では決めず、降り終わった合図だけで次へ進む
+    // 地図が降りる途中で作り直されたら（片付けで「途中で終わった」の合図が来る）、新しい地図でもう一度降りる。
+    // 片付けの合図で次へ進むと、降りている途中でさわれるようになってしまう。開発中の二重実行（StrictMode）もここを通る
+    let gen = 0
+    let alive = true
+    const descend = (waitShops = false) => {
+      const mine = ++gen
       const map = mapRef.current
-      // 降り終わった合図の中で、初めての人は案内を見せる状態にもする（同じ描き直しで見せる。別の描き直しに分けると、その分遅れる。実測 2026-11-23）
-      const done = () => {
-        setIntroDone(true)
-        if (firstGuide.current) setTour((t) => (t === 'wait' ? 'open' : t))
-      }
-      if (map) map.intro(done)
+      // waitShops: お店がそろってから降り始める（タイトルのローディングと同じ条件・同じ上限。地図に来た直後は、まだ位置もお店も無く地図が隠れている）
+      const ready = waitShops && map ? Promise.race([map.whenShopsReady(), new Promise<void>((r) => setTimeout(r, LOADING_MAX_WAIT_MS))]) : undefined
+      if (map)
+        map.intro((aborted) => {
+          if (!aborted) return done()
+          requestAnimationFrame(() => {
+            if (alive && mine === gen) descend(waitShops)
+          })
+        }, ready)
       else done() // 地図がまだ無い（ふつうは無い）: 降りる演出は無しで次へ
       sound.startBgm() // 空から降りるのに合わせて BGM（昼）がふわっと始まる（A6）
       setEntered(true)
-    })
+    }
+    if (loading.hasEntered()) {
+      // タイトルをもう閉じていた。この起動で一度地図に入っていて、規約などほかの画面から戻ってきたときは、何も挟まない
+      if (loading.mapShown()) {
+        sound.startBgm()
+        setEntered(true)
+        setIntroDone(true)
+        return
+      }
+      // 新しいアカウント（ゲストなど）がログイン・初回設定を経て、はじめて地図に来た: 今までの順番のまま、地図に来たところで降りる
+      // （前は降りる演出が抜けて、いきなりポコタンだった。2026-11-23 オーナー「降りるが抜けていたから合わせるべき」）
+      descend(true)
+      return () => {
+        alive = false
+      }
+    }
+    const off = loading.onEnter(() => descend()) // タイトルのローディングでお店はそろっている
+    return () => {
+      alive = false
+      off()
+    }
   }, [])
   useEffect(() => {
     let alive = true

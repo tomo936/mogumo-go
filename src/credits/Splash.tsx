@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import '@fontsource/m-plus-rounded-1c/800.css'
 import './credits.css'
-import { loading } from './loadingGate.ts'
+import { loading, LOADING_MAX_WAIT_MS as MAX_WAIT_MS } from './loadingGate.ts' // お店がそろわなくても、起動からここでメインへ
 import { sound } from '../sound/infra/sound.ts'
 import titleArt from '../assets/ui/title.webp'
 import pancakeArt from '../assets/ui/loading-pancake.webp'
 import logoArt from '../assets/ui/logo.webp'
-const MAX_WAIT_MS = 8000 // お店がそろわなくても、起動からここでメインへ
 const INTRO_FALLBACK_MS = 1500 // 動きが止められている端末で animationend が来なくても、タイトルの絵は消す
 
 // タイトルを閉じたあとの「空から来た」演出（2026-11-16 オーナー）: タイトルの絵がふわっと消えて、下の地図が見える。
