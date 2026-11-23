@@ -107,10 +107,9 @@
   display: none;
 }
 
-/* 案内が出るまでの間、地図・ボタンをさわれないようにする透明の幕（初めての人だけ） */
-.guide-wait {
-  position: fixed;
-  inset: 0;
-  z-index: 59;
-  touch-action: none;
+
+/* 控え: 降りている間に見えないまま組み立てておく（ポコタンの絵の準備を先に済ませる）。見せるときはクラスを外すだけ */
+.guide--standby {
+  visibility: hidden;
+  pointer-events: none;
 }
