@@ -5,6 +5,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './record.css'
 import { Icon } from '../../ui/Icon.tsx'
+import { kindIcon } from '../../zukan/ui/cardArt.ts'
+import { KIND_LABEL } from '../../shops/domain/kindLabel.ts'
 import { expFromShopIds, levelFor } from '../../zukan/domain/level.ts'
 import { loadRecord } from '../infra/recordApi.ts'
 import { RecordMap } from './RecordMap.tsx'
@@ -176,6 +178,29 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
               ワールドマップ
             </button>
           </div>
+          {/* 日付の列は地図の上（2026-11-24 外のレビューの案 mock-b） */}
+          {range !== null && (
+            <div className="rc__slider">
+              <div className="rc__slider-head">
+                <button type="button" aria-label="前の行った日" onClick={() => { setByStep(true); setT(stepVisitDay(now, -1, visits, range)) }}>‹</button>
+                <b>
+                  <Icon name="calendar" size={18} />
+                  {today.length > 0 ? `${dayWithWeek(now)}　${today.length}軒` : dayWithWeek(now)}
+                </b>
+                <button type="button" aria-label="次の行った日" onClick={() => { setByStep(true); setT(stepVisitDay(now, 1, visits, range)) }}>›</button>
+              </div>
+              <input
+                type="range"
+                aria-label="日付"
+                min={range.start}
+                max={range.end}
+                step={3600_000}
+                value={now}
+                onChange={(e) => { setByStep(false); setT(snapEnd(Number(e.target.value), range.end)) }}
+              />
+              <div className="rc__slider-ends"><span>{dayLabel(range.start)}</span><span>{dayLabel(range.end)}</span></div>
+            </div>
+          )}
           <div className="rc__mapcard">
             <RecordMap cells={cells} towns={towns} t={now} home={home} pins={pins} wave={byStep} outlines={outlines} />
             <button
@@ -193,25 +218,6 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
             {range === null && <p className="rc__empty">まだ晴れた場所がありません。お店に行くと、ここに光が広がります</p>}
           </div>
 
-          {range !== null && (
-            <div className="rc__slider">
-              <div className="rc__slider-head">
-                <button type="button" aria-label="前の行った日" onClick={() => { setByStep(true); setT(stepVisitDay(now, -1, visits, range)) }}>‹</button>
-                <b>{today.length > 0 ? `${dayWithWeek(now)}　${today.length}軒` : dayWithWeek(now)}</b>
-                <button type="button" aria-label="次の行った日" onClick={() => { setByStep(true); setT(stepVisitDay(now, 1, visits, range)) }}>›</button>
-              </div>
-              <input
-                type="range"
-                aria-label="日付"
-                min={range.start}
-                max={range.end}
-                step={3600_000}
-                value={now}
-                onChange={(e) => { setByStep(false); setT(snapEnd(Number(e.target.value), range.end)) }}
-              />
-              <div className="rc__slider-ends"><span>{dayLabel(range.start)}</span><span>{dayLabel(range.end)}</span></div>
-            </div>
-          )}
 
           {today.length > 0 && (
             <div className="rc__today">
@@ -219,17 +225,21 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
               {today.map((v, i) => (
                 <div className="rc__today-item" key={`${v.shopId}-${v.at}`}>
                   <span className="rc__today-num">{i + 1}</span>
-                  <b>{v.name}</b>
-                  <span>{timeLabel(v.at)}</span>
+                  <Thumb photoUrl={v.photoUrl} kind={v.kind} />
+                  <div className="rc__item-main">
+                    <b>{v.name}</b>
+                    <span>{timeLabel(v.at)}</span>
+                  </div>
+                  <span className="rc__kind">{KIND_LABEL[v.kind]}</span>
                 </div>
               ))}
             </div>
           )}
 
           <div className="rc__stats">
-            <div><b>{areaKm2At(area, now).toFixed(2)}</b><span>晴れた広さ(km²)</span></div>
-            <div><b>{visitedShops}</b><span>行ったお店</span></div>
-            <div><b>{`Lv ${lv.level}`}</b><span>いまのレベル</span></div>
+            <div><Icon name="cloud" size={20} /><b>{areaKm2At(area, now).toFixed(2)}</b><span>晴れた広さ(km²)</span></div>
+            <div><Icon name="store" size={20} /><b>{visitedShops}</b><span>行ったお店</span></div>
+            <div><Icon name="star" size={20} /><b>{`Lv ${lv.level}`}</b><span>いまのレベル</span></div>
           </div>
 
           <h3 className="rc__h">町のクリア・コンプリート</h3>
@@ -244,11 +254,12 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
                 <div className="rc__month">{g.month}</div>
                 {g.items.map((v, i) => (
                   <div className="rc__item" key={`${v.shopId}-${v.day}-${i}`}>
-                    <span className="rc__thumb">{v.photoUrl ? <img src={v.photoUrl} alt="" /> : null}</span>
-                    <div>
+                    <Thumb photoUrl={v.photoUrl} kind={v.kind} />
+                    <div className="rc__item-main">
                       <b>{v.name}</b>
                       <span>{v.day.replaceAll('-', '.')}</span>
                     </div>
+                    <span className="rc__kind">{KIND_LABEL[v.kind]}</span>
                   </div>
                 ))}
               </div>
@@ -280,5 +291,14 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
         </>
       )}
     </section>
+  )
+}
+
+// お店の小さい写真。写真が無いお店は種類の絵（2026-11-24 外のレビューの案「行ったお店に写真と種類」）
+function Thumb({ photoUrl, kind }: { photoUrl: string | null; kind: VisitEntry['kind'] }) {
+  return (
+    <span className={`rc__thumb${photoUrl ? '' : ' rc__thumb--kind'}`}>
+      <img src={photoUrl ?? kindIcon(kind)} alt="" />
+    </span>
   )
 }

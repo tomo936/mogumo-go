@@ -85,7 +85,7 @@
   pointer-events: none;
 }
 .rc__slider {
-  margin: 14px 4px 4px;
+  margin: 0 4px 16px; /* 地図の上に置く（2026-11-24 mock-b）。下は地図の上のテープ分あける */
   padding: 10px 14px 8px;
   background: #fffdf7;
   border-radius: 14px;
@@ -221,7 +221,7 @@
   border: 1.5px solid #e8a26b;
   border-radius: 999px;
   background: #fff7ee;
-  color: #c2652a;
+  color: #a2561b; /* 明るさの差 5.10（#c2652a は 3.81 で、11px の字には足りない） */
   font-size: 11px;
   font-weight: 800;
 }
@@ -427,4 +427,20 @@
 .rc__range[aria-pressed='true'] {
   background: #c2652a;
   color: #fffdf7;
+}
+
+/* 日付の列のカレンダーの絵（2026-11-24 mock-b・a。B-24 のカレンダーの入口になる） */
+.rc__slider-head b {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rc__slider-head b svg {
+  color: #c2652a;
+}
+/* 数字の札の絵（2026-11-24 mock-b） */
+.rc__stats svg {
+  display: block;
+  margin: 0 auto 2px;
+  color: #c2652a;
 }
