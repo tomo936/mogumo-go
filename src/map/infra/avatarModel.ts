@@ -111,6 +111,9 @@ export function createAvatarModel(map: MapLibreMap, initialId: number) {
         .catch(() => {}) // 読めなければ 2D の絵のまま
   }
 
+  // 駅や大型施設の立体の中を歩くとき、足元が壁に埋まって上半身だけ浮いて見えるのを防ぐ（2026-11-23 オーナー）
+  // 施設の「上を歩く」見た目にする: そのあいだだけ奥行きを無視して全身を手前に描く
+  let overlay = false
   const layer = threeLayer({
     id: 'me-avatar-3d',
     onAdd(scene) {
@@ -126,6 +129,7 @@ export function createAvatarModel(map: MapLibreMap, initialId: number) {
       unload()
     },
     origin: () => pose?.pos ?? null,
+    overlay: () => overlay,
   })
 
   const q = new THREE.Quaternion()
@@ -134,6 +138,12 @@ export function createAvatarModel(map: MapLibreMap, initialId: number) {
   const scale = new THREE.Vector3()
   return {
     layer,
+    setOverlay(on: boolean) {
+      if (on !== overlay) {
+        overlay = on
+        map.triggerRepaint()
+      }
+    },
     ready: () => ready,
     // 使うキャラを替える。3D が無いキャラなら ready() が false のまま（2D の絵が出る）
     setCharacter(id: number) {
