@@ -36,3 +36,10 @@ test('ビルは当たりの中心が高い（sizeM×0.9 上）', () => {
   expect(pickShop([shop('a', 100, 100)], tap, project)).toBeNull()
   expect(pickShop([shop('b', 100, 100, 10, 'building')], tap, project)?.id).toBe('b')
 })
+
+test('strict: 大きな建物の広い円が、離れた所のタップまで取らない（円は指の大きさだけ）', () => {
+  const big = shop('big', 100, 100, 60) // 大きい建物: 通常の当たりは半径 84px
+  expect(pickShop([big], { x: 100 + 60, y: 100 - 40 }, project)?.id).toBe('big') // 通常は広く取る
+  expect(pickShop([big], { x: 100 + 60, y: 100 - 40 }, project, true)).toBeNull() // strict は取らない
+  expect(pickShop([big], { x: 100, y: 100 - 60 }, project, true)?.id).toBe('big') // 見た目の中心（根元より 0.5×60m 上 = 60px 上）のすぐ近くなら取る
+})
