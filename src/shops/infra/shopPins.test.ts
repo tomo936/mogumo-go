@@ -140,7 +140,12 @@ test('pick: お店は店の id、気配は hint:<id>、まとめは cluster:<経
   expect(pins.pick({ x: 10, y: 10 })).toBeNull()
   map.queryRenderedFeatures.mockReturnValueOnce([{ properties: { t: 'shop', id: 'a' } }])
   expect(pins.pick({ x: 10, y: 10 })).toEqual(['a'])
+  expect(map.queryRenderedFeatures).toHaveBeenLastCalledWith([[9, 9], [11, 11]], { layers: [PIN_LAYER] }) // まず指の真下（1px）
+  map.queryRenderedFeatures.mockReturnValueOnce([]).mockReturnValueOnce([{ properties: { t: 'shop', id: 'pad' } }])
+  expect(pins.pick({ x: 10, y: 10 })).toEqual(['pad']) // 真下に無ければ余裕（8px）を足して探し直す
   expect(map.queryRenderedFeatures).toHaveBeenLastCalledWith([[2, 2], [18, 18]], { layers: [PIN_LAYER] })
+  map.queryRenderedFeatures.mockReturnValueOnce([{ properties: { t: 'shop', id: 'under' } }])
+  expect(pins.pick({ x: 10, y: 10 })).toEqual(['under']) // 指の真下の絵を先に取る（近くの別のピンに取られない）
   map.queryRenderedFeatures.mockReturnValueOnce([{ properties: { t: 'hint', id: 'h1' } }])
   expect(pins.pick({ x: 10, y: 10 })).toEqual(['hint:h1'])
   map.queryRenderedFeatures.mockReturnValueOnce([{ properties: { t: 'cluster', id: 'cluster:1' }, geometry: { type: 'Point', coordinates: [139.63, 35.65] } }])
