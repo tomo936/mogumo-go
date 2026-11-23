@@ -22,3 +22,9 @@
 
 ## 確かめられなかったこと
 Dribbble・Behance・Mobbin・Pinterest・Game UI Database の個別の画像。ドラクエウォークの演出、かわいい系のガチャ・レベルアップの良い例。snapblocks・audiocn・scrolltide のライセンス本文。
+
+## animata の部品の数字（2026-11-24 ページを読んで抜き出した。ライセンスはページに MIT と書かれておらず未確認 → コードは使わず、値だけ参考にする）
+- Fluid Tabs（https://animata.design/docs/tabs/fluid-tabs）: 選んだタブの下地は spring（stiffness 380・damping 34・mass 0.75）、文字 0.28s cubic-bezier(.32,.72,0,1)、選んでいないタブは scale .98
+- Flower Menu（https://animata.design/docs/fabs/flower-menu）: 開く 220ms cubic-bezier(.2,0,0,1)、遅れ 10ms＋順番×20ms、閉じる (n−1−順番)×14ms、閉じた花びらは scale .72、押すと scale .95、ボタンは最小 44px
+- Ripple Button: 波紋 250ms ease-out scale 0→1／Card Skew: 傾き最大 X4°・Y6°（hover 用でスマホには不向き）／Icon Ripple: Tailwind の animate-ping／Progress: 棒の遅れ 順番×6ms
+- 「押すと沈む・跳ねる」「持ち上がる」部品は animata に無かった → 押し心地は Josh Comeau の値（押す 34ms・戻り 600ms cubic-bezier(.3,.7,.4,1)）を使う
