@@ -211,3 +211,18 @@
   font-weight: 700;
   color: #9a8570;
 }
+
+/* 次の目標の一言（2026-11-24） */
+.town-row__goal {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #7a5a3a;
+}
+.town-row__goal b {
+  font-size: 15px;
+  color: #a2561b;
+}
+.town-row__goal--complete b {
+  color: #9a6a00;
+}

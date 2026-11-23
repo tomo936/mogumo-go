@@ -63,3 +63,13 @@ export function parseSync(json: unknown): TownSync | null {
 export function percent(p: { visited: number; total: number }): number {
   return p.total <= 0 ? 0 : Math.min(100, Math.floor((p.visited / p.total) * 100))
 }
+
+// 次の目標（2026-11-24 町のコンプリートの存在感を上げる）。クリアはお店の半分（切り上げ）、コンプリートは全部。
+// サーバーの判定 supabase/functions/towns/core.ts の judge と同じ式。数えている途中（total 0）とコンプリート済みは null
+export function nextGoal(p: { visited: number; total: number; clearedAt: number | null; completedAt: number | null }): { to: 'clear' | 'complete'; left: number } | null {
+  if (p.total < 1 || p.completedAt !== null) return null
+  const clearNeed = Math.ceil(p.total / 2)
+  if (p.clearedAt === null && p.visited < clearNeed) return { to: 'clear', left: clearNeed - p.visited }
+  const left = p.total - p.visited
+  return left > 0 ? { to: 'complete', left } : null
+}

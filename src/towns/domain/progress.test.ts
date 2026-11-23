@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseSync, percent } from './progress.ts'
+import { nextGoal, parseSync, percent } from './progress.ts'
 
 const boundary = { type: 'Polygon', coordinates: [[[139.63, 35.64], [139.64, 35.64], [139.64, 35.65], [139.63, 35.64]]] }
 const reply = {
@@ -64,5 +64,20 @@ describe('percent', () => {
     expect(percent({ visited: 5, total: 5 })).toBe(100)
     expect(percent({ visited: 1, total: 0 })).toBe(0)
     expect(percent({ visited: 9, total: 5 })).toBe(100)
+  })
+})
+
+describe('次の目標（nextGoal）', () => {
+  const t = (visited: number, total: number, cleared = false, completed = false) => ({ visited, total, clearedAt: cleared ? 1 : null, completedAt: completed ? 1 : null })
+  it('クリア前は、お店の半分（切り上げ）まであと何軒', () => {
+    expect(nextGoal(t(3, 9))).toEqual({ to: 'clear', left: 2 }) // 9 の半分は 5
+    expect(nextGoal(t(0, 1))).toEqual({ to: 'clear', left: 1 })
+  })
+  it('クリアしたら、コンプリートまであと何軒', () => {
+    expect(nextGoal(t(5, 9, true))).toEqual({ to: 'complete', left: 4 })
+  })
+  it('数えている途中（0 軒）とコンプリート済みは目標なし', () => {
+    expect(nextGoal(t(2, 0))).toBeNull()
+    expect(nextGoal(t(9, 9, true, true))).toBeNull()
   })
 })

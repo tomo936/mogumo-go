@@ -1,6 +1,6 @@
 // 記録に出す、町の進み具合の一覧（最近行った町から）。半分でクリア、ぜんぶでコンプリート。
 // 数はサーバーの関数 towns の返事（スライダーの日付とは関係なく、今の進み具合）。
-import { percent } from '../domain/progress.ts'
+import { percent, nextGoal } from '../domain/progress.ts'
 import type { TownProgress } from '../domain/progress.ts'
 import { TownIcon } from './TownIcon.tsx'
 import './towns.css'
@@ -37,10 +37,13 @@ export function TownList({ state }: { state: TownListState }) {
                 {t.counting ? (
                   <p className="town-row__counting">数えています…</p>
                 ) : (
-                  <div className="town-row__bar" role="progressbar" aria-label={`${t.name}の進み具合`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
-                    <i style={{ width: `${pct}%` }} />
-                    <span className="town-row__half" aria-hidden="true" />
-                  </div>
+                  <>
+                    <div className="town-row__bar" role="progressbar" aria-label={`${t.name}の進み具合`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+                      <i style={{ width: `${pct}%` }} />
+                      <span className="town-row__half" aria-hidden="true" />
+                    </div>
+                    <Goal t={t} />
+                  </>
                 )}
               </div>
               {!t.counting && (
@@ -54,5 +57,16 @@ export function TownList({ state }: { state: TownListState }) {
         })}
       </ul>
     </>
+  )
+}
+
+// 次の目標の一言（2026-11-24 町のコンプリートの存在感を上げる）
+function Goal({ t }: { t: { visited: number; total: number; clearedAt: number | null; completedAt: number | null } }) {
+  const g = nextGoal(t)
+  if (!g) return null
+  return (
+    <p className={`town-row__goal town-row__goal--${g.to}`}>
+      {g.to === 'clear' ? 'クリアまで' : 'コンプリートまで'}あと <b>{g.left}</b> 軒
+    </p>
   )
 }
