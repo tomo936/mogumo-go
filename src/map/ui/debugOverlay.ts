@@ -60,6 +60,7 @@ const tag = () => {
 type Item = { red: HTMLElement; blue: HTMLElement; text: HTMLElement }
 
 export function createDebugOverlay(map: MapLibreMap, rows: () => PinDebugRow[]) {
+  ;(window as unknown as { __mogumoMap?: MapLibreMap }).__mogumoMap = map // 測定用（?debug のときだけ。scripts/e2e/s16.mjs が描き直しの回数を数える）
   const box = map.getContainer()
   const root = document.createElement('div')
   root.style.cssText = `${BASE}inset:0;overflow:hidden;`
@@ -69,8 +70,22 @@ export function createDebugOverlay(map: MapLibreMap, rows: () => PinDebugRow[]) 
   box.appendChild(root)
   const items: Item[] = []
 
+  // 1 秒あたりの描き直しの回数（軽量化の効果を実機で測る。2026-11-23。&idlefps=60 で間引きなしと比べられる）
+  let renders = 0
+  let rate = 0
+  let since = performance.now()
+  map.on('render', () => {
+    renders++
+    const now = performance.now()
+    if (now - since >= 1000) {
+      rate = (renders * 1000) / (now - since)
+      renders = 0
+      since = now
+    }
+  })
+
   const draw = () => {
-    panel.textContent = panelLines(map).join('\n')
+    panel.textContent = [...panelLines(map), `描き直し ${rate.toFixed(1)}回/秒`].join('\n')
     const list = rows()
     list.forEach((r, i) => {
       let it = items[i]

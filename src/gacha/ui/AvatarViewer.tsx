@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import * as THREE from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { gltfLoader } from '../../lib/gltf.ts'
 import { avatarModelUrl, prepareAvatarScene } from '../../map/infra/avatarModel.ts'
 import { BLINK_TOTAL_MS, blinkFrame, nextBlinkDelay } from '../../map/domain/avatar3d.ts'
 
@@ -61,7 +61,7 @@ export function AvatarViewer({ id, fallback }: Props) {
     const ro = new ResizeObserver(fit)
     ro.observe(el)
 
-    new GLTFLoader()
+    gltfLoader()
       .loadAsync(url)
       .then((gltf) => {
         if (!alive) return

@@ -7,6 +7,8 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import './map.css'
 import {
   CIRCLE_RADIUS_M, RIPPLE_COLOR, RIPPLE_COUNT, RIPPLE_FILL_COLOR, RIPPLE_FILL_OPACITY, RIPPLE_PERIOD_MS, FIRST_FIX_TIMEOUT_MS, INITIAL_ZOOM, MAP_THEME, MAX_ZOOM, MIN_ZOOM, PITCH, STYLE_URL,
+  IDLE_FPS,
+  IDLE_SPEED_MPS,
 } from '../config.ts'
 import { recolor, themeStyle } from '../infra/theme.ts'
 import { onPhase } from '../../daynight/infra/phase.ts'
@@ -444,8 +446,15 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     }
     // 毎コマ、表示位置を目標へ寄せてカメラを動かす
     const loop = { frame: 0, prevTime: performance.now(), positionAt: 0 }
+    const idleFps = Number(new URLSearchParams(window.location.search).get('idlefps')) || IDLE_FPS
     const tick = (now: number) => {
       const dt = now - loop.prevTime
+      // 立ち止まっているときは描き直しを idleFps までに間引く（電池のため）。間引いたコマは何もしない（時間は次のコマにまとめて進める）
+      const still = avatar.speed() < IDLE_SPEED_MPS && pointers.size === 0 && !map.isMoving()
+      if (still && dt < 1000 / idleFps - 2) {
+        loop.frame = requestAnimationFrame(tick)
+        return
+      }
       loop.prevTime = now
       if (pausedRef.current) {
         // 隠れているあいだは何も動かさない（地図も描き直さない）。戻ったら目標の位置へ寄っていく
