@@ -111,6 +111,11 @@ export function createAvatarModel(map: MapLibreMap, initialId: number) {
         .catch(() => {}) // 読めなければ 2D の絵のまま
   }
 
+  // 駅や大型施設の立体の中を歩くとき、足元が壁に埋まって上半身だけ浮いて見えるのを防ぐ（2026-11-23 オーナー）。
+  // 全身を手前に描くだけだと壁の中に立っているのに足まで見えて物理的におかしいので、屋根の高さまで持ち上げて「上を歩く」見た目にする
+  const LIFT_SPEED = 0.012 // 1ms あたりに目標へ寄る割合（約 0.25 秒でほぼ着く。上り下りでぽんと跳ねない）
+  let liftTarget = 0
+  let lift = 0
   const layer = threeLayer({
     id: 'me-avatar-3d',
     onAdd(scene) {
@@ -130,10 +135,14 @@ export function createAvatarModel(map: MapLibreMap, initialId: number) {
 
   const q = new THREE.Quaternion()
   const up = new THREE.Vector3(0, 1, 0)
-  const zero = new THREE.Vector3()
+  const liftPos = new THREE.Vector3()
   const scale = new THREE.Vector3()
   return {
     layer,
+    // 足元の高さ（m）。駅・大型施設の上なら屋根の高さ、ふだんは 0
+    setLift(m: number) {
+      liftTarget = m
+    },
     ready: () => ready,
     // 使うキャラを替える。3D が無いキャラなら ready() が false のまま（2D の絵が出る）
     setCharacter(id: number) {
@@ -146,7 +155,9 @@ export function createAvatarModel(map: MapLibreMap, initialId: number) {
       pose = { pos }
       const h = avatarHeightMeters(map.getZoom(), pos.lat)
       q.setFromAxisAngle(up, Math.PI - (headingDeg * Math.PI) / 180)
-      holder.matrix.compose(zero, q, scale.set(h, h, h))
+      lift += (liftTarget - lift) * Math.min(1, dtMs * LIFT_SPEED)
+      if (Math.abs(liftTarget - lift) < 0.01) lift = liftTarget
+      holder.matrix.compose(liftPos.set(0, lift, 0), q, scale.set(h, h, h))
       motion = stepMotion(motion, speedMps, dtMs)
       if (mixer) {
         if (joyWanted) {

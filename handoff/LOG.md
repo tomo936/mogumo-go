@@ -69,3 +69,8 @@
 - 2026-11-18 Claude Code: 本番デプロイ手順をお願い（handoff/to-shiro/2026-11-18-production-deploy-guide.md。オーナーが 1 人でできる粒度。ミシェーラが 1 ステップずつ案内）
 - 2026-11-18 ギルベルト: 本番デプロイ（SQL・Auth・関数 7 本・Turnstile・Google・Vercel・PR #1 dev→main）。https://mogumo-go.vercel.app 公開。残り: ホットペッパーのキーと町のデータ（手順書に追記、オーナーが実施）
 - 2026-11-18 本番デプロイ完了（オーナーがホットペッパーのキーと町のデータを入れた。handoff/to-shiro/2026-11-18-production-deploy-guide.md）
+
+- 2026-11-23 シロ → Claude Code: ガチャ機能の実装と解放の依頼（to-claude/2026-11-23-gacha-implementation.md、状態: 未対応）。
+- 2026-11-23 シロ → Claude Code: UI/UX改善・共有・軽量化・最終セキュリティ確認・リリースの依頼（to-claude/2026-11-23-uiux-security-release.md、状態: 未対応）。
+- 2026-11-23 シロ → Claude Code: 判断ボードを新設（handoff/BOARD.md）。
+- 2026-11-23 シロ → Claude Code: バグ報告2件（to-claude/2026-11-23-bug-reports.md、状態: 未対応）。添付のスクリーンショット（to-claude/2026-11-23-bug-screenshot.jpg）は未配置。GitHubへのサインインができずブラウザからのアップロードができなかったため、バグ報告の本文が参照する画像ファイルはリポジトリに無い。

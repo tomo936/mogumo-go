@@ -1087,3 +1087,14 @@
 .shop-sheet:not(.shop-sheet--full) .shop-sheet__review {
   height: 46px;
 }
+
+/* ボタンの文字が少し下に寄って見える（丸ゴシックの字体の上下の余白の差）ので、真ん中に置いてから 3px 上げる。
+   チェックインと感想は同じ高さで並ぶので両方そろえる（2026-11-23 オーナー） */
+.shop-sheet__go,
+.shop-sheet__review {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0 3px;
+  line-height: 1;
+}

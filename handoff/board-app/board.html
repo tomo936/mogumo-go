@@ -1,0 +1,125 @@
+<title>もぐもGO 判断ボード</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&display=swap">
+<style>
+/* 空色×白のパステル。判断待ちを上に、1枚ずつタップで答える */
+:root{--bg:#eef6fc;--card:#fff;--fg:#1f3347;--sub:#5d7488;--line:#d5e4f0;--accent:#2f8fd8;--accent-fg:#fff;--ok:#2e9d6a;--okbg:#e2f5ec;--warn:#d9822b;--warnbg:#fdf0df;--hi:#d9484a;--hibg:#fde7e7;--hold:#7a6bb8;--holdbg:#ece8f8;--font:'M PLUS Rounded 1c','Hiragino Maru Gothic ProN','Hiragino Sans',sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1b27;--card:#172636;--fg:#e6eff7;--sub:#93a9bb;--line:#27405a;--accent:#5eb0ee;--accent-fg:#06202f;--ok:#58c995;--okbg:#14352a;--warn:#f0a65a;--warnbg:#3a2a14;--hi:#f27d7f;--hibg:#3d1d1e;--hold:#a99be0;--holdbg:#27223f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1b27;--card:#172636;--fg:#e6eff7;--sub:#93a9bb;--line:#27405a;--accent:#5eb0ee;--accent-fg:#06202f;--ok:#58c995;--okbg:#14352a;--warn:#f0a65a;--warnbg:#3a2a14;--hi:#f27d7f;--hibg:#3d1d1e;--hold:#a99be0;--holdbg:#27223f;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.65;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:640px;margin:0 auto}
+h1{font-size:20px;margin:0 0 4px;text-wrap:balance}
+.lead{color:var(--sub);font-size:13px;margin:0 0 14px}
+.tabs{display:flex;gap:8px;margin:0 0 16px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;font-size:14px;padding:8px 14px;border-radius:999px;min-height:40px}
+.tab[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.tab b{font-weight:700;margin-left:4px}
+.list{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;min-width:0}
+.top{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.chip{font-size:12px;padding:2px 10px;border-radius:999px;font-weight:700}
+.imp-高{background:var(--hibg);color:var(--hi)}.imp-中{background:var(--warnbg);color:var(--warn)}.imp-低{background:var(--holdbg);color:var(--hold)}
+.chip.risk{background:var(--bg);color:var(--sub);font-weight:500}
+.st-decided{background:var(--okbg);color:var(--ok)}.st-hold{background:var(--holdbg);color:var(--hold)}
+.card h2{font-size:17px;margin:0 0 6px;text-wrap:balance}
+.body{white-space:pre-wrap;margin:0 0 10px;overflow-wrap:anywhere}
+.rec{background:var(--bg);border-radius:12px;padding:10px 12px;font-size:14px;margin:0 0 12px;overflow-wrap:anywhere}
+.rec b{color:var(--accent)}
+.opts{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.opt{text-align:left;font:inherit;border:1.5px solid var(--line);background:var(--card);color:var(--fg);border-radius:14px;padding:10px 14px;min-height:48px;width:100%}
+.opt small{display:block;color:var(--sub);font-size:12.5px;line-height:1.5}
+.opt.first{border-color:var(--accent)}
+.opt:active,.opt:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.opt.sel{background:var(--okbg);border-color:var(--ok)}
+textarea{width:100%;font:inherit;font-size:15px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-height:64px;resize:vertical}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.ghost{font:inherit;font-size:14px;border:1px solid var(--line);background:transparent;color:var(--sub);border-radius:999px;padding:8px 14px;min-height:40px}
+.ans{background:var(--okbg);color:var(--fg);border-radius:12px;padding:10px 12px;font-size:14px;overflow-wrap:anywhere}
+.ans b{color:var(--ok)}
+.meta{color:var(--sub);font-size:12px;margin-top:6px}
+.empty{color:var(--sub);text-align:center;padding:36px 8px;border:1px dashed var(--line);border-radius:18px}
+.err{color:var(--hi);font-size:13px;margin:8px 0 0}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<main>
+  <h1>もぐもGO 判断ボード</h1>
+  <p class="lead">判断してほしいことが上に出ます。ボタンを1回押せば答えになります。ひとこと足したいときは、先に枠に書いてから押してください。</p>
+  <div class="tabs" role="group" aria-label="表示">
+    <button class="tab" id="t-pending" aria-pressed="true">判断待ち<b id="n-pending">0</b></button>
+    <button class="tab" id="t-hold" aria-pressed="false">保留<b id="n-hold">0</b></button>
+    <button class="tab" id="t-decided" aria-pressed="false">決定済み<b id="n-decided">0</b></button>
+  </div>
+  <div class="list" id="list"><div class="empty">読み込み中です…</div></div>
+</main>
+<script>
+(function(){
+  var IMP={'高':0,'中':1,'低':2}, docs=[], tab='pending', col=null, drafts={}
+  var listEl=document.getElementById('list')
+  function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+  function fmt(s){try{var d=new Date(s);return (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}catch(e){return ''}}
+  function setTab(t){tab=t;['pending','hold','decided'].forEach(function(k){document.getElementById('t-'+k).setAttribute('aria-pressed',String(k===t))});render()}
+  ['pending','hold','decided'].forEach(function(k){document.getElementById('t-'+k).onclick=function(){setTab(k)}})
+  async function save(d,patch,btn){
+    if(!col)return
+    var f=document.getElementById('f-'+d.id); if(f)f.textContent=''
+    try{ if(btn)btn.disabled=true; await col.doc(d.id).update(Object.assign({updatedAt:new Date().toISOString(),answeredBy:'owner'},patch)) }
+    catch(e){ if(btn)btn.disabled=false; var m=document.getElementById('f-'+d.id); if(m)m.textContent=(e&&e.code==='not_granted')?'この画面からは答えられません（オーナーの権限が要ります）。':'保存できませんでした。もう一度押してください。' }
+  }
+  function card(d){
+    var c=el('article','card'), top=el('div','top')
+    top.appendChild(el('span','chip imp-'+d.importance,'重要度 '+d.importance))
+    if(d.risk)top.appendChild(el('span','chip risk','リスク '+d.risk))
+    if(d.due)top.appendChild(el('span','chip risk',d.due))
+    if(d.status==='decided')top.appendChild(el('span','chip st-decided','決定済み'))
+    if(d.status==='hold')top.appendChild(el('span','chip st-hold','保留'))
+    c.appendChild(top)
+    c.appendChild(el('h2','',d.id.toUpperCase()+' '+d.title))
+    if(d.body)c.appendChild(el('p','body',d.body))
+    if(d.recommend){var r=el('div','rec');r.appendChild(el('b','','おすすめ '));r.appendChild(document.createTextNode(d.recommend));c.appendChild(r)}
+    if(d.status==='decided'||d.status==='hold'){
+      if(d.status==='decided'){var a=el('div','ans');a.appendChild(el('b','','あなたの答え '));a.appendChild(document.createTextNode(d.answer||''));if(d.note){a.appendChild(document.createElement('br'));a.appendChild(document.createTextNode(d.note))}c.appendChild(a)}
+      else if(d.note){c.appendChild(el('div','ans',d.note))}
+      c.appendChild(el('div','meta',fmt(d.updatedAt)+' に更新'))
+      var row=el('div','row'),b=el('button','ghost','判断待ちに戻す');b.onclick=function(){save(d,{status:'pending',answer:'',note:''},b)};row.appendChild(b);c.appendChild(row)
+    } else {
+      var opts=el('div','opts'), ta=el('textarea');ta.id='n-'+d.id;ta.placeholder='ひとこと（なくてOK）';ta.value=drafts[d.id]||'';ta.oninput=function(){drafts[d.id]=ta.value}
+      ;(d.options||[]).forEach(function(o,i){
+        var b=el('button','opt'+(i===0?' first':''));b.appendChild(document.createTextNode((i===0?'おすすめで決める：':'')+o.label))
+        if(o.desc){b.appendChild(el('small','',o.desc))}
+        b.onclick=function(){save(d,{status:'decided',answer:o.label,note:ta.value.trim()},b);delete drafts[d.id]}
+        opts.appendChild(b)
+      })
+      c.appendChild(opts);c.appendChild(ta)
+      var row2=el('div','row'),h=el('button','ghost','あとで（保留）');h.onclick=function(){save(d,{status:'hold',answer:'',note:ta.value.trim()},h);delete drafts[d.id]}
+      var o2=el('button','ghost','別の答え（上の枠に書く）');o2.onclick=function(){var t=ta.value.trim();if(!t){ta.focus();return}save(d,{status:'decided',answer:'別案',note:t},o2);delete drafts[d.id]}
+      row2.appendChild(o2);row2.appendChild(h);c.appendChild(row2)
+      var f=el('div','err');f.id='f-'+d.id;c.appendChild(f)
+    }
+    return c
+  }
+  function render(){
+    var by={pending:[],hold:[],decided:[]}
+    docs.forEach(function(d){(by[d.status]||by.pending).push(d)})
+    ;['pending','hold','decided'].forEach(function(k){document.getElementById('n-'+k).textContent=by[k].length})
+    var items=by[tab].slice().sort(function(a,b){return (IMP[a.importance]-IMP[b.importance])||String(a.id).localeCompare(String(b.id))})
+    if(tab==='decided')items.sort(function(a,b){return String(b.updatedAt).localeCompare(String(a.updatedAt))})
+    // 入力中の文字を守るため、枠にフォーカスがあるときは描き直さない
+    if(document.activeElement&&document.activeElement.tagName==='TEXTAREA'&&listEl.contains(document.activeElement))return
+    listEl.textContent=''
+    if(!items.length){listEl.appendChild(el('div','empty',tab==='pending'?'判断待ちはありません。Claude が積むとここに出ます。':tab==='hold'?'保留はありません。':'まだ決定済みはありません。'));return}
+    items.forEach(function(d){listEl.appendChild(card(d))})
+  }
+  function boot(){
+    if(!window.claude||!window.claude.use){listEl.textContent='';listEl.appendChild(el('div','empty','この画面では保存できません。'));return}
+    var timer=setTimeout(function(){if(!docs.length)listEl.firstChild&&(listEl.firstChild.textContent='読み込めませんでした。開き直してください。')},10000)
+    window.claude.use('db').then(function(db){
+      if(!db){clearTimeout(timer);listEl.textContent='';listEl.appendChild(el('div','empty','ログインすると見られます。'));return}
+      col=db.collection('decisions')
+      col.onSnapshot(function(s){clearTimeout(timer);docs=s.docs.map(function(x){return Object.assign({id:x.id},x.data())});render()},function(){clearTimeout(timer);listEl.textContent='';listEl.appendChild(el('div','empty','読み込めませんでした。開き直してください。'))})
+    })
+  }
+  boot()
+})()
+</script>

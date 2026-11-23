@@ -283,8 +283,10 @@ export function createShopPins(map: MapLibreMap) {
     // （まとめの場所へのカメラの寄せは地図の画面がする。自分を追いかけるのを止めてから動かさないと引き戻されるため）
     pick(point: { x: number; y: number }): string[] | null {
       if (!attached || hidden) return null
-      const box: [[number, number], [number, number]] = [[point.x - TAP_PAD_PX, point.y - TAP_PAD_PX], [point.x + TAP_PAD_PX, point.y + TAP_PAD_PX]]
-      const hit = map.queryRenderedFeatures(box, { layers: [PIN_LAYER] })[0]
+      // まず指の真下（1px）にある絵だけを探す。重なったピンや近くのピンを取り違えないため（2026-11-23 オーナー「タップと違うお店が反応する」）。
+      // 何も無いときだけ、指の余裕（TAP_PAD_PX）を足して探し直す
+      const boxOf = (pad: number): [[number, number], [number, number]] => [[point.x - pad, point.y - pad], [point.x + pad, point.y + pad]]
+      const hit = (map.queryRenderedFeatures(boxOf(1), { layers: [PIN_LAYER] })[0] ?? map.queryRenderedFeatures(boxOf(TAP_PAD_PX), { layers: [PIN_LAYER] })[0])
       if (!hit) return null
       const p = hit.properties as Record<string, unknown>
       if (p.t === 'hint') return [`hint:${String(p.id)}`]
