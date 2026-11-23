@@ -2,11 +2,20 @@
 
 シロとの受け渡しは `handoff/`（別物）。こちらは Claude Code 自身の会話の引き継ぎ。
 
-最終更新: 2026-11-17 夜（Claude Code）。区切りごとに上書きする。
+最終更新: 2026-11-24（Claude Code）。区切りごとに上書きする。
 
 - **dev のサイトの URL（オーナー 2026-11-17）: https://mogumo-go-dev.vercel.app**（Cloudflare Turnstile のドメインには `mogumo-go-dev.vercel.app` と `localhost`。本番は `mogumo-go.vercel.app`）
 
 ## いまの状態
+
+- **【2026-11-24（最新）】改善のターン。判断ボード（https://claude.ai/artifact/DEB3fKKBvDMgAKgatXp5e7 、正本 `handoff/BOARD.md`）を返事のはじめに読む。見回り（cron）はしない。リーダーは答えを待たずに一覧を順に進める（オーナー 11-24「自律的に進んでよ」）。**
+  - dev に出したもの（11-23〜24）: タップの当たり判定（建物そのものを光線で拾う）・駅の上を歩く（B-08）・チェックインの文字位置・案内の出方（降りる間は #root を inert、降り終わりと同じ描き直しで案内）・ゲストで始めたときの降りる演出・ログアウトでリセット・立ち止まりの描き直し 30 回/秒・お店の模型の圧縮・ガチャの SQL の門（0018、本番未適用）・まとめピンの絵を CPU 側で描く（30ff356）・アバター圧縮（d3db097）・描く細かさの試しスイッチ `?dpr=N`（9f8c76b）。
+  - dev に出していないもの: 丸ゴシックの字体を全体に（tokens.css。見た目の判断待ち）・B-19 の「図鑑のカードを見る」と「共有する」（eabf2e5・cf5d8ba。B-21 の答え待ち）・小さい直し 3 つ（記録の説明の文・案内のガチャの文・ゲストのお問い合わせ後の文。cf5d8ba に同梱）。
+  - 判断待ち: B-21（共有の置き場所）・B-22（地図の細かさ 3→2 倍）。
+  - 見た目（UI/UX）: 案は 4 回とも却下。**Claude の判断で全体を変えない。オーナーが「ここが安っぽい」と言った所から直す。** ログインボーナス・タイトルは生成した絵なので手本にしない。紫は「謎」の色で残す。切り抜かない・ChatGPT に頼らない。記録 `docs/uiux/2026-11-23-evaluation-and-plan.md` の 11〜14 章。
+  - 軽量化の測り方: `scripts/e2e/s20.mjs`（CPU の使い道。`MODE=still|walk`、`WHO=関数名` で呼んだ元）・`s30.mjs`（まとめの絵の回数）。アバターは meshopt の手順を `docs/superpowers/specs/avatar-character-pipeline.md` の最後に足した。
+  - 残り: 軽量化の続き（アバターの絵 2048px の GPU メモリ 22MB など）→ ガチャの 3D（B-15）→ 最終セキュリティ確認（Opus 読み取り専用）→ リリース。
+  - dev への出し方: devmerge の clone で cherry-pick。テストは本体の node_modules を symlink して回すと 6 ファイルが環境のせいで落ちる（取り込む前の dev でも同じ）。
 
 - **【2026-11-23 compact 前（最新）】本番デプロイは全部終わった（オーナー 2026-11-23）。ここからは「改善のターン」。** 本番 https://mogumo-go.vercel.app／本番 Supabase `jaypeaejbzkeudwvvrnb`、`main` = PR #2 まで（`dev` との差 0）。
   - 本番で確かめ済み: 関数の CORS が本番ドメインだけ・セキュリティヘッダー 4 つ・マニフェスト・サイト 200。SQL 0017 などの適用はオーナー側で済み。
