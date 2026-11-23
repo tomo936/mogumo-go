@@ -1,5 +1,5 @@
 import { chromium } from '/home/otosa/tools/pw/node_modules/playwright/index.mjs'
-export const BASE = 'http://127.0.0.1:5174'
+export const BASE = process.env.E2E_BASE ?? 'http://127.0.0.1:5174'
 export const OUT = process.env.E2E_OUT ?? '/home/otosa/mogumo-go/art/qa/e2e/'
 export async function open({ fresh = false, geo = { latitude: 35.6512, longitude: 139.6362 } } = {}) {
   const dir = process.env.E2E_PROFILE ?? '/tmp/mogumo-e2e-profile'

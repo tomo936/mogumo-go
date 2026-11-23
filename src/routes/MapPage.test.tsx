@@ -86,7 +86,7 @@ vi.mock('../map/ui/MapView.tsx', async () => {
       useEffect(() => { handlers.push({ select: onSelectShop, building: onSelectBuilding, position: onPosition }) }, [onSelectShop, onSelectBuilding, onPosition])
       useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, addTown: (town: { id: string }) => { addTownCalls.push(town.id) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false, visitsFor: () => visitsNow, progressReady: () => true, checked: () => new Set<string>(),
         hintInputs: () => ({ shops: mapShopsNow, near: mapShopsNow, cleared: new Set<string>(), checked: new Set<string>() }),
-        whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, express: (k: string) => { expressCalls.push(k) }, subscribeBearing: () => () => {}, resetNorth: () => { northCalls.push(1) }, intro: (cb?: () => void) => { introCalls.push(1); introDoneCb = cb }, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
+        whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, express: (k: string) => { expressCalls.push(k) }, subscribeBearing: () => () => {}, resetNorth: () => { northCalls.push(1) }, intro: (cb?: (aborted?: boolean) => void) => { introCalls.push(1); introDoneCb = cb as () => void }, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
       }), [])
       return <div data-testid="map-view" data-pins-hidden={String(pinsHidden)} data-paused={String(!!paused)} />
     },
@@ -679,15 +679,58 @@ test('新しいアカウント: タイトルを閉じたのがログイン・初
   claimLoginBonus.mockReset()
   claimLoginBonus.mockResolvedValue({ stampNo: 1, coins: 10, claimedNow: true })
   act(() => loading.enter()) // ログインの画面でタイトルを閉じた（地図の画面はまだ無い）
+  const before = introCalls.length
   render(
     <AuthContext.Provider value={{ session: { user: { id: 'new-user' } } as never, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
       <MapPage />
     </AuthContext.Provider>,
   )
-  await act(async () => { vi.advanceTimersByTime(3300) })
+  // 地図に来たところで降りる（前は降りる演出が抜けて、いきなりポコタンだった。2026-11-23 オーナー）。タイトルは出し直さない
+  expect(introCalls.length).toBe(before + 1)
+  expect(loading.hasEntered()).toBe(true)
+  expect(screen.queryByRole('dialog', { name: 'ポコタンの案内' })).not.toBeInTheDocument() // 降りている間は出ない
+  await act(async () => { introDoneCb?.() }) // 降り終わった瞬間に出る
   expect(screen.getByRole('dialog', { name: 'ポコタンの案内' })).toBeInTheDocument()
   claimLoginBonus.mockReset()
   vi.useRealTimers()
+})
+
+test('一度地図に入ったあと、規約などほかの画面から戻ってきたときは、降りる演出をしない（今までどおり）', async () => {
+  localStorage.setItem('mogumo.tutorial.back-user', '1')
+  act(() => {
+    loading.enter()
+    loading.markMapShown()
+  })
+  const before = introCalls.length
+  render(
+    <AuthContext.Provider value={{ session: { user: { id: 'back-user' } } as never, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
+      <MapPage />
+    </AuthContext.Provider>,
+  )
+  expect(introCalls.length).toBe(before)
+})
+
+test('降りる途中で地図が片付けられた（途中で終わった合図）ときは、さわれるようにせず、もう一度降りる', async () => {
+  localStorage.setItem('mogumo.tutorial.abort-user', '1')
+  const root = document.createElement('div')
+  root.id = 'root'
+  document.body.appendChild(root)
+  render(
+    <AuthContext.Provider value={{ session: { user: { id: 'abort-user' } } as never, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
+      <MapPage />
+    </AuthContext.Provider>,
+    { container: root },
+  )
+  await act(async () => { loading.enter() })
+  const before = introCalls.length
+  const aborted = introDoneCb as unknown as (aborted?: boolean) => void
+  await act(async () => { aborted(true) })
+  expect(root.inert).toBe(true) // 途中で終わっただけなので、まださわれない
+  await act(async () => { await new Promise((r) => requestAnimationFrame(() => r(null))) })
+  expect(introCalls.length).toBe(before + 1) // もう一度降りる
+  await act(async () => { introDoneCb?.() })
+  expect(root.inert).toBe(false)
+  root.remove()
 })
 
 test('ログインボーナスは受け取り済み（claimedNow が false）なら画面を出さない', async () => {

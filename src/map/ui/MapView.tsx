@@ -53,7 +53,7 @@ export type MapViewHandle = {
   bounceHint(hintId: string): void
   express(kind: Expression): void // 3D の男の子の表情（チェックイン・レベルが上がったとき 'happy'）。読めていなければ何もしない
   subscribeBearing(cb: (bearingDeg: number) => void): () => void // 地図の回転（北 0・時計回り）が変わるたびに呼ぶ。方位磁針用。返り値で止める
-  intro(onDone?: () => void): void // 地図へ入るときの演出: 高い所の真上から、いつもの高さと角度へ降りてくる（2026-11-16 オーナー）。降り終わったら onDone を 1 回呼ぶ（降りている間は画面全体がさわれないので、途中で打ち切られない）
+  intro(onDone?: (aborted?: boolean) => void, ready?: Promise<void>): void // 地図へ入るときの演出: 高い所の真上から、いつもの高さと角度へ降りてくる（2026-11-16 オーナー）。降り終わったら onDone を 1 回呼ぶ（降りている間は画面全体がさわれないので、途中で打ち切られない）
   resetNorth(): void // 北を上に戻し、自分の場所に戻る（右上の方位磁針。2026-11-16 オーナー「1 で」）
 }
 
@@ -132,7 +132,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   // お店の板を開いている間は、カメラをそのお店に向けて、自分への追いかけを止める
   const focusRef = useRef<{ lat: number; lng: number } | null>(null)
   const resetNorthRef = useRef<() => void>(() => {})
-  const introRef = useRef<(onDone?: () => void) => void>(() => {})
+  const introRef = useRef<(onDone?: (aborted?: boolean) => void, ready?: Promise<void>) => void>(() => {})
   const sheetFocusRef = useRef(false) // お店・ビル・気配を押して寄せた（シートを閉じたら自分に戻る。2026-11-16 オーナー「前と同じ動き」）
   const unfocusRef = useRef<() => void>(() => {})
   const tapRef = useRef<(ids: string[] | null, at?: LatLng | null) => void>(() => {})
@@ -171,7 +171,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       return () => { bearingSubs.current.delete(cb) }
     },
     resetNorth: () => resetNorthRef.current(),
-    intro: (onDone) => introRef.current(onDone),
+    intro: (onDone, ready) => introRef.current(onDone, ready),
     checkin: (shop, newCells) => {
       const t = setTimeout(() => {
         checkinTimers.current.delete(t)
@@ -413,7 +413,10 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     // 降りる途中が見えなかった（2026-11-16 実測: 1 コマ目で 4.7 秒 → いきなり到着）。そこで自分で 1 コマずつ進め、
     // 1 コマで進むのは最大 INTRO_MAX_STEP_MS 分にする。高い所へは、タイトルの絵が消えるあいだ（INTRO_HOLD_MS）に移っておく。
     // 降りているあいだは画面全体がさわれない（MapPage の inputLocked）ので、指で打ち切ることはない（2026-11-23 オーナー「ギュイーンの最中はタップ不可」）
-    introRef.current = (onDone) => {
+    let introCancel: (() => void) | null = null
+    // ready: 降り始めてよい合図（無ければすぐ）。空の上の姿勢にはすぐ移り、降り始めるのは ready のあと
+    introRef.current = (onDone, ready) => {
+      introCancel?.() // 前の演出が残っていたら終わらせる
       const zoom = map.getZoom()
       const from = Math.max(13, zoom - INTRO_RISE_ZOOM)
       map.setMinZoom(from)
@@ -422,7 +425,15 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       let progress = 0
       let prev = 0
       let ended = false
+      // 地図が片付けられて演出が最後まで進めないときも、終わった合図は必ず出す（出ないと画面がさわれないまま固まる。2026-11-23 レビュー）
+      introCancel = () => {
+        progress = 1
+        if (ended) return
+        ended = true
+        onDone?.(true) // 途中で終わった（地図の作り直し・片付け）
+      }
       const finish = () => {
+        introCancel = null
         progress = 1
         map.jumpTo({ zoom, pitch: PITCH })
         map.setMinZoom(MIN_ZOOM)
@@ -442,7 +453,9 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         map.jumpTo({ zoom: from + (zoom - from) * e, pitch: PITCH * e })
         requestAnimationFrame(step)
       }
-      setTimeout(() => requestAnimationFrame(step), INTRO_HOLD_MS)
+      void Promise.resolve(ready).then(() => {
+        if (progress < 1) setTimeout(() => requestAnimationFrame(step), INTRO_HOLD_MS)
+      })
     }
     // 毎コマ、表示位置を目標へ寄せてカメラを動かす
     const loop = { frame: 0, prevTime: performance.now(), positionAt: 0 }
@@ -525,6 +538,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     window.addEventListener('pageshow', onVisible)
 
     return () => {
+      introCancel?.() // 降りている途中で地図を片付けるときも、終わった合図を出す
       canvas.removeEventListener('webglcontextlost', onLost)
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('pageshow', onVisible)
