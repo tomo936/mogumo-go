@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import './ui/hitArea.css' // 押せる範囲を 44px 以上に（見た目は変えない）
 import { boot } from './boot.tsx'
 import { debugOn } from './map/ui/debugOverlay.ts'
 import { installTapSound } from './sound/infra/sound.ts'
