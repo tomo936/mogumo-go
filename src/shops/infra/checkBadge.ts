@@ -10,7 +10,7 @@ export function checkBadgeImage(src: CanvasImageSource & { width: number; height
   const canvas = document.createElement('canvas')
   canvas.width = w
   canvas.height = h
-  const ctx = canvas.getContext('2d')
+  const ctx = canvas.getContext('2d', { willReadFrequently: true }) // 読み出し前提（shopClusters.ts と同じ理由）
   if (!ctx) return null
   ctx.drawImage(src, 0, 0)
   // 右上の角。丸の半径は絵の幅の 17%
@@ -45,7 +45,7 @@ export function revealBadgeImage(src: CanvasImageSource & { width: number; heigh
   const canvas = document.createElement('canvas')
   canvas.width = w
   canvas.height = h
-  const ctx = canvas.getContext('2d')
+  const ctx = canvas.getContext('2d', { willReadFrequently: true }) // 読み出し前提（shopClusters.ts と同じ理由）
   if (!ctx) return null
   ctx.drawImage(src, 0, 0)
   const r = w * 0.17

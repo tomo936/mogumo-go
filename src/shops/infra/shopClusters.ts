@@ -16,7 +16,9 @@ export function drawCluster(base: CanvasImageSource, n: number): ImageData {
   const cv = document.createElement('canvas')
   cv.width = S
   cv.height = S
-  const c = cv.getContext('2d')!
+  // 読み出し（getImageData）前提の絵なので、GPU ではなく CPU 側に置く。GPU に置くと読み出しのたびに地図の描画を待ち、
+  // 1 回に数百 ms〜数秒かかっていた（2026-11-24 測定 scripts/e2e/s30.mjs）
+  const c = cv.getContext('2d', { willReadFrequently: true })!
   c.drawImage(base, 0, 0, S, S)
   // 字の大きさ: 「99+」の幅が丸の直径の BADGE_TEXT_FIT に収まる大きさ（全部の数で同じ）
   c.font = `800 100px ${FONT}`
