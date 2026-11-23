@@ -80,10 +80,14 @@ button:disabled{opacity:.5}
     try{ await col.doc(d.id).update(Object.assign({answeredAt:now,updatedAt:now},patch)) }
     catch(e){ if(btn)btn.disabled=false; if(m){m.className='msg err';m.textContent=(e&&e.code==='not_granted')?'答えられるのは編集できる人だけです。':'保存できませんでした。もう一度押してください。'} return }
     var line='判断ボード '+d.id.toUpperCase()+'「'+d.title+'」: '+(patch.status==='decided'?'決定「'+patch.answer+'」':patch.status==='rejected'?'却下':patch.status==='hold'?'保留':patch.status==='pending'?'判断待ちに戻す':patch.status)+(patch.reason?'／理由: '+patch.reason:'')+'。BOARD.md に反映してください。'
+    // Claude に送れなかった理由を出す（どの端末・画面なら届くかを確かめるため）
+    var why=''
     try{
-      if(cm && (await cm.canSendToClaude())==='available'){ var a=await cm.anchorFor(cardEl); await cm.sendToClaude({anchor:a,text:line}); if(m){m.className='msg';m.textContent='保存して Claude に送りました。'} }
-      else if(m){m.textContent='保存しました（Claude には次の返事で届きます）。'}
-    }catch(e){ if(m){m.textContent='保存しました（Claude への送信はできませんでした。次の返事で届きます）。'} }
+      var st=cm?await cm.canSendToClaude():'comments が使えない画面'
+      if(st==='available'){ var a=await cm.anchorFor(cardEl); await cm.sendToClaude({anchor:a,text:line}); if(m){m.className='msg';m.textContent='保存して Claude に送りました。'} return }
+      why=String(st)
+    }catch(e){ why=(e&&e.code)?e.code:String(e) }
+    if(m){m.textContent='保存しました。Claude には届いていません（理由: '+why+'）。次にチャットで話しかけたときに Claude が読みます。'}
   }
   function card(d){
     var c=el('article','card'), top=el('div','top')
