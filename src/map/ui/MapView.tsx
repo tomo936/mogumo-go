@@ -51,7 +51,7 @@ export type MapViewHandle = {
   bounceHint(hintId: string): void
   express(kind: Expression): void // 3D の男の子の表情（チェックイン・レベルが上がったとき 'happy'）。読めていなければ何もしない
   subscribeBearing(cb: (bearingDeg: number) => void): () => void // 地図の回転（北 0・時計回り）が変わるたびに呼ぶ。方位磁針用。返り値で止める
-  intro(): void // 地図へ入るときの演出: 高い所の真上から、いつもの高さと角度へ降りてくる（2026-11-16 オーナー）
+  intro(onDone?: () => void): void // 地図へ入るときの演出: 高い所の真上から、いつもの高さと角度へ降りてくる（2026-11-16 オーナー）。降り終わったら onDone を 1 回呼ぶ（降りている間は画面全体がさわれないので、途中で打ち切られない）
   resetNorth(): void // 北を上に戻し、自分の場所に戻る（右上の方位磁針。2026-11-16 オーナー「1 で」）
 }
 
@@ -130,7 +130,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   // お店の板を開いている間は、カメラをそのお店に向けて、自分への追いかけを止める
   const focusRef = useRef<{ lat: number; lng: number } | null>(null)
   const resetNorthRef = useRef<() => void>(() => {})
-  const introRef = useRef<() => void>(() => {})
+  const introRef = useRef<(onDone?: () => void) => void>(() => {})
   const sheetFocusRef = useRef(false) // お店・ビル・気配を押して寄せた（シートを閉じたら自分に戻る。2026-11-16 オーナー「前と同じ動き」）
   const unfocusRef = useRef<() => void>(() => {})
   const tapRef = useRef<(ids: string[] | null) => void>(() => {})
@@ -169,7 +169,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       return () => { bearingSubs.current.delete(cb) }
     },
     resetNorth: () => resetNorthRef.current(),
-    intro: () => introRef.current(),
+    intro: (onDone) => introRef.current(onDone),
     checkin: (shop, newCells) => {
       const t = setTimeout(() => {
         checkinTimers.current.delete(t)
@@ -407,8 +407,8 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     // 高い所は描く量が多く、最初のコマが重い。MapLibre の easeTo は時間で進むので、重いコマのあいだに終わってしまい
     // 降りる途中が見えなかった（2026-11-16 実測: 1 コマ目で 4.7 秒 → いきなり到着）。そこで自分で 1 コマずつ進め、
     // 1 コマで進むのは最大 INTRO_MAX_STEP_MS 分にする。高い所へは、タイトルの絵が消えるあいだ（INTRO_HOLD_MS）に移っておく。
-    // 指で触ったら、すぐいつもの高さ・角度にする
-    introRef.current = () => {
+    // 降りているあいだは画面全体がさわれない（MapPage の inputLocked）ので、指で打ち切ることはない（2026-11-23 オーナー「ギュイーンの最中はタップ不可」）
+    introRef.current = (onDone) => {
       const zoom = map.getZoom()
       const from = Math.max(13, zoom - INTRO_RISE_ZOOM)
       map.setMinZoom(from)
@@ -416,13 +416,17 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       const ease = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2)
       let progress = 0
       let prev = 0
+      let ended = false
       const finish = () => {
         progress = 1
         map.jumpTo({ zoom, pitch: PITCH })
         map.setMinZoom(MIN_ZOOM)
-        container.removeEventListener('pointerdown', finish)
+        if (!ended) {
+          ended = true
+          performance.mark('mogumo:intro-finish') // 測定用（降り終わりから案内が出るまでの間を測る。scripts/e2e/s15.mjs）
+          onDone?.() // 降り終わった合図（初めての人のポコタンの案内を、間を空けずに出す。2026-11-23 オーナー）
+        }
       }
-      container.addEventListener('pointerdown', finish)
       const step = (now: number) => {
         if (progress >= 1) return
         const dt = prev ? Math.min(now - prev, INTRO_MAX_STEP_MS) : 0

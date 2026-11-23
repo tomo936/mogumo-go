@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { loading } from '../credits/loadingGate.ts'
 import { isGuest, useAuth } from '../auth/AuthContext.ts'
 import { LocationOverlay } from '../map/ui/LocationOverlay.tsx'
@@ -145,29 +146,53 @@ export function MapPage() {
   // タイトルの読み込みはお店だけを待つ。お店がそろったら、案内がまだの人はポコタン（A5）を裏で読み始める
   // （「タップしてスタート」を押すまでと空から降りる 3.2 秒のあいだに読み終える。お店とは重ねない。2026-11-17 オーナー「B で」）
   const firstGuide = useRef(userId ? !guideSeen(userId) : false)
-  const [firstTime] = useState(() => (userId ? !guideSeen(userId) : false)) // 初めての人（案内が出るまで地図をさわらせない。下の guide-wait）
   useEffect(() => {
     loading.start()
-    void mapRef.current?.whenShopsReady().then(() => {
-      loading.done()
-      if (firstGuide.current) void preloadPoko()
-    })
+    // 初めての人は、ポコタンの読み込みもタイトルのローディングに含める（降りてから案内までに読み込みの間を作らない。2026-11-23 オーナー）
+    if (firstGuide.current) {
+      const release = loading.hold()
+      void preloadPoko().finally(release)
+    }
+    void mapRef.current?.whenShopsReady().then(() => loading.done())
   }, [])
   // ログインボーナス（A4）の受け取り画面と、地図へ入ったか
   const [entered, setEntered] = useState(false)
+  const [introDone, setIntroDone] = useState(false) // 空から降りる演出が終わった（演出をしないときは最初から true になる）
   const [loginBonus, setLoginBonus] = useState<Claim | null>(null)
   // ポコタンの案内（A5）: 初めての人は空から降りたあとに出す。ログインボーナスは案内が終わってから
   const [tour, setTour] = useState<'wait' | 'open' | 'done'>('wait')
+  // さわれない間: 地図に入ってから降り終わるまで。初めての人は、そのまま案内が出るまで（案内は画面の外枠の外に出すので、案内はさわれる）。
+  // 画面全体（#root）を inert にする。描く前（useLayoutEffect）に付け外しするので、さわれる 1 コマも出ない
+  const firstGuidePending = !!userId && tour === 'wait' && !guideSeen(userId)
+  const inputLocked = entered && (!introDone || firstGuidePending)
+  useLayoutEffect(() => {
+    const root = document.getElementById('root')
+    if (!root) return
+    root.inert = inputLocked
+    return () => {
+      root.inert = false
+    }
+  }, [inputLocked])
   // タイトルを閉じて地図へ入ったら、カメラを空から降ろす（2026-11-16 オーナー「空から来たような感じ」）
   useEffect(() => {
     // タイトルをもう閉じていた（新しいアカウントがログイン・初回設定を経て来た）ときは、すぐ地図に入ったことにする（空から降りる演出はしない）
     if (loading.hasEntered()) {
       sound.startBgm()
       setEntered(true)
+      setIntroDone(true)
       return
     }
     return loading.onEnter(() => {
-      mapRef.current?.intro()
+      // 地図へ入る流れ（2026-11-23 オーナー）: タイトルタップ → ローディング → 地図 → 空から降りる → （初めての人は）ポコタン。
+      // 降りているあいだは全部さわれない（下の inputLocked）。時間では決めず、降り終わった合図だけで次へ進む
+      const map = mapRef.current
+      // 降り終わった合図の中で、初めての人は案内を見せる状態にもする（同じ描き直しで見せる。別の描き直しに分けると、その分遅れる。実測 2026-11-23）
+      const done = () => {
+        setIntroDone(true)
+        if (firstGuide.current) setTour((t) => (t === 'wait' ? 'open' : t))
+      }
+      if (map) map.intro(done)
+      else done() // 地図がまだ無い（ふつうは無い）: 降りる演出は無しで次へ
       sound.startBgm() // 空から降りるのに合わせて BGM（昼）がふわっと始まる（A6）
       setEntered(true)
     })
@@ -395,10 +420,11 @@ export function MapPage() {
   useEffect(() => {
     if (!entered || !userId || tour !== 'wait') return
     if (guideSeen(userId)) return setTour('done')
-    // 初めての人は、地図が見えた瞬間に案内を出す（間を作らない。2026-11-23 オーナー「最初に案内が出るべき」）。
+    if (!introDone) return // 空から降りる演出が終わるのを待つ。終わった瞬間に出す（タイマーで決めると、演出の長さとずれて地図をさわれる間ができた）
+    // 初めての人は、空から降り終わった瞬間に案内を出す（間を作らない。2026-11-23 オーナー「グイーンの後に間なくポコタンが出るべき」）。
     // ポコタンはタイトルのローディングのあいだに裏で読んである（間に合わなければ案内の画面が続きを待つ）
     setTour('open')
-  }, [entered, userId, tour])
+  }, [entered, userId, tour, introDone])
   const closeGuide = useCallback(() => {
     guideShown.current = true
     if (userId) markGuideSeen(userId)
@@ -663,9 +689,9 @@ export function MapPage() {
           onClose={() => setZukanOpen(false)}
         />
       )}
-      {/* 初めての人は、空から降りる演出のあいだ（案内が出るまで）地図をさわれないようにする。案内が先に出る（2026-11-23 オーナー） */}
-      {firstTime && entered && tour === 'wait' && <div className="guide-wait" aria-hidden="true" />}
-      {tour === 'open' && <Guide onClose={closeGuide} />}
+      {/* 案内は画面の外枠（#root）の外に出す（降りている間 #root をさわれなくしても、案内はさわれる）。
+          初めての人は、地図に入ったら控え（見えない）で組み立て、降り終わった瞬間（tour が open になったのと同じ描き直し）に見せる */}
+      {(tour === 'open' || (entered && firstGuidePending)) && createPortal(<Guide onClose={closeGuide} active={tour === 'open'} />, document.body)}
       {linkAsk && (
         <LinkPrompt
           {...LINK_TEXT[linkAsk]}

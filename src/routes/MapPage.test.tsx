@@ -70,6 +70,7 @@ beforeEach(() => {
 })
 const northCalls: number[] = []
 const introCalls: number[] = []
+let introDoneCb: (() => void) | undefined // 空から降り終わった合図（地図の画面が呼ぶ）
 vi.mock('../map/ui/MapView.tsx', async () => {
   const { useEffect, useImperativeHandle } = await import('react')
   return {
@@ -85,7 +86,7 @@ vi.mock('../map/ui/MapView.tsx', async () => {
       useEffect(() => { handlers.push({ select: onSelectShop, building: onSelectBuilding, position: onPosition }) }, [onSelectShop, onSelectBuilding, onPosition])
       useImperativeHandle(ref, () => ({ checkin: (shop, cells) => { checkinCalls.push({ id: shop.id, cells }) }, addTown: (town: { id: string }) => { addTownCalls.push(town.id) }, unfocus: () => { unfocusCalls.push(1) }, isCheckedToday: () => false, visitsFor: () => visitsNow, progressReady: () => true, checked: () => new Set<string>(),
         hintInputs: () => ({ shops: mapShopsNow, near: mapShopsNow, cleared: new Set<string>(), checked: new Set<string>() }),
-        whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, express: (k: string) => { expressCalls.push(k) }, subscribeBearing: () => () => {}, resetNorth: () => { northCalls.push(1) }, intro: () => { introCalls.push(1) }, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
+        whenShopsReady: () => Promise.resolve(), setHints: () => {}, bounceHint: () => {}, express: (k: string) => { expressCalls.push(k) }, subscribeBearing: () => () => {}, resetNorth: () => { northCalls.push(1) }, intro: (cb?: () => void) => { introCalls.push(1); introDoneCb = cb }, focusAt: (p: LatLng) => { focusAtCalls.push(p) },
       }), [])
       return <div data-testid="map-view" data-pins-hidden={String(pinsHidden)} data-paused={String(!!paused)} />
     },
@@ -612,7 +613,9 @@ test('初めての人は、空から降りたあとにポコタンの案内が�
   await act(async () => { loading.enter() })
   expect(claimLoginBonus).not.toHaveBeenCalled() // 案内が終わるまで受け取らない
   await act(async () => { vi.advanceTimersByTime(3300) })
-  expect(screen.getByRole('dialog', { name: 'ポコタンの案内' })).toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: 'ポコタンの案内' })).not.toBeInTheDocument() // 降りている途中は、時間では出さない（演出の長さとずれて間ができた）
+  await act(async () => { introDoneCb?.() }) // 降り終わった
+  expect(screen.getByRole('dialog', { name: 'ポコタンの案内' })).toBeInTheDocument() // その瞬間に出る（タイマーを進めなくてよい）
   await act(async () => { screen.getByRole('button', { name: 'スキップ' }).click() })
   expect(screen.queryByRole('dialog', { name: 'ポコタンの案内' })).not.toBeInTheDocument()
   expect(localStorage.getItem('mogumo.tutorial.u1')).toBe('1')
@@ -621,6 +624,54 @@ test('初めての人は、空から降りたあとにポコタンの案内が�
   expect(screen.getByRole('dialog', { name: 'ログインボーナス' })).toBeInTheDocument() // 案内の後は待たずに出す
   claimLoginBonus.mockReset()
   vi.useRealTimers()
+})
+
+test('地図に入ってから降り終わるまで、画面全体（#root）はさわれない。初めての人は降り終わった瞬間に案内が出て、そこで外れる（2026-11-23 オーナー）', async () => {
+  claimLoginBonus.mockReset()
+  claimLoginBonus.mockResolvedValue({ stampNo: 1, coins: 10, claimedNow: false })
+  const root = document.createElement('div')
+  root.id = 'root'
+  document.body.appendChild(root)
+  render(
+    <AuthContext.Provider value={{ session: { user: { id: 'lock-user' } } as never, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
+      <MapPage />
+    </AuthContext.Provider>,
+    { container: root },
+  )
+  expect(root.inert).toBe(false) // タイトルの間（地図に入る前）はロックしない
+  await act(async () => { loading.enter() })
+  expect(root.inert).toBe(true) // 降りている間はさわれない
+  expect(screen.queryByRole('dialog', { name: 'ポコタンの案内' })).not.toBeInTheDocument() // 見えない
+  const standby = document.querySelector('.guide--standby')
+  expect(standby).not.toBeNull() // 降りている間に、控え（見えない）で組み立ててある（ポコタンの絵の準備を先に済ませる）
+  await act(async () => { introDoneCb?.() }) // 降り終わった
+  const guide = screen.getByRole('dialog', { name: 'ポコタンの案内' })
+  expect(guide).toBe(standby) // 作り直さず、同じものを見せるだけ（その場で読み込み・準備をしない）
+  expect(guide.classList.contains('guide--standby')).toBe(false)
+  expect(root.contains(guide)).toBe(false) // 案内は #root の外（さわれる）
+  expect(root.inert).toBe(false) // 案内が出たのと同じ描き直しで外れる
+  await act(async () => { screen.getByRole('button', { name: 'スキップ' }).click() })
+  root.remove()
+  claimLoginBonus.mockReset()
+})
+
+test('2 回目以降の人も、降りている間はさわれず、降り終わったらすぐさわれる（案内は出ない）', async () => {
+  localStorage.setItem('mogumo.tutorial.seen-user', '1')
+  const root = document.createElement('div')
+  root.id = 'root'
+  document.body.appendChild(root)
+  render(
+    <AuthContext.Provider value={{ session: { user: { id: 'seen-user' } } as never, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
+      <MapPage />
+    </AuthContext.Provider>,
+    { container: root },
+  )
+  await act(async () => { loading.enter() })
+  expect(root.inert).toBe(true)
+  await act(async () => { introDoneCb?.() })
+  expect(root.inert).toBe(false)
+  expect(screen.queryByRole('dialog', { name: 'ポコタンの案内' })).not.toBeInTheDocument()
+  root.remove()
 })
 
 test('新しいアカウント: タイトルを閉じたのがログイン・初回設定の前でも、地図に着いたらポコタンの案内が出る（出ていなかった。2026-11-17 オーナー）', async () => {
