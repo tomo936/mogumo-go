@@ -39,7 +39,6 @@ type Options = {
   onAdd(scene: THREE.Scene, map: MapLibreMap): void
   onRemove(): void
   origin(): LatLng | null // 描くものが無いときは null
-  overlay?(): boolean // true のあいだ、先に奥行きを消して描く（ほかの 3D の中に埋まっていても全身を見せる）
 }
 
 // 試作どおり、レイヤーごとに MapLibre の GL を共有するレンダラーを1つ持つ
@@ -83,7 +82,6 @@ export function threeLayer(opts: Options): CustomLayerInterface {
       local.fromArray(modelMatrix(origin, origin, 1, 0))
       camera.projectionMatrix = proj.fromArray(args.defaultProjectionData.mainMatrix as unknown as number[]).multiply(local)
       renderer.resetState()
-      if (opts.overlay?.()) renderer.clearDepth()
       renderer.render(scene, camera)
     },
   }

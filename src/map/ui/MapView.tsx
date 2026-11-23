@@ -451,7 +451,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         s.world?.onPosition(c)
         avatar.update(c, dt)
         avatarModel.update(c, avatar.heading(), avatar.speed(), dt, now)
-        avatarModel.setOverlay(s.world?.insideFacility(c) ?? false)
+        avatarModel.setLift(s.world?.facilityHeightAt(c) ?? 0)
         avatar.setHidden(avatarModel.ready())
         if (now - loop.positionAt >= POSITION_EVERY_MS) {
           loop.positionAt = now

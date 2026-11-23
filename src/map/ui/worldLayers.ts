@@ -89,7 +89,7 @@ type Work = { p: LatLng; frame: ReturnType<typeof localFrame>; area: AreaFeature
 
 type World = {
   onPosition(p: LatLng): void
-  insideFacility(p: LatLng): boolean // いま立体で出している駅・大型施設の輪郭の中か（アバターを手前に描くため）
+  facilityHeightAt(p: LatLng): number // いま立体で出している駅・大型施設の輪郭の中なら、その屋根の高さ（m）。外は 0（アバターが上を歩くため）
   setAccuracy(m: number): void // 最新の測位の誤差（m）。粗い位置で取ったホットペッパーを、正確になったら取り直すため
   shopsNear(): Shop[]
   pick(point: { x: number; y: number }): string[] | null // 押された建物の店の id（ビルなら全員）
@@ -684,7 +684,11 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       if (canFetch(origin)) fetchAround(origin)
       if (!refreshedAt || distanceMeters(refreshedAt, origin) >= SHOP_REFRESH_M) refreshShops(origin)
     },
-    insideFacility: (p) => shownFacilities.some((f) => f.parts.some((q) => ringHas(q.ring, p))),
+    facilityHeightAt: (p) => {
+      let top = 0
+      for (const f of shownFacilities) for (const q of f.parts) if (ringHas(q.ring, p)) top = Math.max(top, q.heightM + 0.1) // 屋根と同じ高さだと面がちらつくので少し上
+      return top
+    },
     shopsNear: () => near,
     titleOf: (ids) => shownFacilities.find((f) => f.shopIds.includes(ids[0]))?.name ?? null,
     pick: (point) => shopPins.pick(point) ?? fogShopLayer.pick(point) ?? shopLayer.pick(point) ?? facilityLayer.pick(point), // 手前に出やすい小さい模型を先に
