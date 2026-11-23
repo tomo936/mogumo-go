@@ -11,7 +11,9 @@ const CENTER_RISE_RATE = 0.5 // 建物の見た目の中心は、根元より大
 const MIN_HIT_PX = 16 // 指で押せる最低の半径
 
 // いちばん中心が近い当たりの建物（店かビル）。無ければ null
-export function pickShop(shops: readonly PlacedShop[], tap: Pt, project: Project): PlacedShop | null {
+// strict: 当たりの半径を建物の大きさでなく指の大きさ（MIN_HIT_PX）だけにする。実際の模型に線を引いて外れたときの保険で、
+// 大きな建物の広い円が小さな建物の上まで覆って取り違える（2026-11-23 新宿）のを防ぐ
+export function pickShop(shops: readonly PlacedShop[], tap: Pt, project: Project, strict = false): PlacedShop | null {
   let best: PlacedShop | null = null
   let bestD = Infinity
   for (const s of shops) {
@@ -22,7 +24,7 @@ export function pickShop(shops: readonly PlacedShop[], tap: Pt, project: Project
     const cx = base.x
     const rise = s.model === 'building' ? BUILDING_CENTER_RISE_RATE : CENTER_RISE_RATE
     const cy = base.y - s.sizeM * rise * ppm
-    const r = Math.max(s.sizeM * HIT_RADIUS_RATE * ppm, MIN_HIT_PX)
+    const r = strict ? MIN_HIT_PX : Math.max(s.sizeM * HIT_RADIUS_RATE * ppm, MIN_HIT_PX)
     const d = Math.hypot(tap.x - cx, tap.y - cy)
     if (d <= r && d < bestD) {
       best = s

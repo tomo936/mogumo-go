@@ -42,7 +42,11 @@ type Options = {
 }
 
 // 試作どおり、レイヤーごとに MapLibre の GL を共有するレンダラーを1つ持つ
-export function threeLayer(opts: Options): CustomLayerInterface {
+export type HitLayer = CustomLayerInterface & {
+  // 画面の点から真っすぐ見た先で、いちばん手前に当たる物（無ければ null）。distance は m（層をまたいで比べられる）
+  hit(tap: { x: number; y: number }): THREE.Intersection | null
+}
+export function threeLayer(opts: Options): HitLayer {
   let renderer: THREE.WebGLRenderer | null = null
   let map: MapLibreMap | null = null
   let ctx: WebGLRenderingContext | WebGL2RenderingContext | null = null
@@ -55,8 +59,25 @@ export function threeLayer(opts: Options): CustomLayerInterface {
   const scene = new THREE.Scene()
   const proj = new THREE.Matrix4()
   const local = new THREE.Matrix4()
+  const raycaster = new THREE.Raycaster()
+  const inv = new THREE.Matrix4()
   return {
     id: opts.id,
+    hit(tap) {
+      const origin = opts.origin()
+      if (!map || !lastMatrix || !origin) return null
+      const c = map.getCanvas()
+      if (!c.clientWidth || !c.clientHeight) return null
+      // render() と同じ行列の逆で、画面の点を奥行き 0（手前）と 1（奥）の 2 点に戻して、1 本の線にする
+      local.fromArray(modelMatrix(origin, origin, 1, 0))
+      inv.fromArray(lastMatrix).multiply(local).invert()
+      const nx = (tap.x / c.clientWidth) * 2 - 1
+      const ny = 1 - (tap.y / c.clientHeight) * 2
+      const near = new THREE.Vector3(nx, ny, -1).applyMatrix4(inv)
+      const far = new THREE.Vector3(nx, ny, 1).applyMatrix4(inv)
+      raycaster.set(near, far.sub(near).normalize())
+      return raycaster.intersectObjects(scene.children, true)[0] ?? null
+    },
     type: 'custom',
     renderingMode: '3d',
     onAdd(m, gl) {

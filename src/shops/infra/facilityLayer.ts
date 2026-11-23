@@ -97,7 +97,8 @@ const at = (p: P, up: number) => new THREE.Vector3(p.x, up, -p.y)
 
 export function createFacilityLayer(): CustomLayerInterface & {
   setFacilities(list: PlacedFacility[]): void
-  pick(point: { x: number; y: number }): string[] | null
+  pick(point: { x: number; y: number }, strict?: boolean): string[] | null
+  rayPick(point: { x: number; y: number }): { distance: number; ids: string[] } | null
 } {
   let scene: THREE.Scene | null = null
   let map: MapLibreMap | null = null
@@ -117,9 +118,11 @@ export function createFacilityLayer(): CustomLayerInterface & {
     geos.length = 0
   }
 
+  let building: PlacedFacility | null = null // いま作っている施設（当たった物から施設を引く）
   const add = (geo: THREE.BufferGeometry, m: THREE.Material | THREE.Material[]) => {
     geos.push(geo)
     const mesh = new THREE.Mesh(geo, m)
+    mesh.userData.facility = building
     scene!.add(mesh)
     objects.push(mesh)
   }
@@ -129,6 +132,7 @@ export function createFacilityLayer(): CustomLayerInterface & {
     if (!scene || !origin || !mats || !stMats) return
     const frame = localFrame(origin)
     for (const f of list) {
+      building = f
       const m = f.kind === 'station' ? stMats : mats
       const rims: THREE.BufferGeometry[] = []
       const parts = f.parts.map((part) => ({ pts: part.ring.map((q) => frame.to(q)), heightM: part.heightM }))
@@ -251,12 +255,17 @@ export function createFacilityLayer(): CustomLayerInterface & {
       origin = next.length ? next[0].door : null
       build()
     },
+    rayPick(point) {
+      const h = layer.hit(point)
+      const f = h?.object.userData.facility as PlacedFacility | undefined
+      return h && f ? { distance: h.distance, ids: f.shopIds } : null
+    },
     // 画面の点で押された施設の店の id（全員）
-    pick(point) {
+    pick(point, strict = false) {
       if (!map) return null
       const m = map
       const project = (p: { lat: number; lng: number }) => m.project([p.lng, p.lat])
-      const hit = pickFacility(list, point, project, (f, heightM) => heightM * screenScale(project, f.door).pxPerUpM)
+      const hit = pickFacility(list, point, project, (f, heightM) => (strict ? 0 : heightM * screenScale(project, f.door).pxPerUpM)) // strict: 屋根の広がりは使わず、地面の輪郭の中だけ
       return hit?.shopIds ?? null
     },
   }

@@ -92,7 +92,7 @@ type World = {
   facilityHeightAt(p: LatLng): number // いま立体で出している駅・大型施設の輪郭の中なら、その屋根の高さ（m）。外は 0（アバターが上を歩くため）
   setAccuracy(m: number): void // 最新の測位の誤差（m）。粗い位置で取ったホットペッパーを、正確になったら取り直すため
   shopsNear(): Shop[]
-  pick(point: { x: number; y: number }): string[] | null // 押された建物の店の id（ビルなら全員）
+  pick(point: { x: number; y: number }): string[] | null // 押された建物の店の id（ビルなら全員）。ピンが先、次に 3D の模型のうち画面の点から見て一番手前に当たったもの
   setView(center: LatLng | null): void // カメラが自分から離れて見ている場所（自分を追いかけているときは null）。雲はそこのまわりに置く
   focus(shopIds: string[] | null): void // タップして選んだ店（その建物は必ず詳しい模型）。閉じたら null
   addCleared(cells: Cell[], from: LatLng): void
@@ -691,7 +691,16 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     },
     shopsNear: () => near,
     titleOf: (ids) => shownFacilities.find((f) => f.shopIds.includes(ids[0]))?.name ?? null,
-    pick: (point) => shopPins.pick(point) ?? fogShopLayer.pick(point) ?? shopLayer.pick(point) ?? facilityLayer.pick(point), // 手前に出やすい小さい模型を先に
+    // 押した点にある建物の取り違えを防ぐ（2026-11-23 オーナー「タップした建物と違う建物に飛ぶ」）。
+    // 前は「店の円の当たり → 施設の輪郭」の順で、円や屋根の広がりが重なると隣の建物が勝っていた。
+    // 今は実際の模型に画面から線を引いて、一番手前に当たった物を取る。線がどれにも当たらないとき（細い所・指のずれ）だけ、前の円・輪郭の判定にもどる
+    pick(point) {
+      const pin = shopPins.pick(point)
+      if (pin) return pin
+      const hits = [shopLayer.rayPick(point), fogShopLayer.rayPick(point), facilityLayer.rayPick(point)].filter((h): h is { distance: number; ids: string[] } => h !== null)
+      if (hits.length) return hits.reduce((a, b) => (b.distance < a.distance ? b : a)).ids
+      return fogShopLayer.pick(point, true) ?? shopLayer.pick(point, true) ?? facilityLayer.pick(point, true)
+    },
     focus(shopIds) {
       focusIds = new Set(shopIds ?? [])
       if (refreshedAt && !disposed) showShops(refreshedAt)

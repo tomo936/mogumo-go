@@ -31,7 +31,8 @@ type Model = { parts: Part[]; unit: number } // unit: 模型の幅（東西・�
 // id: 地図の層の名前（晴れた所の店と、霧の中の近い店で2つ作る）
 export function createShopLayer(id: string): CustomLayerInterface & {
   setShops(shops: PlacedShop[]): void
-  pick(point: { x: number; y: number }): string[] | null
+  pick(point: { x: number; y: number }, strict?: boolean): string[] | null
+  rayPick(point: { x: number; y: number }): { distance: number; ids: string[] } | null // 実際の模型に当たった手前の店（distance は m。層をまたいで比べる）
 } {
   let scene: THREE.Scene | null = null
   let map: MapLibreMap | null = null
@@ -119,6 +120,7 @@ export function createShopLayer(id: string): CustomLayerInterface & {
       for (const part of model.parts) {
         const inst = new THREE.InstancedMesh(part.geo, part.mat, list.length)
         place.forEach((pm, i) => inst.setMatrixAt(i, m.multiplyMatrices(pm, part.local)))
+        inst.userData.shops = list // 当たった instanceId から店を引く
         inst.computeBoundingSphere()
         scene.add(inst)
         meshes.push(inst)
@@ -178,12 +180,19 @@ export function createShopLayer(id: string): CustomLayerInterface & {
       origin = next.length ? { lat: next[0].lat, lng: next[0].lng } : null
       build()
     },
+    // 実際の模型の形に当たった店（手前にあるものが勝つ）。外れたら null
+    rayPick(point) {
+      const h = layer.hit(point)
+      const list = h?.object.userData.shops as PlacedShop[] | undefined
+      const s = h && list && h.instanceId !== undefined ? list[h.instanceId] : undefined
+      return h && s ? { distance: h.distance, ids: s.shopIds } : null
+    },
     // 画面の点で押された建物の店の id（ビルなら全員。建物が出ているものだけ）
-    pick(point) {
+    pick(point, strict = false) {
       if (!map) return null
       const m = map
       const drawn = shops.filter((s) => drawnKey(s))
-      return pickShop(drawn, point, (p) => m.project([p.lng, p.lat]))?.shopIds ?? null
+      return pickShop(drawn, point, (p) => m.project([p.lng, p.lat]), strict)?.shopIds ?? null
     },
   }
 }
