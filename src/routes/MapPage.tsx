@@ -390,14 +390,14 @@ export function MapPage() {
       .catch(() => {})
     loadCoins().then(setCoins).catch(() => {})
   }, [])
-  // ポコタンの案内（A5）: まだ見ていなければ、空から降りる演出が終わったころに出す
+  // ポコタンの案内（A5）: まだ見ていなければ、地図に入ってすぐ出す
   const guideShown = useRef(false) // 案内を出した後のログインボーナスは、待たずに出す
   useEffect(() => {
     if (!entered || !userId || tour !== 'wait') return
     if (guideSeen(userId)) return setTour('done')
-    // ポコタンは裏で読んである（間に合わなければ案内の画面が続きを待つ）。空から降りる演出（3.2 秒）が終わったら出す
-    const t = setTimeout(() => setTour('open'), LOGIN_BONUS_DELAY_MS)
-    return () => clearTimeout(t)
+    // 初めての人は、地図が見えた瞬間に案内を出す（間を作らない。2026-11-23 オーナー「最初に案内が出るべき」）。
+    // ポコタンはタイトルのローディングのあいだに裏で読んである（間に合わなければ案内の画面が続きを待つ）
+    setTour('open')
   }, [entered, userId, tour])
   const closeGuide = useCallback(() => {
     guideShown.current = true
