@@ -252,3 +252,9 @@
 - 生成 4 回（腕を付けた絵 2・三面図 1・三面図 2）。採用は 4 回目の絵（`art/reference/avatar/boy-apose2/`）。
 - 最後の物: 1.54MB・29,994 三角形・骨 18・動き 4（`art/characters/boy/avatar.glb`）。
 - 使用量: 新しい流れになってから Opus で約 100 万トークン（1 回目 35 万・2 回目 27 万・3 回目 31 万・足の直し少し）。手順が決まった今は、1 体 30〜40 万を目安に見直す。
+
+## 最後の手順: 形の圧縮（2026-11-24 追加）
+`src/assets/characters/<番号>/avatar.glb` に置く前に meshopt で圧縮する（読み込みは `src/lib/gltf.ts` の `gltfLoader()` が meshopt に対応済み）。
+- コマンド: `gltf-transform meshopt --quantize-texcoord 14 in.glb out.glb`（@gltf-transform/cli）
+- 1・101・102 は 1.55MB → 0.51MB。確かめた値: 4 つの動き×3 時点で骨を動かした形のずれが模型の大きさの 0.055% 以内、絵の貼り位置のずれが 0.11 画素以内。
+- 入れたら、動き（idle・walk・run・joy）が残っているか・形がずれていないかを同じように確かめる。
