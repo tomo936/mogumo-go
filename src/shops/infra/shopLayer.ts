@@ -1,6 +1,6 @@
 // お店の建物（19種の glb）。種類ごとに初めて要るときに読み、同じ種類はインスタンス描画で使い回す
 import * as THREE from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { gltfLoader } from '../../lib/gltf.ts'
 import type { CustomLayerInterface, Map as MapLibreMap } from 'maplibre-gl'
 import { localFrame } from '../../map/domain/geo.ts'
 import type { LatLng } from '../../map/domain/geo.ts'
@@ -57,7 +57,7 @@ export function createShopLayer(id: string): CustomLayerInterface & {
     models.set(kind, null)
     if (!url) return
     url()
-      .then((u) => new GLTFLoader().loadAsync(u))
+      .then((u) => gltfLoader().loadAsync(u))
       .then((gltf) => {
         const parts: Part[] = []
         gltf.scene.updateMatrixWorld(true)

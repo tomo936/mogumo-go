@@ -43,3 +43,8 @@ export const AVATAR_RUN_REF_MPS = 3.0
 export const AVATAR_RATE_MIN = 0.7
 export const AVATAR_RATE_MAX = 1.4
 export const AVATAR_JOY_PLAYS = 2 // うれしいの動き（1 回 0.8 秒）を何回
+
+// 立ち止まっているときの描き直しの上限（1 秒あたり。2026-11-23 軽量化）。待機の動き・足元の波紋はゆっくりなので 30 で見た目はほぼ同じ。
+// 歩いている・指で触っている・地図が動いている間は上限なし（端末のまま。ふつう 60）。?idlefps=60 で比べられる
+export const IDLE_FPS = 30
+export const IDLE_SPEED_MPS = 0.2 // これより遅ければ「立ち止まっている」

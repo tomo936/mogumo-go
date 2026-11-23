@@ -1,7 +1,7 @@
 // 自分の位置に、3D の男の子（骨組みと動きのある GLB）を立てる。店の模型と同じ地図の3D層を使う。
 // 大きさは地図の上で固定（引けば小さく、寄れば大きく）。動きは速さで 待機・歩き・走り、窓口 express('happy') でうれしい。
 import * as THREE from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { gltfLoader } from '../../lib/gltf.ts'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import { threeLayer } from '../../lib/threeLayer.ts'
 import { AVATAR_FADE_S, AVATAR_JOY_PLAYS } from '../config.ts'
@@ -90,7 +90,7 @@ export function createAvatarModel(map: MapLibreMap, initialId: number) {
     unload()
     const url = AVATARS[`../../assets/characters/${characterId}/avatar.glb`]
     if (!url) return map.triggerRepaint()
-      new GLTFLoader()
+      gltfLoader()
         .loadAsync(url)
         .then((gltf) => {
           if (seq !== loadSeq) return
