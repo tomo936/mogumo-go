@@ -66,7 +66,7 @@
 .vw-town{position:absolute;left:12px;right:12px;top:calc(64px + env(safe-area-inset-top));z-index:3;padding:10px 14px 12px;border:2px solid #ead7b8;border-radius:14px;background:#fffdf7;box-shadow:0 3px 10px rgba(90,60,30,.18);color:#5a3a1e}
 .vw-town__head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .vw-town__head b{font-size:16px}
-.vw-town__stamp{padding:1px 8px;border-radius:999px;background:#c2652a;color:#fff;font-size:11px;font-weight:800}
+.vw-town__stamp{padding:1px 8px;border-radius:999px;background:#a2561b;color:#fff;font-size:11px;font-weight:800}
 .vw-town__num{margin-left:auto;font-size:13px;font-weight:800;color:#a2561b}
 .vw-town__bar{display:block;height:6px;margin-top:8px;border-radius:99px;background:#f1e4cc;overflow:hidden}
 .vw-town__bar i{display:block;height:100%;border-radius:99px;background:#e8782f}

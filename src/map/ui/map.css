@@ -355,3 +355,44 @@
   font-size: 12px;
   white-space: nowrap;
 }
+
+/* 扇を開いたときの後ろの幕（2026-11-24 外のレビュー）。上の部品より上、扇（.hud-menu）より下 */
+.hud-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 5; /* 上の部品（同じ 5、先に置いてある）より上、扇（後に置いてある）より下 */
+  background: rgba(58, 40, 22, 0.32);
+  animation: hud-scrim-in 180ms ease-out;
+}
+@keyframes hud-scrim-in {
+  from { opacity: 0; }
+}
+/* 文字の札を丸の下にくっつける（2026-11-24 案）。丸に少し重ね、こげ茶の細い縁で 1 つの部品に見せる */
+.hud-fan small {
+  position: relative;
+  margin-top: -8px;
+  border: 1.5px solid #c9a27a;
+  box-shadow: 0 1px 2px rgba(74, 47, 24, 0.18);
+}
+/* 開いているときの × は少し小さく（76 → 60px）、下に「閉じる」（アイコンだけでは分かりにくい。2026-11-24 案） */
+.hud-toggle--close .hud-toggle__art {
+  width: 60px;
+  height: 60px;
+  margin: 8px auto 0;
+}
+.hud-toggle__label {
+  position: absolute;
+  left: 50%;
+  bottom: -14px;
+  transform: translateX(-50%);
+  padding: 0 7px;
+  height: 16px;
+  border: 1.5px solid #c9a27a;
+  border-radius: 999px;
+  background: rgba(255, 253, 247, 0.95);
+  color: #4a3b2c;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 16px;
+  white-space: nowrap;
+}

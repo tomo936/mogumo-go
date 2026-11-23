@@ -299,7 +299,8 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
 function Thumb({ photoUrl, kind }: { photoUrl: string | null; kind: VisitEntry['kind'] }) {
   return (
     <span className={`rc__thumb${photoUrl ? '' : ' rc__thumb--kind'}`}>
-      <img src={photoUrl ?? kindIcon(kind)} alt="" />
+      {/* 写真の期限付き URL が切れて読めないときは種類の絵に戻す */}
+      <img src={photoUrl ?? kindIcon(kind)} alt="" onError={(e) => { if (photoUrl) { e.currentTarget.src = kindIcon(kind); e.currentTarget.parentElement?.classList.add('rc__thumb--kind') } }} />
     </span>
   )
 }

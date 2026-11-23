@@ -11,7 +11,7 @@ const art = (name: string) => UI_ART[`../../assets/ui/${name}.webp`]
 
 const FAN_RADIUS = 160
 const DISC = 64 // 扇の丸の大きさ（CSS の .hud-fan__disc と同じ。2026-11-12 オーナー「もう少し大きく」で 54→64）
-const LABEL_BLOCK = 19 // 丸の下の文字の高さ＋すきま（CSS の .hud-fan small と同じ）
+const LABEL_BLOCK = 8 // 丸の下にはみ出す文字の札の高さ（札 16px を丸に 8px 重ねる。CSS の .hud-fan small と同じ。2026-11-24）
 const BOX_W = 76 // 文字が入る幅（CSS の .hud-fan と同じ）
 
 type Props = {
@@ -84,6 +84,9 @@ export function MapHud(p: Props) {
         <img src={art('kehai-cloud')} alt="" />
       </button>
 
+      {/* 扇を開いている間は、後ろを暗くしてメニューに目を集める。押すと閉じる（2026-11-24 外のレビューの案。
+          ぼかし（backdrop-filter）は、後ろの地図が毎回描き直すので重く、熱の元になるため使わない） */}
+      {menuOpen && <div className="hud-scrim" aria-hidden="true" onClick={() => setMenuOpen(false)} />}
       <div className="hud-menu">
         {menuOpen &&
           items.map((it, i) => (
@@ -110,6 +113,7 @@ export function MapHud(p: Props) {
           onClick={() => setMenuOpen((x) => !x)}
         >
           <img src={art(menuOpen ? 'icon-close' : 'btn-cloche')} alt="" className="hud-toggle__art" />
+          {menuOpen && <small className="hud-toggle__label">閉じる</small>}
         </button>
       </div>
 

@@ -98,7 +98,7 @@
 }
 .rc__slider-head b {
   font-size: 18px;
-  color: #c2652a;
+  color: #a2561b; /* 明るさの差 5.3（#c2652a は 3.8。18px の太字は 4.5 が要る。レビュー 2026-11-24） */
 }
 .rc__slider-head button {
   width: 34px;
@@ -436,7 +436,7 @@
   gap: 6px;
 }
 .rc__slider-head b svg {
-  color: #c2652a;
+  color: #a2561b;
 }
 /* 数字の札の絵（2026-11-24 mock-b） */
 .rc__stats svg {

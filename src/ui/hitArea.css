@@ -2,10 +2,10 @@
    ボタンの外側に見えない ::after を広げ、指で押せる所だけを広げる。広げる量 = (44 − 今の大きさ) ÷ 2。
    となりの押せる物とは重ならない向き・量にしてある（図鑑のタブは縦だけ）。 */
 .cl__back, .ib__back, .mp__back, .nb__back, .rc__back, .rv-ed__close, .st__back, .hs__back, .zd__back,
-.pins-toggle, .rc__slider-head button, .zukan__tab, .zukan__pager button, .zukan__hintbar button {
+.rc__slider-head button, .zukan__tab, .zukan__pager button, .zukan__hintbar button {
   position: relative;
 }
-.shop-sheet__close::after, .cl__back::after, .ib__back::after, .pins-toggle::after, .mp__back::after, .nb__back::after,
+.shop-sheet__close::after, .cl__back::after, .ib__back::after, .mp__back::after, .nb__back::after,
 .rc__back::after, .rc__slider-head button::after, .rv-ed__close::after, .rv-zoom__close::after, .st__back::after,
 .hs__back::after, .zukan__close::after, .zukan__tab::after, .zukan__pager button::after, .zukan__hintbar button::after,
 .zd__back::after {
@@ -14,9 +14,8 @@
   inset: var(--hit, -2px); /* 40px → 44px */
 }
 .shop-sheet__close { --hit: -8px; } /* 32px＋枠線 2px（::after は枠線の内側から広がるので、その分も足す） */
-.pins-toggle { --hit: -4px; }
 .rc__slider-head button { --hit: -5px; }
 .rv-zoom__close { --hit: -1px; }
 .zukan__close { --hit: -3px; }
-.zukan__tab { --hit: -6px 0; } /* 36px＋枠線 2px */
+.zukan__tab { --hit: -4px 0 -8px; } /* 36px＋枠線 2px。上は並びの余白 4px で切れるので、上 4・下 8 で合わせて 44（レビュー 2026-11-24） */
 .zukan__hintbar button { --hit: -8px; }
