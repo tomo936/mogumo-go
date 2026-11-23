@@ -119,7 +119,7 @@
   background: #f6ecd8;
 }
 .bd-sheet__steps small {
-  font-size: 10px;
+  font-size: 11px; /* 10px → 11px（Apple の最小 11pt。2026-11-24 B-23） */
   font-weight: 800;
   color: #8a6a48;
 }

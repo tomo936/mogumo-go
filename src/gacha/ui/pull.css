@@ -198,7 +198,7 @@
   object-position: 50% 100%;
 }
 .pl__cell span {
-  font-size: 10px;
+  font-size: 11px; /* 10px → 11px（Apple の最小 11pt。2026-11-24 B-23） */
   font-weight: 800;
   line-height: 1.2;
   text-align: center;
@@ -211,7 +211,7 @@
   border-radius: 6px;
   background: #e8883a;
   color: #fff;
-  font-size: 10px;
+  font-size: 11px; /* 10px → 11px（Apple の最小 11pt。2026-11-24 B-23） */
   font-style: normal;
   font-weight: 800;
 }

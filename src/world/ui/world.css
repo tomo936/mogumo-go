@@ -57,7 +57,7 @@
 /* 旗を出す・隠すボタン（右、帯の上） */
 .wm-flags{position:absolute;right:12px;bottom:118px;z-index:5;width:58px;height:58px;border-radius:50%;border:2.5px solid #7a4a26;background:#fffaf0;box-shadow:0 3px 0 rgba(122,74,38,.3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:0;cursor:pointer;color:#7a4a26}
 .wm-flags span svg{width:24px;height:29px}
-.wm-flags small{font-size:10px;font-weight:800;line-height:1}
+.wm-flags small{font-size: 11px; /* 10px → 11px（Apple の最小 11pt。2026-11-24 B-23） */font-weight:800;line-height:1}
 .wm-flags:not(.on){background:#efe6d2;opacity:.85}
 /* 見るだけ: 左上のワールドマップへ戻るボタン（検索欄の←と同じ手帳風） */
 .vw-world{position:absolute;left:12px;top:calc(12px + env(safe-area-inset-top));z-index:5;height:44px;display:flex;align-items:center;gap:4px;padding:0 16px 0 10px;border:2.5px solid #7a4a26;border-radius:999px;background:#fffaf0;color:#6b4a2b;font:inherit;font-size:15px;font-weight:800;box-shadow:0 3px 0 rgba(122,74,38,.25);cursor:pointer}

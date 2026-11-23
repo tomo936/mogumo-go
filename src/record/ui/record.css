@@ -199,13 +199,36 @@
   height: 100%;
   object-fit: cover;
 }
-.rc__item b {
-  display: block;
-  font-size: 13px;
+.rc__item-main {
+  flex: 1;
+  min-width: 0;
 }
-.rc__item span:not(.rc__thumb) {
-  font-size: 11px;
+.rc__item-main b {
+  display: block;
+  font-size: 14px; /* お店の名前は 14px 以上（読みやすさの決まり） */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rc__item-main span {
+  font-size: 12px;
   color: #7a6450;
+}
+/* 種類の札（2026-11-24 外のレビューの案）。橙の細い枠の小さい札 */
+.rc__kind {
+  flex: none;
+  padding: 2px 8px;
+  border: 1.5px solid #e8a26b;
+  border-radius: 999px;
+  background: #fff7ee;
+  color: #c2652a;
+  font-size: 11px;
+  font-weight: 800;
+}
+/* 写真が無いお店は種類の絵（枠なしの絵なので、地の色の上に少し小さく） */
+.rc__thumb--kind img {
+  object-fit: contain;
+  padding: 4px;
 }
 
 /* 自宅の目印（2026-11-10 オーナー: 強調表示）。position は absolute（MapLibre が配置する） */
@@ -247,7 +270,7 @@
   border-radius: 999px;
   background: #c2652a;
   color: #fff;
-  font-size: 10px;
+  font-size: 11px; /* 10px → 11px（Apple の最小 11pt。2026-11-24 B-23） */
   font-weight: 800;
   line-height: 16px;
   white-space: nowrap;
@@ -336,11 +359,9 @@
   background: #fffdf7;
   font-size: 13px;
 }
-.rc__today-item b {
-  flex: 1;
-}
-.rc__today-item span:last-child {
-  color: #8a6a48;
+.rc__today-item .rc__thumb {
+  width: 40px;
+  height: 40px;
 }
 .rc__today-num {
   width: 20px;
@@ -399,7 +420,7 @@
   cursor: pointer;
 }
 .rc__range small {
-  font-size: 9px;
+  font-size: 11px; /* 9px → 11px（Apple の最小 11pt。2026-11-24 B-23） */
   font-weight: 800;
   line-height: 1;
 }

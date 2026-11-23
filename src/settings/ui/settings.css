@@ -103,7 +103,7 @@
   border-radius: 999px;
   background: #b9a88c;
   color: #fff;
-  font-size: 10px;
+  font-size: 11px; /* 10px → 11px（Apple の最小 11pt。2026-11-24 B-23） */
   font-weight: 800;
 }
 .st__vol {

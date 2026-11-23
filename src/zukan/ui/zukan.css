@@ -238,7 +238,7 @@
   display: block;
   padding-left: 2px;
   text-align: left;
-  font-size: 9px;
+  font-size: 11px; /* 9px → 11px（Apple の最小 11pt。2026-11-24 B-23） */
   font-weight: 800;
   letter-spacing: 0.06em;
   color: #4a2f18;
@@ -305,7 +305,7 @@
 }
 /* 長い名前は字を小さく */
 .zukan__name--long {
-  font-size: 9.5px;
+  font-size: 11px; /* 9.5px → 11px（Apple の最小 11pt。2026-11-24 B-23） */
   line-height: 12px;
 }
 .zukan__name--long .zukan__name-text {
@@ -322,7 +322,7 @@
   gap: 4px;
   height: 18px;
   margin-top: 4px;
-  font-size: 9.5px;
+  font-size: 11px; /* 9.5px → 11px（Apple の最小 11pt。2026-11-24 B-23） */
   font-weight: 800;
   color: #4a2f18;
 }
@@ -479,7 +479,7 @@
   padding: 2px 8px;
   border-radius: 99px;
   background: rgba(255, 255, 255, 0.9);
-  font-size: 10px;
+  font-size: 11px; /* 10px → 11px（Apple の最小 11pt。2026-11-24 B-23） */
   font-weight: 800;
 }
 .zd__name {
@@ -548,7 +548,7 @@
   font-size: 14px;
 }
 .zd__stamp span {
-  font-size: 10px;
+  font-size: 11px; /* 10px → 11px（Apple の最小 11pt。2026-11-24 B-23） */
 }
 .zd__stats {
   display: grid;

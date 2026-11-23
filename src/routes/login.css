@@ -117,7 +117,7 @@
 .login__err small {
   display: block;
   margin-top: 2px;
-  font-size: 10px;
+  font-size: 11px; /* 10px → 11px（Apple の最小 11pt。2026-11-24 B-23） */
   font-weight: 400;
   opacity: 0.8;
 }
