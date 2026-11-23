@@ -73,3 +73,9 @@
 - 判断が要る・確認したいことは、チャットで聞く前に画面へ積む。積んだら、チャットに「ボードに○件積みました」と一言残す。
 - B-07 直した3件を dev に出す: **出す** → dev に反映済み（merge 8a519b2。Vercel が mogumo-go-dev に出す。本番 main には出していない）
 - B-08 駅の中の歩き方: **上を歩く（今のまま）**
+
+---
+## 根拠資料
+判断ボードの土台（Anthropic のゲート型の形と調査の結論）は、公式の参照先をまとめた資料にあります：
+- handoff/to-claude/2026-11-23-decision-board-references.md（公式の参照先リスト＋調査の結論）
+- 調査レポートの実物2本：handoff/to-claude/refs-decision-board/ 配下
