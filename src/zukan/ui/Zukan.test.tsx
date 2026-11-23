@@ -143,3 +143,23 @@ test('歩いて位置が変わると、出ているヒントも今の位置か�
   rerender(<Zukan onLocate={() => {}} onClose={() => {}} origin={{ pos: { lat: 35.65 + 200 / 111_320, lng: 139.63 }, from: 'here' }} />)
   expect(screen.getByRole('status')).toHaveTextContent('ここから 北へ 150m')
 })
+
+test('お店のシートから開いた（initialShopId）ときは、そのお店のカードの詳細が開く（2026-11-24 B-19）', async () => {
+  load.mockResolvedValueOnce([unknown, visited])
+  render(<Zukan onLocate={() => {}} onClose={() => {}} initialShopId="hp:A" />)
+  expect(await screen.findByLabelText('図鑑カード詳細')).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: '麺屋A' })).toBeInTheDocument()
+})
+
+test('行ったお店の詳細には「共有する」。共有の画面が無い端末では文をコピーする（アプリのリンクつき）', async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined)
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+  load.mockResolvedValueOnce([visited])
+  render(<Zukan onLocate={() => {}} onClose={() => {}} initialShopId="hp:A" />)
+  await screen.findByLabelText('図鑑カード詳細')
+  await userEvent.click(screen.getByRole('button', { name: '共有する' }))
+  await waitFor(() => expect(writeText).toHaveBeenCalled())
+  expect(writeText.mock.calls[0][0]).toContain('麺屋A（ラーメン）に2回目のチェックインしたよ')
+  expect(writeText.mock.calls[0][0]).toContain('https://mogumo-go.vercel.app')
+  expect(screen.getByText('文をコピーしました')).toBeInTheDocument()
+})

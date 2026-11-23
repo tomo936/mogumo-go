@@ -588,3 +588,29 @@
   font-weight: 800;
   box-shadow: 0 5px 0 #8a5a32;
 }
+
+/* 共有する（2026-11-24 B-19）。「地図で見る」の下に、同じ形の白いボタン（主役は地図で見る） */
+.zd__share {
+  display: block;
+  width: calc(100% - 36px);
+  height: 48px;
+  margin: 14px auto 0;
+  border: 2.5px solid #8a5a32;
+  border-radius: 99px;
+  background: #fff;
+  color: #8a5a32;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 4px 0 #8a5a32;
+}
+.zd__share:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #8a5a32;
+}
+.zd__share-msg {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #8a5a32;
+}

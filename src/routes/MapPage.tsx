@@ -396,6 +396,7 @@ export function MapPage() {
     void loadMissions()
   }
   const [zukanOpen, setZukanOpen] = useState(false) // 図鑑（メニューから開く）
+  const [zukanShopId, setZukanShopId] = useState<string | null>(null) // お店のシートから開いたとき、そのお店のカードを出す
   const [recordTab, setRecordTab] = useState<RecordTab | null>(null) // 記録（メニューから開く。マイページからは じっせき で）
   const [myPageOpen, setMyPageOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -660,6 +661,10 @@ export function MapPage() {
           hint={hints.hintFor(selected)}
           masked={hints.isMasked(selected)}
           onReview={() => void openReview(selected)}
+          onZukan={() => {
+            setZukanShopId(selected.id)
+            setZukanOpen(true)
+          }}
           reviews={sheetReviews?.shopId === selected.id ? sheetReviews : null}
           busy={busy}
           error={checkinError}
@@ -708,12 +713,16 @@ export function MapPage() {
           mapShops={zukanInput?.mapShops}
           cleared={zukanInput?.cleared}
           origin={hintOrigin}
+          initialShopId={zukanShopId}
           onLocate={(z) => {
             setZukanOpen(false)
             mapRef.current?.focusAt(z) // 詳細の「地図で見る」: 視点をお店へ寄せて、シートを開く
             select(zukanToShop(z))
           }}
-          onClose={() => setZukanOpen(false)}
+          onClose={() => {
+            setZukanOpen(false)
+            setZukanShopId(null)
+          }}
         />
       )}
       {/* 案内は画面の外枠（#root）の外に出す（降りている間 #root をさわれなくしても、案内はさわれる）。
@@ -880,6 +889,7 @@ export function MapPage() {
             const inp = mapRef.current?.hintInputs()
             setZukanInput({ mapShops: inp?.shops ?? [], cleared: inp?.cleared ?? new Set() })
             syncOsm()
+            setZukanShopId(null)
             setZukanOpen(true)
           }}
           onNearby={() => {

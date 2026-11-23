@@ -1098,3 +1098,20 @@
   padding: 0 0 3px;
   line-height: 1;
 }
+
+/* わたしの記録の「図鑑のカードを見る」（2026-11-24 B-19）。押せる高さ 44px、わたしの記録の色に合わせた控えめな文字のボタン */
+.shop-record__zukan {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  border: none;
+  border-top: 1.5px dashed #e3cfaa;
+  background: none;
+  color: #c2652a;
+  font-size: 14px;
+  font-weight: 800;
+}
+.shop-record__zukan::after {
+  content: ' ›';
+}

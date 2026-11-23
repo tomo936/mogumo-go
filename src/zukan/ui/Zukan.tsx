@@ -31,9 +31,10 @@ type Props = {
   mapShops?: readonly Shop[] // 今の地図のお店（shops に書く前でもすぐ「？」を出す）
   cleared?: ReadonlySet<string> // 地図の晴れたマス（自宅のまわり・町のクリアも入る）
   origin?: HintOrigin | null // 「？」のヒントをどこから測るか（今いる場所・無ければ自宅）。無ければヒントは出さない
+  initialShopId?: string | null // 開いたらこのお店のカードの詳細を出す（お店のシートの「図鑑のカードを見る」。2026-11-24 B-19）
 }
 
-export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null }: Props) {
+export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null, initialShopId = null }: Props) {
   const [detail, setDetail] = useState<{ shop: ZukanShop; no: string } | null>(null)
   const [state, setState] = useState<{ status: 'loading' } | { status: 'error' } | { status: 'ready'; shops: ZukanShop[] }>({ status: 'loading' })
   const [kind, setKind] = useState<ShopKind>('ramen')
@@ -52,6 +53,20 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null }: P
   }, [opened])
 
   const byKind = useMemo(() => (state.status === 'ready' ? buildZukan(state.shops) : null), [state])
+  // お店のシートから来たときは、読み込めたらそのお店の種類を選び、カードの詳細を開く（1 回だけ）
+  const [jumped, setJumped] = useState(false)
+  useEffect(() => {
+    if (jumped || !initialShopId || !byKind) return
+    setJumped(true)
+    for (const [k, list] of byKind) {
+      const i = list.findIndex((s) => s.id === initialShopId)
+      if (i < 0) continue
+      setKind(k)
+      setPage(Math.floor(i / PAGE_SIZE))
+      setDetail({ shop: list[i], no: cardNo(i) })
+      return
+    }
+  }, [jumped, initialShopId, byKind])
   const all = useMemo(() => (byKind ? [...byKind.values()].flat() : []), [byKind])
   const list = byKind?.get(kind) ?? []
   const pages = pageCount(list.length)

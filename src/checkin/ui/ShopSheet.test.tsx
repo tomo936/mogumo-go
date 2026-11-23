@@ -283,3 +283,15 @@ test('行っていない・伏せた気配・onReview が無いときは出さ�
   render(<ShopSheet shop={hp} distanceM={32} busy={false} error={null} onCheckin={vi.fn()} onClose={vi.fn()} visits={twice} />)
   expect(screen.queryByRole('button', { name: '感想を書く' })).not.toBeInTheDocument()
 })
+
+test('行ったお店は、くわしく見るの「わたしの記録」から図鑑のカードへ（2026-11-24 B-19）。行っていなければ出さない', async () => {
+  const onZukan = vi.fn()
+  const { unmount } = render(<ShopSheet shop={hp} distanceM={10} busy={false} error={null} onCheckin={() => {}} onClose={() => {}} visits={twice} recordReady onZukan={onZukan} />)
+  await expand()
+  await userEvent.click(screen.getByRole('button', { name: '図鑑のカードを見る' }))
+  expect(onZukan).toHaveBeenCalledTimes(1)
+  unmount()
+  setup({ visits: null, recordReady: true, onZukan })
+  await expand()
+  expect(screen.queryByRole('button', { name: '図鑑のカードを見る' })).not.toBeInTheDocument()
+})

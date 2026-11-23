@@ -60,10 +60,11 @@ type Props = {
   onBack?: () => void
   reviews?: { summary: { avg: number; count: number } | null; latest: Review[] } | null // みんなの感想（読み中・読めないは null）
   onReview?: () => void // 行ったお店の「感想を書く」（チェックインのとなり。2026-11-13 オーナー）
+  onZukan?: () => void // 行ったお店の「図鑑のカードを見る」（わたしの記録の中。2026-11-24 B-19「お店から図鑑へ」）
   viewOnly?: boolean // 見るだけ（ワールドマップから飛んだ先）。チェックインのボタンと誤りの文を出さない
 }
 
-export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, masked = false, visits = null, recordReady, busy, error, onCheckin, onClose, onLocate, backLabel = null, onBack, viewOnly = false, reviews = null, onReview }: Props) {
+export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, masked = false, visits = null, recordReady, busy, error, onCheckin, onClose, onLocate, backLabel = null, onBack, viewOnly = false, reviews = null, onReview, onZukan }: Props) {
   const [expanded, setExpanded] = useState(false) // 止まっている段（全画面か）
   const [openedAt] = useState(() => new Date()) // 営業中かは、シートを開いた時刻で決める
   const [height, setHeight] = useState<number | null>(null) // 引いている間・全画面の高さ（px）。小さい段で止まっているときは null（中身の高さ）
@@ -332,6 +333,11 @@ export function ShopSheet({ shop, distanceM, doneToday = false, hint = null, mas
                           <i style={{ width: `${Math.round((count / (count + next.remaining)) * 100)}%` }} />
                         </div>
                       </>
+                    )}
+                    {onZukan && (
+                      <button type="button" className="shop-record__zukan" onClick={onZukan}>
+                        図鑑のカードを見る
+                      </button>
                     )}
                   </>
                 ) : (

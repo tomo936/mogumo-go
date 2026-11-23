@@ -1,5 +1,6 @@
 // 図鑑カードの詳細（案B。2026-11-12 オーナー決定）。大きなカード・数字 3 つ・わたしの感想・みんなの感想・地図で見る。
-// 仕様: docs/superpowers/specs/2026-11-12-zukan-b-reviews-design.md の 2.（共有ボタンと「お店の情報」は出さない）
+// 仕様: docs/superpowers/specs/2026-11-12-zukan-b-reviews-design.md の 2.（「お店の情報」は出さない）。
+// 共有は 2026-11-12 には出さないと決めたが、2026-11-23 B-19「共有」で足す（行ったお店だけ。置き場所はボード B-21 で確認中）
 import './zukan.css'
 import { frameTier } from '../../checkin/domain/visits.ts'
 import type { ZukanShop } from '../domain/zukan.ts'
@@ -8,6 +9,9 @@ import { MyReviews } from '../../reviews/ui/MyReviews.tsx'
 import { ReviewList } from '../../reviews/ui/ReviewList.tsx'
 import { cardUrl, kindIcon } from './cardArt.ts'
 import { Icon } from '../../ui/Icon.tsx'
+import { useState } from 'react'
+import { zukanShareText } from '../../share/domain/shareText.ts'
+import { shareOut } from '../../share/infra/share.ts'
 
 // 段の呼び名は 銅（1〜2 回）・銀（3〜9 回）・金（10 回〜）。2026-11-12 オーナー「金銀銅」
 const TIER_CHIP = { normal: '銅の枠', silver: '銀の枠', gold: '金の枠' } as const
@@ -25,6 +29,11 @@ type Props = {
 
 export function ZukanDetail({ shop, no, onBack, onLocate }: Props) {
   const v = shop.visits
+  const [shareMsg, setShareMsg] = useState<string | null>(null)
+  const share = async () => {
+    const r = await shareOut(zukanShareText({ shopName: shop.name, kindLabel: KIND_LABEL[shop.kind] ?? null, visits: v?.count ?? 1 }))
+    setShareMsg(r === 'copied' ? '文をコピーしました' : r === 'failed' ? '共有できませんでした' : null)
+  }
   const tier = v ? frameTier(v.count) : 'normal'
   return (
     <section className="zd" aria-label="図鑑カード詳細">
@@ -82,6 +91,14 @@ export function ZukanDetail({ shop, no, onBack, onLocate }: Props) {
           <button type="button" className="zd__locate" onClick={onLocate}>
             地図で見る
           </button>
+          <button type="button" className="zd__share" onClick={() => void share()}>
+            共有する
+          </button>
+          {shareMsg && (
+            <p className="zd__share-msg" role="status">
+              {shareMsg}
+            </p>
+          )}
         </>
       )}
     </section>
