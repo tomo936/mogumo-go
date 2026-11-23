@@ -50,6 +50,9 @@ export const loading = {
     mapShown = true
   },
   mapShown: () => mapShown,
+  forgetMapShown: () => {
+    mapShown = false
+  },
   onEnter: (cb: () => void) => {
     enterSubs.add(cb)
     return () => { enterSubs.delete(cb) }

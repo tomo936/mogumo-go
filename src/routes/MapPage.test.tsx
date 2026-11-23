@@ -710,6 +710,22 @@ test('一度地図に入ったあと、規約などほかの画面から戻っ�
   expect(introCalls.length).toBe(before)
 })
 
+test('ログアウトしてから入り直したとき（ゲストなど）は、もう一度降りる（2026-11-23 オーナー）', async () => {
+  localStorage.setItem('mogumo.tutorial.relogin-user', '1')
+  act(() => {
+    loading.enter()
+    loading.markMapShown() // 前のログインで一度地図に入った
+    loading.forgetMapShown() // ログアウトした（AuthProvider がログインが外れたときに呼ぶ）
+  })
+  const before = introCalls.length
+  render(
+    <AuthContext.Provider value={{ session: { user: { id: 'relogin-user' } } as never, loading: false, signInWithGoogle: vi.fn(), signInAsGuest: vi.fn(), linkGoogle: vi.fn(), signOut: vi.fn() }}>
+      <MapPage />
+    </AuthContext.Provider>,
+  )
+  expect(introCalls.length).toBe(before + 1)
+})
+
 test('降りる途中で地図が片付けられた（途中で終わった合図）ときは、さわれるようにせず、もう一度降りる', async () => {
   localStorage.setItem('mogumo.tutorial.abort-user', '1')
   const root = document.createElement('div')

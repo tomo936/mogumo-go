@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase.ts'
 import { AuthContext } from './AuthContext.ts'
+import { loading as loadingGate } from '../credits/loadingGate.ts'
 
 async function signInWithGoogle() {
   await supabase.auth.signInWithOAuth({
@@ -47,6 +48,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
     })
     const { data } = supabase.auth.onAuthStateChange((_event, next) => {
+      // ログインが外れた（ログアウト・退会・期限切れ）: 次にログインして地図に来たら、もう一度空から降りる
+      // （外さないと「規約などから戻ってきた人」と取り違えて降りなかった。2026-11-23 オーナー「ログアウトしてゲストで入り直すとだめ」）
+      if (!next) loadingGate.forgetMapShown()
       setSession(next)
       setLoading(false)
     })

@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { AuthProvider } from './AuthProvider.tsx'
 import { useAuth } from './AuthContext.ts'
+import { loading } from '../credits/loadingGate.ts'
 
 const auth = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -79,4 +80,14 @@ test('Google ログインは今開いている URL に戻す', async () => {
 test('Provider の外で useAuth を呼ぶとエラー', () => {
   vi.spyOn(console, 'error').mockImplementation(() => {})
   expect(() => render(<Probe />)).toThrow('useAuth must be used inside AuthProvider')
+})
+
+test('ログインが外れたら「この起動で地図に入った」の印を消す（入り直したら、もう一度空から降りる。2026-11-23 オーナー）', async () => {
+  render(<AuthProvider><Probe /></AuthProvider>)
+  await act(async () => resolveSession(fakeSession('u1')))
+  loading.markMapShown()
+  act(() => authCallback('TOKEN_REFRESHED', fakeSession('u1')))
+  expect(loading.mapShown()).toBe(true) // ログインしたままなら消さない（規約などから戻ったときは降りない）
+  act(() => authCallback('SIGNED_OUT', null))
+  expect(loading.mapShown()).toBe(false)
 })
