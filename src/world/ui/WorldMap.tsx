@@ -30,7 +30,7 @@ type TownMark = { id: string; name: string; cleared: boolean; lat: number; lng: 
 type Props = {
   towns: TownProgress[]
   onClose: () => void
-  onOpen: (t: { name: string; center: LatLng; zoom: number }) => void
+  onOpen: (t: { name: string; center: LatLng; zoom: number; townId?: string }) => void // townId: 旗から開いたとき（町の進み具合の札を出す）
   loadBoxes?: (ids: string[]) => Promise<Map<string, Box>>
 }
 
@@ -110,6 +110,7 @@ export function WorldMap({ towns, onClose, onOpen, loadBoxes = loadTownBoxes }: 
           const b = boxesRef.current.get(mark.id)
           if (!b) return
           onOpenRef.current({
+            townId: mark.id,
             name: mark.name,
             center: boxCenter(b),
             zoom: zoomForBox(b, el.clientWidth || 390, el.clientHeight || 844, 13, 17),

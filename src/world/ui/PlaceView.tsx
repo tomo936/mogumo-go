@@ -1,6 +1,8 @@
 // 見るだけの地図（ワールドマップから飛んだ先）。真上の地図に、記録と同じ雲。行ったお店のピンだけ出す（仕様 S1）。
 // チェックインはできない。左上の「ワールドマップ」で戻る。「今いる場所に戻る」で記録ごと閉じる。
 // 「見ているだけ」の帯は出さない（2026-11-12 オーナー）。
+import type { TownProgress } from '../../towns/domain/progress.ts'
+import { nextGoal, percent } from '../../towns/domain/progress.ts'
 import { useMemo, useState } from 'react'
 import { RecordMap } from '../../record/ui/RecordMap.tsx'
 import type { ClearedCell, VisitEntry } from '../../record/domain/timeline.ts'
@@ -23,12 +25,13 @@ type Props = {
   home: LatLng | null
   onBack: () => void
   onReturn: () => void
+  town?: TownProgress | null // 旗から開いた町の進み具合（2026-11-24 町のコンプリートの存在感を上げる）
   onLocate?: (shop: Shop) => void // お店のシートの「地図で見る」: いつもの地図でそのお店へ寄せる（図鑑と同じ。2026-11-17 オーナー）
 }
 
 type Placed = VisitEntry & { lat: number; lng: number }
 
-export function PlaceView({ center, zoom, cells, towns, visits, home, onBack, onReturn, onLocate }: Props) {
+export function PlaceView({ center, zoom, cells, towns, visits, home, onBack, onReturn, onLocate, town = null }: Props) {
   const [now] = useState(() => Date.now())
   const [openId, setOpenId] = useState<string | null>(null)
   const focus = useMemo(() => ({ center, zoom }), [center, zoom])
@@ -60,6 +63,7 @@ export function PlaceView({ center, zoom, cells, towns, visits, home, onBack, on
   return (
     <section className="vw" aria-label="見るだけの地図">
       <RecordMap cells={cells} towns={towns} t={now} home={home} pins={pins} wave={false} focus={focus} onPinTap={setOpenId} />
+      {town && <TownCard town={town} />}
       <button type="button" className="vw-world" aria-label="ワールドマップへ戻る" onClick={onBack}>
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
         ワールドマップ
@@ -84,5 +88,23 @@ export function PlaceView({ center, zoom, cells, towns, visits, home, onBack, on
         />
       )}
     </section>
+  )
+}
+
+// 町の進み具合の札（旗から開いたとき、地図の上に出す。2026-11-24）
+function TownCard({ town }: { town: TownProgress }) {
+  const pct = percent(town)
+  const goal = nextGoal(town)
+  const mark = town.completedAt !== null ? 'コンプリート' : town.clearedAt !== null ? 'クリア' : null
+  return (
+    <div className="vw-town" aria-label={`${town.name} ${town.visited} / ${town.total} 軒`}>
+      <div className="vw-town__head">
+        <b>{town.name}</b>
+        {mark && <span className="vw-town__stamp">{mark}</span>}
+        <span className="vw-town__num">{`${town.visited} / ${town.total} 軒・${pct}%`}</span>
+      </div>
+      <i className="vw-town__bar" aria-hidden="true"><i style={{ width: `${pct}%` }} /></i>
+      {goal && <p className="vw-town__goal">{goal.to === 'clear' ? 'クリアまで' : 'コンプリートまで'}あと <b>{goal.left}</b> 軒</p>}
+    </div>
   )
 }

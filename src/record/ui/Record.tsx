@@ -67,7 +67,7 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
   const [showRange, setShowRange] = useState(false) // 「町の範囲」（行った町の境目と名前）を地図に出すか
   const [shapes, setShapes] = useState<Map<string, { name: string; geom: Geometry; bbox: OutlineTown['bbox'] }> | null>(null)
   const [worldOpen, setWorldOpen] = useState(false) // ワールドマップ（日本全体）を重ねて出す
-  const [place, setPlace] = useState<{ name: string; center: LatLng; zoom: number } | null>(null) // 飛んだ先（見るだけ）
+  const [place, setPlace] = useState<{ name: string; center: LatLng; zoom: number; townId?: string } | null>(null) // 飛んだ先（見るだけ）
   const [t, setT] = useState<number | null>(null) // スライダーの日付（null = いちばん新しい）
 
   useEffect(() => {
@@ -283,6 +283,7 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
               towns={towns}
               visits={visits}
               home={home}
+              town={place.townId && townState.status === 'ready' ? townState.towns.find((x) => x.id === place.townId) ?? null : null}
               onBack={() => setPlace(null)}
               onReturn={onClose}
               onLocate={onLocate}

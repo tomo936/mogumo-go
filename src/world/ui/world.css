@@ -61,3 +61,14 @@
 .wm-flags:not(.on){background:#efe6d2;opacity:.85}
 /* 見るだけ: 左上のワールドマップへ戻るボタン（検索欄の←と同じ手帳風） */
 .vw-world{position:absolute;left:12px;top:calc(12px + env(safe-area-inset-top));z-index:5;height:44px;display:flex;align-items:center;gap:4px;padding:0 16px 0 10px;border:2.5px solid #7a4a26;border-radius:999px;background:#fffaf0;color:#6b4a2b;font:inherit;font-size:15px;font-weight:800;box-shadow:0 3px 0 rgba(122,74,38,.25);cursor:pointer}
+
+/* 旗から開いた町の進み具合の札（2026-11-24） */
+.vw-town{position:absolute;left:12px;right:12px;top:calc(64px + env(safe-area-inset-top));z-index:3;padding:10px 14px 12px;border:2px solid #ead7b8;border-radius:14px;background:#fffdf7;box-shadow:0 3px 10px rgba(90,60,30,.18);color:#5a3a1e}
+.vw-town__head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.vw-town__head b{font-size:16px}
+.vw-town__stamp{padding:1px 8px;border-radius:999px;background:#c2652a;color:#fff;font-size:11px;font-weight:800}
+.vw-town__num{margin-left:auto;font-size:13px;font-weight:800;color:#a2561b}
+.vw-town__bar{display:block;height:6px;margin-top:8px;border-radius:99px;background:#f1e4cc;overflow:hidden}
+.vw-town__bar i{display:block;height:100%;border-radius:99px;background:#e8782f}
+.vw-town__goal{margin:6px 0 0;font-size:12px;font-weight:700;color:#7a5a3a}
+.vw-town__goal b{font-size:15px;color:#a2561b}
