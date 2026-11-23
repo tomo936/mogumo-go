@@ -3,7 +3,13 @@
 // 土台は文字やお店の印が少ない positron。色は themes.ts の案を上から当てる
 export const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron'
 export const MAP_THEME: 'sky' | 'mint' | 'pop' | 'illust' = 'illust' // イラスト調（2026-11-10 オーナー）。前は pop
-export const PITCH = 55
+export const PITCH = 55 // 倍率 17（はじめの倍率）の傾き。ほかの倍率は PITCH_BY_ZOOM
+// 倍率ごとの傾き（度）。引くと真上に近く、寄ると主人公の目線に近い（2026-11-24 オーナー「ポケモン GO のように自然に」）。
+// 14 は降りる演出の始まり（真上から）。19（いちばん寄った）は地平線と空が見える傾き
+export const PITCH_BY_ZOOM: readonly (readonly [number, number])[] = [[14, 0], [16, 40], [17, PITCH], [18, 64], [19, 72]]
+export const MAX_PITCH = 75
+// 主人公を画面の真ん中より下に置く（画面の高さに対する上の余白の割合。0.34 で主人公は上から約 67% の高さ。ポケモン GO の手本と同じくらい）
+export const AVATAR_PAD_TOP = 0.34
 export const MIN_ZOOM = 16
 export const MAX_ZOOM = 19 // 2026-11-16 オーナー「もっとズームできるように」（A13）→ 20 は「できすぎ」で 19。地図のタイルは 14 までなので、それより上は拡大表示
 export const INITIAL_ZOOM = 17

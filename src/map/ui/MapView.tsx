@@ -1,3 +1,4 @@
+import { pitchForZoom } from '../domain/camera.ts'
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef } from 'react'
 import type { Ref } from 'react'
 import { Map as MapLibreMap } from 'maplibre-gl'
@@ -6,7 +7,7 @@ import type { GeoJSONSource } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './map.css'
 import {
-  CIRCLE_RADIUS_M, RIPPLE_COLOR, RIPPLE_COUNT, RIPPLE_FILL_COLOR, RIPPLE_FILL_OPACITY, RIPPLE_PERIOD_MS, FIRST_FIX_TIMEOUT_MS, INITIAL_ZOOM, MAP_THEME, MAX_ZOOM, MIN_ZOOM, PITCH, STYLE_URL,
+  CIRCLE_RADIUS_M, RIPPLE_COLOR, RIPPLE_COUNT, RIPPLE_FILL_COLOR, RIPPLE_FILL_OPACITY, RIPPLE_PERIOD_MS, FIRST_FIX_TIMEOUT_MS, INITIAL_ZOOM, MAP_THEME, MAX_ZOOM, MIN_ZOOM, PITCH, STYLE_URL, PITCH_BY_ZOOM, MAX_PITCH, AVATAR_PAD_TOP,
   IDLE_FPS,
   MAP_MAX_PIXEL_RATIO,
   IDLE_SPEED_MPS,
@@ -203,7 +204,10 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       style: STYLE_URL,
       ...(dprCap ? { pixelRatio: Math.min(window.devicePixelRatio || 1, dprCap) } : {}),
       transformStyle: (_prev, next) => themeStyle(next, theme),
-      pitch: PITCH,
+      pitch: pitchForZoom(INITIAL_ZOOM, PITCH_BY_ZOOM),
+      maxPitch: MAX_PITCH,
+      // 傾きは倍率で決まる（指でつまんでも、寄せる動きでも、降りる演出でも同じ。2026-11-24）
+      transformCameraUpdate: ({ zoom }) => (zoom === undefined ? {} : { pitch: pitchForZoom(zoom, PITCH_BY_ZOOM) }),
       zoom: INITIAL_ZOOM,
       minZoom: MIN_ZOOM,
       maxZoom: MAX_ZOOM,
@@ -247,6 +251,12 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       drawn: LatLng | null; shown: LatLng | null; acceptedAt: number; rejectedAt: number | null
       world: ReturnType<typeof attachWorld> | null
     } = { loaded: false, target: null, current: null, lastFix: null, drawn: null, shown: null, acceptedAt: 0, rejectedAt: null, world: null }
+    // 主人公（地図の真ん中）を画面の少し下に置く。画面の大きさが変わったら合わせ直す（2026-11-24）
+    const pad = () => map.setPadding({ top: Math.round(container.clientHeight * AVATAR_PAD_TOP), bottom: 0, left: 0, right: 0 })
+    pad()
+    map.on('resize', pad)
+    // はじめの倍率がはじめの傾きと違うとき（前に寄せた倍率のまま開いたなど）も、倍率に合った傾きにそろえる
+    map.once('load', () => map.jumpTo({ zoom: map.getZoom() }))
     map.on('load', () => {
       map.addSource('me-circle', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addSource('me-shadow', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
