@@ -133,7 +133,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
   const introRef = useRef<(onDone?: () => void) => void>(() => {})
   const sheetFocusRef = useRef(false) // お店・ビル・気配を押して寄せた（シートを閉じたら自分に戻る。2026-11-16 オーナー「前と同じ動き」）
   const unfocusRef = useRef<() => void>(() => {})
-  const tapRef = useRef<(ids: string[] | null) => void>(() => {})
+  const tapRef = useRef<(ids: string[] | null, at?: LatLng | null) => void>(() => {})
   const focusAtRef = useRef<(p: LatLng) => void>(() => {})
   // 気配のピン。最後に渡された内容は覚えておき、地図を作り直したときに出し直す
   const lastHintsRef = useRef<Parameters<MapViewHandle['setHints']> | null>(null)
@@ -334,10 +334,11 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       if (e.type !== 'pointerup' || !d || d.multi || !s.world) return
       if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > TAP_MAX_MOVE_PX || performance.now() - d.t > TAP_MAX_MS) return
       const rect = container.getBoundingClientRect()
-      tapRef.current(s.world.pick({ x: e.clientX - rect.left, y: e.clientY - rect.top }))
+      const t = s.world.pickTarget({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+      tapRef.current(t?.ids ?? null, t?.at)
     }
     // 建物かピンが押された: 1軒ならお店のシート、2軒以上ならビルの一覧。カメラはそのお店（ビルなら先頭の店）へ寄せる
-    tapRef.current = (ids) => {
+    tapRef.current = (ids, tapAt) => {
       // 気配のピンを押した（ピンは 1 つの層。2026-11-16）
       const hint = ids?.[0]?.startsWith('hint:') ? ids[0].slice(5) : null
       if (hint) {
@@ -363,7 +364,9 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         onSelectBuildingRef.current(null)
         onSelectShopRef.current(found[0] ?? null)
       }
-      const at = found[0]
+      // カメラを寄せる先: 押した建物の場所（大きな施設は指が当たった所）。分からないとき（ピンなど）は先頭の店
+      // （前は常に先頭の店で、大きな施設を押すと離れた別の建物へ飛んでいた。2026-11-23 新宿で実測）
+      const at = tapAt ?? found[0]
       if (at) {
         const zoom = focusRef.current ? map.getZoom() : Math.min(map.getZoom() + TAP_ZOOM_STEP, MAX_ZOOM)
         focusRef.current = { lat: at.lat, lng: at.lng }

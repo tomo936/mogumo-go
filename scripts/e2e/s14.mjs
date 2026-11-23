@@ -18,7 +18,9 @@ for (let i = 0; i < 4; i++) { const sk = p.getByRole('button', { name: 'スキ�
 for (const name of [/受け取る|もらう|OK|とじる|閉じる/]) { const b = p.getByRole('button', { name }).first(); if (await b.count()) { await b.click().catch(() => {}); await p.waitForTimeout(1500) } }
 await shot(p, `14-${lat > 35.66 ? 'shinjuku' : 'kyodo'}-start`)
 const pts = []
-for (const y of [330, 420, 500, 580, 650]) for (const x of [70, 150, 230, 310]) pts.push([x, y])
+// 環境変数 PTS="x,y;x,y" で点を選べる（無ければ 4×5 の格子）
+if (process.env.PTS) for (const q of process.env.PTS.split(';')) pts.push(q.split(',').map(Number))
+else for (const y of [330, 420, 500, 580, 650]) for (const x of [70, 150, 230, 310]) pts.push([x, y])
 let n = 0
 for (const [x, y] of pts) {
   await p.evaluate(([x, y]) => { document.getElementById('dot')?.remove(); const d = document.createElement('div'); d.id = 'dot'; d.style.cssText = `position:fixed;left:${x - 6}px;top:${y - 6}px;width:12px;height:12px;border-radius:6px;background:red;border:2px solid #fff;z-index:99999;pointer-events:none`; document.body.appendChild(d) }, [x, y])

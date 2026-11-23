@@ -32,7 +32,7 @@ type Model = { parts: Part[]; unit: number } // unit: 模型の幅（東西・�
 export function createShopLayer(id: string): CustomLayerInterface & {
   setShops(shops: PlacedShop[]): void
   pick(point: { x: number; y: number }, strict?: boolean): string[] | null
-  rayPick(point: { x: number; y: number }): { distance: number; ids: string[] } | null // 実際の模型に当たった手前の店（distance は m。層をまたいで比べる）
+  rayPick(point: { x: number; y: number }): { distance: number; ids: string[]; at: LatLng } | null // 実際の模型に当たった手前の店（distance は m。層をまたいで比べる）
 } {
   let scene: THREE.Scene | null = null
   let map: MapLibreMap | null = null
@@ -185,7 +185,7 @@ export function createShopLayer(id: string): CustomLayerInterface & {
       const h = layer.hit(point)
       const list = h?.object.userData.shops as PlacedShop[] | undefined
       const s = h && list && h.instanceId !== undefined ? list[h.instanceId] : undefined
-      return h && s ? { distance: h.distance, ids: s.shopIds } : null
+      return h && s ? { distance: h.distance, ids: s.shopIds, at: { lat: s.lat, lng: s.lng } } : null // at: その建物の模型の場所（カメラを寄せる先）
     },
     // 画面の点で押された建物の店の id（ビルなら全員。建物が出ているものだけ）
     pick(point, strict = false) {
