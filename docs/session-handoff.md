@@ -8,6 +8,14 @@
 
 ## いまの状態
 
+- **【2026-11-23 compact 前（最新）】本番は公開済み・最新（`main` = PR #2 まで。`dev` との差 0）。** https://mogumo-go.vercel.app／本番 Supabase `jaypeaejbzkeudwvvrnb`。
+  - 本番で確かめ済み（2026-11-23）: 関数の CORS が本番ドメインだけ（evil は許可なし）、セキュリティヘッダー 4 つ、マニフェストが本物、サイト 200。
+  - **未確認**: 本番に **SQL 0017（回数の上限、`supabase/migrations/0017_rate_limits.sql`）が入っているか**（本番の SQL Editor で `select to_regclass('public.rate_limits') is not null;`）。iPhone の実機（ホーム画面の追加し直し→アドレスバーが出ないか・起動の絵・開き直しで地図が白くならないか・音が戻るか）、Google ログイン、本物のホットペッパーの店、実機 GPS。
+  - 今日の流れ: 結合試験（手元の Docker の Supabase＋Playwright、`scripts/e2e/`、結果 `docs/integration-test-2026-11-18.md`）→ ゲストの「自分だけ」の感想（SQL 0016）→ 新しい絵（タイトル・メニュー・お店・お知らせ・方位磁針）→ 複合施設のチェックインを単体と同じ動きに → 開き直しで地図が白くなる（WebGL 失われたら読み込み直し）・音が消える（戻ったら作り直す）→ 本番デプロイ（ギルベルトが SQL・Auth・関数・Vercel、オーナーがホットペッパーのキー・町のデータ）→ セキュリティ診断の対応（`docs/security-2026-11-18.md`: ヘッダー・関数の回数の上限・CORS・gitleaks/npm audit/Dependabot・PWA 化と起動画像）。
+  - 残り（急がない）: 文の食い違い 2 件（ポコタンの案内 8 ページ目のガチャ・ゲストのお問い合わせ後の「メールアドレスに」）、ガチャを SQL でも閉じる（H1）、CSP の本体（script-src など。許可リストの設計が要る）、ホットペッパーの同一エリア再取得のキャッシュ、GPS 偽装の緩和（オーナーの方針待ち・実装しない）、three が古い世代。
+  - 決まり: **`main` への push は自動の確認で止められる。`dev` → `main` は GitHub の画面で PR をマージする（オーナーかギルベルト）。** 手元の `dev` への反映は別の clone（`/tmp/.../scratchpad/devmerge`）で行う（作業ツリーに未コミットのファイルがあるため）。録画・ブラウザ・Docker・GitHub 送信はサンドボックスの外で動かす（そのつど確認）。
+  - 本番の運用: 関数の置き直しは `npx supabase functions deploy --use-api --project-ref jaypeaejbzkeudwvvrnb`（Ubuntu で。login → deploy → logout）。SQL は本番の SQL Editor で番号順に。ギルベルト（ミシェーラとは別の協力者）は本番の作業に協力している。
+
 - **【2026-11-18 夜（最新）】本番デプロイ完了。** https://mogumo-go.vercel.app（本番 Supabase `jaypeaejbzkeudwvvrnb`）。SQL 0001〜0016・Auth・関数 7 本・Turnstile・Google・Vercel はギルベルト、ホットペッパーのキーと町のデータはオーナー。残り（急がない）: 文の食い違い 2 件（ポコタンの案内 8 ページ目のガチャ・ゲストのお問い合わせ後）、起動の白い画面、ガチャは閉じたまま（H1 の SQL は未）、Google ログイン・本物のホットペッパー・実機 GPS の確認。
 
 - **【2026-11-18 夜 区切り（最新・トークン切れの前）】本番デプロイはオーナーが 1 人でやる。手順書 `handoff/to-shiro/2026-11-18-production-deploy-guide.md`（ミシェーラが案内）。** 本番に出す中身は `dev`（`main` は 906 コミット遅れ・衝突なし）。順番: 本番 Supabase（SQL・ログイン設定・町データ・キー・関数 7 本）→ Turnstile・Google → Vercel の環境変数 → `dev`→`main` の PR。本番でも dev と同じお店が出るよう `shopSourceEnabled` の制限は外し済み。
