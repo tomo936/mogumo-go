@@ -106,3 +106,11 @@
 .guide__poko canvas[hidden] {
   display: none;
 }
+
+/* 案内が出るまでの間、地図・ボタンをさわれないようにする透明の幕（初めての人だけ） */
+.guide-wait {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  touch-action: none;
+}

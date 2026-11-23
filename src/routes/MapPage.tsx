@@ -145,6 +145,7 @@ export function MapPage() {
   // タイトルの読み込みはお店だけを待つ。お店がそろったら、案内がまだの人はポコタン（A5）を裏で読み始める
   // （「タップしてスタート」を押すまでと空から降りる 3.2 秒のあいだに読み終える。お店とは重ねない。2026-11-17 オーナー「B で」）
   const firstGuide = useRef(userId ? !guideSeen(userId) : false)
+  const [firstTime] = useState(() => (userId ? !guideSeen(userId) : false)) // 初めての人（案内が出るまで地図をさわらせない。下の guide-wait）
   useEffect(() => {
     loading.start()
     void mapRef.current?.whenShopsReady().then(() => {
@@ -662,6 +663,8 @@ export function MapPage() {
           onClose={() => setZukanOpen(false)}
         />
       )}
+      {/* 初めての人は、空から降りる演出のあいだ（案内が出るまで）地図をさわれないようにする。案内が先に出る（2026-11-23 オーナー） */}
+      {firstTime && entered && tour === 'wait' && <div className="guide-wait" aria-hidden="true" />}
       {tour === 'open' && <Guide onClose={closeGuide} />}
       {linkAsk && (
         <LinkPrompt
