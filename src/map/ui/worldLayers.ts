@@ -93,6 +93,7 @@ type World = {
   setAccuracy(m: number): void // 最新の測位の誤差（m）。粗い位置で取ったホットペッパーを、正確になったら取り直すため
   shopsNear(): Shop[]
   pick(point: { x: number; y: number }): string[] | null // 押された建物の店の id（ビルなら全員）。ピンが先、次に 3D の模型のうち画面の点から見て一番手前に当たったもの
+  pickTarget(point: { x: number; y: number }): { ids: string[]; at: LatLng | null } | null // pick と同じものと、カメラを寄せる先（押した建物の場所。分からなければ null）
   setView(center: LatLng | null): void // カメラが自分から離れて見ている場所（自分を追いかけているときは null）。雲はそこのまわりに置く
   focus(shopIds: string[] | null): void // タップして選んだ店（その建物は必ず詳しい模型）。閉じたら null
   addCleared(cells: Cell[], from: LatLng): void
@@ -651,6 +652,19 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     if (areaNow()) refreshShops(areaNow()!)
   }
 
+  // 押された物と、カメラを寄せる先（ピンが先、次に 3D の模型のうち一番手前、外れたら指の大きさの円）
+  const pickTarget = (point: { x: number; y: number }): { ids: string[]; at: LatLng | null } | null => {
+    const pin = shopPins.pick(point)
+    if (pin) return { ids: pin, at: null }
+    const hits = [shopLayer.rayPick(point), fogShopLayer.rayPick(point), facilityLayer.rayPick(point)].filter((h) => h !== null)
+    if (hits.length) {
+      const h = hits.reduce((a, b) => (b.distance < a.distance ? b : a))
+      return { ids: h.ids, at: h.at }
+    }
+    const ids = fogShopLayer.pick(point, true) ?? shopLayer.pick(point, true) ?? facilityLayer.pick(point, true)
+    return ids ? { ids, at: null } : null
+  }
+
   return {
     setAccuracy(m) {
       accuracyM = m
@@ -694,13 +708,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     // 押した点にある建物の取り違えを防ぐ（2026-11-23 オーナー「タップした建物と違う建物に飛ぶ」）。
     // 前は「店の円の当たり → 施設の輪郭」の順で、円や屋根の広がりが重なると隣の建物が勝っていた。
     // 今は実際の模型に画面から線を引いて、一番手前に当たった物を取る。線がどれにも当たらないとき（細い所・指のずれ）だけ、前の円・輪郭の判定にもどる
-    pick(point) {
-      const pin = shopPins.pick(point)
-      if (pin) return pin
-      const hits = [shopLayer.rayPick(point), fogShopLayer.rayPick(point), facilityLayer.rayPick(point)].filter((h): h is { distance: number; ids: string[] } => h !== null)
-      if (hits.length) return hits.reduce((a, b) => (b.distance < a.distance ? b : a)).ids
-      return fogShopLayer.pick(point, true) ?? shopLayer.pick(point, true) ?? facilityLayer.pick(point, true)
-    },
+    pickTarget: (point) => pickTarget(point),
+    pick: (point) => pickTarget(point)?.ids ?? null,
     focus(shopIds) {
       focusIds = new Set(shopIds ?? [])
       if (refreshedAt && !disposed) showShops(refreshedAt)

@@ -98,7 +98,7 @@ const at = (p: P, up: number) => new THREE.Vector3(p.x, up, -p.y)
 export function createFacilityLayer(): CustomLayerInterface & {
   setFacilities(list: PlacedFacility[]): void
   pick(point: { x: number; y: number }, strict?: boolean): string[] | null
-  rayPick(point: { x: number; y: number }): { distance: number; ids: string[] } | null
+  rayPick(point: { x: number; y: number }): { distance: number; ids: string[]; at: LatLng } | null
 } {
   let scene: THREE.Scene | null = null
   let map: MapLibreMap | null = null
@@ -258,7 +258,9 @@ export function createFacilityLayer(): CustomLayerInterface & {
     rayPick(point) {
       const h = layer.hit(point)
       const f = h?.object.userData.facility as PlacedFacility | undefined
-      return h && f ? { distance: h.distance, ids: f.shopIds } : null
+      if (!h || !f || !origin) return null
+      // at: 指が当たった所（シーンは origin を原点にした m。x=東, z=南）。大きな施設は、先頭の店ではなく押した所へカメラを寄せる
+      return { distance: h.distance, ids: f.shopIds, at: localFrame(origin).back({ x: h.point.x, y: -h.point.z }) }
     },
     // 画面の点で押された施設の店の id（全員）
     pick(point, strict = false) {
