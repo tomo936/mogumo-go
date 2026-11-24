@@ -1115,3 +1115,31 @@
 .shop-record__zukan::after {
   content: ' ›';
 }
+
+/* 手帳に押すスタンプ（2026-11-24 B-18）。押す 34ms 前後で沈み、戻りはばね（調査 docs/uiux/2026-11-23-css-craft-research.md の押し心地の値） */
+.checkin-stamp {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  width: 168px;
+  height: 168px;
+  margin: -84px 0 0 -84px;
+  color: #b5462f; /* はんこの朱色（地図の上でも読める濃さ） */
+  pointer-events: none;
+  transform: rotate(-12deg);
+  animation: checkin-stamp-press 560ms cubic-bezier(0.3, 0.7, 0.4, 1) both;
+  filter: drop-shadow(0 2px 0 rgba(255, 253, 247, 0.9)) drop-shadow(0 0 6px rgba(255, 253, 247, 0.85));
+}
+.checkin-stamp--still {
+  animation: none;
+}
+@keyframes checkin-stamp-press {
+  0% { opacity: 0; transform: rotate(-4deg) scale(2.1); }
+  38% { opacity: 1; transform: rotate(-12deg) scale(0.92); } /* 紙に当たる */
+  52% { transform: rotate(-12deg) scale(1.04); }
+  70% { transform: rotate(-12deg) scale(0.99); }
+  100% { opacity: 1; transform: rotate(-12deg) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .checkin-stamp { animation: none; }
+}
