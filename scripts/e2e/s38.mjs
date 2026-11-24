@@ -75,6 +75,40 @@ if (process.env.PROF) {
   const tot = Object.values(dt).reduce((a, b) => a + b, 0)
   console.log('total ms', Math.round(tot)); for (const [k, v] of Object.entries(dt).sort((a, b) => b[1] - a[1]).slice(0, 25)) console.log(Math.round(v), k)
 }
+if (process.env.AB) {
+  // 札（HTML）の重さだけを比べる: GPU の分を消すため 3D・雲・建物の絵を隠し、札あり／札なしで、回しながら進む 6 秒の 1 コマの時間を測る
+  const run = () => p.evaluate(async () => {
+    const m = window.__mogumoMap; const c0 = m.getCenter(); const gaps = []; let last = performance.now(); const t0 = last
+    await new Promise((done) => { const step = (t) => { gaps.push(t - last); last = t; const k = (t - t0) / 6000
+      m.jumpTo({ bearing: k * 360, center: [c0.lng, c0.lat + (k * 150) / 111320] }); if (k < 1) requestAnimationFrame(step); else done() }; requestAnimationFrame(step) })
+    m.jumpTo({ bearing: 0, center: c0 })
+    gaps.sort((a, b) => a - b); const q = (x) => Math.round(gaps[Math.floor(gaps.length * x)])
+    return { frames: gaps.length, p50: q(0.5), p90: q(0.9), max: Math.round(gaps[gaps.length - 1]), pins: document.querySelectorAll('.maplibregl-marker').length }
+  })
+  await p.evaluate(() => { const m = window.__mogumoMap; m.jumpTo({ zoom: 19, bearing: 0 }); for (const l of m.getStyle().layers) if (l.type !== 'background') m.setLayoutProperty(l.id, 'visibility', 'none'); for (const id of ['shops-3d', 'facilities-3d', 'fog', 'shops-3d-fog', 'haze', 'me-avatar-3d']) if (m.getLayer(id)) m.setLayoutProperty(id, 'visibility', 'none') }); await W(6000)
+  if (process.env.ABPROF) {
+    await p.evaluate(() => { for (const e of document.querySelectorAll('.maplibregl-marker')) e.style.display = 'none' })
+    const cdp = await p.context().newCDPSession(p)
+    await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 200 }); await cdp.send('Profiler.start')
+    console.log('pins off', JSON.stringify(await run()))
+    const { profile } = await cdp.send('Profiler.stop')
+    // 自分の時間と、呼んだ先も含めた時間（アプリの関数だけ）
+    const byId = new Map(profile.nodes.map((n) => [n.id, n])); const parent = new Map()
+    for (const n of profile.nodes) for (const c of n.children ?? []) parent.set(c, n.id)
+    const self = {}; const incl = {}
+    const name = (n) => `${n.callFrame.functionName || '(anon)'} ${n.callFrame.url.split('/').slice(-2).join('/').split('?')[0]}`
+    profile.samples.forEach((id, i) => { const ms = (profile.timeDeltas[i] ?? 0) / 1000; const n = byId.get(id); self[name(n)] = (self[name(n)] ?? 0) + ms
+      const seen = new Set(); for (let x = id; x !== undefined; x = parent.get(x)) { const k = name(byId.get(x)); if (seen.has(k)) continue; seen.add(k); if (/src\//.test(byId.get(x).callFrame.url)) incl[k] = (incl[k] ?? 0) + ms } })
+    console.log('SELF'); for (const [k, v] of Object.entries(self).sort((a, b) => b[1] - a[1]).slice(0, 14)) console.log(Math.round(v), k)
+    console.log('APP (含む)'); for (const [k, v] of Object.entries(incl).sort((a, b) => b[1] - a[1]).slice(0, 16)) console.log(Math.round(v), k)
+  }
+  for (let i = 0; i < (process.env.ABPROF ? 0 : 2); i++) {
+    console.log('pins on ', JSON.stringify(await run()))
+    await p.evaluate(() => { for (const e of document.querySelectorAll('.maplibregl-marker')) e.style.display = 'none' })
+    console.log('pins off', JSON.stringify(await run()))
+    await p.evaluate(() => { for (const e of document.querySelectorAll('.maplibregl-marker')) e.style.display = '' })
+  }
+}
 if (process.env.TAP) {
   // 模型を押してお店のシートが開くか（詰めた並びで店を引けるか）
   const [x, y] = process.env.TAP.split(',').map(Number)

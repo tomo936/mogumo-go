@@ -48,10 +48,21 @@ export function createShopLayer(id: string): CustomLayerInterface & {
 
   let lights: ReturnType<typeof makeLights> | null = null
   let stopPhase: (() => void) | null = null
+  // 模型のまとまり（種類×部品）の器は使い回す。詳しい模型が 1 軒変わるたびに全部作り直していて、新宿で動かすとカクついた（2026-11-24）。
+  // 足りなくなったときだけ 1.5 倍の大きさで作り直す
+  const pool = new Map<string, THREE.InstancedMesh>()
+  const meshFor = (key: string, part: Part, n: number): THREE.InstancedMesh => {
+    const have = pool.get(key)
+    if (have && have.instanceMatrix.count >= n) return have
+    have?.dispose()
+    const made = new THREE.InstancedMesh(part.geo, part.mat, Math.max(4, Math.ceil(n * 1.5)))
+    pool.set(key, made)
+    return made
+  }
   const clear = () => {
     for (const m of meshes) {
       scene?.remove(m)
-      m.dispose()
+      if (!m.userData.pooled) m.dispose() // 使い回す器は捨てない（足元の光だけ毎回作る）
     }
     meshes = []
     groups = []
@@ -124,10 +135,13 @@ export function createShopLayer(id: string): CustomLayerInterface & {
         )
       })
       const g: CullGroup<PlacedShop> = { meshes: [], full: [], spheres: place.map((pm) => model.bound.clone().applyMatrix4(pm)), items: list, shown: '' }
-      for (const part of model.parts) {
-        const inst = new THREE.InstancedMesh(part.geo, part.mat, list.length)
+      for (const [pi, part] of model.parts.entries()) {
+        const inst = meshFor(`${kind}#${pi}`, part, list.length)
+        inst.userData.pooled = true
+        inst.count = list.length
         const full = place.map((pm) => new THREE.Matrix4().multiplyMatrices(pm, part.local))
         full.forEach((fm, i) => inst.setMatrixAt(i, fm))
+        inst.instanceMatrix.needsUpdate = true // 使い回した器は、書き換えたことを知らせる
         inst.userData.shops = list // 当たった instanceId から店を引く（描く直前に詰めたら詰めた並び）
         inst.computeBoundingSphere()
         scene.add(inst)
@@ -171,6 +185,8 @@ export function createShopLayer(id: string): CustomLayerInterface & {
       stopPhase?.()
       stopPhase = null
       clear()
+      for (const m of pool.values()) m.dispose()
+      pool.clear()
       for (const md of models.values()) {
         for (const p of md?.parts ?? []) {
           p.geo.dispose()

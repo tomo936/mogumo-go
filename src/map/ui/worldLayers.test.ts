@@ -1087,3 +1087,14 @@ test('気配のピンと弾みは、ピンの層に渡す（同じ層で前後�
   world.bounceHint('h1')
   expect(pinsApi.bounceHint).toHaveBeenLastCalledWith('h1')
 })
+
+test('詳しい・軽いが切りかわるだけなら、お店の模型だけ作り直し、施設の立体は作り直さない（2026-11-24 新宿でカクつく）', async () => {
+  const { world } = setup({ fetchHotpepper: vi.fn((_c: LatLng) => Promise.resolve([at('a', 140)])) })
+  world.onPosition(home)
+  await flush()
+  const shops = vi.mocked(shopLayer.setShops).mock.calls.length
+  const facs = vi.mocked(facilityLayer.setFacilities).mock.calls.length
+  world.onPosition(north(-45)) // 185m: 軽いに切りかわる
+  expect(vi.mocked(shopLayer.setShops).mock.calls.length).toBe(shops + 1)
+  expect(vi.mocked(facilityLayer.setFacilities).mock.calls.length).toBe(facs)
+})

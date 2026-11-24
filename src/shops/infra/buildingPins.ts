@@ -91,7 +91,9 @@ function moreTag(n: number, onClick: () => void): HTMLButtonElement {
 }
 
 // topM: ピンを浮かせる高さ（m）。散らばったピンは塊の店の屋根のうち一番高いもの、それ以外は b.topM
-type Shown = { m: Marker; b: PinnedBuilding; at: LatLng; inner: HTMLElement; count: number; sizeM: number; topM: number; last: string }
+type Shown = { m: Marker; outer: HTMLElement; b: PinnedBuilding; at: LatLng; inner: HTMLElement; count: number; sizeM: number; topM: number; last: string }
+
+const CUT_FADE_PX = 90 // 地面の端の手前で札をうすくする幅
 
 export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) => void) {
   let markers: Shown[] = []
@@ -110,10 +112,20 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
 
   // カメラに合わせて、ピンの大きさ（建物の幅に収まる）と高さ（屋根の上）を合わせ直す
   // 縮み具合は建物ごとに1回だけ測り、前と同じなら書き直さない（散らばったピンは数十個になるため）
+  const container = map.getContainer()
+  // 画面の大きさは変わったときだけ読む（毎コマ読むと、札を書き換えたあとの画面の作りを計算し直させる）
+  const size = { w: container.clientWidth, h: container.clientHeight }
+  map.on('resize', () => {
+    size.w = container.clientWidth
+    size.h = container.clientHeight
+  })
   const fit = () => {
     const scaleOf = new Map<PinnedBuilding, ReturnType<typeof screenScale>>()
-    const W = map.getContainer().clientWidth
-    const H = map.getContainer().clientHeight
+    const W = size.w
+    const H = size.h
+    // 地面の端（描画距離・地平線。MapView が --cut に書く）より上の札は空に浮くので隠し、手前 90px でうすくする。
+    // 画面の位置は地図の座標から計算する（前は札ごとに画面の作りを読み、動かすたびに計算し直させていた。2026-11-24）
+    const cut = parseFloat(container.style.getPropertyValue('--cut'))
     for (const s of markers) {
       // 画面の外（ふちから 150px より外）の札は合わせない。画面に入ったコマで合わせる
       const g = map.project([s.at.lng, s.at.lat])
@@ -130,6 +142,12 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
       const top = ground ? projectAt(map, s.at, s.topM) : null
       const dx = ground && top ? Math.round((top.x - ground.x) * 10) / 10 : 0
       const dy = ground && top ? Math.round((top.y - ground.y) * 10) / 10 : Math.round(-s.topM * sc.pxPerUpM * 10) / 10
+      const bottom = g.y + dy
+      const vis = Number.isFinite(cut) && bottom < cut ? 'hidden' : ''
+      const op = Number.isFinite(cut) && bottom < cut + CUT_FADE_PX ? String(Math.max(0, Math.round(((bottom - cut) / CUT_FADE_PX) * 20) / 20)) : ''
+      const el = s.outer
+      if (el.style.visibility !== vis) el.style.visibility = vis
+      if (el.style.opacity !== op) el.style.opacity = op
       const key = `${scale}|${dx}|${dy}`
       if (key === s.last) continue
       s.last = key
@@ -164,7 +182,7 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
     outer.addEventListener('pointerdown', (e) => e.stopPropagation()) // 地図のタップ（建物の当たり判定）を走らせない
     const count = fill(el)
     const m = new Marker({ element: outer, anchor: 'bottom' }).setLngLat([at.lng, at.lat]).addTo(map)
-    return { m, b, at, inner: el, count, sizeM, topM, last: '' }
+    return { m, b, at, outer, inner: el, count, sizeM, topM, last: '' }
   }
 
   const nameTag = (b: PinnedBuilding): HTMLElement | null => {
@@ -252,7 +270,6 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
   map.on('zoomend', onZoom)
   map.on('render', fit) // 3D を描いたあと（そのコマのカメラ）で合わせる
 
-  const container = map.getContainer()
   // 引き（倍率 17 未満）は、ビルの並べたピンと施設の「6/6」を隠し、名前の札だけ残す（中のお店は shopClusters のまとめに入る）。
   // 寄り（17 以上）は今までどおり（2026-11-16 オーナー承認）
   // 施設・駅は 17 から前の表記（2026-11-16 オーナー「2 段階めは前と同じ」）

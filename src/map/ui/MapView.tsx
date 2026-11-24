@@ -300,14 +300,10 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         map.setFilter(PIN_LAYER, null)
         map.setPaintProperty(PIN_LAYER, 'icon-opacity', 1)
       }
-      for (const el of container.querySelectorAll<HTMLElement>('.maplibregl-marker')) {
-        el.style.visibility = ''
-        el.style.opacity = ''
-      }
     }
     let pinCenter: { lat: number; lng: number } | null = null // ピンの円を最後に作った真ん中
     let pinM = 0 // そのときの描画距離
-    const limitPins = (cutY: number, lim: number) => {
+    const limitPins = (lim: number) => {
       // 1 軒のピン（地図の層）: 主人公から drawM の円の中だけ。円と濃さの式は、真ん中が 20m 動いたときだけ作り直す
       // （毎コマ作り直すと地図の仕組みが層を計算し直して重くなる。2026-11-24 テスト役の指摘）
       const c = map.getCenter()
@@ -330,17 +326,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
           /* 距離の式が使えない版では、うすくせず円の外で消すだけ */
         }
       }
-      // ビル・施設の札（HTML）: 画面で境目に近づくほどうすく、境目より上は隠す
-      // 画面の位置は先に全部読んでから書く（読む・書くを交互にすると、1 つごとに画面の作りを計算し直してカクつく。2026-11-24）
-      const FADE = 90 // px
-      const els = [...container.querySelectorAll<HTMLElement>('.maplibregl-marker')]
-      const bottoms = els.map((el) => el.getBoundingClientRect().bottom)
-      els.forEach((el, i) => {
-        const vis = bottoms[i] < cutY ? 'hidden' : ''
-        const op = bottoms[i] < cutY + FADE ? String(Math.max(0, Math.round(((bottoms[i] - cutY) / FADE) * 20) / 20)) : ''
-        if (el.style.visibility !== vis) el.style.visibility = vis
-        if (el.style.opacity !== op) el.style.opacity = op
-      })
+      // ビル・施設の札（HTML）は buildingPins が --cut を見て隠す（地図の座標から計算するので、画面の作りを読まない）
       pinsLimited = true
     }
     // 地面の端（地図が描く地面のいちばん遠い所）に霧をかける。端が画面に入るのは、
@@ -353,6 +339,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       t.clearNearFarZOverride()
       const sinP = Math.sin(t.pitchInRadians)
       if (sinP < 0.05) {
+        container.style.removeProperty('--cut') // 真上からは地面の端が見えない（札も隠さない）
         hazeOn = false
         setMapFog(null)
         return unlimitPins()
@@ -378,7 +365,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       const dLng = (end * Math.sin(b)) / (111_320 * Math.cos((c.lat * Math.PI) / 180))
       const y = map.project([c.lng + dLng, c.lat + dLat]).y
       container.style.setProperty('--cut', `${Math.max(0, Math.round(y))}px`)
-      if (limited) limitPins(y, lim)
+      if (limited) limitPins(lim)
       else unlimitPins()
     }
     // 測る口（?debug のときだけ）: 描画距離と霧が効いているか

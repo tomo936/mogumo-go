@@ -227,3 +227,15 @@ test('setHidden で出す・出さないを切りかえ、dispose で class を�
   pins.dispose()
   expect(container.classList.contains('pins-off')).toBe(false)
 })
+
+test('地面の端（--cut）より上の札は隠し、端が無ければ出す。位置は地図の座標から計算する（2026-11-24）', () => {
+  const pins = createBuildingPins(map, vi.fn())
+  pins.update([bldg(['a', 'b'], true)], new Set())
+  const shown = () => live().map((m) => m.el.style.visibility)
+  container.style.setProperty('--cut', '100000px') // 画面のずっと下が端 = どの札も端より上
+  moved!()
+  expect(shown().every((v) => v === 'hidden')).toBe(true)
+  container.style.removeProperty('--cut')
+  moved!()
+  expect(shown().every((v) => v === '')).toBe(true)
+})

@@ -76,6 +76,7 @@ const ringHas = (ring: LatLng[], p: LatLng) => {
 // 店ごとの置き方。輪郭に合わせたときは、同じ建物の店がそろったときのビルの置き方（bldg）も持つ
 // facility: 実際の形で立体にする建物（輪郭が FACILITY_MIN_AREA_M2 以上か、駅の点を含むときだけ）
 // ring: 店が乗った輪郭（bldg があるときだけ。後から駅の点が見つかったときの置き直し用）
+type FacGroup = NonNullable<Placed['facility']> & { ids: string[]; center: PlacedShop }
 type Placed = {
   main: PlacedShop
   bldg: PlacedShop | null
@@ -183,6 +184,10 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   let near: Shop[] = [] // いま層に渡している店（近い順）
   let last: LatLng | null = null
   let shownKey: string | null = null
+  // 作り直しを層ごとに分ける（2026-11-24 新宿でカクつく: 詳しい模型が 1 軒変わるだけで、施設の立体と札まで全部作り直していた）
+  let shownLodKey = '' // 詳しい模型・軽い模型の分け方
+  let shownFacKey: string | null = null // 施設の立体（最初の 1 回は必ず渡す）
+  let facCache: { key: string; list: FacGroup[] } | null = null // 施設の整理（施設の顔ぶれが同じなら同じ結果）
   const placed = new Map<string, Placed>() // 店ごとの置き方（一度だけ計算）
   let landmarks: Landmark[] = [] // 駅と施設の名前つきの点（地図のお店と一緒に読む）
   const facilityCache: NonNullable<Placed['facility']>[] = [] // 計算済みの施設の形
@@ -386,7 +391,6 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     const singles: PlacedShop[] = []
     const blds: PinnedBuilding[] = []
     const facs: PlacedFacility[] = []
-    type FacGroup = NonNullable<Placed['facility']> & { ids: string[]; center: PlacedShop }
     const facGroups: FacGroup[] = []
     let key = ''
     // 安全のための模型の数の上限（施設は数えない。ふだんは届かない）
@@ -416,12 +420,17 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     )
     lastDetailed = detailed
     const drawn = out.map((s) => (detailed.has(s.id) ? s : { ...s, light: true }))
-    key += `|${drawn.filter((s) => s.light).map((s) => s.id).join(',')}`
+    const lodKey = drawn.filter((s) => s.light).map((s) => s.id).join(',')
     // 大型施設・駅: 実際の形の立体と、名前の札。輪郭を共有する・形が重なる施設は1つにまとめ（駅があれば駅）、
     // 残りも同じ輪郭を2つの施設が描かないよう、駅を先に並べて重なりを外す
-    const merged = mergeFacilities(facGroups, ringKey, (a, b) => ringsOverlap(a.map((v) => frame.to(v)), b.map((v) => frame.to(v))))
-    merged.sort((a, b) => Number(b.kind === 'station') - Number(a.kind === 'station'))
-    for (const f of dropSharedParts(merged, ringKey)) {
+    // 整理は施設の顔ぶれが変わったときだけ（重なりの判定は輪郭どうしの比べで重い。結果は原点によらない）
+    const facGroupKey = facGroups.map((g) => g.ids.join('+')).join(',')
+    if (!facCache || facCache.key !== facGroupKey) {
+      const merged = mergeFacilities(facGroups, ringKey, (a, b) => ringsOverlap(a.map((v) => frame.to(v)), b.map((v) => frame.to(v))))
+      merged.sort((a, b) => Number(b.kind === 'station') - Number(a.kind === 'station'))
+      facCache = { key: facGroupKey, list: dropSharedParts(merged, ringKey) }
+    }
+    for (const f of facCache.list) {
       const { ids, center, parts } = f
       const members = ids.map((id) => byId.get(id)!)
       const cf = localFrame(center)
@@ -439,16 +448,24 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       })
     }
     near = visible.map((v) => v.shop)
-    if (key === shownKey) return // 顔ぶれが変わったときだけ層を作り直す
+    const layoutChanged = key !== shownKey
+    if (!layoutChanged && lodKey === shownLodKey) return // 顔ぶれも詳しい模型も同じなら何もしない
+    shownLodKey = lodKey
+    // お店の模型: 顔ぶれか詳しい模型が変わったとき
+    shopLayer.setShops(drawn.filter((s) => !inFog.has(s.id)))
+    fogShopLayer.setShops(drawn.filter((s) => inFog.has(s.id)))
+    if (!layoutChanged) return // 詳しい模型が変わっただけなら、施設の立体と札はそのまま
     shownKey = key
     shownPlaced = singles
     shownInFog = inFog
     shownFrom = p
     shownBuildings = blds
     shownFacilities = facs
-    shopLayer.setShops(drawn.filter((s) => !inFog.has(s.id)))
-    fogShopLayer.setShops(drawn.filter((s) => inFog.has(s.id)))
-    facilityLayer.setFacilities(facs)
+    const facKey = facs.map((f) => `${f.id}:${f.shopIds.join('+')}`).join(',')
+    if (facKey !== shownFacKey) {
+      shownFacKey = facKey
+      facilityLayer.setFacilities(facs)
+    }
     updateMarks()
   }
   // 1軒の店のピン（✓ は絵の右上）とビルのピンを、済みの一覧に合わせて出し直す
