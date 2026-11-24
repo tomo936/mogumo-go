@@ -82,11 +82,9 @@ export function RecordCalendar({ visits, mine, month: first, today, selected, on
           <h3>{`${Number(picked.slice(5, 7))}月${Number(picked.slice(8))}日に行ったお店`}</h3>
           {dayList.map((v) => (
             <div key={`${v.shopId}-${v.at}`} className="rcal__item">
-              {photoOf(v) && (
-                <span className="rcal__thumb">
-                  <img src={photoOf(v)!} alt="" />
-                </span>
-              )}
+              <span className={`rcal__thumb${photoOf(v) ? '' : ' is-kind'}`}>
+                <img src={photoOf(v) ?? kindIcon(v.kind)} alt="" />
+              </span>
               <div className="rcal__item-main">
                 <b>{v.name}</b>
                 <span>

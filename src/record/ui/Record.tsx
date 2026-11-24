@@ -346,8 +346,6 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
 
 // お店の小さい写真。写真が無いお店は種類の絵（2026-11-24 外のレビューの案「行ったお店に写真と種類」）
 function Thumb({ photoUrl, kind }: { photoUrl: string | null; kind: VisitEntry['kind'] }) {
-  // 写真が無い行は画像を出さない（種類の絵は右の種類の札と同じことを言うだけ。2026-11-24 オーナー「画像いる？」）
-  if (!photoUrl) return null
   return (
     <span className={`rc__thumb${photoUrl ? '' : ' rc__thumb--kind'}`}>
       {/* 写真の期限付き URL が切れて読めないときは種類の絵に戻す */}
