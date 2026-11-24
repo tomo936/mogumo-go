@@ -195,14 +195,16 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null, ini
                   setHint(null)
                 }}
               >
-                {f === 'all' ? 'ぜんぶ' : f === 'done' ? '行った' : 'まだ'}
+                {/* 図鑑の言葉（カードの「訪問済み」の札）にそろえ、件数も出す（2026-11-24 オーナー「雑すぎ」） */}
+                {f === 'all' ? '全部' : f === 'done' ? '訪問済み' : '未訪問'}
+                <small>{f === 'all' ? kindList.length : f === 'done' ? filledCount(kindList) : kindList.length - filledCount(kindList)}</small>
               </button>
             ))}
           </div>
 
           {list.length === 0 ? (
             <p className="zukan__note">
-              {kindList.length > 0 && filter === 'done' ? 'まだ行ったお店がありません' : kindList.length > 0 && filter === 'yet' ? 'ぜんぶ行きました！' : 'まだ見つけたお店がありません。街を歩いて探してみてね'}
+              {kindList.length > 0 && filter === 'done' ? '訪問済みのお店はまだありません' : kindList.length > 0 && filter === 'yet' ? '未訪問のお店はありません。ぜんぶ訪問しました！' : 'まだ見つけたお店がありません。街を歩いて探してみてね'}
             </p>
           ) : (
             <>

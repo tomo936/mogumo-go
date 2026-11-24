@@ -186,10 +186,10 @@ test('「すべて」のタブは全部の種類、行った/まだ で絞り込
   await userEvent.click(screen.getByRole('button', { name: 'すべて' }))
   expect(screen.getByLabelText('2/3 訪問済み')).toBeInTheDocument()
   expect(screen.getByText('カフェC')).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: 'まだ' }))
+  await userEvent.click(screen.getByRole('button', { name: /^未訪問/ }))
   expect(screen.queryByText('カフェC')).not.toBeInTheDocument()
   expect(screen.getByText('？？？')).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: '行った' }))
+  await userEvent.click(screen.getByRole('button', { name: /^訪問済み/ }))
   expect(screen.getByText('カフェC')).toBeInTheDocument()
   expect(screen.queryByText('？？？')).not.toBeInTheDocument()
   expect(screen.getByLabelText('2/3 訪問済み')).toBeInTheDocument() // 数は絞り込み前の種類の数

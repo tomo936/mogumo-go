@@ -677,3 +677,11 @@
   color: #a2561b;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
+
+/* 絞り込みの件数（2026-11-24） */
+.zukan__filter small {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.85;
+}
