@@ -255,7 +255,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     // setPadding は中で jumpTo を呼び、寄せる動き（easeTo）を止めてしまうので、高さが変わったときだけ・動きの最中は終わってから
     let padTop = -1
     const pad = () => {
-      const top = Math.round(container.clientHeight * AVATAR_PAD_TOP)
+      const top = Math.round(container.clientHeight * (Number(new URLSearchParams(window.location.search).get('pad')) || AVATAR_PAD_TOP))
       if (top === padTop) return
       if (map.isMoving()) return void map.once('moveend', pad)
       padTop = top
