@@ -18,6 +18,7 @@ import { jstDay } from '../../checkin/domain/day.ts'
 import { evaluate } from '../../badges/domain/evaluate.ts'
 import { BadgeList } from '../../badges/ui/BadgeList.tsx'
 import { EatStatsCard } from './EatStatsCard.tsx'
+import { RecordCalendar } from './RecordCalendar.tsx'
 import { eatStats } from '../domain/eatStats.ts'
 import { areaKm2At, areaTimeline } from '../../towns/domain/area.ts'
 import type { ClearedTown } from '../../towns/domain/shape.ts'
@@ -170,6 +171,7 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
       alive = false
     }
   }, [state.status])
+  const [calOpen, setCalOpen] = useState(false) // 記録のカレンダーの画面（2026-11-24 B-24）
   const range = useMemo(() => timeRange(cells, towns.map((x) => x.at)), [cells, towns])
   const now = t ?? range?.end ?? 0
   const history = useMemo(() => groupByMonth(visits, now), [visits, now])
@@ -208,6 +210,12 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
       {state.status === 'ready' && tab === 'record' && (
         <>
           <div className="rc__worldrow">
+            {range !== null && (
+              <button type="button" className="rc__cal" onClick={() => setCalOpen(true)}>
+                <Icon name="calendar" size={18} />
+                カレンダー
+              </button>
+            )}
             <button type="button" className="rc__world" onClick={() => setWorldOpen(true)}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" /></svg>
               ワールドマップ
@@ -309,6 +317,22 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
         </>
       )}
 
+      {calOpen && state.status === 'ready' && (
+        <RecordCalendar
+          visits={visits}
+          month={dayKey.slice(0, 7)}
+          today={jstDay(new Date())}
+          selected={dayKey}
+          onPick={(d) => {
+            // その日のいちばん遅いチェックインの時刻へ（‹ › と同じ動き）
+            const at = Math.max(...visits.filter((v) => v.day === d).map((v) => v.at))
+            setByStep(true)
+            setT(at)
+            setCalOpen(false)
+          }}
+          onClose={() => setCalOpen(false)}
+        />
+      )}
       {worldOpen && state.status === 'ready' && (
         <>
           <WorldMap

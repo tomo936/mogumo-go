@@ -529,3 +529,137 @@
   font-size: 11px;
   color: #7a5a3a;
 }
+
+/* 記録のカレンダーの画面（2026-11-24 B-24）。記録と同じ紙の地・角丸・こげ茶の字 */
+.rcal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow-y: auto;
+  padding: calc(12px + env(safe-area-inset-top)) 16px 24px;
+  background: #f3e9d6;
+  color: #5a3a1e;
+}
+.rcal__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.rcal__bar h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+}
+.rcal__month {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-radius: 14px;
+  background: #fffdf7;
+  box-shadow: 0 2px 8px rgba(90, 60, 30, 0.12);
+}
+.rcal__month b {
+  font-size: 18px;
+  color: #a2561b;
+}
+.rcal__month button {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: #f3e9d6;
+  color: #6b4a2b;
+  font-size: 22px;
+}
+.rcal__month button:disabled {
+  opacity: 0.35;
+}
+.rcal__sum {
+  margin: 10px 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #7a5a3a;
+}
+.rcal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  padding: 10px 8px;
+  border-radius: 14px;
+  background: #fffdf7;
+  box-shadow: 0 2px 8px rgba(90, 60, 30, 0.12);
+}
+.rcal__w {
+  padding-bottom: 4px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #7a5a3a;
+}
+.rcal__w.is-sun { color: #b5462f; }
+.rcal__w.is-sat { color: #2f6d93; }
+.rcal__d {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 48px;
+  padding: 6px 0 0;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: #5a3a1e;
+  font-size: 14px;
+  font-weight: 700;
+}
+.rcal__d.is-out { color: #b8a690; }
+.rcal__d.is-today > span:first-child {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid #a2561b;
+  border-radius: 50%;
+}
+.rcal__d.has {
+  background: #fff1e2;
+}
+.rcal__d.is-sel {
+  box-shadow: inset 0 0 0 2px #a2561b;
+}
+.rcal__d i {
+  margin-top: 2px;
+  min-width: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #a2561b;
+  color: #fff;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 18px;
+}
+.rcal__note {
+  margin: 12px 4px 0;
+  font-size: 12px;
+  color: #7a5a3a;
+}
+/* 記録の上の入口の並び（カレンダー・ワールドマップ）。2026-11-24 */
+.rc__worldrow { gap: 8px; }
+.rc__cal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 14px 0 10px;
+  border: 2.5px solid #7a4a26;
+  border-radius: 999px;
+  background: #fffaf0;
+  color: #6b4a2b;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 3px 0 rgba(122, 74, 38, 0.25);
+}

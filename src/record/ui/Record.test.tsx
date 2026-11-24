@@ -168,3 +168,17 @@ test('じっせきの上に、食べ歩きプロフィール（行ったお店�
   expect(card).toHaveTextContent('2行った種類')
   expect(card).toHaveTextContent('いちばん行った種類は')
 })
+
+test('「カレンダー」ボタンでカレンダーの画面。行った日を押すと、その日の記録に戻る（2026-11-24 B-24）', async () => {
+  load.mockResolvedValueOnce({ cells, visits, towns: [] })
+  render(<Record home={null} onClose={() => {}} />)
+  await screen.findByText('1.00')
+  await userEvent.click(screen.getByRole('button', { name: 'カレンダー' }))
+  const cal = screen.getByRole('region', { name: '記録のカレンダー' })
+  expect(cal).toHaveTextContent('2026年11月')
+  await userEvent.click(screen.getByRole('button', { name: '前の月' }))
+  expect(cal).toHaveTextContent('2026年10月')
+  await userEvent.click(screen.getByRole('button', { name: '10月5日 1回' }))
+  expect(screen.queryByRole('region', { name: '記録のカレンダー' })).not.toBeInTheDocument()
+  expect(await screen.findByText(/^10\/5（月）\s+1軒$/)).toBeInTheDocument()
+})
