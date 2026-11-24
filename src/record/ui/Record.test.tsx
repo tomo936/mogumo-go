@@ -185,3 +185,14 @@ test('「カレンダー」ボタンでカレンダーの画面。行った日�
   expect(screen.queryByRole('region', { name: '記録のカレンダー' })).not.toBeInTheDocument()
   expect(await screen.findByText(/^10\/5（月）\s+1軒$/)).toBeInTheDocument()
 })
+
+test('行ったお店を「町ごと」に切り替えられる（町の一覧がまだ無ければ「そのほか」にまとめる。2026-11-24）', async () => {
+  load.mockResolvedValueOnce({ cells, visits, towns: [] })
+  render(<Record home={null} onClose={() => {}} />)
+  await screen.findByText('1.00')
+  await userEvent.click(screen.getByRole('button', { name: '町ごと' }))
+  expect(screen.getByText('そのほか')).toBeInTheDocument()
+  expect(screen.getByText('麺屋A')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '日付順' }))
+  expect(screen.getByText('2026年11月')).toBeInTheDocument()
+})

@@ -196,3 +196,12 @@ test('「すべて」のタブは全部の種類、行った/まだ で絞り込
   expect(screen.queryByText('？？？')).not.toBeInTheDocument()
   expect(screen.getByLabelText('2/3 訪問済み')).toBeInTheDocument() // 数は絞り込み前の種類の数
 })
+
+test('カードの No. は図鑑全体の通し番号（「すべて」で同じ番号が並ばない。2026-11-24）', async () => {
+  const cafe: ZukanShop = { ...base, kind: 'cafe', id: 'hp:C', name: 'カフェC', catch: null, visits: { count: 1, firstDay: '2026-11-03', lastDay: '2026-11-03' } }
+  load.mockResolvedValueOnce([visited, unknown, cafe])
+  render(<Zukan onLocate={() => {}} onClose={() => {}} />)
+  await screen.findByLabelText('2/3 訪問済み')
+  const nos = screen.getAllByText(/^No\.\d{3}$/).map((e) => e.textContent)
+  expect(new Set(nos).size).toBe(nos.length)
+})

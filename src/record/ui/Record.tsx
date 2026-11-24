@@ -23,6 +23,8 @@ import { eatStats } from '../domain/eatStats.ts'
 import { areaKm2At, areaTimeline } from '../../towns/domain/area.ts'
 import type { ClearedTown } from '../../towns/domain/shape.ts'
 import type { TownSync } from '../../towns/domain/progress.ts'
+import { nextGoal } from '../../towns/domain/progress.ts'
+import { groupByTown } from '../domain/byTown.ts'
 import { loadTownShapes, syncUntilSettled } from '../../towns/infra/townsApi.ts'
 import type { OutlineTown } from '../../towns/domain/outline.ts'
 import type { Geometry } from '../../towns/domain/shape.ts'
@@ -69,6 +71,7 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
   const [tab, setTab] = useState<RecordTab>(initialTab)
   const [byStep, setByStep] = useState(false) // 日付を ‹ › で送ったときだけ、晴れる動きを見せる（スライダーは引いたぶんをすぐ反映）
   const [showRange, setShowRange] = useState(false) // 「町の範囲」（行った町の境目と名前）を地図に出すか
+  const [listMode, setListMode] = useState<'day' | 'town'>('day') // 行ったお店の並べ方（日付順｜町ごと。2026-11-24）
   const [shapes, setShapes] = useState<Map<string, { name: string; geom: Geometry; bbox: OutlineTown['bbox'] }> | null>(null)
   const [worldOpen, setWorldOpen] = useState(false) // ワールドマップ（日本全体）を重ねて出す
   const [place, setPlace] = useState<{ name: string; center: LatLng; zoom: number; townId?: string } | null>(null) // 飛んだ先（見るだけ）
@@ -112,7 +115,7 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
   const progressIds = townState.status === 'ready' ? townState.towns.map((x) => x.id).join('|') : ''
   const loadedShapes = useRef(new Map<string, unknown>()) // 読み終えた町（増えた分だけ読む）
   useEffect(() => {
-    if (!showRange || progressIds === '') return
+    if ((!showRange && listMode !== 'town') || progressIds === '') return
     const want = progressIds.split('|').filter((id) => !loadedShapes.current.has(id))
     if (want.length === 0) return
     const closed = new AbortController()
@@ -126,7 +129,7 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
         if (!closed.signal.aborted) setShowRange(false) // 読めなければスイッチを戻す（押したのに何も出ない状態にしない）
       })
     return () => closed.abort()
-  }, [showRange, progressIds])
+  }, [showRange, listMode, progressIds])
 
   const cells = state.status === 'ready' ? state.cells : NO_CELLS
   const visits = state.status === 'ready' ? state.visits : NO_VISITS
@@ -286,26 +289,40 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
           <h3 className="rc__h">町のクリア・コンプリート</h3>
           <TownList state={townState} />
 
-          <h3 className="rc__h">行ったお店</h3>
+          <div className="rc__listhead">
+            <h3 className="rc__h">行ったお店</h3>
+            {/* 日付順 ｜ 町ごと（2026-11-24 外のレビューの案「行った日｜エリア別」） */}
+            <div className="rc__listmode" role="group" aria-label="並べ方">
+              <button type="button" aria-pressed={listMode === 'day'} className={listMode === 'day' ? 'is-on' : ''} onClick={() => setListMode('day')}>日付順</button>
+              <button type="button" aria-pressed={listMode === 'town'} className={listMode === 'town' ? 'is-on' : ''} onClick={() => setListMode('town')}>町ごと</button>
+            </div>
+          </div>
           {history.length === 0 ? (
             <p className="rc__note">この日までに行ったお店はありません</p>
+          ) : listMode === 'town' ? (
+            !shapes && progressIds !== '' ? (
+              <p className="rc__note">町を読み込んでいます…</p>
+            ) : (
+              groupByTown(history.flatMap((g) => g.items), [...(shapes ?? [])].map(([id, x]) => ({ id, ...x }))).map((g) => {
+                const prog = g.id && townState.status === 'ready' ? townState.towns.find((x) => x.id === g.id) : undefined
+                const goal = prog ? nextGoal(prog) : null
+                return (
+                  <div key={g.id ?? 'other'} className="rc__town">
+                    <div className="rc__townhead">
+                      <b>{g.name}</b>
+                      <span>{prog ? `${prog.visited} / ${prog.total} 軒${prog.completedAt !== null ? '・コンプリート' : prog.clearedAt !== null ? '・クリア' : ''}` : `${g.items.length} 回`}</span>
+                      {goal && <small>{goal.to === 'clear' ? 'クリアまで' : 'コンプリートまで'}あと {goal.left} 軒</small>}
+                    </div>
+                    {g.items.map((v, i) => <VisitRow key={`${v.shopId}-${v.day}-${i}`} v={v} mine={mine} />)}
+                  </div>
+                )
+              })
+            )
           ) : (
             history.map((g) => (
               <div key={g.month}>
                 <div className="rc__month">{g.month}</div>
-                {g.items.map((v, i) => (
-                  <div className="rc__item" key={`${v.shopId}-${v.day}-${i}`}>
-                    <Thumb photoUrl={mine.get(v.checkinId ?? '')?.photo ?? v.photoUrl} kind={v.kind} />
-                    <div className="rc__item-main">
-                      <b>{v.name}</b>
-                      <span>
-                        {v.day.replaceAll('-', '.')}
-                        {mine.has(v.checkinId ?? '') && <i className="rc__stars" aria-label={`自分の星 ${mine.get(v.checkinId ?? '')?.stars}`}>{'★'.repeat(mine.get(v.checkinId ?? '')?.stars ?? 0)}</i>}
-                      </span>
-                    </div>
-                    <span className="rc__kind">{KIND_LABEL[v.kind]}</span>
-                  </div>
-                ))}
+                {g.items.map((v, i) => <VisitRow key={`${v.shopId}-${v.day}-${i}`} v={v} mine={mine} />)}
               </div>
             ))
           )}
@@ -363,5 +380,23 @@ function Thumb({ photoUrl, kind }: { photoUrl: string | null; kind: VisitEntry['
       {/* 写真の期限付き URL が切れて読めないときは種類の絵に戻す */}
       <img src={photoUrl ?? kindIcon(kind)} alt="" onError={(e) => { if (photoUrl) { e.currentTarget.src = kindIcon(kind); e.currentTarget.parentElement?.classList.add('rc__thumb--kind') } }} />
     </span>
+  )
+}
+
+// 行ったお店の 1 行（日付順・町ごとで同じ形）
+function VisitRow({ v, mine }: { v: VisitEntry; mine: ReadonlyMap<string, { stars: number; photo: string | null }> }) {
+  const r = mine.get(v.checkinId ?? '')
+  return (
+    <div className="rc__item">
+      <Thumb photoUrl={r?.photo ?? v.photoUrl} kind={v.kind} />
+      <div className="rc__item-main">
+        <b>{v.name}</b>
+        <span>
+          {v.day.replaceAll('-', '.')}
+          {r && <i className="rc__stars" aria-label={`自分の星 ${r.stars}`}>{'★'.repeat(r.stars)}</i>}
+        </span>
+      </div>
+      <span className="rc__kind">{KIND_LABEL[v.kind]}</span>
+    </div>
   )
 }

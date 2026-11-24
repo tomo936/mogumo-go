@@ -68,18 +68,19 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null, ini
       if (i < 0) continue
       setKind(k)
       setPage(Math.floor(i / PAGE_SIZE))
-      setDetail({ shop: list[i], no: cardNo(i) })
+      setDetail({ shop: list[i], no: cardNo([...byKind.values()].flat().findIndex((x) => x.id === list[i].id)) }) // 図鑑全体の通し番号
       return
     }
     setMissing(true)
   }, [jumped, initialShopId, byKind])
   const all = useMemo(() => (byKind ? [...byKind.values()].flat() : []), [byKind])
-  // カードの No. は、その種類の中での固定の番号（「すべて」や絞り込みで変わらない。レビュー 2026-11-24）
+  // カードの No. は図鑑全体の通し番号（種類の順に並べた位置）。1 軒に 1 つで、どのタブ・絞り込みでも同じ
+  // （2026-11-24 オーナー「すべてで No.001 がいくつもあるのはおかしい」。前は種類ごとの番号だった）
   const noOf = useMemo(() => {
     const m = new Map<string, string>()
-    for (const l of byKind?.values() ?? []) l.forEach((s, i) => m.set(s.id, cardNo(i)))
+    all.forEach((s, i) => m.set(s.id, cardNo(i)))
     return m
-  }, [byKind])
+  }, [all])
   const kindList = kind === 'all' ? all : byKind?.get(kind) ?? []
   const list = filter === 'all' ? kindList : kindList.filter((s) => (filter === 'done') === (s.visits !== null))
   const pages = pageCount(list.length)
