@@ -1,7 +1,6 @@
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import { FOG_REBUILD_M, THIN_START_M } from '../../fog/config.ts'
 import { clearedFromHome, isClearedAt } from '../../fog/domain/clearing.ts'
-import { behindFog } from '../../shops/domain/visibility.ts'
 import { farClumps, fogClumps } from '../../fog/domain/clumps.ts'
 import type { Clump } from '../../fog/domain/clumps.ts'
 import { cellKey } from '../../fog/domain/grid.ts'
@@ -11,7 +10,7 @@ import { TOWN_FILL_HALF_M } from '../../towns/config.ts'
 import { cellsInTown } from '../../towns/domain/shape.ts'
 import type { ClearedTown } from '../../towns/domain/shape.ts'
 import { createFogLayer } from '../../fog/infra/fogLayer.ts'
-import { BUILDING_MAX_SIZE_M, BUILDING_TOP_RATE, FACILITY_MIN_AREA_M2, FACILITY_NEAR_M, IN_FOG_VISIBLE_M, LAYER_UPDATE_MS, LOD_CAMERA_MIN_ZOOM, LOD_CAMERA_MOVE_M, LOD_MARGIN_M, LOD_MAX_DETAILED, LOD_NEAR_M, MAP_SHOPS_REEXTRACT_M, MAX_SHOP_MODELS, PLACE_BUDGET_MS, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
+import { BUILDING_MAX_SIZE_M, BUILDING_TOP_RATE, FACILITY_MIN_AREA_M2, FACILITY_NEAR_M, LAYER_UPDATE_MS, LOD_CAMERA_MIN_ZOOM, LOD_CAMERA_MOVE_M, LOD_MARGIN_M, LOD_MAX_DETAILED, LOD_NEAR_M, MAP_SHOPS_REEXTRACT_M, MAX_SHOP_MODELS, PLACE_BUDGET_MS, SHOP_RADIUS_M, SHOP_REFETCH_M, SHOP_REFRESH_M, SHOP_RETRY_AFTER_FAIL_MS } from '../../shops/config.ts'
 import { doorPoint, dropSharedParts, enoughShops, facilityLabel, facilityParts, heightAt, mergeFacilities, ringsOverlap, stationIn } from '../../shops/domain/facility.ts'
 import { groupShops } from '../../shops/domain/grouping.ts'
 import { capModels, pickDetailed } from '../../shops/domain/lod.ts'
@@ -365,14 +364,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     layerAt = performance.now()
     const frame = localFrame(p)
     const visible: { shop: Shop; hit: Placed }[] = []
-    const nearAll: Shop[] = [] // 気配などの材料（霧の向こうでも数える。描くかどうかとは別）
     for (const shop of shownVisible) {
-      if (placed.get(shop.id)) nearAll.push(shop)
       const hit = placed.get(shop.id)
-      // 霧の向こう（見ている所からお店までの地面の間に、まだ晴れていない所がある）のお店は、模型もピンも描かない。
-      // 2026-11-24 オーナー「雲の上に家がある」: 霧の向こうの晴れた区画の家が、手前の雲より背が高くて雲の上に見えていた。
-      // 描くときだけの決まり（気配・図鑑などの「見えるお店」の決まりは変えない）。自分の近くの霧の中の店は今まで通り
-      if (hit && distanceMeters(last ?? p, shop) > IN_FOG_VISIBLE_M && behindFog(p, shop, cleared)) continue
       if (hit) visible.push({ shop, hit })
     }
     // 同じ建物（輪郭に合わせた中心がそろう）の見えている店を1組にする
@@ -445,7 +438,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         label: f.name ? { text: f.name, station: f.kind === 'station' } : null,
       })
     }
-    near = nearAll
+    near = visible.map((v) => v.shop)
     if (key === shownKey) return // 顔ぶれが変わったときだけ層を作り直す
     shownKey = key
     shownPlaced = singles
