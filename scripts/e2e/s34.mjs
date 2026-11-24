@@ -38,7 +38,8 @@ await p.mouse.move(195, 600); await p.mouse.wheel(0, 650); await W(1500); await 
 await p.mouse.wheel(0, 900); await W(1500); await shot(p, `${P}-rec-bottom`)
 try {
   await p.getByRole('button', { name: 'カレンダー' }).click(); await W(2000); await shot(p, `${P}-rec-cal`)
-  await p.locator('.rcal button.rcal__d').first().click(); await W(2500); await shot(p, `${P}-rec-after-cal`)
+  await p.locator('.rcal button.rcal__d').first().click(); await W(2500); await shot(p, `${P}-rec-cal-day`)
+  await p.getByRole('button', { name: 'この日の地図を見る' }).click(); await W(2500)
   await p.getByRole('tab', { name: 'じっせき' }).click(); await W(3000); await shot(p, `${P}-rec-badges`)
   await p.locator('.rc__back').click(); await W(1500)
   await p.getByRole('button', { name: 'メニュー' }).click({ timeout: 8000 }); await W(1500)

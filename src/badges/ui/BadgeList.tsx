@@ -63,6 +63,10 @@ export function BadgeList({ states, hasHome }: { states: BadgeState[]; hasHome: 
                 <div className="bd__rowhead">
                   <span>{rowLabel(x)}</span>
                   <small>{`${x.steps.filter((s) => s.earnedAt !== null).length} / ${x.steps.length}`}</small>
+                  {/* 種類ごとの進み具合の棒（2026-11-24 外のレビュー） */}
+                  <i className="bd__rowbar" aria-hidden="true">
+                    <i style={{ width: `${Math.round((x.steps.filter((s) => s.earnedAt !== null).length / x.steps.length) * 100)}%` }} />
+                  </i>
                 </div>
                 <div className="bd__steps">
                   {x.steps.map((s) => (

@@ -87,8 +87,10 @@ export function BadgeMedal({ state, size = 72 }: { state: BadgeState; size?: num
           <feMerge><feMergeNode in="o" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
         <filter id={id('g')}>
-          <feColorMatrix type="saturate" values="0" />
-          <feComponentTransfer><feFuncA type="linear" slope=".45" /></feComponentTransfer>
+          {/* まだのバッジ: 真っ灰色・うすさ .45 だと何のバッジか読めなかった（2026-11-24 外のレビュー「未取得が薄すぎる」）。
+              色を少し残し（.3）、濃さ .7 にして、絵は読めるがまだと分かる見え方に */}
+          <feColorMatrix type="saturate" values=".3" />
+          <feComponentTransfer><feFuncA type="linear" slope=".7" /></feComponentTransfer>
         </filter>
         <clipPath id={id('c')}><circle cx={CX} cy={CY} r={R - 14} /></clipPath>
       </defs>
