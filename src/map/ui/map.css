@@ -400,7 +400,8 @@
   white-space: nowrap;
 }
 
-/* 描画距離の境目より上を覆う空の幕（2026-11-24）。下の端をぼかして霧に消えるように。地図の上・ピンの上、上の部品（HUD）の下 */
+/* 描画距離の境目より上の空と、境目の霞（2026-11-24）。上は空、地平線は霞（不透明で境目を隠す）、手前へうすく溶ける。
+   昼は青空、夜は星空（オーナー「空が燃えていて終末感」）。--cut は境目の高さ（px）。地図の上・ピンの上、上の部品（HUD）の下 */
 .map-farsky {
   position: absolute;
   left: 0;
@@ -409,6 +410,42 @@
   z-index: 2;
   display: none;
   pointer-events: none;
-  /* 上は空、境目に向かってうすく（境目の先は地面の色の地なので、地面が遠くでかすんで空に溶けて見える） */
-  background: linear-gradient(to bottom, var(--far-sky, #e3f1fa) 0, var(--far-sky, #e3f1fa) calc(100% - 110px), rgba(227, 241, 250, 0) 100%);
+  background: linear-gradient(
+    to bottom,
+    #7cc3ec 0,
+    #a9d8f2 calc(var(--cut, 300px) * 0.55),
+    #d6ecf7 calc(var(--cut, 300px) - 40px),
+    #e9f4f8 var(--cut, 300px),
+    rgba(233, 244, 248, 0) 100%
+  );
+}
+[data-night='1'] .map-farsky {
+  background: linear-gradient(
+    to bottom,
+    #121a3d 0,
+    #1f2a58 calc(var(--cut, 300px) * 0.6),
+    #33406c calc(var(--cut, 300px) - 40px),
+    #3a4470 var(--cut, 300px),
+    rgba(58, 68, 112, 0) 100%
+  );
+}
+/* 夜の星（空の部分だけ。地平線の近くは出さない） */
+[data-night='1'] .map-farsky::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(var(--cut, 300px) * 0.7);
+  background-image:
+    radial-gradient(1.4px 1.4px at 12% 18%, #fff 98%, transparent),
+    radial-gradient(1px 1px at 33% 42%, #fff 98%, transparent),
+    radial-gradient(1.6px 1.6px at 56% 12%, #fff8d8 98%, transparent),
+    radial-gradient(1px 1px at 71% 35%, #fff 98%, transparent),
+    radial-gradient(1.3px 1.3px at 88% 22%, #fff 98%, transparent),
+    radial-gradient(1px 1px at 22% 66%, #fff 98%, transparent),
+    radial-gradient(1.2px 1.2px at 47% 78%, #fff 98%, transparent),
+    radial-gradient(1px 1px at 93% 61%, #fff 98%, transparent);
+  background-size: 180px 120px;
+  opacity: 0.85;
 }

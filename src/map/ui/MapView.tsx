@@ -86,6 +86,7 @@ const TAP_MAX_MOVE_PX = 10
 const TAP_MAX_MS = 300
 const POSITION_EVERY_MS = 250
 const TAP_ZOOM_STEP = 0.6
+const HAZE_BELOW_PX = 64 // 境目から手前へ霞を溶かす幅
 const PITCH_LIMIT_FROM = 56 // これより深く傾いたときだけ描画距離を効かせる（本番の傾き 55 度までは今までどおり）
 const INTRO_RISE_ZOOM = 3 // 地図へ入る演出: いつもよりどれだけ高い所から始めるか（霧の雲の海の上空）
 const INTRO_MS = 2400
@@ -199,10 +200,13 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     container.style.visibility = 'hidden' // 最初の位置が取れるまで地図は見せない
     // 描画距離の先（何も描かない所）に見える色。昼は霧の雲の白、夜は夜の地面の色（2026-11-24）
     // 描画距離の先: 入れ物の地は地面の色（境目近くの建物の下に空が見えないように）、その上を空の幕で覆う
-    const farColor = (t: typeof theme) => t.ground
-    const skyColor = (t: typeof theme) => (t === THEMES.illustNight ? '#2b3358' : '#e3f1fa')
-    container.style.background = farColor(theme)
-    container.style.setProperty('--far-sky', skyColor(theme))
+    // 空と地平線の霞（2026-11-24 オーナー「空が燃えていて終末感。昼は青空、夜は星空」）。境目の先の地も霞の色にそろえる
+    const setSky = (t: typeof theme) => {
+      const night = t === THEMES.illustNight
+      container.dataset.night = night ? '1' : '0'
+      container.style.background = night ? '#3a4470' : '#e9f4f8' // 霞の色（境目の先に見える）
+    }
+    setSky(theme)
     // 描く細かさ: ?dpr=N で試せる。無ければ config の上限（null なら端末のまま）
     const dprParam = Number(new URLSearchParams(window.location.search).get('dpr')) || null
     const dprCap = dprParam ?? MAP_MAX_PIXEL_RATIO
@@ -233,8 +237,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     // 昼と夜が切り替わったら、地図を作り直さずに色だけ替える（A14）
     const stopPhase = onPhase(() => {
       if (map.isStyleLoaded()) recolor(map, currentTheme(window.location.search, MAP_THEME))
-      container.style.background = farColor(currentTheme(window.location.search, MAP_THEME))
-      container.style.setProperty('--far-sky', skyColor(currentTheme(window.location.search, MAP_THEME)))
+      setSky(currentTheme(window.location.search, MAP_THEME))
       map.triggerRepaint() // 雲・3D の光も描き直す
     })
     // カメラが止まったら、自分から離れた所を見ているか世界に伝える（雲をそこのまわりに置くため）
@@ -299,7 +302,9 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       const dLng = (drawM * Math.sin(b)) / (111_320 * Math.cos((c.lat * Math.PI) / 180))
       const y = map.project([c.lng + dLng, c.lat + dLat]).y
       farSky.style.display = 'block'
-      farSky.style.height = `${Math.max(0, Math.round(y))}px` // 幕の下の端（ぼかしの終わり）＝境目
+      // 幕は境目より少し下まで伸ばし、境目は不透明な霞で隠す（地面が途切れる線を見せない）。霞は手前へうすく溶ける
+      farSky.style.height = `${Math.max(0, Math.round(y + HAZE_BELOW_PX))}px`
+      farSky.style.setProperty('--cut', `${Math.max(0, Math.round(y))}px`)
     }
     map.on('move', limitFar)
     map.on('resize', limitFar)
