@@ -89,6 +89,7 @@ const TAP_MAX_MOVE_PX = 10
 const TAP_MAX_MS = 300
 const POSITION_EVERY_MS = 250
 const TAP_ZOOM_STEP = 0.6
+const NIGHT_TOP = '#121a3d' // 夜空のいちばん上の色（map.css の .map-view[data-night] と同じ）
 const HAZE_BAND_M = 280 // 地面の端の手前から霞に溶かす幅（m。端が近いときは端までの 58%）
 const INTRO_RISE_ZOOM = 3 // 地図へ入る演出: いつもよりどれだけ高い所から始めるか（霧の雲の海の上空）
 const INTRO_MS = 2400
@@ -203,10 +204,20 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     // 描画距離の先（何も描かない所）に見える色。昼は霧の雲の白、夜は夜の地面の色（2026-11-24）
     // 描画距離の先: 入れ物の地は地面の色（境目近くの建物の下に空が見えないように）、その上を空の幕で覆う
     // 空と地平線の霞（2026-11-24 オーナー「空が燃えていて終末感。昼は青空、夜は星空」）。境目の先の地も霞の色にそろえる
+    // 画面のいちばん上（時計・電池の帯）の色。Safari はページの地の色（新しい版）か theme-color（前の版）で塗る。
+    // 白のままだと夜の地図の上に白い帯が浮くので、夜は夜空のいちばん上の色にする（2026-11-24 オーナー「夜は浮く」）。昼は今までどおり白
+    const themeMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    const setChrome = (night: boolean) => {
+      const c = night ? NIGHT_TOP : ''
+      document.documentElement.style.backgroundColor = c
+      document.body.style.backgroundColor = c
+      themeMeta?.setAttribute('content', night ? NIGHT_TOP : '#ffffff')
+    }
     const setSky = (t: typeof theme) => {
       const night = t === THEMES.illustNight
       container.dataset.night = night ? '1' : '0'
       container.style.background = '' // 空の色は CSS（.map-view と data-night）
+      setChrome(night)
     }
     setSky(theme)
     // 描く細かさ: ?dpr=N で試せる。無ければ config の上限（null なら端末のまま）
@@ -693,6 +704,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       s.world?.dispose()
       mapRef.current = null
       stopPhase()
+      setChrome(false) // 地図を閉じたら白に戻す
       map.remove()
     }
   }, [home])
