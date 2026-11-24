@@ -87,7 +87,6 @@ const TAP_MAX_MS = 300
 const POSITION_EVERY_MS = 250
 const TAP_ZOOM_STEP = 0.6
 const PITCH_LIMIT_FROM = 56 // これより深く傾いたときだけ描画距離を効かせる（本番の傾き 55 度までは今までどおり）
-const FAR_FADE_PX = 56 // 描画距離の境目のぼかしの幅
 const INTRO_RISE_ZOOM = 3 // 地図へ入る演出: いつもよりどれだけ高い所から始めるか（霧の雲の海の上空）
 const INTRO_MS = 2400
 const INTRO_MAX_STEP_MS = 40 // 重いコマでも、1 コマで進めるのはここまで（途中が飛ばないように）
@@ -199,9 +198,11 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     const theme = currentTheme(window.location.search, MAP_THEME) // 夜は夜の色（A14）
     container.style.visibility = 'hidden' // 最初の位置が取れるまで地図は見せない
     // 描画距離の先（何も描かない所）に見える色。昼は霧の雲の白、夜は夜の地面の色（2026-11-24）
-    const farColor = (t: typeof theme) => (t === THEMES.illustNight ? t.ground : '#eaf5fb') // 昼は淡い空色
+    // 描画距離の先: 入れ物の地は地面の色（境目近くの建物の下に空が見えないように）、その上を空の幕で覆う
+    const farColor = (t: typeof theme) => t.ground
+    const skyColor = (t: typeof theme) => (t === THEMES.illustNight ? '#2b3358' : '#e3f1fa')
     container.style.background = farColor(theme)
-    container.style.setProperty('--far-sky', farColor(theme))
+    container.style.setProperty('--far-sky', skyColor(theme))
     // 描く細かさ: ?dpr=N で試せる。無ければ config の上限（null なら端末のまま）
     const dprParam = Number(new URLSearchParams(window.location.search).get('dpr')) || null
     const dprCap = dprParam ?? MAP_MAX_PIXEL_RATIO
@@ -233,7 +234,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     const stopPhase = onPhase(() => {
       if (map.isStyleLoaded()) recolor(map, currentTheme(window.location.search, MAP_THEME))
       container.style.background = farColor(currentTheme(window.location.search, MAP_THEME))
-      container.style.setProperty('--far-sky', farColor(currentTheme(window.location.search, MAP_THEME)))
+      container.style.setProperty('--far-sky', skyColor(currentTheme(window.location.search, MAP_THEME)))
       map.triggerRepaint() // 雲・3D の光も描き直す
     })
     // カメラが止まったら、自分から離れた所を見ているか世界に伝える（雲をそこのまわりに置くため）
@@ -298,7 +299,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       const dLng = (drawM * Math.sin(b)) / (111_320 * Math.cos((c.lat * Math.PI) / 180))
       const y = map.project([c.lng + dLng, c.lat + dLat]).y
       farSky.style.display = 'block'
-      farSky.style.height = `${Math.max(0, Math.round(y + FAR_FADE_PX / 2))}px`
+      farSky.style.height = `${Math.max(0, Math.round(y))}px` // 幕の下の端（ぼかしの終わり）＝境目
     }
     map.on('move', limitFar)
     map.on('resize', limitFar)

@@ -406,5 +406,6 @@
   z-index: 2;
   display: none;
   pointer-events: none;
-  background: linear-gradient(to bottom, var(--far-sky, #eaf5fb) 0, var(--far-sky, #eaf5fb) calc(100% - 56px), transparent 100%);
+  /* 上は空、境目に向かってうすく（境目の先は地面の色の地なので、地面が遠くでかすんで空に溶けて見える） */
+  background: linear-gradient(to bottom, var(--far-sky, #e3f1fa) 0, var(--far-sky, #e3f1fa) calc(100% - 110px), rgba(227, 241, 250, 0) 100%);
 }
