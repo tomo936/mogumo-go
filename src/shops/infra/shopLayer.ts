@@ -10,6 +10,8 @@ import { pickShop } from './pickShop.ts'
 import { MODEL_SCALE } from '../config.ts'
 import { isNight, onPhase } from '../../daynight/infra/phase.ts'
 import { GLOW_SCALE, glowMesh, lightUp, makeLights } from '../../daynight/infra/nightLook.ts'
+import { cull } from './instanceCull.ts'
+import type { CullGroup } from './instanceCull.ts'
 
 // 地図に置く建物1つ。1軒の店は model がその種類・shopIds が [id]。
 // ビル（同じ建物の複数の店）は model 'building'・id 'bldg:<先頭の店 id>'・shopIds に全員
@@ -26,7 +28,7 @@ const urlOf = (key: ModelKey) => (key.startsWith('lod:') ? LOD_URLS[`../../asset
 
 // 読み込んだ模型: 部品ごとの形・材質と、模型の根元からの行列
 type Part = { geo: THREE.BufferGeometry; mat: THREE.Material | THREE.Material[]; local: THREE.Matrix4 }
-type Model = { parts: Part[]; unit: number } // unit: 模型の幅（東西・南北の大きい方）
+type Model = { parts: Part[]; unit: number; bound: THREE.Sphere } // unit: 模型の幅（東西・南北の大きい方）。bound: 模型が収まる球
 
 // id: 地図の層の名前（晴れた所の店と、霧の中の近い店で2つ作る）
 export function createShopLayer(id: string): CustomLayerInterface & {
@@ -38,6 +40,9 @@ export function createShopLayer(id: string): CustomLayerInterface & {
   let map: MapLibreMap | null = null
   const models = new Map<ModelKey, Model | null>() // null = 読み込み中か失敗
   let meshes: THREE.InstancedMesh[] = []
+  let groups: CullGroup<PlacedShop>[] = [] // 種類ごと。描く直前に画面に入る軒だけに詰める
+  const frustum = new THREE.Frustum()
+  const viewProj = new THREE.Matrix4()
   let shops: PlacedShop[] = []
   let origin: LatLng | null = null
 
@@ -49,6 +54,7 @@ export function createShopLayer(id: string): CustomLayerInterface & {
       m.dispose()
     }
     meshes = []
+    groups = []
   }
   const allMats = () => [...models.values()].flatMap((md) => md?.parts.flatMap((p) => (Array.isArray(p.mat) ? p.mat : [p.mat])) ?? [])
 
@@ -71,7 +77,7 @@ export function createShopLayer(id: string): CustomLayerInterface & {
         })
         const box = new THREE.Box3().setFromObject(gltf.scene)
         const unit = Math.max(box.max.x - box.min.x, box.max.z - box.min.z) || 1
-        models.set(kind, { parts, unit })
+        models.set(kind, { parts, unit, bound: box.getBoundingSphere(new THREE.Sphere()) })
         build()
       })
       .catch(() => {}) // 読めなかった種類は出さない
@@ -117,14 +123,19 @@ export function createShopLayer(id: string): CustomLayerInterface & {
           sc.set(k, k, k),
         )
       })
+      const g: CullGroup<PlacedShop> = { meshes: [], full: [], spheres: place.map((pm) => model.bound.clone().applyMatrix4(pm)), items: list, shown: '' }
       for (const part of model.parts) {
         const inst = new THREE.InstancedMesh(part.geo, part.mat, list.length)
-        place.forEach((pm, i) => inst.setMatrixAt(i, m.multiplyMatrices(pm, part.local)))
-        inst.userData.shops = list // 当たった instanceId から店を引く
+        const full = place.map((pm) => new THREE.Matrix4().multiplyMatrices(pm, part.local))
+        full.forEach((fm, i) => inst.setMatrixAt(i, fm))
+        inst.userData.shops = list // 当たった instanceId から店を引く（描く直前に詰めたら詰めた並び）
         inst.computeBoundingSphere()
         scene.add(inst)
         meshes.push(inst)
+        g.meshes.push(inst)
+        g.full.push(full)
       }
+      groups.push(g)
     }
     // 夜: お店の足元に暖かい光のたまり（A14。形と材質は使い回すので、外すときは InstancedMesh だけ捨てる）
     const lit = shops.filter((s) => drawnKey(s))
@@ -171,6 +182,11 @@ export function createShopLayer(id: string): CustomLayerInterface & {
       map = null
     },
     origin: () => (meshes.length ? origin : null),
+    beforeRender(camera) {
+      viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
+      frustum.setFromProjectionMatrix(viewProj)
+      for (const g of groups) cull(g, frustum)
+    },
   })
 
   return {

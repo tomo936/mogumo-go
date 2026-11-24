@@ -59,6 +59,7 @@ type Options = {
   onAdd(scene: THREE.Scene, map: MapLibreMap): void
   onRemove(): void
   origin(): LatLng | null // 描くものが無いときは null
+  beforeRender?(camera: THREE.Camera): void // 描く直前（カメラの行列が決まったあと）。1 軒ずつの画面外の省きに使う
 }
 
 // 試作どおり、レイヤーごとに MapLibre の GL を共有するレンダラーを1つ持つ
@@ -123,6 +124,7 @@ export function threeLayer(opts: Options): HitLayer {
       if (!renderer || !origin) return
       local.fromArray(modelMatrix(origin, origin, 1, 0))
       camera.projectionMatrix = proj.fromArray(args.defaultProjectionData.mainMatrix as unknown as number[]).multiply(local)
+      opts.beforeRender?.(camera)
       renderer.resetState()
       renderer.render(scene, camera)
     },
