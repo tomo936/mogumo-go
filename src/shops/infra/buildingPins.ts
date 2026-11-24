@@ -112,7 +112,12 @@ export function createBuildingPins(map: MapLibreMap, onTap: (shopIds: string[]) 
   // 縮み具合は建物ごとに1回だけ測り、前と同じなら書き直さない（散らばったピンは数十個になるため）
   const fit = () => {
     const scaleOf = new Map<PinnedBuilding, ReturnType<typeof screenScale>>()
+    const W = map.getContainer().clientWidth
+    const H = map.getContainer().clientHeight
     for (const s of markers) {
+      // 画面の外（ふちから 150px より外）の札は合わせない。画面に入ったコマで合わせる
+      const g = map.project([s.at.lng, s.at.lat])
+      if (g.x < -150 || g.x > W + 150 || g.y < -150 || g.y > H + 150) continue
       let sc = scaleOf.get(s.b)
       if (!sc) {
         sc = screenScale((p) => map.project([p.lng, p.lat]), s.b.placed)

@@ -40,15 +40,25 @@ export function setMapFog(f: { color: string; near: number; far: number } | null
 // 最後に描いたコマのカメラ（メルカトル座標 → 画面のクリップ座標）。地図の上に重ねる HTML のピンを、
 // 3D の屋根の高さにぴったり合わせるのに使う（画面の真上にずらすだけだと、遠近で傾いた分がずれる）
 let lastMatrix: number[] | null = null
+// 札の位置合わせは 1 コマに札の数 ×2 回呼ばれる。行列と画面の大きさは描いたときに 1 回だけ用意して使い回す
+// （前は呼ぶたびに行列を作り、札を書き換えたあとに画面の大きさを読んで、そのたびに画面の作りを計算し直させていた。2026-11-24 新宿でカクつく）
+const lastM = new THREE.Matrix4()
+const v4 = new THREE.Vector4()
+let lastW = 0
+let lastH = 0
 
 // p の地面から heightM 上の点が、画面（CSS px）のどこに写るか。まだ一度も描いていなければ null
 export function projectAt(map: MapLibreMap, p: { lat: number; lng: number }, heightM: number): { x: number; y: number } | null {
   if (!lastMatrix) return null
+  if (!lastW) {
+    const c = map.getCanvas()
+    lastW = c.clientWidth
+    lastH = c.clientHeight
+  }
   const mc = MercatorCoordinate.fromLngLat([p.lng, p.lat], heightM)
-  const v = new THREE.Vector4(mc.x, mc.y, mc.z, 1).applyMatrix4(new THREE.Matrix4().fromArray(lastMatrix))
+  const v = v4.set(mc.x, mc.y, mc.z, 1).applyMatrix4(lastM)
   if (v.w <= 0) return null
-  const c = map.getCanvas()
-  return { x: ((v.x / v.w + 1) / 2) * c.clientWidth, y: ((1 - v.y / v.w) / 2) * c.clientHeight }
+  return { x: ((v.x / v.w + 1) / 2) * lastW, y: ((1 - v.y / v.w) / 2) * lastH }
 }
 
 // projectAt が使える状態か（一度でも 3D を描いたか）。?debug の表示用
@@ -120,6 +130,13 @@ export function threeLayer(opts: Options): HitLayer {
     },
     render(_gl, args) {
       lastMatrix = args.defaultProjectionData.mainMatrix as unknown as number[]
+      lastM.fromArray(lastMatrix)
+      if (map) {
+        // 札を書き換える前（3D を描くとき）に読む
+        const c = map.getCanvas()
+        lastW = c.clientWidth
+        lastH = c.clientHeight
+      }
       const origin = opts.origin()
       if (!renderer || !origin) return
       local.fromArray(modelMatrix(origin, origin, 1, 0))

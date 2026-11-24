@@ -331,12 +331,16 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         }
       }
       // ビル・施設の札（HTML）: 画面で境目に近づくほどうすく、境目より上は隠す
+      // 画面の位置は先に全部読んでから書く（読む・書くを交互にすると、1 つごとに画面の作りを計算し直してカクつく。2026-11-24）
       const FADE = 90 // px
-      for (const el of container.querySelectorAll<HTMLElement>('.maplibregl-marker')) {
-        const r = el.getBoundingClientRect()
-        el.style.visibility = r.bottom < cutY ? 'hidden' : ''
-        el.style.opacity = r.bottom < cutY + FADE ? String(Math.max(0, (r.bottom - cutY) / FADE)) : ''
-      }
+      const els = [...container.querySelectorAll<HTMLElement>('.maplibregl-marker')]
+      const bottoms = els.map((el) => el.getBoundingClientRect().bottom)
+      els.forEach((el, i) => {
+        const vis = bottoms[i] < cutY ? 'hidden' : ''
+        const op = bottoms[i] < cutY + FADE ? String(Math.max(0, Math.round(((bottoms[i] - cutY) / FADE) * 20) / 20)) : ''
+        if (el.style.visibility !== vis) el.style.visibility = vis
+        if (el.style.opacity !== op) el.style.opacity = op
+      })
       pinsLimited = true
     }
     // 地面の端（地図が描く地面のいちばん遠い所）に霧をかける。端が画面に入るのは、

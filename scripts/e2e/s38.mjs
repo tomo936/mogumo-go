@@ -51,6 +51,30 @@ for (const z of (process.env.ZOOMS ?? '19').split(',').map(Number)) for (const b
   console.log(JSON.stringify(r)); await shot(p, `${P}-z${z}-b${b}`)
 }
 }
+if (process.env.PROF) {
+  // 地図を回して動かす 10 秒のあいだの、1 コマの間隔と、計算（JS）の内訳を測る（2026-11-24 オーナー「カクつく」）
+  const cdp = await p.context().newCDPSession(p)
+  await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 500 })
+  await p.evaluate(() => window.__mogumoMap.jumpTo({ zoom: 19, bearing: 0 })); await W(6000)
+  await p.evaluate(() => { window.__lt = []; new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__lt.push(Math.round(e.duration)) }).observe({ type: 'longtask', buffered: false }) })
+  await cdp.send('Profiler.start')
+  const fr = await p.evaluate(async () => {
+    const m = window.__mogumoMap; const c0 = m.getCenter(); const gaps = []; let last = performance.now(); const t0 = last
+    await new Promise((done) => { const step = (t) => { gaps.push(t - last); last = t; const k = (t - t0) / 10000
+      // 1 周回しながら、北へ 300m 進む（指で動かすのと同じく毎コマ jumpTo）
+      m.jumpTo({ bearing: k * 360, center: [c0.lng, c0.lat + (k * 300) / 111320] }); if (k < 1) requestAnimationFrame(step); else done() }; requestAnimationFrame(step) })
+    gaps.sort((a, b) => a - b); const q = (x) => Math.round(gaps[Math.floor(gaps.length * x)])
+    return { frames: gaps.length, fps: Math.round(gaps.length / 10), p50: q(0.5), p90: q(0.9), p99: q(0.99), max: Math.round(gaps[gaps.length - 1]), over50: gaps.filter((g) => g > 50).length }
+  })
+  const { profile } = await cdp.send('Profiler.stop')
+  console.log('fit', JSON.stringify(await p.evaluate(() => ({ n: window.__fitN, calls: window.__fitC, ms: Math.round(window.__fit), markers: document.querySelectorAll('.maplibregl-marker').length }))))
+  console.log('frames', JSON.stringify(fr), 'longtasks', JSON.stringify(await p.evaluate(() => window.__lt.slice(0, 30))))
+  // 自分の時間を関数ごとに足す（上位 25）
+  const dt = {}; const byId = new Map(profile.nodes.map((n) => [n.id, n]))
+  profile.samples.forEach((id, i) => { const n = byId.get(id); const f = n.callFrame; const k = `${f.functionName || '(anon)'} ${f.url.split('/').slice(-2).join('/').split('?')[0]}:${f.lineNumber}`; dt[k] = (dt[k] ?? 0) + (profile.timeDeltas[i] ?? 0) / 1000 })
+  const tot = Object.values(dt).reduce((a, b) => a + b, 0)
+  console.log('total ms', Math.round(tot)); for (const [k, v] of Object.entries(dt).sort((a, b) => b[1] - a[1]).slice(0, 25)) console.log(Math.round(v), k)
+}
 if (process.env.TAP) {
   // 模型を押してお店のシートが開くか（詰めた並びで店を引けるか）
   const [x, y] = process.env.TAP.split(',').map(Number)

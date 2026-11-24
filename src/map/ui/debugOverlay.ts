@@ -84,8 +84,31 @@ export function createDebugOverlay(map: MapLibreMap, rows: () => PinDebugRow[]) 
     }
   })
 
+  // 1 コマの時間（実機のカクつきを測る。2026-11-24 オーナー「処理が追いついてなくてカクつく」）。直近 2 秒の平均・最長・33ms 超えの回数
+  const gaps: { t: number; d: number }[] = []
+  let frame = ''
+  let lastT = performance.now()
+  let raf = 0
+  const tick = (t: number) => {
+    gaps.push({ t, d: t - lastT })
+    lastT = t
+    while (gaps.length && gaps[0].t < t - 2000) gaps.shift()
+    const ds = gaps.map((g) => g.d)
+    const avg = ds.reduce((a, b) => a + b, 0) / Math.max(1, ds.length)
+    frame = `コマ 平均${avg.toFixed(0)}ms 最長${Math.max(0, ...ds).toFixed(0)}ms 33ms超${ds.filter((d) => d > 33).length}回/2秒`
+    raf = requestAnimationFrame(tick)
+  }
+  raf = requestAnimationFrame(tick)
+  // ?debug=lite: 札ごとの点と文字を出さない（それ自体が重いので、カクつきを測るとき用）
+  const lite = new URLSearchParams(window.location.search).get('debug') === 'lite' || sessionStorage.getItem('mogumo.debugLite') === '1'
+  try {
+    if (lite) sessionStorage.setItem('mogumo.debugLite', '1')
+  } catch {
+    /* 覚えられなくても、この画面では効く */
+  }
   const draw = () => {
-    panel.textContent = [...panelLines(map), `描き直し ${rate.toFixed(1)}回/秒`].join('\n')
+    panel.textContent = [...panelLines(map), `描き直し ${rate.toFixed(1)}回/秒`, frame, `札 ${box.querySelectorAll('.maplibregl-marker').length}`].join('\n')
+    if (lite) return
     const list = rows()
     list.forEach((r, i) => {
       let it = items[i]
@@ -113,6 +136,7 @@ export function createDebugOverlay(map: MapLibreMap, rows: () => PinDebugRow[]) 
   return {
     dispose() {
       map.off('render', draw)
+      cancelAnimationFrame(raf)
       root.remove()
     },
   }
