@@ -67,7 +67,7 @@ export function WorldMap({ towns, onClose, onOpen, loadBoxes = loadTownBoxes }: 
   prefRef.current = prefs
   useEffect(() => {
     const m = mapRef.current
-    if (m?.getLayer('pref-fill')) m.setPaintProperty('pref-fill', 'fill-opacity', ['case', ['in', ['get', 'code'], ['literal', prefs]], 0.42, 0])
+    if (m?.getLayer('pref-fill')) m.setPaintProperty('pref-fill', 'fill-opacity', ['case', ['in', ['get', 'code'], ['literal', prefs]], 0.6, 0])
   }, [prefs])
 
   const ids = towns.map((t) => t.id).join('|')
@@ -139,7 +139,7 @@ export function WorldMap({ towns, onClose, onOpen, loadBoxes = loadTownBoxes }: 
       // 都道府県の塗り分けと県境（2026-11-24 外のレビュー。形は国土数値情報を加工した public/geo/prefectures.json）。
       // 行った県は淡い橙、まだの県は塗らない。旗より下
       map.addSource('pref', { type: 'geojson', data: '/geo/prefectures.json' })
-      map.addLayer({ id: 'pref-fill', type: 'fill', source: 'pref', paint: { 'fill-color': '#f5a35c', 'fill-opacity': ['case', ['in', ['get', 'code'], ['literal', prefRef.current]], 0.42, 0] } })
+      map.addLayer({ id: 'pref-fill', type: 'fill', source: 'pref', paint: { 'fill-color': '#f5a35c', 'fill-opacity': ['case', ['in', ['get', 'code'], ['literal', prefRef.current]], 0.6, 0] } })
       map.addLayer({ id: 'pref-line', type: 'line', source: 'pref', paint: { 'line-color': '#9a6a44', 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.6, 8, 1.4], 'line-opacity': 0.7 } })
       draw()
     })
