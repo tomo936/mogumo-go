@@ -320,10 +320,11 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
       {calOpen && state.status === 'ready' && (
         <RecordCalendar
           visits={visits}
+          mine={mine}
           month={dayKey.slice(0, 7)}
           today={jstDay(new Date())}
           selected={dayKey}
-          onPick={(d) => {
+          onOpenDay={(d) => {
             // その日のいちばん遅いチェックインの時刻へ（‹ › と同じ動き）
             const at = Math.max(...visits.filter((v) => v.day === d).map((v) => v.at))
             setByStep(true)

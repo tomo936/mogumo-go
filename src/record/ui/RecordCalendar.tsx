@@ -1,23 +1,50 @@
-// 記録のカレンダーの画面（2026-11-24 B-24）。行った日に印、月を切り替え、日を押すとその日の記録へ
-import { useState } from 'react'
-import { addMonths, countByDay, monthGrid } from '../domain/calendar.ts'
+// 記録のカレンダーの画面（2026-11-24 B-24。オーナー「カレンダーの画面で、行ったお店を感想の画像と店名で見たい」）。
+// 行った日の升目に写真（自分の感想の写真 → お店の写真 → 種類の絵）。日を押すと下にその日のお店の一覧、そこからその日の記録へ
+import { useMemo, useState } from 'react'
+import { addMonths, monthGrid } from '../domain/calendar.ts'
+import type { VisitEntry } from '../domain/timeline.ts'
+import { kindIcon } from '../../zukan/ui/cardArt.ts'
+import { KIND_LABEL } from '../../shops/domain/kindLabel.ts'
 
+type Mine = ReadonlyMap<string, { stars: number; photo: string | null }>
 type Props = {
-  visits: readonly { day: string }[]
+  visits: readonly VisitEntry[]
+  mine: Mine // 自分の感想（お店ごと）
   month: string // はじめに出す月 'YYYY-MM'
   today: string // 'YYYY-MM-DD'
   selected: string | null // 今見ている日
-  onPick: (day: string) => void
+  onOpenDay: (day: string) => void // その日の記録へ
   onClose: () => void
 }
 
 const WEEK = ['日', '月', '火', '水', '木', '金', '土']
+const time = (ms: number) => {
+  const d = new Date(ms + 9 * 3600_000)
+  return `${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2, '0')}`
+}
 
-export function RecordCalendar({ visits, month: first, today, selected, onPick, onClose }: Props) {
+export function RecordCalendar({ visits, mine, month: first, today, selected, onOpenDay, onClose }: Props) {
   const [month, setMonth] = useState(first)
-  const counts = countByDay(visits)
+  const [picked, setPicked] = useState<string | null>(selected)
+  // 日ごとの訪問（早い順）
+  const byDay = useMemo(() => {
+    const m = new Map<string, VisitEntry[]>()
+    for (const v of [...visits].sort((a, b) => a.at - b.at)) {
+      if (!m.has(v.day)) m.set(v.day, [])
+      m.get(v.day)!.push(v)
+    }
+    return m
+  }, [visits])
+  const photoOf = (v: VisitEntry) => mine.get(v.shopId)?.photo ?? v.photoUrl
+  // 升目の写真: その日の訪問のうち、写真のあるもの（自分の写真を優先）。無ければ最初のお店の種類の絵
+  const cover = (list: VisitEntry[]) => {
+    const own = list.find((v) => mine.get(v.shopId)?.photo)
+    const any = own ?? list.find((v) => v.photoUrl)
+    return any ? { src: photoOf(any)!, photo: true } : { src: kindIcon(list[0].kind), photo: false }
+  }
   const grid = monthGrid(month)
-  const inMonth = [...counts].filter(([d]) => d.startsWith(month)).reduce((s, [, n]) => s + n, 0)
+  const inMonth = [...byDay].filter(([d]) => d.startsWith(month)).reduce((s, [, l]) => s + l.length, 0)
+  const dayList = picked ? byDay.get(picked) ?? [] : []
   return (
     <section className="rcal" aria-label="記録のカレンダー">
       <header className="rcal__bar">
@@ -37,21 +64,41 @@ export function RecordCalendar({ visits, month: first, today, selected, onPick, 
           <span key={w} className={`rcal__w${i === 0 ? ' is-sun' : i === 6 ? ' is-sat' : ''}`}>{w}</span>
         ))}
         {grid.map((d) => {
-          const n = counts.get(d.day) ?? 0
-          const cls = `rcal__d${d.inMonth ? '' : ' is-out'}${d.day === today ? ' is-today' : ''}${d.day === selected ? ' is-sel' : ''}${n > 0 ? ' has' : ''}`
-          return n > 0 ? (
-            <button key={d.day} type="button" className={cls} aria-label={`${Number(d.day.slice(5, 7))}月${d.date}日 ${n}回`} onClick={() => onPick(d.day)}>
-              <span>{d.date}</span>
-              <i>{n}</i>
+          const list = byDay.get(d.day)
+          const cls = `rcal__d${d.inMonth ? '' : ' is-out'}${d.day === today ? ' is-today' : ''}${d.day === picked ? ' is-sel' : ''}${list ? ' has' : ''}`
+          if (!list) return <span key={d.day} className={cls}><span className="rcal__num">{d.date}</span></span>
+          const c = cover(list)
+          return (
+            <button key={d.day} type="button" className={cls} aria-label={`${Number(d.day.slice(5, 7))}月${d.date}日 ${list.length}軒 ${list[0].name}`} aria-pressed={d.day === picked} onClick={() => setPicked(d.day)}>
+              <img src={c.src} alt="" className={c.photo ? 'is-photo' : 'is-kind'} />
+              <span className="rcal__num">{d.date}</span>
+              {list.length > 1 && <i>{list.length}</i>}
             </button>
-          ) : (
-            <span key={d.day} className={cls}>
-              <span>{d.date}</span>
-            </span>
           )
         })}
       </div>
-      <p className="rcal__note">印のある日を押すと、その日の記録が見られます</p>
+
+      {picked && dayList.length > 0 && (
+        <div className="rcal__day" aria-label={`${Number(picked.slice(5, 7))}月${Number(picked.slice(8))}日のお店`}>
+          <h3>{`${Number(picked.slice(5, 7))}月${Number(picked.slice(8))}日に行ったお店`}</h3>
+          {dayList.map((v) => (
+            <div key={`${v.shopId}-${v.at}`} className="rcal__item">
+              <span className={`rcal__thumb${photoOf(v) ? '' : ' is-kind'}`}>
+                <img src={photoOf(v) ?? kindIcon(v.kind)} alt="" />
+              </span>
+              <div className="rcal__item-main">
+                <b>{v.name}</b>
+                <span>
+                  {time(v.at)}・{KIND_LABEL[v.kind]}
+                  {mine.has(v.shopId) && <i className="rc__stars">{'★'.repeat(mine.get(v.shopId)?.stars ?? 0)}</i>}
+                </span>
+              </div>
+            </div>
+          ))}
+          <button type="button" className="rcal__open" onClick={() => onOpenDay(picked)}>この日の地図を見る</button>
+        </div>
+      )}
+      {!picked && <p className="rcal__note">写真のある日を押すと、その日に行ったお店が見られます</p>}
     </section>
   )
 }
