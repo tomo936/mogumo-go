@@ -5,8 +5,9 @@ export const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron'
 export const MAP_THEME: 'sky' | 'mint' | 'pop' | 'illust' = 'illust' // イラスト調（2026-11-10 オーナー）。前は pop
 export const PITCH = 55 // 倍率 17（はじめの倍率）の傾き。ほかの倍率は PITCH_BY_ZOOM
 // 倍率ごとの傾き（度）。引くと真上に近く、寄ると主人公の目線に近い（2026-11-24 オーナー「ポケモン GO のように自然に」）。
-// 14 は降りる演出の始まり（真上から）。19（いちばん寄った）は地平線と空が見える傾き
-export const PITCH_BY_ZOOM: readonly (readonly [number, number])[] = [[14, 0], [16, 40], [17, PITCH], [18, 59], [19, 62]]
+// 14 は降りる演出の始まり（真上から）。19（いちばん寄った）は地平線と空が見える傾き。重さは描画距離（DRAW_DISTANCE_M）で抑える
+// （オーナー 11-24「最初の傾きが良かった。それを軽くするべき」。この傾き＋描画距離 500m で、どの倍率も前と同じかそれより軽い）
+export const PITCH_BY_ZOOM: readonly (readonly [number, number])[] = [[14, 0], [16, 40], [17, PITCH], [18, 64], [19, 72]]
 export const MAX_PITCH = 75
 // 主人公を画面の真ん中より下に置く（画面の高さに対する上の余白の割合。0.34 で主人公は上から約 67% の高さ。ポケモン GO の手本と同じくらい）
 // 下に置くと画面の上に遠くまで映り、描画距離が無いと寄ったときの描く量が 1.5〜2.4 倍になった（2026-11-24 夕、オーナー「重くなった」）。
