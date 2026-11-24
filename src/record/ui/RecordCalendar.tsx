@@ -72,7 +72,6 @@ export function RecordCalendar({ visits, mine, month: first, today, selected, on
             <button key={d.day} type="button" className={cls} aria-label={`${Number(d.day.slice(5, 7))}月${d.date}日 ${list.length}軒 ${list[0].name}`} aria-pressed={d.day === picked} onClick={() => setPicked(d.day)}>
               <img src={c.src} alt="" className={c.photo ? 'is-photo' : 'is-kind'} />
               <span className="rcal__num">{d.date}</span>
-              {list.length > 1 && <i>{list.length}</i>}
             </button>
           )
         })}
