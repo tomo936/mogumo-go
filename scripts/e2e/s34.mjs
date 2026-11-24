@@ -36,4 +36,14 @@ await p.getByRole('button', { name: '記録', exact: true }).click({ timeout: 80
 await shot(p, `${P}-rec-top`)
 await p.mouse.move(195, 600); await p.mouse.wheel(0, 650); await W(1500); await shot(p, `${P}-rec-mid`)
 await p.mouse.wheel(0, 900); await W(1500); await shot(p, `${P}-rec-bottom`)
+try {
+  await p.getByRole('button', { name: 'カレンダー' }).click(); await W(2000); await shot(p, `${P}-rec-cal`)
+  await p.locator('.rcal button.rcal__d').first().click(); await W(2500); await shot(p, `${P}-rec-after-cal`)
+  await p.getByRole('tab', { name: 'じっせき' }).click(); await W(3000); await shot(p, `${P}-rec-badges`)
+  await p.locator('.rc__back').click(); await W(1500)
+  await p.getByRole('button', { name: 'メニュー' }).click({ timeout: 8000 }); await W(1500)
+  await p.getByRole('button', { name: '図鑑', exact: true }).click({ timeout: 8000 }); await W(6000)
+  await p.getByRole('button', { name: 'すべて', exact: true }).click(); await W(2000); await shot(p, `${P}-zukan-all`)
+  await p.getByRole('button', { name: /^訪問済み/ }).click(); await W(2000); await shot(p, `${P}-zukan-done`)
+} catch (e) { console.log('FAIL extra', String(e).split('\n')[0].slice(0, 100)) }
 console.log('done'); process.exit(0)
