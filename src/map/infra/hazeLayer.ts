@@ -8,11 +8,11 @@ import type { LatLng } from '../domain/geo.ts'
 
 export const HAZE_LAYER = 'haze'
 
-export function createHazeLayer(opts: { active: () => boolean; drawM: () => number; color: () => string }) {
+export function createHazeLayer(opts: { active: () => boolean; range: () => { inner: number; outer: number }; color: () => string }) {
   let map: MapLibreMap | null = null
   let mesh: THREE.Mesh | null = null
   const uniforms = {
-    color: { value: new THREE.Color('#dff0f8') },
+    color: { value: new THREE.Color().setStyle('#dff0f8', THREE.LinearSRGBColorSpace) },
     inner: { value: 200 }, // ここから霞が始まる（m）
     outer: { value: 500 }, // ここで霞が濃さ 1（m）
   }
@@ -58,11 +58,12 @@ export function createHazeLayer(opts: { active: () => boolean; drawM: () => numb
     },
     origin(): LatLng | null {
       if (!map || !mesh || !opts.active()) return null
-      const r = opts.drawM()
-      uniforms.inner.value = r * 0.42
-      uniforms.outer.value = r * 0.98
-      uniforms.color.value.set(opts.color())
-      mesh.scale.set(r * 1.6, 1, r * 1.6) // 境目の外まで覆う（遠い面で切れる）
+      const { inner, outer } = opts.range()
+      uniforms.inner.value = inner
+      uniforms.outer.value = outer
+      // 自前のシェーダーは色を画面の色に戻さないので、受け取った色をそのまま渡す（そのまま set すると計算用の値に変わり、夜は空より暗い帯になっていた。2026-11-24 実測 (11,15,41)）
+      uniforms.color.value.setStyle(opts.color(), THREE.LinearSRGBColorSpace)
+      mesh.scale.set(outer * 1.6, 1, outer * 1.6) // 地面の端の外まで覆う（遠い面で切れる）
       const c = map.getCenter()
       return { lat: c.lat, lng: c.lng }
     },

@@ -89,6 +89,7 @@ const TAP_MAX_MOVE_PX = 10
 const TAP_MAX_MS = 300
 const POSITION_EVERY_MS = 250
 const TAP_ZOOM_STEP = 0.6
+const HAZE_BAND_M = 280 // 地面の端の手前から霞に溶かす幅（m。端が近いときは端までの 58%）
 const PITCH_LIMIT_FROM = 56 // これより深く傾いたときだけ描画距離を効かせる（本番の傾き 55 度までは今までどおり）
 const INTRO_RISE_ZOOM = 3 // 地図へ入る演出: いつもよりどれだけ高い所から始めるか（霧の雲の海の上空）
 const INTRO_MS = 2400
@@ -286,9 +287,11 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     // 空は地図の「後ろ」（入れ物の地）に描く。地図が何も描かない描画距離の先にだけ見え、手前の建物・札・ピンは覆わない
     // （2026-11-24 デグレ: 前は空を地図の上に重ねていて、手前の駅の名前やピンまで霞んでいた）。
     // 描画距離の先にあるピン・札は、空に浮かないよう隠す（ピンの層は描画距離で切れないため）
-    let hazeOn = false // 描画距離が効いているときだけ、遠くの地面に霧を敷く
+    let hazeOn = false // 地面の端が見えるとき、遠くの地面に霧を敷く
     let hazeColor = '#dff0f8'
-    const haze = createHazeLayer({ active: () => hazeOn, drawM: () => drawM, color: () => hazeColor })
+    let hazeInner = 200 // 霧が始まる距離（m）
+    let hazeOuter = 490 // 霧が地平線の色になる距離（m）
+    const haze = createHazeLayer({ active: () => hazeOn, range: () => ({ inner: hazeInner, outer: hazeOuter }), color: () => hazeColor })
     map.on('load', () => map.addLayer(haze, map.getLayer(PIN_LAYER) ? PIN_LAYER : undefined))
     let pinsLimited = false
     const unlimitPins = () => {
@@ -333,30 +336,40 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       }
       pinsLimited = true
     }
+    // 地面の端（地図が描く地面のいちばん遠い所）に霧をかける。端が画面に入るのは、
+    //  - 寄った倍率（傾き 55 度より深い）: 描画距離 drawM で切った所
+    //  - それ以外: 地図の仕組みがもともと持っている遠さの限り（主人公を下に置いたので、倍率 17 でも端が見える。2026-11-24 デグレ）
+    // どちらでも、端の手前 HAZE_BAND_M から霞に溶かし、端で空の地平線の色にする（地面・3D の模型の両方）
     const limitFar = () => {
       const t = farTransform()
       if (!t?.overrideNearFarZ) return
       t.clearNearFarZOverride()
-      // 傾きが本番（55 度）より深い倍率だけに効かせる。引いた倍率・普段の倍率は今までどおり（画面の上が抜けないように）
-      hazeOn = false
-      setMapFog(null)
-      if (map.getPitch() <= PITCH_LIMIT_FROM) return unlimitPins()
-      const far = (t.cameraToCenterDistance + drawM * t.pixelsPerMeter * Math.sin(t.pitchInRadians)) * 1.01
-      if (far >= t.farZ) return unlimitPins()
+      const sinP = Math.sin(t.pitchInRadians)
+      if (sinP < 0.05) {
+        hazeOn = false
+        setMapFog(null)
+        return unlimitPins()
+      }
+      const depthAt = (d: number) => t.cameraToCenterDistance + d * t.pixelsPerMeter * sinP
+      // 地図の仕組みが決めた遠さ（farZ）から、地面の端までの距離（m）を逆算する（farZ ≒ (カメラから真ん中 + 端までの距離×sin(傾き))×1.01）
+      const defaultEnd = (t.farZ / 1.01 - t.cameraToCenterDistance) / (t.pixelsPerMeter * sinP)
+      const limited = map.getPitch() > PITCH_LIMIT_FROM && drawM < defaultEnd
+      const end = limited ? drawM : defaultEnd
+      if (limited) t.overrideNearFarZ(t.height / 50, depthAt(drawM) * 1.01)
       hazeOn = true
       hazeColor = container.dataset.night === '1' ? '#3a4470' : '#dff0f8' // 空の地平線の色（map.css の .map-view と同じ）
-      // 3D の模型の霧: 地面の霧の輪（hazeLayer: 半径の 42% から 98%）と同じ距離。奥行きは「主人公から d m 先の地面」の奥行き
-      const depthAt = (d: number) => t.cameraToCenterDistance + d * t.pixelsPerMeter * Math.sin(t.pitchInRadians)
-      setMapFog({ color: hazeColor, near: depthAt(drawM * 0.42), far: depthAt(drawM * 0.98) })
-      t.overrideNearFarZ(t.height / 50, far)
-      // 境目の画面の高さ: 地図の真ん中から、向いている方角へ drawM 進んだ地面の点
+      hazeOuter = end * 0.98
+      hazeInner = end - Math.min(end * 0.58, HAZE_BAND_M)
+      setMapFog({ color: hazeColor, near: depthAt(hazeInner), far: depthAt(hazeOuter) })
+      // 地面の端の画面の高さ（空の地平線の高さ）: 地図の真ん中から、向いている方角へ end 進んだ地面の点
       const c = map.getCenter()
       const b = (map.getBearing() * Math.PI) / 180
-      const dLat = (drawM * Math.cos(b)) / 111_320
-      const dLng = (drawM * Math.sin(b)) / (111_320 * Math.cos((c.lat * Math.PI) / 180))
+      const dLat = (end * Math.cos(b)) / 111_320
+      const dLng = (end * Math.sin(b)) / (111_320 * Math.cos((c.lat * Math.PI) / 180))
       const y = map.project([c.lng + dLng, c.lat + dLat]).y
-      container.style.setProperty('--cut', `${Math.max(0, Math.round(y))}px`) // 空の地平線の高さ
-      limitPins(y)
+      container.style.setProperty('--cut', `${Math.max(0, Math.round(y))}px`)
+      if (limited) limitPins(y)
+      else unlimitPins()
     }
     // 測る口（?debug のときだけ）: 描画距離と霧が効いているか
     if (new URLSearchParams(window.location.search).has('debug')) {
