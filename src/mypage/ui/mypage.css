@@ -113,17 +113,18 @@
   color: #c2652a;
 }
 .mp__lvbar {
+  /* 進み具合の棒の決まり（2026-11-24 土台の統一）。緑は Web っぽいのでやめ、アプリの橙に（地図の左上の Lv の輪と同じ） */
   height: 8px;
   margin: 5px 0 3px;
-  border-radius: 4px;
-  background: #efe3cc;
+  border-radius: 99px;
+  background: #f1e4cc;
   overflow: hidden;
 }
 .mp__lvbar i {
   display: block;
   height: 100%;
-  border-radius: 4px;
-  background: #6cbf93;
+  border-radius: 99px;
+  background: #e8782f;
 }
 .mp__who small {
   font-size: 12px;

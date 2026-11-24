@@ -210,15 +210,15 @@
 .bd__rowbar {
   display: block;
   flex-basis: 100%;
-  height: 4px;
+  height: 6px;
   margin-top: 4px;
   border-radius: 99px;
-  background: #efe2c8;
+  background: #f1e4cc;
   overflow: hidden;
 }
 .bd__rowbar i {
   display: block;
   height: 100%;
   border-radius: 99px;
-  background: #e8a26b;
+  background: #e8782f;
 }

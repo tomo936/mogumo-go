@@ -96,6 +96,6 @@ button.wm-band{font:inherit;cursor:pointer;text-align:left}
 .wm-town__name small{font-size:12px;color:#7a5a3a}
 .wm-town__name em{font-style:normal;padding:1px 7px;border-radius:999px;background:#a2561b;color:#fff;font-size:11px;font-weight:800}
 .wm-town__num{font-size:13px;font-weight:800;color:#a2561b}
-.wm-town__bar{display:block;flex-basis:100%;height:5px;border-radius:99px;background:#f1e4cc;overflow:hidden}
+.wm-town__bar{display:block;flex-basis:100%;height:6px;border-radius:99px;background:#f1e4cc;overflow:hidden}
 .wm-town__bar i{display:block;height:100%;border-radius:99px;background:#e8782f}
 .wm-town__goal{font-size:12px;color:#7a5a3a}

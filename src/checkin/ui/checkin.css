@@ -898,10 +898,12 @@
   color: #7a6450;
 }
 .shop-record__bar {
-  background: #efe3cc;
+  background: #f1e4cc; /* 進み具合の棒の決まり（2026-11-24 土台の統一）: 地 #f1e4cc・中身 #e8782f・角は丸く */
+  border-radius: 99px;
 }
 .shop-record__bar i {
-  background: #e57a35;
+  background: #e8782f;
+  border-radius: 99px;
 }
 
 /* 2026-11-10 オーナー「ちょっとでかい」「上にあげるカードのように、画面外にまだあるようなイメージ」:
