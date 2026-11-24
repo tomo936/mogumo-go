@@ -101,6 +101,11 @@
   color: #a2561b; /* 明るさの差 5.3（#c2652a は 3.8。18px の太字は 4.5 が要る。レビュー 2026-11-24） */
 }
 .rc__slider-head button {
+  /* 矢印は絵で、丸の真ん中に（字の ‹ › は下にずれていた。2026-11-24）。共通の button の余白で横に伸びないよう padding 0 */
+  display: grid;
+  place-items: center;
+  flex: none;
+  padding: 0;
   width: 34px;
   height: 34px;
   border: 0;
@@ -565,6 +570,9 @@
   color: #a2561b;
 }
 .rcal__month button {
+  display: grid;
+  place-items: center;
+  padding: 0;
   width: 44px;
   height: 44px;
   border: 0;
@@ -745,61 +753,3 @@
   box-shadow: 0 3px 0 rgba(122, 74, 38, 0.25);
 }
 
-/* 行ったお店の見出しと、並べ方の切り替え（2026-11-24。記録の上のタブと同じ作りの小さい版） */
-.rc__listhead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.rc__listmode {
-  display: flex;
-  padding: 3px;
-  border-radius: 999px;
-  background: #e8dcc4;
-}
-.rc__listmode button {
-  position: relative;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 999px;
-  background: none;
-  color: #7a5a3a;
-  font-size: 13px;
-  font-weight: 800;
-}
-.rc__listmode button::after {
-  content: '';
-  position: absolute;
-  inset: -6px 0; /* 押せる高さ 44px */
-}
-.rc__listmode button.is-on {
-  background: #fffdf7;
-  color: #a2561b;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
-}
-/* 町ごとのまとまり */
-.rc__town {
-  margin-bottom: 14px;
-}
-.rc__townhead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
-  margin: 6px 4px 8px;
-}
-.rc__townhead b {
-  font-size: 16px;
-  color: #5a3a1e;
-}
-.rc__townhead span {
-  font-size: 13px;
-  font-weight: 800;
-  color: #a2561b;
-}
-.rc__townhead small {
-  font-size: 12px;
-  color: #7a5a3a;
-}

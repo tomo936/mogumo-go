@@ -23,8 +23,6 @@ import { eatStats } from '../domain/eatStats.ts'
 import { areaKm2At, areaTimeline } from '../../towns/domain/area.ts'
 import type { ClearedTown } from '../../towns/domain/shape.ts'
 import type { TownSync } from '../../towns/domain/progress.ts'
-import { nextGoal } from '../../towns/domain/progress.ts'
-import { groupByTown } from '../domain/byTown.ts'
 import { loadTownShapes, syncUntilSettled } from '../../towns/infra/townsApi.ts'
 import type { OutlineTown } from '../../towns/domain/outline.ts'
 import type { Geometry } from '../../towns/domain/shape.ts'
@@ -71,7 +69,6 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
   const [tab, setTab] = useState<RecordTab>(initialTab)
   const [byStep, setByStep] = useState(false) // 日付を ‹ › で送ったときだけ、晴れる動きを見せる（スライダーは引いたぶんをすぐ反映）
   const [showRange, setShowRange] = useState(false) // 「町の範囲」（行った町の境目と名前）を地図に出すか
-  const [listMode, setListMode] = useState<'day' | 'town'>('day') // 行ったお店の並べ方（日付順｜町ごと。2026-11-24）
   const [shapes, setShapes] = useState<Map<string, { name: string; geom: Geometry; bbox: OutlineTown['bbox'] }> | null>(null)
   const [worldOpen, setWorldOpen] = useState(false) // ワールドマップ（日本全体）を重ねて出す
   const [place, setPlace] = useState<{ name: string; center: LatLng; zoom: number; townId?: string } | null>(null) // 飛んだ先（見るだけ）
@@ -115,7 +112,7 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
   const progressIds = townState.status === 'ready' ? townState.towns.map((x) => x.id).join('|') : ''
   const loadedShapes = useRef(new Map<string, unknown>()) // 読み終えた町（増えた分だけ読む）
   useEffect(() => {
-    if ((!showRange && listMode !== 'town') || progressIds === '') return
+    if (!showRange || progressIds === '') return
     const want = progressIds.split('|').filter((id) => !loadedShapes.current.has(id))
     if (want.length === 0) return
     const closed = new AbortController()
@@ -129,7 +126,7 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
         if (!closed.signal.aborted) setShowRange(false) // 読めなければスイッチを戻す（押したのに何も出ない状態にしない）
       })
     return () => closed.abort()
-  }, [showRange, listMode, progressIds])
+  }, [showRange, progressIds])
 
   const cells = state.status === 'ready' ? state.cells : NO_CELLS
   const visits = state.status === 'ready' ? state.visits : NO_VISITS
@@ -223,12 +220,12 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
           {range !== null && (
             <div className="rc__slider">
               <div className="rc__slider-head">
-                <button type="button" aria-label="前の行った日" onClick={() => { setByStep(true); setT(stepVisitDay(now, -1, visits, range)) }}>‹</button>
+                <button type="button" aria-label="前の行った日" onClick={() => { setByStep(true); setT(stepVisitDay(now, -1, visits, range)) }}><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
                 <b>
                   <Icon name="calendar" size={18} />
                   {today.length > 0 ? `${dayWithWeek(now)}　${today.length}軒` : dayWithWeek(now)}
                 </b>
-                <button type="button" aria-label="次の行った日" onClick={() => { setByStep(true); setT(stepVisitDay(now, 1, visits, range)) }}>›</button>
+                <button type="button" aria-label="次の行った日" onClick={() => { setByStep(true); setT(stepVisitDay(now, 1, visits, range)) }}><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
               </div>
               <input
                 type="range"
@@ -289,35 +286,9 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
           <h3 className="rc__h">町のクリア・コンプリート</h3>
           <TownList state={townState} />
 
-          <div className="rc__listhead">
-            <h3 className="rc__h">行ったお店</h3>
-            {/* 日付順 ｜ 町ごと（2026-11-24 外のレビューの案「行った日｜エリア別」） */}
-            <div className="rc__listmode" role="group" aria-label="並べ方">
-              <button type="button" aria-pressed={listMode === 'day'} className={listMode === 'day' ? 'is-on' : ''} onClick={() => setListMode('day')}>日付順</button>
-              <button type="button" aria-pressed={listMode === 'town'} className={listMode === 'town' ? 'is-on' : ''} onClick={() => setListMode('town')}>町ごと</button>
-            </div>
-          </div>
+          <h3 className="rc__h">行ったお店</h3>
           {history.length === 0 ? (
             <p className="rc__note">この日までに行ったお店はありません</p>
-          ) : listMode === 'town' ? (
-            !shapes && progressIds !== '' ? (
-              <p className="rc__note">町を読み込んでいます…</p>
-            ) : (
-              groupByTown(history.flatMap((g) => g.items), [...(shapes ?? [])].map(([id, x]) => ({ id, ...x }))).map((g) => {
-                const prog = g.id && townState.status === 'ready' ? townState.towns.find((x) => x.id === g.id) : undefined
-                const goal = prog ? nextGoal(prog) : null
-                return (
-                  <div key={g.id ?? 'other'} className="rc__town">
-                    <div className="rc__townhead">
-                      <b>{g.name}</b>
-                      <span>{prog ? `${prog.visited} / ${prog.total} 軒${prog.completedAt !== null ? '・コンプリート' : prog.clearedAt !== null ? '・クリア' : ''}` : `${g.items.length} 回`}</span>
-                      {goal && <small>{goal.to === 'clear' ? 'クリアまで' : 'コンプリートまで'}あと {goal.left} 軒</small>}
-                    </div>
-                    {g.items.map((v, i) => <VisitRow key={`${v.shopId}-${v.day}-${i}`} v={v} mine={mine} />)}
-                  </div>
-                )
-              })
-            )
           ) : (
             history.map((g) => (
               <div key={g.month}>
@@ -375,6 +346,8 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
 
 // お店の小さい写真。写真が無いお店は種類の絵（2026-11-24 外のレビューの案「行ったお店に写真と種類」）
 function Thumb({ photoUrl, kind }: { photoUrl: string | null; kind: VisitEntry['kind'] }) {
+  // 写真が無い行は画像を出さない（種類の絵は右の種類の札と同じことを言うだけ。2026-11-24 オーナー「画像いる？」）
+  if (!photoUrl) return null
   return (
     <span className={`rc__thumb${photoUrl ? '' : ' rc__thumb--kind'}`}>
       {/* 写真の期限付き URL が切れて読めないときは種類の絵に戻す */}

@@ -54,9 +54,9 @@ export function RecordCalendar({ visits, mine, month: first, today, selected, on
         <h2>カレンダー</h2>
       </header>
       <div className="rcal__month">
-        <button type="button" aria-label="前の月" onClick={() => setMonth(addMonths(month, -1))}>‹</button>
+        <button type="button" aria-label="前の月" onClick={() => setMonth(addMonths(month, -1))}><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
         <b>{`${month.slice(0, 4)}年${Number(month.slice(5))}月`}</b>
-        <button type="button" aria-label="次の月" disabled={month >= today.slice(0, 7)} onClick={() => setMonth(addMonths(month, 1))}>›</button>
+        <button type="button" aria-label="次の月" disabled={month >= today.slice(0, 7)} onClick={() => setMonth(addMonths(month, 1))}><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
       </div>
       <p className="rcal__sum">{inMonth > 0 ? `この月は ${inMonth} 回のチェックイン` : 'この月のチェックインはありません'}</p>
       <div className="rcal__grid" role="grid">
@@ -82,9 +82,11 @@ export function RecordCalendar({ visits, mine, month: first, today, selected, on
           <h3>{`${Number(picked.slice(5, 7))}月${Number(picked.slice(8))}日に行ったお店`}</h3>
           {dayList.map((v) => (
             <div key={`${v.shopId}-${v.at}`} className="rcal__item">
-              <span className={`rcal__thumb${photoOf(v) ? '' : ' is-kind'}`}>
-                <img src={photoOf(v) ?? kindIcon(v.kind)} alt="" />
-              </span>
+              {photoOf(v) && (
+                <span className="rcal__thumb">
+                  <img src={photoOf(v)!} alt="" />
+                </span>
+              )}
               <div className="rcal__item-main">
                 <b>{v.name}</b>
                 <span>
