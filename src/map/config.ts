@@ -9,7 +9,9 @@ export const PITCH = 55 // 倍率 17（はじめの倍率）の傾き。ほか�
 export const PITCH_BY_ZOOM: readonly (readonly [number, number])[] = [[14, 0], [16, 40], [17, PITCH], [18, 59], [19, 62]]
 export const MAX_PITCH = 75
 // 主人公を画面の真ん中より下に置く（画面の高さに対する上の余白の割合。0.34 で主人公は上から約 67% の高さ。ポケモン GO の手本と同じくらい）
-export const AVATAR_PAD_TOP = 0.34
+// 2026-11-24 夕: 0.34 にすると上の端に映る地面が 2〜3 倍遠くなり（倍率 17 で 674m → 1307m、19 で 288m → 893m）、
+// 描くタイルが 1.5 倍に増えて重くなった（オーナー「前の方が動きは絶対良かった」）。原因が分かるまで 0（前と同じ真ん中）に戻す
+export const AVATAR_PAD_TOP = 0
 export const MIN_ZOOM = 16
 export const MAX_ZOOM = 19 // 2026-11-16 オーナー「もっとズームできるように」（A13）→ 20 は「できすぎ」で 19。地図のタイルは 14 までなので、それより上は拡大表示
 export const INITIAL_ZOOM = 17
