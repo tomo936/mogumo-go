@@ -400,43 +400,22 @@
   white-space: nowrap;
 }
 
-/* 描画距離の境目より上の空と、境目の霞（2026-11-24）。上は空、地平線は霞（不透明で境目を隠す）、手前へうすく溶ける。
-   昼は青空、夜は星空（オーナー「空が燃えていて終末感」）。--cut は境目の高さ（px）。地図の上・ピンの上、上の部品（HUD）の下 */
-.map-farsky {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  z-index: 2;
-  display: none;
-  pointer-events: none;
-  background: linear-gradient(
-    to bottom,
-    #7cc3ec 0,
-    #a9d8f2 calc(var(--cut, 300px) * 0.55),
-    #d6ecf7 calc(var(--cut, 300px) - 40px),
-    #e9f4f8 var(--cut, 300px),
-    rgba(233, 244, 248, 0) 100%
-  );
+/* 空（2026-11-24 作り直し）。地図の入れ物の地に描くので、地図が何も描かない描画距離の先にだけ見え、手前の建物・札・ピンは覆わない。
+   --cut は描画距離の境目の画面の高さ（MapView が入れる）。昼は青空で地平線が淡く、夜は紺の星空 */
+.map-view {
+  background: linear-gradient(to bottom, #7cc3ec 0, #a9d8f2 calc(var(--cut, 300px) * 0.6), #dff0f8 var(--cut, 300px), #dff0f8 100%);
 }
-[data-night='1'] .map-farsky {
-  background: linear-gradient(
-    to bottom,
-    #121a3d 0,
-    #1f2a58 calc(var(--cut, 300px) * 0.6),
-    #33406c calc(var(--cut, 300px) - 40px),
-    #3a4470 var(--cut, 300px),
-    rgba(58, 68, 112, 0) 100%
-  );
+.map-view[data-night='1'] {
+  background: linear-gradient(to bottom, #121a3d 0, #1f2a58 calc(var(--cut, 300px) * 0.6), #3a4470 var(--cut, 300px), #3a4470 100%);
 }
-/* 夜の星（空の部分だけ。地平線の近くは出さない） */
-[data-night='1'] .map-farsky::before {
+.map-view[data-night='1']::before {
   content: '';
   position: absolute;
   left: 0;
   right: 0;
   top: 0;
-  height: calc(var(--cut, 300px) * 0.7);
+  height: calc(var(--cut, 300px) * 0.75);
+  pointer-events: none;
   background-image:
     radial-gradient(1.4px 1.4px at 12% 18%, #fff 98%, transparent),
     radial-gradient(1px 1px at 33% 42%, #fff 98%, transparent),

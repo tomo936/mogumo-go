@@ -1,3 +1,4 @@
+import { PIN_LAYER } from '../../shops/infra/shopPins.ts'
 import { pitchForZoom } from '../domain/camera.ts'
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef } from 'react'
 import type { Ref } from 'react'
@@ -86,7 +87,6 @@ const TAP_MAX_MOVE_PX = 10
 const TAP_MAX_MS = 300
 const POSITION_EVERY_MS = 250
 const TAP_ZOOM_STEP = 0.6
-const HAZE_BELOW_PX = 64 // 境目から手前へ霞を溶かす幅
 const PITCH_LIMIT_FROM = 56 // これより深く傾いたときだけ描画距離を効かせる（本番の傾き 55 度までは今までどおり）
 const INTRO_RISE_ZOOM = 3 // 地図へ入る演出: いつもよりどれだけ高い所から始めるか（霧の雲の海の上空）
 const INTRO_MS = 2400
@@ -204,7 +204,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     const setSky = (t: typeof theme) => {
       const night = t === THEMES.illustNight
       container.dataset.night = night ? '1' : '0'
-      container.style.background = night ? '#3a4470' : '#e9f4f8' // 霞の色（境目の先に見える）
+      container.style.background = '' // 空の色は CSS（.map-view と data-night）
     }
     setSky(theme)
     // 描く細かさ: ?dpr=N で試せる。無ければ config の上限（null なら端末のまま）
@@ -281,19 +281,40 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     type FarTransform = { cameraToCenterDistance: number; pixelsPerMeter: number; pitchInRadians: number; height: number; farZ: number; overrideNearFarZ: (n: number, f: number) => void; clearNearFarZOverride: () => void }
     // MapLibre 6 は、カメラの変換を内側の _camera に持つ（公開の型には無い口。上げたら確かめる。scripts/e2e/s36.mjs で効き目を測れる）
     const farTransform = () => (map as unknown as { _camera?: { transform?: FarTransform }; transform?: FarTransform })._camera?.transform ?? (map as unknown as { transform?: FarTransform }).transform
-    // 境目より上は空の色の幕で覆う（ピンは地図とは別に描くので、遠い面で切れずに空に浮いてしまう。2026-11-24 デグレ）。
-    // 幕の下の端はぼかして、遠くが霧に消えるように見せる
-    const farSky = document.createElement('div')
-    farSky.className = 'map-farsky'
-    container.appendChild(farSky)
+    // 空は地図の「後ろ」（入れ物の地）に描く。地図が何も描かない描画距離の先にだけ見え、手前の建物・札・ピンは覆わない
+    // （2026-11-24 デグレ: 前は空を地図の上に重ねていて、手前の駅の名前やピンまで霞んでいた）。
+    // 描画距離の先にあるピン・札は、空に浮かないよう隠す（ピンの層は描画距離で切れないため）
+    let pinsLimited = false
+    const unlimitPins = () => {
+      if (!pinsLimited) return
+      pinsLimited = false
+      if (map.getLayer(PIN_LAYER)) map.setFilter(PIN_LAYER, null)
+      for (const el of container.querySelectorAll<HTMLElement>('.maplibregl-marker')) el.style.visibility = ''
+    }
+    const limitPins = (cutY: number) => {
+      // 1 軒のピン（地図の層）: 主人公から drawM の円の中だけ
+      const c = map.getCenter()
+      const ring: [number, number][] = []
+      for (let i = 0; i <= 32; i++) {
+        const a = (i / 32) * Math.PI * 2
+        ring.push([c.lng + (drawM * Math.sin(a)) / (111_320 * Math.cos((c.lat * Math.PI) / 180)), c.lat + (drawM * Math.cos(a)) / 111_320])
+      }
+      if (map.getLayer(PIN_LAYER)) map.setFilter(PIN_LAYER, ['within', { type: 'Polygon', coordinates: [ring] }])
+      // ビル・施設の札（HTML）: 画面で境目より上に出るものは隠す
+      for (const el of container.querySelectorAll<HTMLElement>('.maplibregl-marker')) {
+        const r = el.getBoundingClientRect()
+        el.style.visibility = r.bottom < cutY ? 'hidden' : ''
+      }
+      pinsLimited = true
+    }
     const limitFar = () => {
       const t = farTransform()
       if (!t?.overrideNearFarZ) return
       t.clearNearFarZOverride()
       // 傾きが本番（55 度）より深い倍率だけに効かせる。引いた倍率・普段の倍率は今までどおり（画面の上が抜けないように）
-      if (map.getPitch() <= PITCH_LIMIT_FROM) return void (farSky.style.display = 'none')
+      if (map.getPitch() <= PITCH_LIMIT_FROM) return unlimitPins()
       const far = (t.cameraToCenterDistance + drawM * t.pixelsPerMeter * Math.sin(t.pitchInRadians)) * 1.01
-      if (far >= t.farZ) return void (farSky.style.display = 'none')
+      if (far >= t.farZ) return unlimitPins()
       t.overrideNearFarZ(t.height / 50, far)
       // 境目の画面の高さ: 地図の真ん中から、向いている方角へ drawM 進んだ地面の点
       const c = map.getCenter()
@@ -301,10 +322,8 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       const dLat = (drawM * Math.cos(b)) / 111_320
       const dLng = (drawM * Math.sin(b)) / (111_320 * Math.cos((c.lat * Math.PI) / 180))
       const y = map.project([c.lng + dLng, c.lat + dLat]).y
-      farSky.style.display = 'block'
-      // 幕は境目より少し下まで伸ばし、境目は不透明な霞で隠す（地面が途切れる線を見せない）。霞は手前へうすく溶ける
-      farSky.style.height = `${Math.max(0, Math.round(y + HAZE_BELOW_PX))}px`
-      farSky.style.setProperty('--cut', `${Math.max(0, Math.round(y))}px`)
+      container.style.setProperty('--cut', `${Math.max(0, Math.round(y))}px`) // 空の地平線の高さ
+      limitPins(y)
     }
     map.on('move', limitFar)
     map.on('resize', limitFar)
