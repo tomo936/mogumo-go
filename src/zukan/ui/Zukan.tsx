@@ -38,7 +38,7 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null, ini
   const [detail, setDetail] = useState<{ shop: ZukanShop; no: string } | null>(null)
   const [state, setState] = useState<{ status: 'loading' } | { status: 'error' } | { status: 'ready'; shops: ZukanShop[] }>({ status: 'loading' })
   // 'all' = すべての種類（2026-11-24 図鑑の充実）
-  const [kind, setKind] = useState<ShopKind | 'all'>('ramen')
+  const [kind, setKind] = useState<ShopKind | 'all'>('all') // 開いたら「すべて」（2026-11-24 オーナー「必ずラーメン始まりになっている」）
   // 行った / まだ の絞り込み（2026-11-24 図鑑の充実）
   const [filter, setFilter] = useState<'all' | 'done' | 'yet'>('all')
   const [page, setPage] = useState(0)

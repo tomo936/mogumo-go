@@ -150,12 +150,13 @@ test('「ワールドマップ」を押すと日本地図が重なり、戻る�
   expect(screen.queryByText('world-close')).toBeNull()
 })
 
-test('自分の感想があるお店は、行の日付の横に自分の星を出す（2026-11-24 記録を思い出に）', async () => {
+test('感想を書いた訪問（チェックイン）の行にだけ、自分の星を出す（同じお店の別の日には出さない。2026-11-24）', async () => {
   mineReviews.mockResolvedValueOnce([{ id: 'r1', checkinId: 'c1', shopId: 'hp:A', userId: 'me', stars: 4, body: null, photoPath: null, isPublic: true, createdAt: '2026-10-05T04:00:00Z', nickname: null }])
-  load.mockResolvedValueOnce({ cells, visits, towns: [] })
+  const again: VisitEntry = { ...visits[0], day: '2026-11-03', at: Date.parse('2026-11-03T05:00:00Z'), checkinId: 'c9' }
+  load.mockResolvedValueOnce({ cells, visits: [{ ...visits[0], checkinId: 'c1' }, visits[1], again], towns: [] })
   render(<Record home={null} onClose={() => {}} />)
   expect(await screen.findByLabelText('自分の星 4')).toHaveTextContent('★★★★')
-  expect(screen.queryByLabelText(/自分の星 /, { selector: '[aria-label="自分の星 0"]' })).not.toBeInTheDocument()
+  expect(screen.getAllByLabelText(/自分の星/)).toHaveLength(1) // 11/3 に行った同じお店（感想なし）には出ない
 })
 
 test('じっせきの上に、食べ歩きプロフィール（行ったお店・回数・種類・いちばん行った種類）を出す（2026-11-24）', async () => {

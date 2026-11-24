@@ -144,7 +144,7 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
     })
   }, [showRange, shapes, townState, towns])
   const area = useMemo(() => areaTimeline(cells, towns), [cells, towns])
-  // 自分の感想（お店ごとに新しいもの 1 つ）: 行ったお店の行に、自分の写真と星を出す（2026-11-24 記録を思い出に）。読めなければ出さないだけ
+  // 自分の感想（チェックインごと）: 行ったお店の行に、その訪問の写真と星を出す（2026-11-24 記録を思い出に）。読めなければ出さないだけ
   const [mine, setMine] = useState<Map<string, { stars: number; photo: string | null }>>(new Map())
   useEffect(() => {
     if (state.status !== 'ready') return
@@ -152,17 +152,12 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
     void (async () => {
       try {
         const list = await loadAllMine()
-        // 星は新しい感想、写真は写真のある感想のうち新しいもの（レビュー 2026-11-24: 新しい方に写真が無いと古い写真が出なかった）
-        const latest = new Map<string, (typeof list)[number]>()
-        const photoOf = new Map<string, string>()
-        for (const rv of list) {
-          if (!latest.has(rv.shopId)) latest.set(rv.shopId, rv)
-          if (rv.photoPath && !photoOf.has(rv.shopId)) photoOf.set(rv.shopId, rv.photoPath)
-        }
-        const paths = [...photoOf.values()]
+        // 感想はチェックインごと。その訪問（チェックイン）の感想の星と写真だけを出す
+        // （2026-11-24 オーナー「感想を書いた日以外にも感想の写真が出ている」。お店ごとにまとめていたのが原因）
+        const paths = list.map((x) => x.photoPath).filter((x): x is string => x !== null)
         const urls = paths.length ? await photoUrls(paths).catch(() => new Map<string, string>()) : new Map<string, string>()
         if (!alive) return
-        setMine(new Map([...latest].map(([id, x]) => [id, { stars: x.stars, photo: urls.get(photoOf.get(id) ?? '') ?? null }])))
+        setMine(new Map(list.map((x) => [x.checkinId, { stars: x.stars, photo: x.photoPath ? urls.get(x.photoPath) ?? null : null }])))
       } catch {
         /* 感想が読めなくても記録はそのまま */
       }
@@ -268,12 +263,12 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
               {today.map((v, i) => (
                 <div className="rc__today-item" key={`${v.shopId}-${v.at}`}>
                   <span className="rc__today-num">{i + 1}</span>
-                  <Thumb photoUrl={mine.get(v.shopId)?.photo ?? v.photoUrl} kind={v.kind} />
+                  <Thumb photoUrl={mine.get(v.checkinId ?? '')?.photo ?? v.photoUrl} kind={v.kind} />
                   <div className="rc__item-main">
                     <b>{v.name}</b>
                     <span>
                       {timeLabel(v.at)}
-                      {mine.has(v.shopId) && <i className="rc__stars" aria-label={`自分の星 ${mine.get(v.shopId)?.stars}`}>{'★'.repeat(mine.get(v.shopId)?.stars ?? 0)}</i>}
+                      {mine.has(v.checkinId ?? '') && <i className="rc__stars" aria-label={`自分の星 ${mine.get(v.checkinId ?? '')?.stars}`}>{'★'.repeat(mine.get(v.checkinId ?? '')?.stars ?? 0)}</i>}
                     </span>
                   </div>
                   <span className="rc__kind">{KIND_LABEL[v.kind]}</span>
@@ -300,12 +295,12 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
                 <div className="rc__month">{g.month}</div>
                 {g.items.map((v, i) => (
                   <div className="rc__item" key={`${v.shopId}-${v.day}-${i}`}>
-                    <Thumb photoUrl={mine.get(v.shopId)?.photo ?? v.photoUrl} kind={v.kind} />
+                    <Thumb photoUrl={mine.get(v.checkinId ?? '')?.photo ?? v.photoUrl} kind={v.kind} />
                     <div className="rc__item-main">
                       <b>{v.name}</b>
                       <span>
                         {v.day.replaceAll('-', '.')}
-                        {mine.has(v.shopId) && <i className="rc__stars" aria-label={`自分の星 ${mine.get(v.shopId)?.stars}`}>{'★'.repeat(mine.get(v.shopId)?.stars ?? 0)}</i>}
+                        {mine.has(v.checkinId ?? '') && <i className="rc__stars" aria-label={`自分の星 ${mine.get(v.checkinId ?? '')?.stars}`}>{'★'.repeat(mine.get(v.checkinId ?? '')?.stars ?? 0)}</i>}
                       </span>
                     </div>
                     <span className="rc__kind">{KIND_LABEL[v.kind]}</span>

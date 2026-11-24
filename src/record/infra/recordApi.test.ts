@@ -25,7 +25,7 @@ describe('loadRecord', () => {
     // 名前が分からない店（hp:Z）は履歴に入れない。日付は日本時間（UTC 15:30 は翌日 11/3）
     expect(r.visits).toEqual([{
       shopId: 'hp:A', name: '麺屋A', kind: 'ramen', photoUrl: 'https://x/l.jpg', day: '2026-11-03',
-      at: Date.parse('2026-11-02T15:30:00Z'), lat: 35.6, lng: 139.6, wasHint: true, mysteryHint: true,
+      at: Date.parse('2026-11-02T15:30:00Z'), lat: 35.6, lng: 139.6, wasHint: true, mysteryHint: true, checkinId: 'c1',
     }])
   })
   it('位置の無いお店は lat・lng が null、気配の表が読めなくても履歴は出る', async () => {

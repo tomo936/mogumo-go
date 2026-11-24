@@ -182,9 +182,11 @@ test('「すべて」のタブは全部の種類、行った/まだ で絞り込
   const cafe: ZukanShop = { ...base, kind: 'cafe', id: 'hp:C', name: 'カフェC', catch: null, visits: { count: 1, firstDay: '2026-11-03', lastDay: '2026-11-03' } }
   load.mockResolvedValueOnce([visited, unknown, cafe])
   render(<Zukan onLocate={() => {}} onClose={() => {}} />)
-  await screen.findByLabelText('1/2 訪問済み')
+  // 開いたら「すべて」（2026-11-24 オーナー）
+  expect(await screen.findByLabelText('2/3 訪問済み')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: /ラーメン/ }))
+  expect(screen.getByLabelText('1/2 訪問済み')).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'すべて' }))
-  expect(screen.getByLabelText('2/3 訪問済み')).toBeInTheDocument()
   expect(screen.getByText('カフェC')).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: /^未訪問/ }))
   expect(screen.queryByText('カフェC')).not.toBeInTheDocument()

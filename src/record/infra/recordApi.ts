@@ -77,7 +77,7 @@ export async function loadRecord(client?: Client): Promise<{ cells: ClearedCell[
     const cid = str(r.checkin_id)
     visits.push({
       shopId: id, name: info.name, kind: kindFromHotpepper(info.code, info.name), photoUrl: photo, day: jstDay(at),
-      at: at.getTime(), lat: info.lat, lng: info.lng, wasHint: r.was_hint === true, mysteryHint: cid !== null && mysteryIds.has(cid),
+      at: at.getTime(), lat: info.lat, lng: info.lng, wasHint: r.was_hint === true, mysteryHint: cid !== null && mysteryIds.has(cid), checkinId: cid,
     })
   }
   return { cells, visits, towns }

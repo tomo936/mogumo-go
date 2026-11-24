@@ -6,10 +6,10 @@ import type { VisitEntry } from '../domain/timeline.ts'
 import { kindIcon } from '../../zukan/ui/cardArt.ts'
 import { KIND_LABEL } from '../../shops/domain/kindLabel.ts'
 
-type Mine = ReadonlyMap<string, { stars: number; photo: string | null }>
+type Mine = ReadonlyMap<string, { stars: number; photo: string | null }> // チェックインの番号ごと
 type Props = {
   visits: readonly VisitEntry[]
-  mine: Mine // 自分の感想（お店ごと）
+  mine: Mine // 自分の感想（チェックインごと）
   month: string // はじめに出す月 'YYYY-MM'
   today: string // 'YYYY-MM-DD'
   selected: string | null // 今見ている日
@@ -35,10 +35,10 @@ export function RecordCalendar({ visits, mine, month: first, today, selected, on
     }
     return m
   }, [visits])
-  const photoOf = (v: VisitEntry) => mine.get(v.shopId)?.photo ?? v.photoUrl
+  const photoOf = (v: VisitEntry) => mine.get(v.checkinId ?? '')?.photo ?? v.photoUrl
   // 升目の写真: その日の訪問のうち、写真のあるもの（自分の写真を優先）。無ければ最初のお店の種類の絵
   const cover = (list: VisitEntry[]) => {
-    const own = list.find((v) => mine.get(v.shopId)?.photo)
+    const own = list.find((v) => mine.get(v.checkinId ?? '')?.photo)
     const any = own ?? list.find((v) => v.photoUrl)
     return any ? { src: photoOf(any)!, photo: true } : { src: kindIcon(list[0].kind), photo: false }
   }
@@ -89,7 +89,7 @@ export function RecordCalendar({ visits, mine, month: first, today, selected, on
                 <b>{v.name}</b>
                 <span>
                   {time(v.at)}・{KIND_LABEL[v.kind]}
-                  {mine.has(v.shopId) && <i className="rc__stars">{'★'.repeat(mine.get(v.shopId)?.stars ?? 0)}</i>}
+                  {mine.has(v.checkinId ?? '') && <i className="rc__stars">{'★'.repeat(mine.get(v.checkinId ?? '')?.stars ?? 0)}</i>}
                 </span>
               </div>
             </div>

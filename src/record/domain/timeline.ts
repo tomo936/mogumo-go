@@ -18,6 +18,7 @@ export type VisitEntry = {
   lng: number | null
   wasHint: boolean // 気配のお店として行った
   mysteryHint: boolean // 謎の気配として行った
+  checkinId?: string | null // チェックインの番号（感想はチェックインごと。その日の感想の写真・星を結び付ける。2026-11-24）
 }
 
 export const DAY_MS = 86_400_000
