@@ -452,3 +452,80 @@
   color: #946300; /* 地 #fffdf7 との明るさの差 5.1 */
   letter-spacing: 1px;
 }
+
+/* 食べ歩きプロフィール（2026-11-24）。図鑑の進み具合の札と同じ地・縁 */
+.es {
+  margin: 0 2px 14px;
+  padding: 12px 14px 14px;
+  border: 2px solid #ead7b8;
+  border-radius: 14px;
+  background: #fffdf7;
+  color: #5a3a1e;
+}
+.es__title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 800;
+}
+.es__nums {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  text-align: center;
+}
+.es__nums b {
+  display: block;
+  font-size: 22px;
+  color: #a2561b;
+}
+.es__nums span {
+  font-size: 11px;
+  color: #7a5a3a;
+}
+.es__top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 4px;
+  font-size: 13px;
+}
+.es__top img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.es__top b {
+  color: #a2561b;
+}
+.es__months {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  align-items: end;
+  gap: 8px;
+  height: 104px;
+  margin-top: 10px;
+}
+.es__month {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+.es__month i {
+  display: block;
+  width: 70%;
+  min-height: 3px;
+  border-radius: 6px 6px 2px 2px;
+  background: #e8a26b;
+}
+.es__count {
+  font-size: 12px;
+  font-weight: 800;
+  color: #7a5a3a;
+}
+.es__label {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #7a5a3a;
+}

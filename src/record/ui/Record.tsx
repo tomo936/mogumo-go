@@ -17,6 +17,8 @@ import { pinsAt, stepVisitDay, visitsOnDay } from '../domain/dayPins.ts'
 import { jstDay } from '../../checkin/domain/day.ts'
 import { evaluate } from '../../badges/domain/evaluate.ts'
 import { BadgeList } from '../../badges/ui/BadgeList.tsx'
+import { EatStatsCard } from './EatStatsCard.tsx'
+import { eatStats } from '../domain/eatStats.ts'
 import { areaKm2At, areaTimeline } from '../../towns/domain/area.ts'
 import type { ClearedTown } from '../../towns/domain/shape.ts'
 import type { TownSync } from '../../towns/domain/progress.ts'
@@ -191,7 +193,12 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
       {state.status === 'loading' && <p className="rc__note">記録を開いています…</p>}
       {state.status === 'error' && <p className="rc__note" role="alert">記録を読み込めませんでした</p>}
 
-      {state.status === 'ready' && tab === 'badges' && <BadgeList states={badges} hasHome={home !== null} />}
+      {state.status === 'ready' && tab === 'badges' && (
+        <>
+          <EatStatsCard stats={eatStats(visits, jstDay(new Date()))} towns={townState.status === 'ready' ? townState.towns.length : null} />
+          <BadgeList states={badges} hasHome={home !== null} />
+        </>
+      )}
 
       {state.status === 'ready' && tab === 'record' && (
         <>

@@ -157,3 +157,14 @@ test('自分の感想があるお店は、行の日付の横に自分の星を�
   expect(await screen.findByLabelText('自分の星 4')).toHaveTextContent('★★★★')
   expect(screen.queryByLabelText(/自分の星 /, { selector: '[aria-label="自分の星 0"]' })).not.toBeInTheDocument()
 })
+
+test('じっせきの上に、食べ歩きプロフィール（行ったお店・回数・種類・いちばん行った種類）を出す（2026-11-24）', async () => {
+  load.mockResolvedValueOnce({ cells, visits, towns: [] })
+  render(<Record home={null} onClose={() => {}} />)
+  await screen.findByText('1.00')
+  await userEvent.click(screen.getByRole('tab', { name: 'じっせき' }))
+  const card = screen.getByRole('region', { name: '食べ歩きプロフィール' })
+  expect(card).toHaveTextContent('2行ったお店')
+  expect(card).toHaveTextContent('2行った種類')
+  expect(card).toHaveTextContent('いちばん行った種類は')
+})
