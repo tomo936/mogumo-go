@@ -7,14 +7,14 @@ import type { GeoJSONSource } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './map.css'
 import {
-  CIRCLE_RADIUS_M, RIPPLE_COLOR, RIPPLE_COUNT, RIPPLE_FILL_COLOR, RIPPLE_FILL_OPACITY, RIPPLE_PERIOD_MS, FIRST_FIX_TIMEOUT_MS, INITIAL_ZOOM, MAP_THEME, MAX_ZOOM, MIN_ZOOM, STYLE_URL, PITCH_BY_ZOOM, MAX_PITCH, AVATAR_PAD_TOP,
+  CIRCLE_RADIUS_M, RIPPLE_COLOR, RIPPLE_COUNT, RIPPLE_FILL_COLOR, RIPPLE_FILL_OPACITY, RIPPLE_PERIOD_MS, FIRST_FIX_TIMEOUT_MS, INITIAL_ZOOM, MAP_THEME, MAX_ZOOM, MIN_ZOOM, STYLE_URL, PITCH_BY_ZOOM, MAX_PITCH, AVATAR_PAD_TOP, DRAW_DISTANCE_M,
   IDLE_FPS,
   MAP_MAX_PIXEL_RATIO,
   IDLE_SPEED_MPS,
 } from '../config.ts'
 import { recolor, themeStyle } from '../infra/theme.ts'
 import { onPhase } from '../../daynight/infra/phase.ts'
-import { currentTheme } from '../infra/themes.ts'
+import { THEMES, currentTheme } from '../infra/themes.ts'
 import { fakeStart, isFakeWalkEnabled, startFakeWalk } from '../infra/fakeWalk.ts'
 import { circlePolygon, distanceMeters, metersPerPixel } from '../domain/geo.ts'
 import { ripplesAt } from '../domain/ripple.ts'
@@ -196,6 +196,9 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     // 色の案は標準（MAP_THEME）。見比べたいときだけ URL の ?theme= で選ぶ
     const theme = currentTheme(window.location.search, MAP_THEME) // 夜は夜の色（A14）
     container.style.visibility = 'hidden' // 最初の位置が取れるまで地図は見せない
+    // 描画距離の先（何も描かない所）に見える色。昼は霧の雲の白、夜は夜の地面の色（2026-11-24）
+    const farColor = (t: typeof theme) => (t === THEMES.illustNight ? t.ground : '#ffffff')
+    container.style.background = farColor(theme)
     // 描く細かさ: ?dpr=N で試せる。無ければ config の上限（null なら端末のまま）
     const dprParam = Number(new URLSearchParams(window.location.search).get('dpr')) || null
     const dprCap = dprParam ?? MAP_MAX_PIXEL_RATIO
@@ -226,6 +229,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     // 昼と夜が切り替わったら、地図を作り直さずに色だけ替える（A14）
     const stopPhase = onPhase(() => {
       if (map.isStyleLoaded()) recolor(map, currentTheme(window.location.search, MAP_THEME))
+      container.style.background = farColor(currentTheme(window.location.search, MAP_THEME))
       map.triggerRepaint() // 雲・3D の光も描き直す
     })
     // カメラが止まったら、自分から離れた所を見ているか世界に伝える（雲をそこのまわりに置くため）
@@ -263,6 +267,22 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     }
     pad()
     map.on('resize', pad)
+    // 描画距離: カメラのいちばん遠い面を「主人公から DRAW_DISTANCE_M 先の地面」までにする。カメラが動くたびに合わせ直す。
+    // 地図の仕組みが自分で決める遠さより近くするときだけ（真上に近いときは今までどおり）
+    const drawM = Number(new URLSearchParams(window.location.search).get('draw')) || DRAW_DISTANCE_M
+    type FarTransform = { cameraToCenterDistance: number; pixelsPerMeter: number; pitchInRadians: number; height: number; farZ: number; overrideNearFarZ: (n: number, f: number) => void; clearNearFarZOverride: () => void }
+    // MapLibre 6 は、カメラの変換を内側の _camera に持つ（公開の型には無い口。上げたら確かめる。scripts/e2e/s36.mjs で効き目を測れる）
+    const farTransform = () => (map as unknown as { _camera?: { transform?: FarTransform }; transform?: FarTransform })._camera?.transform ?? (map as unknown as { transform?: FarTransform }).transform
+    const limitFar = () => {
+      const t = farTransform()
+      if (!t?.overrideNearFarZ) return
+      t.clearNearFarZOverride()
+      const far = (t.cameraToCenterDistance + drawM * t.pixelsPerMeter * Math.sin(t.pitchInRadians)) * 1.01
+      if (far < t.farZ) t.overrideNearFarZ(t.height / 50, far)
+    }
+    map.on('move', limitFar)
+    map.on('resize', limitFar)
+    map.once('load', limitFar)
     map.on('load', () => {
       map.addSource('me-circle', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addSource('me-shadow', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
