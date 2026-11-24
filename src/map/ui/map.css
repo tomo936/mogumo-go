@@ -361,6 +361,9 @@
   position: absolute;
   inset: 0;
   z-index: 5; /* 上の部品（同じ 5、先に置いてある）より上、扇（後に置いてある）より下 */
+  /* 入れ物（.map-overlay）は指を通す作りなので、幕は指を受け止める。開いている間は扇だけ押せる。
+     幕を押すと閉じる（2026-11-24 オーナー「影を出すならメニュー以外タップ不可に」。前は幕の下の地図や建物が押せていた） */
+  pointer-events: auto;
   background: rgba(58, 40, 22, 0.32);
   animation: hud-scrim-in 180ms ease-out;
 }
