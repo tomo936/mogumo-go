@@ -70,6 +70,9 @@ test('位置情報の使い方を押すと説明が開く、出典も開く', as
   await userEvent.click(screen.getByRole('button', { name: '出典・クレジット' }))
   expect(screen.getByRole('link', { name: 'OpenStreetMap contributors' })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: '国土地理院' })).toHaveAttribute('href', 'https://www.gsi.go.jp/')
+  // 県境の出典（PDL1.0: 出典・元データの名前・加工したこと。2026-11-24）
+  expect(screen.getByRole('link', { name: '国土数値情報（行政区域データ）' })).toHaveAttribute('href', 'https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N03-2026.html')
+  expect(screen.getByText(/国土交通省）を加工して作成/)).toBeInTheDocument()
   // 町の境目（e-Stat の利用規約: 出典と、加工したことを書く）
   expect(screen.getByRole('link', { name: '政府統計の総合窓口（e-Stat）' })).toHaveAttribute('href', 'https://www.e-stat.go.jp/')
   expect(screen.getByText('「国勢調査 町丁・字等別境界データ」（総務省統計局）を加工して作成')).toBeInTheDocument()

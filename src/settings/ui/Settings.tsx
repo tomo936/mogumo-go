@@ -124,6 +124,8 @@ export function Settings(p: Props) {
             <p>町の境目の出典: <a href="https://www.e-stat.go.jp/" target="_blank" rel="noreferrer">政府統計の総合窓口（e-Stat）</a></p>
             <p>「国勢調査 町丁・字等別境界データ」（総務省統計局）を加工して作成</p>
             <p>地名検索: <a href="https://www.gsi.go.jp/" target="_blank" rel="noreferrer">国土地理院</a></p>
+            {/* ワールドマップの県境（2026-11-24 B-25）。公共データ利用規約（PDL1.0）: 出典・元データの名前・加工したことを書く */}
+            <p>都道府県の形の出典: 「<a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N03-2026.html" target="_blank" rel="noreferrer">国土数値情報（行政区域データ）</a>」（国土交通省）を加工して作成</p>
             <p>図鑑の字体: <a href="https://fonts.google.com/specimen/M+PLUS+Rounded+1c" target="_blank" rel="noreferrer">M PLUS Rounded 1c</a>（SIL Open Font License 1.1）</p>
             <p>ポコタンの動き: Live2D Cubism SDK（© Live2D Inc.）</p>
             <p>チェーン店の判定: <a href="https://github.com/osmlab/name-suggestion-index" target="_blank" rel="noreferrer">name-suggestion-index</a>（OpenStreetMap, BSD-3-Clause）</p>

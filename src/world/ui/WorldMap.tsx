@@ -14,6 +14,7 @@ import type { Box } from '../domain/box.ts'
 import { loadTownBoxes } from '../infra/townBoxes.ts'
 import { PlaceSearch } from './PlaceSearch.tsx'
 import './world.css'
+import { visitedPrefCodes } from '../domain/prefectures.ts'
 
 const WORLD_MIN_ZOOM = 4
 const WORLD_MAX_ZOOM = 11
@@ -60,6 +61,14 @@ export function WorldMap({ towns, onClose, onOpen, loadBoxes = loadTownBoxes }: 
   )
   const marksRef = useRef(marks)
   marksRef.current = marks
+  // 行った県のコード（塗りつぶしに使う）。町が増えたら塗り直す
+  const prefs = useMemo(() => visitedPrefCodes(towns.map((t) => t.id)), [towns])
+  const prefRef = useRef(prefs)
+  prefRef.current = prefs
+  useEffect(() => {
+    const m = mapRef.current
+    if (m?.getLayer('pref-fill')) m.setPaintProperty('pref-fill', 'fill-opacity', ['case', ['in', ['get', 'code'], ['literal', prefs]], 0.42, 0])
+  }, [prefs])
 
   const ids = towns.map((t) => t.id).join('|')
   useEffect(() => {
@@ -127,6 +136,11 @@ export function WorldMap({ towns, onClose, onOpen, loadBoxes = loadTownBoxes }: 
         const sl = (l as { 'source-layer'?: string })['source-layer']
         if (l.type === 'symbol' || sl === 'transportation' || sl === 'aeroway' || sl === 'boundary') map.setLayoutProperty(l.id, 'visibility', 'none')
       }
+      // 都道府県の塗り分けと県境（2026-11-24 外のレビュー。形は国土数値情報を加工した public/geo/prefectures.json）。
+      // 行った県は淡い橙、まだの県は塗らない。旗より下
+      map.addSource('pref', { type: 'geojson', data: '/geo/prefectures.json' })
+      map.addLayer({ id: 'pref-fill', type: 'fill', source: 'pref', paint: { 'fill-color': '#f5a35c', 'fill-opacity': ['case', ['in', ['get', 'code'], ['literal', prefRef.current]], 0.42, 0] } })
+      map.addLayer({ id: 'pref-line', type: 'line', source: 'pref', paint: { 'line-color': '#9a6a44', 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.6, 8, 1.4], 'line-opacity': 0.7 } })
       draw()
     })
     map.on('zoomend', () => setFar(map.getZoom() < NAME_ZOOM))
