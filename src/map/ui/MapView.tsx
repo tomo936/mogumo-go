@@ -86,6 +86,8 @@ const TAP_MAX_MOVE_PX = 10
 const TAP_MAX_MS = 300
 const POSITION_EVERY_MS = 250
 const TAP_ZOOM_STEP = 0.6
+const PITCH_LIMIT_FROM = 56 // これより深く傾いたときだけ描画距離を効かせる（本番の傾き 55 度までは今までどおり）
+const FAR_FADE_PX = 56 // 描画距離の境目のぼかしの幅
 const INTRO_RISE_ZOOM = 3 // 地図へ入る演出: いつもよりどれだけ高い所から始めるか（霧の雲の海の上空）
 const INTRO_MS = 2400
 const INTRO_MAX_STEP_MS = 40 // 重いコマでも、1 コマで進めるのはここまで（途中が飛ばないように）
@@ -197,8 +199,9 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     const theme = currentTheme(window.location.search, MAP_THEME) // 夜は夜の色（A14）
     container.style.visibility = 'hidden' // 最初の位置が取れるまで地図は見せない
     // 描画距離の先（何も描かない所）に見える色。昼は霧の雲の白、夜は夜の地面の色（2026-11-24）
-    const farColor = (t: typeof theme) => (t === THEMES.illustNight ? t.ground : '#ffffff')
+    const farColor = (t: typeof theme) => (t === THEMES.illustNight ? t.ground : '#eaf5fb') // 昼は淡い空色
     container.style.background = farColor(theme)
+    container.style.setProperty('--far-sky', farColor(theme))
     // 描く細かさ: ?dpr=N で試せる。無ければ config の上限（null なら端末のまま）
     const dprParam = Number(new URLSearchParams(window.location.search).get('dpr')) || null
     const dprCap = dprParam ?? MAP_MAX_PIXEL_RATIO
@@ -230,6 +233,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     const stopPhase = onPhase(() => {
       if (map.isStyleLoaded()) recolor(map, currentTheme(window.location.search, MAP_THEME))
       container.style.background = farColor(currentTheme(window.location.search, MAP_THEME))
+      container.style.setProperty('--far-sky', farColor(currentTheme(window.location.search, MAP_THEME)))
       map.triggerRepaint() // 雲・3D の光も描き直す
     })
     // カメラが止まったら、自分から離れた所を見ているか世界に伝える（雲をそこのまわりに置くため）
@@ -273,12 +277,28 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     type FarTransform = { cameraToCenterDistance: number; pixelsPerMeter: number; pitchInRadians: number; height: number; farZ: number; overrideNearFarZ: (n: number, f: number) => void; clearNearFarZOverride: () => void }
     // MapLibre 6 は、カメラの変換を内側の _camera に持つ（公開の型には無い口。上げたら確かめる。scripts/e2e/s36.mjs で効き目を測れる）
     const farTransform = () => (map as unknown as { _camera?: { transform?: FarTransform }; transform?: FarTransform })._camera?.transform ?? (map as unknown as { transform?: FarTransform }).transform
+    // 境目より上は空の色の幕で覆う（ピンは地図とは別に描くので、遠い面で切れずに空に浮いてしまう。2026-11-24 デグレ）。
+    // 幕の下の端はぼかして、遠くが霧に消えるように見せる
+    const farSky = document.createElement('div')
+    farSky.className = 'map-farsky'
+    container.appendChild(farSky)
     const limitFar = () => {
       const t = farTransform()
       if (!t?.overrideNearFarZ) return
       t.clearNearFarZOverride()
+      // 傾きが本番（55 度）より深い倍率だけに効かせる。引いた倍率・普段の倍率は今までどおり（画面の上が抜けないように）
+      if (map.getPitch() <= PITCH_LIMIT_FROM) return void (farSky.style.display = 'none')
       const far = (t.cameraToCenterDistance + drawM * t.pixelsPerMeter * Math.sin(t.pitchInRadians)) * 1.01
-      if (far < t.farZ) t.overrideNearFarZ(t.height / 50, far)
+      if (far >= t.farZ) return void (farSky.style.display = 'none')
+      t.overrideNearFarZ(t.height / 50, far)
+      // 境目の画面の高さ: 地図の真ん中から、向いている方角へ drawM 進んだ地面の点
+      const c = map.getCenter()
+      const b = (map.getBearing() * Math.PI) / 180
+      const dLat = (drawM * Math.cos(b)) / 111_320
+      const dLng = (drawM * Math.sin(b)) / (111_320 * Math.cos((c.lat * Math.PI) / 180))
+      const y = map.project([c.lng + dLng, c.lat + dLat]).y
+      farSky.style.display = 'block'
+      farSky.style.height = `${Math.max(0, Math.round(y + FAR_FADE_PX / 2))}px`
     }
     map.on('move', limitFar)
     map.on('resize', limitFar)

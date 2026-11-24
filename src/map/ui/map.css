@@ -396,3 +396,15 @@
   line-height: 16px;
   white-space: nowrap;
 }
+
+/* 描画距離の境目より上を覆う空の幕（2026-11-24）。下の端をぼかして霧に消えるように。地図の上・ピンの上、上の部品（HUD）の下 */
+.map-farsky {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 2;
+  display: none;
+  pointer-events: none;
+  background: linear-gradient(to bottom, var(--far-sky, #eaf5fb) 0, var(--far-sky, #eaf5fb) calc(100% - 56px), transparent 100%);
+}

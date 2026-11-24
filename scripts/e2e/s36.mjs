@@ -17,7 +17,7 @@ for (const [ui, url] of urls.entries()) {
   await go(p, url, 30000)
   await p.waitForFunction(() => window.__mogumoMap && window.__mogumoMap.getMinZoom() >= 16, null, { timeout: 90000 }).catch(() => {})
   for (const n of ['とじる', 'あとで', 'スキップ']) { const b = p.getByRole('button', { name: n, exact: true }).first(); if (await b.isVisible().catch(() => false)) await b.click().catch(() => {}) }
-  for (const z of [17, 18, 19]) {
+  for (const z of (process.env.ZOOMS ?? '17,18,19').split(',').map(Number)) {
     const r = await p.evaluate(async (z) => {
       const m = window.__mogumoMap; m.jumpTo({ zoom: z }); await new Promise((r) => setTimeout(r, 5000))
       const vs = []
