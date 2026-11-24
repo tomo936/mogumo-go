@@ -17,6 +17,26 @@ export function modelMatrix(origin: LatLng, p: { lat: number; lng: number }, sca
     .toArray()
 }
 
+// 距離の霧（2026-11-24。遠くの地面を霞に溶かす霧の輪と同じ色・距離で、3D の模型も霞に溶かす）。
+// three の霧はふつう「カメラから見た奥行き」で効くが、ここのカメラは地図の行列を丸ごと projection に入れていて、
+// その奥行きが取れない。そこで霧の奥行きを、画面に写したあとの w（＝カメラからの奥行き。地図の単位）にする。
+// 霧の near/far も同じ単位で、地図（MapView）が毎コマ入れる。霧は常にかけたまま（切り替えるとシェーダーを作り直して引っかかる）、
+// 効かせないときは near/far をとても遠くにする
+THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
+	vFogDepth = gl_Position.w;
+#endif`
+const mapFog = new THREE.Fog(0xdff0f8, 1e12, 2e12)
+export function setMapFog(f: { color: string; near: number; far: number } | null) {
+  if (!f) {
+    mapFog.near = 1e12
+    mapFog.far = 2e12
+    return
+  }
+  mapFog.color.set(f.color)
+  mapFog.near = f.near
+  mapFog.far = f.far
+}
+
 // 最後に描いたコマのカメラ（メルカトル座標 → 画面のクリップ座標）。地図の上に重ねる HTML のピンを、
 // 3D の屋根の高さにぴったり合わせるのに使う（画面の真上にずらすだけだと、遠近で傾いた分がずれる）
 let lastMatrix: number[] | null = null
@@ -57,6 +77,7 @@ export function threeLayer(opts: Options): HitLayer {
   }
   const camera = new THREE.Camera()
   const scene = new THREE.Scene()
+  scene.fog = mapFog
   const proj = new THREE.Matrix4()
   const local = new THREE.Matrix4()
   const raycaster = new THREE.Raycaster()

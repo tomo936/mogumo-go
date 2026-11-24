@@ -20,10 +20,11 @@ export function createHazeLayer(opts: { active: () => boolean; drawM: () => numb
     uniforms,
     transparent: true,
     depthWrite: false,
+    side: THREE.DoubleSide, // 地図に合わせる行列で上下が裏返るので、片面だと裏向きとして捨てられて描かれなかった（2026-11-24）
     vertexShader: `
       varying vec2 vXZ;
       void main() {
-        vXZ = position.xz;
+        vXZ = (modelMatrix * vec4(position, 1.0)).xz; // 大きさを掛けたあとの m（前は掛ける前の値で、どこでも透明になっていた）
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }`,
     fragmentShader: `

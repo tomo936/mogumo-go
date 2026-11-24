@@ -1,3 +1,4 @@
+import { setMapFog } from '../../lib/threeLayer.ts'
 import { createHazeLayer } from '../infra/hazeLayer.ts'
 import { PIN_LAYER } from '../../shops/infra/shopPins.ts'
 import { pitchForZoom } from '../domain/camera.ts'
@@ -293,8 +294,14 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     const unlimitPins = () => {
       if (!pinsLimited) return
       pinsLimited = false
-      if (map.getLayer(PIN_LAYER)) map.setFilter(PIN_LAYER, null)
-      for (const el of container.querySelectorAll<HTMLElement>('.maplibregl-marker')) el.style.visibility = ''
+      if (map.getLayer(PIN_LAYER)) {
+        map.setFilter(PIN_LAYER, null)
+        map.setPaintProperty(PIN_LAYER, 'icon-opacity', 1)
+      }
+      for (const el of container.querySelectorAll<HTMLElement>('.maplibregl-marker')) {
+        el.style.visibility = ''
+        el.style.opacity = ''
+      }
     }
     const limitPins = (cutY: number) => {
       // 1 軒のピン（地図の層）: 主人公から drawM の円の中だけ
@@ -304,11 +311,21 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         const a = (i / 32) * Math.PI * 2
         ring.push([c.lng + (drawM * Math.sin(a)) / (111_320 * Math.cos((c.lat * Math.PI) / 180)), c.lat + (drawM * Math.cos(a)) / 111_320])
       }
-      if (map.getLayer(PIN_LAYER)) map.setFilter(PIN_LAYER, ['within', { type: 'Polygon', coordinates: [ring] }])
-      // ビル・施設の札（HTML）: 画面で境目より上に出るものは隠す
+      if (map.getLayer(PIN_LAYER)) {
+        map.setFilter(PIN_LAYER, ['within', { type: 'Polygon', coordinates: [ring] }])
+        // 霧と同じ距離でうすくしてから消す（主人公からの距離。描画距離の 60% から 95% で 1 → 0）
+        try {
+          map.setPaintProperty(PIN_LAYER, 'icon-opacity', ['interpolate', ['linear'], ['distance', { type: 'Point', coordinates: [c.lng, c.lat] }], drawM * 0.6, 1, drawM * 0.95, 0])
+        } catch {
+          /* 距離の式が使えない版では、うすくせず円の外で消すだけ */
+        }
+      }
+      // ビル・施設の札（HTML）: 画面で境目に近づくほどうすく、境目より上は隠す
+      const FADE = 90 // px
       for (const el of container.querySelectorAll<HTMLElement>('.maplibregl-marker')) {
         const r = el.getBoundingClientRect()
         el.style.visibility = r.bottom < cutY ? 'hidden' : ''
+        el.style.opacity = r.bottom < cutY + FADE ? String(Math.max(0, (r.bottom - cutY) / FADE)) : ''
       }
       pinsLimited = true
     }
@@ -318,11 +335,15 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       t.clearNearFarZOverride()
       // 傾きが本番（55 度）より深い倍率だけに効かせる。引いた倍率・普段の倍率は今までどおり（画面の上が抜けないように）
       hazeOn = false
+      setMapFog(null)
       if (map.getPitch() <= PITCH_LIMIT_FROM) return unlimitPins()
       const far = (t.cameraToCenterDistance + drawM * t.pixelsPerMeter * Math.sin(t.pitchInRadians)) * 1.01
       if (far >= t.farZ) return unlimitPins()
       hazeOn = true
       hazeColor = container.dataset.night === '1' ? '#3a4470' : '#dff0f8' // 空の地平線の色（map.css の .map-view と同じ）
+      // 3D の模型の霧: 地面の霧の輪（hazeLayer: 半径の 42% から 98%）と同じ距離。奥行きは「主人公から d m 先の地面」の奥行き
+      const depthAt = (d: number) => t.cameraToCenterDistance + d * t.pixelsPerMeter * Math.sin(t.pitchInRadians)
+      setMapFog({ color: hazeColor, near: depthAt(drawM * 0.42), far: depthAt(drawM * 0.98) })
       t.overrideNearFarZ(t.height / 50, far)
       // 境目の画面の高さ: 地図の真ん中から、向いている方角へ drawM 進んだ地面の点
       const c = map.getCenter()
@@ -332,6 +353,13 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       const y = map.project([c.lng + dLng, c.lat + dLat]).y
       container.style.setProperty('--cut', `${Math.max(0, Math.round(y))}px`) // 空の地平線の高さ
       limitPins(y)
+    }
+    // 測る口（?debug のときだけ）: 描画距離と霧が効いているか
+    if (new URLSearchParams(window.location.search).has('debug')) {
+      ;(window as unknown as { __mogumoFar?: () => unknown }).__mogumoFar = () => {
+        const t = farTransform()
+        return { hazeOn, pinsLimited, pitch: map.getPitch(), farZ: t?.farZ, override: (t as unknown as { nearFarZOverride?: unknown })?.nearFarZOverride ?? null, hasHaze: !!map.getLayer('haze') }
+      }
     }
     map.on('move', limitFar)
     map.on('resize', limitFar)

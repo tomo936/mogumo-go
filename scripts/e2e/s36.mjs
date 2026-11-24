@@ -13,6 +13,8 @@ await p.addInitScript(() => {
     wrap('drawElements', (a) => a[1]); wrap('drawArrays', (a) => a[2]); wrap('drawElementsInstanced', (a) => a[1] * a[4]); wrap('drawArraysInstanced', (a) => a[2] * a[3])
   }
 })
+p.on('console', (m) => { if (m.type() === 'error') console.log('CONSOLE', m.text().slice(0, 160)) })
+p.on('pageerror', (e) => console.log('PAGEERR', String(e).slice(0, 160)))
 for (const [ui, url] of urls.entries()) {
   await go(p, url, 30000)
   if (process.env.NOFOG) await p.evaluate(() => { window.__noFog = true })
