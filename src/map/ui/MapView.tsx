@@ -1,3 +1,4 @@
+import { createHazeLayer } from '../infra/hazeLayer.ts'
 import { PIN_LAYER } from '../../shops/infra/shopPins.ts'
 import { pitchForZoom } from '../domain/camera.ts'
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef } from 'react'
@@ -284,6 +285,10 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
     // 空は地図の「後ろ」（入れ物の地）に描く。地図が何も描かない描画距離の先にだけ見え、手前の建物・札・ピンは覆わない
     // （2026-11-24 デグレ: 前は空を地図の上に重ねていて、手前の駅の名前やピンまで霞んでいた）。
     // 描画距離の先にあるピン・札は、空に浮かないよう隠す（ピンの層は描画距離で切れないため）
+    let hazeOn = false // 描画距離が効いているときだけ、遠くの地面に霧を敷く
+    let hazeColor = '#dff0f8'
+    const haze = createHazeLayer({ active: () => hazeOn, drawM: () => drawM, color: () => hazeColor })
+    map.on('load', () => map.addLayer(haze, map.getLayer(PIN_LAYER) ? PIN_LAYER : undefined))
     let pinsLimited = false
     const unlimitPins = () => {
       if (!pinsLimited) return
@@ -312,9 +317,12 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       if (!t?.overrideNearFarZ) return
       t.clearNearFarZOverride()
       // 傾きが本番（55 度）より深い倍率だけに効かせる。引いた倍率・普段の倍率は今までどおり（画面の上が抜けないように）
+      hazeOn = false
       if (map.getPitch() <= PITCH_LIMIT_FROM) return unlimitPins()
       const far = (t.cameraToCenterDistance + drawM * t.pixelsPerMeter * Math.sin(t.pitchInRadians)) * 1.01
       if (far >= t.farZ) return unlimitPins()
+      hazeOn = true
+      hazeColor = container.dataset.night === '1' ? '#3a4470' : '#dff0f8' // 空の地平線の色（map.css の .map-view と同じ）
       t.overrideNearFarZ(t.height / 50, far)
       // 境目の画面の高さ: 地図の真ん中から、向いている方角へ drawM 進んだ地面の点
       const c = map.getCenter()

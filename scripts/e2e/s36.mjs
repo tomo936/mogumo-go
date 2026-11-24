@@ -21,7 +21,7 @@ for (const [ui, url] of urls.entries()) {
   for (const z of (process.env.ZOOMS ?? '17,18,19').split(',').map(Number)) {
     const r = await p.evaluate(async (z) => {
       const m = window.__mogumoMap; m.jumpTo({ zoom: z }); await new Promise((r) => setTimeout(r, 5000))
-      if (window.__noFog) for (const l of m.getStyle().layers) if (/fog|cloud/i.test(l.id)) m.setLayoutProperty(l.id, 'visibility', 'none') // 晴れた町の見え方（雲なし）
+      if (window.__noFog && m.getLayer('fog')) m.setLayoutProperty('fog', 'visibility', 'none') // 晴れた町の見え方（雲なし。3D の層は getStyle に出ないので名前で）
       const vs = []
       for (let k = 0; k < 3; k++) { window.__gl.verts = 0; let f = 0; const on = () => f++; m.on('render', on); for (let i = 0; i < 8; i++) { m.triggerRepaint(); await new Promise((r) => requestAnimationFrame(r)) } await new Promise((r) => setTimeout(r, 200)); m.off('render', on); vs.push(Math.round(window.__gl.verts / f / 1000)) }
       return { zoom: z, pitch: Math.round(m.getPitch()), kVerts: vs }
