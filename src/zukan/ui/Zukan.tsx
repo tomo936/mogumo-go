@@ -74,6 +74,12 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null, ini
     setMissing(true)
   }, [jumped, initialShopId, byKind])
   const all = useMemo(() => (byKind ? [...byKind.values()].flat() : []), [byKind])
+  // カードの No. は、その種類の中での固定の番号（「すべて」や絞り込みで変わらない。レビュー 2026-11-24）
+  const noOf = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const l of byKind?.values() ?? []) l.forEach((s, i) => m.set(s.id, cardNo(i)))
+    return m
+  }, [byKind])
   const kindList = kind === 'all' ? all : byKind?.get(kind) ?? []
   const list = filter === 'all' ? kindList : kindList.filter((s) => (filter === 'done') === (s.visits !== null))
   const pages = pageCount(list.length)
@@ -202,7 +208,7 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null, ini
             <>
               <ul className="zukan__grid">
                 {shown.map((s, i) => {
-                  const no = cardNo(current * PAGE_SIZE + i)
+                  const no = noOf.get(s.id) ?? cardNo(current * PAGE_SIZE + i)
                   if (!s.visits) {
                     const back = (
                       <>

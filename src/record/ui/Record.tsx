@@ -151,12 +151,17 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
     void (async () => {
       try {
         const list = await loadAllMine()
+        // 星は新しい感想、写真は写真のある感想のうち新しいもの（レビュー 2026-11-24: 新しい方に写真が無いと古い写真が出なかった）
         const latest = new Map<string, (typeof list)[number]>()
-        for (const rv of list) if (!latest.has(rv.shopId)) latest.set(rv.shopId, rv)
-        const paths = [...latest.values()].map((x) => x.photoPath).filter((x): x is string => x !== null)
+        const photoOf = new Map<string, string>()
+        for (const rv of list) {
+          if (!latest.has(rv.shopId)) latest.set(rv.shopId, rv)
+          if (rv.photoPath && !photoOf.has(rv.shopId)) photoOf.set(rv.shopId, rv.photoPath)
+        }
+        const paths = [...photoOf.values()]
         const urls = paths.length ? await photoUrls(paths).catch(() => new Map<string, string>()) : new Map<string, string>()
         if (!alive) return
-        setMine(new Map([...latest].map(([id, x]) => [id, { stars: x.stars, photo: x.photoPath ? urls.get(x.photoPath) ?? null : null }])))
+        setMine(new Map([...latest].map(([id, x]) => [id, { stars: x.stars, photo: urls.get(photoOf.get(id) ?? '') ?? null }])))
       } catch {
         /* 感想が読めなくても記録はそのまま */
       }
@@ -195,7 +200,7 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
 
       {state.status === 'ready' && tab === 'badges' && (
         <>
-          <EatStatsCard stats={eatStats(visits, jstDay(new Date()))} towns={townState.status === 'ready' ? townState.towns.length : null} />
+          <EatStatsCard stats={eatStats(visits, jstDay(new Date()))} towns={townState.status === 'ready' && !townState.more ? townState.towns.length : null} />
           <BadgeList states={badges} hasHome={home !== null} />
         </>
       )}
