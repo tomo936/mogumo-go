@@ -1,6 +1,6 @@
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import { FOG_REBUILD_M, THIN_START_M } from '../../fog/config.ts'
-import { clearedFromHome, isClearedAt } from '../../fog/domain/clearing.ts'
+import { clearedFromHome, cloudFree, isClearedAt } from '../../fog/domain/clearing.ts'
 import { behindFog } from '../../shops/domain/visibility.ts'
 import { farClumps, fogClumps } from '../../fog/domain/clumps.ts'
 import type { Clump } from '../../fog/domain/clumps.ts'
@@ -181,6 +181,8 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
   let hpShops: Shop[] = [] // ホットペッパーの最後に成功した結果
   let mapShops: Shop[] = [] // 地図タイルのお店（タイルが読めたときだけ更新）
   let shops: Shop[] = [] // 2つを合わせたもの
+  let cloudFreeSize = -1 // そのとき雲を置かなかった所の数
+  let cloudShopsCount = -1 // 雲を置いたときのお店の数（お店が増えたら、端のお店のまわりを空けるため雲を置き直す）
   let near: Shop[] = [] // いま層に渡している店（近い順）
   let last: LatLng | null = null
   let shownKey: string | null = null
@@ -236,6 +238,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
       for (const m of lm) lmById.set(lmKey(m), m)
       landmarks = [...lmById.values()]
       shops = mergeShops(mapShops, hpShops)
+      recloudForShops()
       if (tilesSeen) ready.map = true
       if (newTiles.length) {
         const boxes = newTiles
@@ -480,7 +483,10 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
 
   const setFog = (origin: LatLng) => {
     fillTowns(origin)
-    lastClumps = fogClumps(origin, cleared)
+    const free = cloudFree(cleared, shops)
+    lastClumps = fogClumps(origin, free) // 晴れた場所の端のお店のまわりにも雲を置かない
+    cloudShopsCount = shops.length
+    cloudFreeSize = free.size
     fogLayer.setClumps(origin, [...lastClumps, ...farClumps(origin)])
     fogCenter = origin
     thinSent = null // 原点が変わったので薄さも送り直す
@@ -556,6 +562,7 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
         hpShops = [...list, ...retainNear(hpShops, [p, last], SHOP_RADIUS_M * 1.5).filter((h) => !have.has(h.id))]
         ready.hp = true
         shops = mergeShops(mapShops, hpShops)
+        recloudForShops()
         if (areaNow()) refreshShops(areaNow()!)
       },
       () => {
@@ -638,6 +645,19 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     () => {},
   )
 
+  // お店が増えたとき: 晴れた場所の端に立つお店のまわりの雲を、波でやさしく引っ込める（いきなり消すと雲がちらつくので）
+  const recloudForShops = () => {
+    if (disposed || !fogCenter || shops.length === cloudShopsCount) return
+    cloudShopsCount = shops.length
+    const free = cloudFree(cleared, shops)
+    if (free.size === cloudFreeSize) return // 雲を置かない所が増えていなければ置き直さない
+    cloudFreeSize = free.size
+    const before = lastClumps
+    const after = fogClumps(fogCenter, free)
+    fogLayer.setClumps(fogCenter, [...waveClumps(before, after, localFrame(fogCenter).to(last ?? fogCenter), performance.now() / 1000), ...farClumps(fogCenter)])
+    lastClumps = after
+  }
+
   // 晴れたセルを足して、from から波で雲を消す
   const addCleared = (cells: Cell[], from: LatLng) => {
     if (disposed) return
@@ -652,7 +672,9 @@ export function attachWorld(map: WorldMap, deps: Deps): World {
     if (!added) return
     if (fogCenter) {
       const before = lastClumps
-      const after = fogClumps(fogCenter, cleared)
+      const free = cloudFree(cleared, shops)
+      cloudFreeSize = free.size
+      const after = fogClumps(fogCenter, free)
       fogLayer.setClumps(fogCenter, [...waveClumps(before, after, localFrame(fogCenter).to(from), performance.now() / 1000), ...farClumps(fogCenter)])
       lastClumps = after
     }
