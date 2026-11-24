@@ -18,12 +18,15 @@ p.on('pageerror', (e) => console.log('PAGEERR', String(e).slice(0, 160)))
 for (const [ui, url] of urls.entries()) {
   await go(p, url, 30000)
   if (process.env.NOFOG) await p.evaluate(() => { window.__noFog = true })
+  if (process.env.HIDE) await p.evaluate((h) => { window.__hide = h.split(',') }, process.env.HIDE)
+  if (process.env.LAYERS) console.log(await p.evaluate(() => window.__mogumoMap?.style?._order?.join(' ')))
   await p.waitForFunction(() => window.__mogumoMap && window.__mogumoMap.getMinZoom() >= 16, null, { timeout: 90000 }).catch(() => {})
   for (const n of ['とじる', 'あとで', 'スキップ']) { const b = p.getByRole('button', { name: n, exact: true }).first(); if (await b.isVisible().catch(() => false)) await b.click().catch(() => {}) }
   for (const z of (process.env.ZOOMS ?? '17,18,19').split(',').map(Number)) {
     const r = await p.evaluate(async ([z, pitch, bearing]) => {
       const m = window.__mogumoMap; m.jumpTo({ zoom: z, ...(pitch ? { pitch } : {}), ...(bearing ? { bearing } : {}) }); await new Promise((r) => setTimeout(r, 5000))
-      if (window.__noFog && m.getLayer('fog')) m.setLayoutProperty('fog', 'visibility', 'none') // 晴れた町の見え方（雲なし。3D の層は getStyle に出ないので名前で）
+      if (window.__noFog && m.getLayer('fog')) m.setLayoutProperty('fog', 'visibility', 'none')
+      if (window.__hide) for (const id of window.__hide) if (m.getLayer(id)) m.setLayoutProperty(id, 'visibility', 'none') // 晴れた町の見え方（雲なし。3D の層は getStyle に出ないので名前で）
       const vs = []
       for (let k = 0; k < 3; k++) { window.__gl.verts = 0; let f = 0; const on = () => f++; m.on('render', on); for (let i = 0; i < 8; i++) { m.triggerRepaint(); await new Promise((r) => requestAnimationFrame(r)) } await new Promise((r) => setTimeout(r, 200)); m.off('render', on); vs.push(Math.round(window.__gl.verts / f / 1000)) }
       return { zoom: z, pitch: Math.round(m.getPitch()), kVerts: vs, far: window.__mogumoFar?.() }

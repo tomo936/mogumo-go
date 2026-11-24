@@ -64,8 +64,17 @@ void main() {
     return;
   }
   vec2 uv = mix(LO, HI, a_corner * 0.5 + 0.5);
+  // 根元より下の部分の高さは、地面の上の塊（半径 w の円）を画面に写したときの縦の半分（dpx）。
+  // 真上からは wpx と同じで見た目は変わらない。倒したときに下の部分が塊自身の場所より手前（晴れた場所）へ伸びて、
+  // 手前の家の下に雲がもぐり込み「雲の上に家が立つ」ように見えていた（2026-11-24 オーナーの動画）
+  vec2 e = px(ex) - px(c);
+  vec2 n = px(ny) - px(c);
+  float dpx = min(wpx, length(vec2(e.y, n.y)));
+  vec2 off = vec2(uv.x * wpx, uv.y * (uv.y < 0.0 ? dpx : wpx));
   // 奥行き（z）は塊の根元のまま。四角全体が根元と同じ奥行きになる
-  gl_Position = c + vec4(uv * wpx / (u_viewport * 0.5) * c.w, 0.0, 0.0);
+  gl_Position = c + vec4(off / (u_viewport * 0.5) * c.w, 0.0, 0.0);
+  // 地面を描く距離（遠い面）より奥の雲も切らずに、いちばん奥に描く（奥の雲が消えて見切れないように）
+  gl_Position.z = min(gl_Position.z, gl_Position.w * 0.99999);
   v_uv = uv;
   v_seed = a_clump.w;
 }`

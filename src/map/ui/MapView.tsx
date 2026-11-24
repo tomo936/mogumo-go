@@ -90,7 +90,6 @@ const TAP_MAX_MS = 300
 const POSITION_EVERY_MS = 250
 const TAP_ZOOM_STEP = 0.6
 const HAZE_BAND_M = 280 // 地面の端の手前から霞に溶かす幅（m。端が近いときは端までの 58%）
-const PITCH_LIMIT_FROM = 56 // これより深く傾いたときだけ描画距離を効かせる（本番の傾き 55 度までは今までどおり）
 const INTRO_RISE_ZOOM = 3 // 地図へ入る演出: いつもよりどれだけ高い所から始めるか（霧の雲の海の上空）
 const INTRO_MS = 2400
 const INTRO_MAX_STEP_MS = 40 // 重いコマでも、1 コマで進めるのはここまで（途中が飛ばないように）
@@ -307,22 +306,26 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       }
     }
     let pinCenter: { lat: number; lng: number } | null = null // ピンの円を最後に作った真ん中
-    const limitPins = (cutY: number) => {
+    let pinM = 0 // そのときの描画距離
+    const limitPins = (cutY: number, lim: number) => {
       // 1 軒のピン（地図の層）: 主人公から drawM の円の中だけ。円と濃さの式は、真ん中が 20m 動いたときだけ作り直す
       // （毎コマ作り直すと地図の仕組みが層を計算し直して重くなる。2026-11-24 テスト役の指摘）
       const c = map.getCenter()
-      const moved = !pinCenter || !pinsLimited || distanceMeters(pinCenter, { lat: c.lat, lng: c.lng }) > 20
-      if (moved) pinCenter = { lat: c.lat, lng: c.lng }
+      const moved = !pinCenter || !pinsLimited || distanceMeters(pinCenter, { lat: c.lat, lng: c.lng }) > 20 || Math.abs(lim - pinM) > pinM * 0.1
+      if (moved) {
+        pinCenter = { lat: c.lat, lng: c.lng }
+        pinM = lim
+      }
       const ring: [number, number][] = []
       for (let i = 0; i <= 32; i++) {
         const a = (i / 32) * Math.PI * 2
-        ring.push([c.lng + (drawM * Math.sin(a)) / (111_320 * Math.cos((c.lat * Math.PI) / 180)), c.lat + (drawM * Math.cos(a)) / 111_320])
+        ring.push([c.lng + (lim * Math.sin(a)) / (111_320 * Math.cos((c.lat * Math.PI) / 180)), c.lat + (lim * Math.cos(a)) / 111_320])
       }
       if (moved && map.getLayer(PIN_LAYER)) {
         map.setFilter(PIN_LAYER, ['within', { type: 'Polygon', coordinates: [ring] }])
         // 霧と同じ距離でうすくしてから消す（主人公からの距離。描画距離の 60% から 95% で 1 → 0）
         try {
-          map.setPaintProperty(PIN_LAYER, 'icon-opacity', ['interpolate', ['linear'], ['distance', { type: 'Point', coordinates: [c.lng, c.lat] }], drawM * 0.6, 1, drawM * 0.95, 0])
+          map.setPaintProperty(PIN_LAYER, 'icon-opacity', ['interpolate', ['linear'], ['distance', { type: 'Point', coordinates: [c.lng, c.lat] }], lim * 0.6, 1, lim * 0.95, 0])
         } catch {
           /* 距離の式が使えない版では、うすくせず円の外で消すだけ */
         }
@@ -337,7 +340,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       pinsLimited = true
     }
     // 地面の端（地図が描く地面のいちばん遠い所）に霧をかける。端が画面に入るのは、
-    //  - 寄った倍率（傾き 55 度より深い）: 描画距離 drawM で切った所
+    //  - 描画距離（倍率 18 で drawM、引くほど遠く）で切った所
     //  - それ以外: 地図の仕組みがもともと持っている遠さの限り（主人公を下に置いたので、倍率 17 でも端が見える。2026-11-24 デグレ）
     // どちらでも、端の手前 HAZE_BAND_M から霞に溶かし、端で空の地平線の色にする（地面・3D の模型の両方）
     const limitFar = () => {
@@ -353,9 +356,12 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       const depthAt = (d: number) => t.cameraToCenterDistance + d * t.pixelsPerMeter * sinP
       // 地図の仕組みが決めた遠さ（farZ）から、地面の端までの距離（m）を逆算する（farZ ≒ (カメラから真ん中 + 端までの距離×sin(傾き))×1.01）
       const defaultEnd = (t.farZ / 1.01 - t.cameraToCenterDistance) / (t.pixelsPerMeter * sinP)
-      const limited = map.getPitch() > PITCH_LIMIT_FROM && drawM < defaultEnd
-      const end = limited ? drawM : defaultEnd
-      if (limited) t.overrideNearFarZ(t.height / 50, depthAt(drawM) * 1.01)
+      // 描画距離は倍率でなめらかに変える（倍率 18 から寄ると drawM、1 段引くごとに 2 倍）。前は傾き 56 度で急に切り替わり、
+      // そのさかいめで奥が出たり消えたりしていた（2026-11-24 オーナーの動画）
+      const lim = drawM * Math.pow(2, Math.max(0, 18 - map.getZoom()))
+      const limited = lim < defaultEnd
+      const end = limited ? lim : defaultEnd
+      if (limited) t.overrideNearFarZ(t.height / 50, depthAt(lim) * 1.01)
       hazeOn = true
       hazeColor = container.dataset.night === '1' ? '#3a4470' : '#dff0f8' // 空の地平線の色（map.css の .map-view と同じ）
       hazeOuter = end * 0.98
@@ -368,7 +374,7 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
       const dLng = (end * Math.sin(b)) / (111_320 * Math.cos((c.lat * Math.PI) / 180))
       const y = map.project([c.lng + dLng, c.lat + dLat]).y
       container.style.setProperty('--cut', `${Math.max(0, Math.round(y))}px`)
-      if (limited) limitPins(y)
+      if (limited) limitPins(y, lim)
       else unlimitPins()
     }
     // 測る口（?debug のときだけ）: 描画距離と霧が効いているか
