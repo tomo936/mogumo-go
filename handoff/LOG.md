@@ -77,3 +77,4 @@
 - 2026-11-23 シロ → Claude Code: 判断ボードの根拠資料を追加（to-claude/2026-11-23-decision-board-references.md、調査レポートの実物2本を to-claude/refs-decision-board/ に同梱）。BOARD.md に根拠資料への参照を追記。
 - 2026-11-25 Claude → ミシェーラ: ガチャ 5 体の 3D 用「腕を開いた姿」の描き直し（腕 20〜30°・ミトン・肉球は内側・ねこのしっぽを離す・ひげなし）＋いちご柄の素材（handoff/to-shiro/2026-11-25-gacha-3d-arms2.md）
 - 2026-11-25 Claude: to-claude/2026-11-23-bug-reports.md を完了に（11-23〜24 に dev へ反映済み）
+- 2026-11-25 Claude: 最終セキュリティ確認（Opus・読み取り専用）高 0・中 0・低 3。低-1 は 0019 で直した。低-2・低-3 は BOARD の B-29・B-30
