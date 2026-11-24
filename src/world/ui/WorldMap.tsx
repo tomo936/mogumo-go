@@ -1,5 +1,6 @@
 // ワールドマップ（全画面）。日本全体に、行った町ごとに旗を立てる（数字にはまとめない。2026-11-12 オーナー）。
 // 旗は右のボタンで出す・隠す。町名の札は寄ったときだけ。上に検索、下に帯。
+import { nextGoal, percent } from '../../towns/domain/progress.ts'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Map as MapLibreMap, Marker } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -48,6 +49,8 @@ export function WorldMap({ towns, onClose, onOpen, loadBoxes = loadTownBoxes }: 
   const flagsRef = useRef(flags)
   flagsRef.current = flags
   const [far, setFar] = useState(true) // 引いて見ている（町名の札を隠す）
+  const [listOpen, setListOpen] = useState(false) // 行った町の一覧
+  const [prefTip, setPrefTip] = useState<{ name: string; towns: number } | null>(null) // 押した県の名前と行った町の数
 
   const marks = useMemo(
     () =>
@@ -63,6 +66,8 @@ export function WorldMap({ towns, onClose, onOpen, loadBoxes = loadTownBoxes }: 
   marksRef.current = marks
   // 行った県のコード（塗りつぶしに使う）。町が増えたら塗り直す
   const prefs = useMemo(() => visitedPrefCodes(towns.map((t) => t.id)), [towns])
+  const townIdsRef = useRef<string[]>([])
+  townIdsRef.current = towns.map((t) => t.id)
   const prefRef = useRef(prefs)
   prefRef.current = prefs
   useEffect(() => {
@@ -140,6 +145,16 @@ export function WorldMap({ towns, onClose, onOpen, loadBoxes = loadTownBoxes }: 
       // 行った県は淡い橙、まだの県は塗らない。旗より下
       map.addSource('pref', { type: 'geojson', data: '/geo/prefectures.json' })
       map.addLayer({ id: 'pref-fill', type: 'fill', source: 'pref', paint: { 'fill-color': '#f5a35c', 'fill-opacity': ['case', ['in', ['get', 'code'], ['literal', prefRef.current]], 0.6, 0] } })
+      // 県を押すと、県の名前とその県で行った町の数（2026-11-24 外のレビュー「地域をタップで詳細」）。数秒で消える
+      let tipTimer: ReturnType<typeof setTimeout> | undefined
+      map.on('click', 'pref-fill', (e) => {
+        const f = e.features?.[0]
+        const code = f?.properties?.code as string | undefined
+        if (!code) return
+        clearTimeout(tipTimer)
+        setPrefTip({ name: String(f?.properties?.name ?? ''), towns: townIdsRef.current.filter((id) => id.startsWith(code)).length })
+        tipTimer = setTimeout(() => setPrefTip(null), 2600)
+      })
       map.addLayer({ id: 'pref-line', type: 'line', source: 'pref', paint: { 'line-color': '#9a6a44', 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.6, 8, 1.4], 'line-opacity': 0.7 } })
       draw()
     })
@@ -176,11 +191,66 @@ export function WorldMap({ towns, onClose, onOpen, loadBoxes = loadTownBoxes }: 
         <span dangerouslySetInnerHTML={{ __html: flags ? CLEAR_FLAG : NOT_YET_FLAG }} />
         <small>{flags ? '旗 ON' : '旗 OFF'}</small>
       </button>
-      <div className="wm-band" aria-label={`行った町 ${towns.length} クリア ${cleared}`}>
+      {/* 凡例（2026-11-24 外のレビュー） */}
+      <p className="wm-legend"><i aria-hidden="true" />行った県</p>
+      {prefTip && (
+        <p className="wm-preftip" role="status">
+          <b>{prefTip.name}</b>
+          {prefTip.towns > 0 ? `行った町 ${prefTip.towns}` : 'まだ行っていません'}
+        </p>
+      )}
+      {/* 下の札を押すと、行った町の一覧（2026-11-24 オーナー「行った町の一覧への遷移」） */}
+      <button type="button" className="wm-band" aria-label={`行った町 ${towns.length} クリア ${cleared}。行った町の一覧`} onClick={() => setListOpen(true)}>
         <div className="cell"><b>{towns.length}</b><span>行った町</span></div>
         <div className="sep" />
         <div className="cell"><b>{cleared}</b><span>クリア</span></div>
-      </div>
+        <span className="wm-band__more" aria-hidden="true">一覧 ›</span>
+      </button>
+      {listOpen && (
+        <div className="wm-list-sheet" role="dialog" aria-label="行った町の一覧">
+          <div className="wm-list-sheet__head">
+            <b>行った町</b>
+            <button type="button" className="wm-list-sheet__close" aria-label="閉じる" onClick={() => setListOpen(false)}>
+              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" /></svg>
+            </button>
+          </div>
+          {towns.length === 0 ? (
+            <p className="wm-list-sheet__note">まだ行った町がありません</p>
+          ) : (
+            <ul>
+              {[...towns].sort((a, b) => b.lastAt - a.lastAt).map((t) => {
+                const pct = percent(t)
+                const goal = nextGoal(t)
+                const mark = t.completedAt !== null ? 'コンプリート' : t.clearedAt !== null ? 'クリア' : null
+                const b = boxes.get(t.id)
+                return (
+                  <li key={t.id}>
+                    <button
+                      type="button"
+                      disabled={!b}
+                      onClick={() => {
+                        if (!b) return
+                        setListOpen(false)
+                        const el = ref.current
+                        onOpen({ townId: t.id, name: t.name, center: boxCenter(b), zoom: zoomForBox(b, el?.clientWidth || 390, el?.clientHeight || 844, 13, 17) })
+                      }}
+                    >
+                      <span className="wm-town__name">
+                        <b>{t.name}</b>
+                        {t.city && <small>{t.city}</small>}
+                        {mark && <em>{mark}</em>}
+                      </span>
+                      <span className="wm-town__num">{`${t.visited} / ${t.total} 軒・${pct}%`}</span>
+                      <i className="wm-town__bar" aria-hidden="true"><i style={{ width: `${pct}%` }} /></i>
+                      {goal && <small className="wm-town__goal">{goal.to === 'clear' ? 'クリアまで' : 'コンプリートまで'}あと {goal.left} 軒</small>}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      )}
     </section>
   )
 }

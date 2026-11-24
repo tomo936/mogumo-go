@@ -8,9 +8,13 @@ vi.mock('maplibre-gl', () => {
     private h: Record<string, (() => void)[]> = {}
     touchZoomRotate = { disableRotation() {} }
     constructor() { queueMicrotask(() => this.h.load?.forEach((f) => f())) }
-    on(e: string, f: () => void) { (this.h[e] ??= []).push(f); return this }
+    on(e: string, a: unknown, b?: unknown) { const f = (typeof a === 'function' ? a : b) as () => void; (this.h[e] ??= []).push(f); return this }
     getStyle() { return { layers: [] } }
     setLayoutProperty() {}
+    addSource() {}
+    addLayer() {}
+    getLayer() { return undefined }
+    setPaintProperty() {}
     project([lng, lat]: number[]) { return { x: lng * 1000, y: lat * 1000 } }
     unproject([x, y]: number[]) { return { lng: x / 1000, lat: y / 1000 } }
     getZoom() { return 5 }
@@ -87,4 +91,18 @@ test('検索の候補を押すと zoom 15 で onOpen、←で onClose', async ()
   fireEvent.click(screen.getByLabelText('記録へ戻る'))
   expect(onClose).toHaveBeenCalled()
   vi.unstubAllGlobals()
+})
+
+test('下の札を押すと行った町の一覧。町を押すとその町へ（onOpen に townId）。2026-11-24', async () => {
+  const onOpen = vi.fn()
+  render(<WorldMap towns={[town('13112-a', '経堂', 1), town('13112-b', '赤堤', null)]} onClose={() => {}} onOpen={onOpen} loadBoxes={async () => new Map([['13112-a', box(35.65, 139.63)], ['13112-b', box(35.66, 139.64)]])} />)
+  await waitFor(() => expect(marker('経堂')).toBeDefined())
+  fireEvent.click(screen.getByRole('button', { name: /行った町の一覧/ }))
+  const list = screen.getByRole('dialog', { name: '行った町の一覧' })
+  expect(list).toHaveTextContent('経堂')
+  expect(list).toHaveTextContent('クリア')
+  expect(list).toHaveTextContent('赤堤')
+  fireEvent.click(screen.getByRole('button', { name: /赤堤/ }))
+  expect(onOpen.mock.calls[0][0].townId).toBe('13112-b')
+  expect(screen.queryByRole('dialog', { name: '行った町の一覧' })).not.toBeInTheDocument()
 })
