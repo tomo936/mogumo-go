@@ -444,3 +444,11 @@
   margin: 0 auto 2px;
   color: #c2652a;
 }
+
+/* 自分の感想の星（2026-11-24 記録を思い出に）。日付・時刻の右 */
+.rc__stars {
+  margin-left: 8px;
+  font-style: normal;
+  color: #946300; /* 地 #fffdf7 との明るさの差 5.1 */
+  letter-spacing: 1px;
+}

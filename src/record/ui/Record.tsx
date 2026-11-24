@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import './record.css'
 import { Icon } from '../../ui/Icon.tsx'
 import { kindIcon } from '../../zukan/ui/cardArt.ts'
+import { loadAllMine, photoUrls } from '../../reviews/infra/reviewsApi.ts'
 import { KIND_LABEL } from '../../shops/domain/kindLabel.ts'
 import { expFromShopIds, levelFor } from '../../zukan/domain/level.ts'
 import { loadRecord } from '../infra/recordApi.ts'
@@ -140,6 +141,28 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
     })
   }, [showRange, shapes, townState, towns])
   const area = useMemo(() => areaTimeline(cells, towns), [cells, towns])
+  // 自分の感想（お店ごとに新しいもの 1 つ）: 行ったお店の行に、自分の写真と星を出す（2026-11-24 記録を思い出に）。読めなければ出さないだけ
+  const [mine, setMine] = useState<Map<string, { stars: number; photo: string | null }>>(new Map())
+  useEffect(() => {
+    if (state.status !== 'ready') return
+    let alive = true
+    void (async () => {
+      try {
+        const list = await loadAllMine()
+        const latest = new Map<string, (typeof list)[number]>()
+        for (const rv of list) if (!latest.has(rv.shopId)) latest.set(rv.shopId, rv)
+        const paths = [...latest.values()].map((x) => x.photoPath).filter((x): x is string => x !== null)
+        const urls = paths.length ? await photoUrls(paths).catch(() => new Map<string, string>()) : new Map<string, string>()
+        if (!alive) return
+        setMine(new Map([...latest].map(([id, x]) => [id, { stars: x.stars, photo: x.photoPath ? urls.get(x.photoPath) ?? null : null }])))
+      } catch {
+        /* 感想が読めなくても記録はそのまま */
+      }
+    })()
+    return () => {
+      alive = false
+    }
+  }, [state.status])
   const range = useMemo(() => timeRange(cells, towns.map((x) => x.at)), [cells, towns])
   const now = t ?? range?.end ?? 0
   const history = useMemo(() => groupByMonth(visits, now), [visits, now])
@@ -225,10 +248,13 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
               {today.map((v, i) => (
                 <div className="rc__today-item" key={`${v.shopId}-${v.at}`}>
                   <span className="rc__today-num">{i + 1}</span>
-                  <Thumb photoUrl={v.photoUrl} kind={v.kind} />
+                  <Thumb photoUrl={mine.get(v.shopId)?.photo ?? v.photoUrl} kind={v.kind} />
                   <div className="rc__item-main">
                     <b>{v.name}</b>
-                    <span>{timeLabel(v.at)}</span>
+                    <span>
+                      {timeLabel(v.at)}
+                      {mine.has(v.shopId) && <i className="rc__stars" aria-label={`自分の星 ${mine.get(v.shopId)?.stars}`}>{'★'.repeat(mine.get(v.shopId)?.stars ?? 0)}</i>}
+                    </span>
                   </div>
                   <span className="rc__kind">{KIND_LABEL[v.kind]}</span>
                 </div>
@@ -254,10 +280,13 @@ export function Record({ home, onClose, initialTab = 'record', onTownSync, onLoc
                 <div className="rc__month">{g.month}</div>
                 {g.items.map((v, i) => (
                   <div className="rc__item" key={`${v.shopId}-${v.day}-${i}`}>
-                    <Thumb photoUrl={v.photoUrl} kind={v.kind} />
+                    <Thumb photoUrl={mine.get(v.shopId)?.photo ?? v.photoUrl} kind={v.kind} />
                     <div className="rc__item-main">
                       <b>{v.name}</b>
-                      <span>{v.day.replaceAll('-', '.')}</span>
+                      <span>
+                        {v.day.replaceAll('-', '.')}
+                        {mine.has(v.shopId) && <i className="rc__stars" aria-label={`自分の星 ${mine.get(v.shopId)?.stars}`}>{'★'.repeat(mine.get(v.shopId)?.stars ?? 0)}</i>}
+                      </span>
                     </div>
                     <span className="rc__kind">{KIND_LABEL[v.kind]}</span>
                   </div>

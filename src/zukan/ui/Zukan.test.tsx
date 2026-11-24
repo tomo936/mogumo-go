@@ -177,3 +177,20 @@ test('図鑑にそのお店が無ければ、一覧のまま一言出す', async
   expect(await screen.findByText(/まだ図鑑に入っていません/)).toBeInTheDocument()
   expect(screen.queryByLabelText('図鑑カード詳細')).not.toBeInTheDocument()
 })
+
+test('「すべて」のタブは全部の種類、行った/まだ で絞り込める（2026-11-24）', async () => {
+  const cafe: ZukanShop = { ...base, kind: 'cafe', id: 'hp:C', name: 'カフェC', catch: null, visits: { count: 1, firstDay: '2026-11-03', lastDay: '2026-11-03' } }
+  load.mockResolvedValueOnce([visited, unknown, cafe])
+  render(<Zukan onLocate={() => {}} onClose={() => {}} />)
+  await screen.findByLabelText('1/2 訪問済み')
+  await userEvent.click(screen.getByRole('button', { name: 'すべて' }))
+  expect(screen.getByLabelText('2/3 訪問済み')).toBeInTheDocument()
+  expect(screen.getByText('カフェC')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'まだ' }))
+  expect(screen.queryByText('カフェC')).not.toBeInTheDocument()
+  expect(screen.getByText('？？？')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '行った' }))
+  expect(screen.getByText('カフェC')).toBeInTheDocument()
+  expect(screen.queryByText('？？？')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('2/3 訪問済み')).toBeInTheDocument() // 数は絞り込み前の種類の数
+})

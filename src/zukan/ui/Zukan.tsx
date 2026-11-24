@@ -37,7 +37,10 @@ type Props = {
 export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null, initialShopId = null }: Props) {
   const [detail, setDetail] = useState<{ shop: ZukanShop; no: string } | null>(null)
   const [state, setState] = useState<{ status: 'loading' } | { status: 'error' } | { status: 'ready'; shops: ZukanShop[] }>({ status: 'loading' })
-  const [kind, setKind] = useState<ShopKind>('ramen')
+  // 'all' = すべての種類（2026-11-24 図鑑の充実）
+  const [kind, setKind] = useState<ShopKind | 'all'>('ramen')
+  // 行った / まだ の絞り込み（2026-11-24 図鑑の充実）
+  const [filter, setFilter] = useState<'all' | 'done' | 'yet'>('all')
   const [page, setPage] = useState(0)
   const [hint, setHint] = useState<{ id: string; at: { lat: number; lng: number } } | null>(null) // 押した「？」のカード（文は今の位置から毎回測る）
   const [opened] = useState({ mapShops, cleared }) // 開いたときの地図のお店と晴れたマス（開いている間は読み直さない）
@@ -71,7 +74,8 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null, ini
     setMissing(true)
   }, [jumped, initialShopId, byKind])
   const all = useMemo(() => (byKind ? [...byKind.values()].flat() : []), [byKind])
-  const list = byKind?.get(kind) ?? []
+  const kindList = kind === 'all' ? all : byKind?.get(kind) ?? []
+  const list = filter === 'all' ? kindList : kindList.filter((s) => (filter === 'done') === (s.visits !== null))
   const pages = pageCount(list.length)
   const current = Math.min(page, Math.max(0, pages - 1))
   const shown = list.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE)
@@ -128,6 +132,18 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null, ini
       {byKind && (
         <>
           <nav className="zukan__tabs" aria-label="ジャンル">
+            <button
+              type="button"
+              className={`zukan__tab zukan__tab--all${kind === 'all' ? ' zukan__tab--on' : ''}`}
+              aria-pressed={kind === 'all'}
+              onClick={() => {
+                setKind('all')
+                setPage(0)
+                setHint(null)
+              }}
+            >
+              すべて
+            </button>
             {KIND_ORDER.map((k) => (
               <button
                 key={k}
@@ -148,19 +164,40 @@ export function Zukan({ onLocate, onClose, mapShops, cleared, origin = null, ini
 
           {/* 選んだジャンルの進み具合（2026-11-24 外のレビューの案 mock-c: 種類の絵＋大きな数字＋棒） */}
           <div className="zukan__summary">
-            <img src={kindIcon(kind)} alt="" />
-            <span>{KIND_NAME[kind]}</span>
-            <b aria-label={`${filledCount(list)}/${list.length} 訪問済み`}>
-              {filledCount(list)}
-              <small>{` / ${list.length}`}</small>
+            {kind !== 'all' && <img src={kindIcon(kind)} alt="" />}
+            <span>{kind === 'all' ? 'すべて' : KIND_NAME[kind]}</span>
+            <b aria-label={`${filledCount(kindList)}/${kindList.length} 訪問済み`}>
+              {filledCount(kindList)}
+              <small>{` / ${kindList.length}`}</small>
             </b>
             <i className="zukan__summary-bar" aria-hidden="true">
-              <i style={{ width: `${list.length ? Math.round((filledCount(list) / list.length) * 100) : 0}%` }} />
+              <i style={{ width: `${kindList.length ? Math.round((filledCount(kindList) / kindList.length) * 100) : 0}%` }} />
             </i>
           </div>
 
+          {/* 行った / まだ の絞り込み（2026-11-24） */}
+          <div className="zukan__filter" role="group" aria-label="絞り込み">
+            {(['all', 'done', 'yet'] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                aria-pressed={filter === f}
+                className={filter === f ? 'is-on' : ''}
+                onClick={() => {
+                  setFilter(f)
+                  setPage(0)
+                  setHint(null)
+                }}
+              >
+                {f === 'all' ? 'ぜんぶ' : f === 'done' ? '行った' : 'まだ'}
+              </button>
+            ))}
+          </div>
+
           {list.length === 0 ? (
-            <p className="zukan__note">まだ見つけたお店がありません。街を歩いて探してみてね</p>
+            <p className="zukan__note">
+              {kindList.length > 0 && filter === 'done' ? 'まだ行ったお店がありません' : kindList.length > 0 && filter === 'yet' ? 'ぜんぶ行きました！' : 'まだ見つけたお店がありません。街を歩いて探してみてね'}
+            </p>
           ) : (
             <>
               <ul className="zukan__grid">

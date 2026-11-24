@@ -85,6 +85,14 @@ export async function loadMine(shopId: string, client?: ReviewsClient): Promise<
   return { visits, mine: parseAll(rows(rv, 'reviews_unavailable')).filter((r) => r.userId === me) }
 }
 
+// 自分の感想を全部（記録の画面で、行ったお店の行に自分の写真と星を出す。2026-11-24）。新しい順
+export async function loadAllMine(client?: ReviewsClient): Promise<Review[]> {
+  const c = await getClient(client)
+  const me = await myId(c)
+  const rv = await c.from('reviews').select(COLS).eq('user_id', me).order('created_at', { ascending: false }).limit(1000)
+  return parseAll(rows(rv, 'reviews_unavailable')).filter((r) => r.userId === me)
+}
+
 async function withNicknames(c: ReviewsClient, list: Review[]): Promise<Review[]> {
   const ids = [...new Set(list.map((r) => r.userId))]
   if (ids.length === 0) return list

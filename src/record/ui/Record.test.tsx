@@ -15,6 +15,8 @@ vi.mock('../../towns/infra/townsApi.ts', () => ({ syncUntilSettled: (...a: Param
 
 vi.mock('../../world/ui/WorldMap.tsx', () => ({ WorldMap: ({ onClose }: { onClose: () => void }) => <button onClick={onClose}>world-close</button> }))
 vi.mock('./RecordMap.tsx', () => ({ RecordMap: () => <div data-testid="record-map" /> }))
+const mineReviews = vi.fn(async () => [] as unknown[])
+vi.mock('../../reviews/infra/reviewsApi.ts', () => ({ loadAllMine: () => mineReviews(), photoUrls: async () => new Map() }))
 
 import { Record } from './Record.tsx'
 
@@ -146,4 +148,12 @@ test('「ワールドマップ」を押すと日本地図が重なり、戻る�
   await userEvent.click(await screen.findByRole('button', { name: 'ワールドマップ' }))
   await userEvent.click(screen.getByText('world-close'))
   expect(screen.queryByText('world-close')).toBeNull()
+})
+
+test('自分の感想があるお店は、行の日付の横に自分の星を出す（2026-11-24 記録を思い出に）', async () => {
+  mineReviews.mockResolvedValueOnce([{ id: 'r1', checkinId: 'c1', shopId: 'hp:A', userId: 'me', stars: 4, body: null, photoPath: null, isPublic: true, createdAt: '2026-10-05T04:00:00Z', nickname: null }])
+  load.mockResolvedValueOnce({ cells, visits, towns: [] })
+  render(<Record home={null} onClose={() => {}} />)
+  expect(await screen.findByLabelText('自分の星 4')).toHaveTextContent('★★★★')
+  expect(screen.queryByLabelText(/自分の星 /, { selector: '[aria-label="自分の星 0"]' })).not.toBeInTheDocument()
 })

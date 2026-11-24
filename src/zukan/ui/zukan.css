@@ -643,3 +643,37 @@
   font-weight: 700;
   color: #8a5a32;
 }
+
+/* 「すべて」のタブ（絵なし。2026-11-24） */
+.zukan__tab--all {
+  padding: 0 16px;
+}
+/* 行った / まだ の絞り込み（記録の切り替えのタブと同じ作り。2026-11-24） */
+.zukan__filter {
+  display: flex;
+  margin: 0 14px 10px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #e8dcc4;
+}
+.zukan__filter button {
+  position: relative;
+  flex: 1;
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: #7a5a3a;
+  font-size: 13px;
+  font-weight: 800;
+}
+.zukan__filter button::after {
+  content: '';
+  position: absolute;
+  inset: -5px 0; /* 押せる高さ 44px */
+}
+.zukan__filter button.is-on {
+  background: #fffdf7;
+  color: #a2561b;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
