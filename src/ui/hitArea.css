@@ -19,3 +19,25 @@
 .zukan__close { --hit: -3px; }
 .zukan__tab { --hit: -4px 0 -8px; } /* 36px＋枠線 2px。上は並びの余白 4px で切れるので、上 4・下 8 で合わせて 44（レビュー 2026-11-24） */
 .zukan__hintbar button { --hit: -8px; }
+
+/* 橙のボタンの決まり（2026-11-24 B-28 は B: 色は今の橙のまま、大 52px・小 40px、縁 #8a5a32・影 4px/3px にそろえる）。
+   押したときは影の分だけ沈む（押す瞬間は短く、戻りはばね。docs/uiux/2026-11-23-css-craft-research.md） */
+.shop-sheet__locate, .rv-ed__save, .zd__locate, .rcal__open, .zd-box__write, .rv-write, .rv-mine__edit, .rc__world {
+  transition: transform 600ms cubic-bezier(0.3, 0.7, 0.4, 1), box-shadow 600ms cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+.shop-sheet__locate:active, .rv-ed__save:active, .zd__locate:active, .rcal__open:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #8a5a32;
+  transition-duration: 34ms;
+}
+.zd-box__write:active, .rv-write:active, .rv-mine__edit:active, .rc__world:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #8a5a32;
+  transition-duration: 34ms;
+}
+/* 小さいボタン（40px）の押せる範囲を 44px に */
+.zd-box__write, .rv-write, .rv-mine__edit, .rc__world { position: relative; }
+.zd-box__write::after, .rv-write::after, .rv-mine__edit::after, .rc__world::after { content: ''; position: absolute; inset: -4px 0; }
+@media (prefers-reduced-motion: reduce) {
+  .shop-sheet__locate, .rv-ed__save, .zd__locate, .rcal__open, .zd-box__write, .rv-write, .rv-mine__edit, .rc__world { transition: none; }
+}

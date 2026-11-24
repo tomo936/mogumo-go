@@ -218,7 +218,7 @@
 .rv-ed__save {
   display: block;
   width: 100%;
-  height: 54px;
+  height: 52px;
   margin-top: 18px;
   border: 2.5px solid #8a5a32;
   border-radius: 99px;
@@ -226,7 +226,7 @@
   color: #fff;
   font-size: 17px;
   font-weight: 800;
-  box-shadow: 0 5px 0 #8a5a32;
+  box-shadow: 0 4px 0 #8a5a32;
 }
 .rv-ed__save:disabled {
   opacity: 0.45;
@@ -309,15 +309,16 @@
   text-align: center;
 }
 .zd-box__write {
-  height: 38px;
+  height: 40px;
   margin-top: 4px;
   padding: 0 18px;
-  border: 0;
+  border: 2.5px solid #8a5a32;
   border-radius: 99px;
   background: #e8782f;
   color: #fff;
   font-size: 14px;
   font-weight: 800;
+  box-shadow: 0 3px 0 #8a5a32;
 }
 .zd-box__more {
   display: block;
@@ -543,12 +544,12 @@
   align-items: center;
   gap: 4px;
   margin-left: auto;
-  height: 36px;
+  height: 40px;
   padding: 0 16px 0 10px !important;
-  border: 2.5px solid #4a2f18 !important;
+  border: 2.5px solid #8a5a32;
   border-radius: 99px;
-  background: #e8782f !important;
-  box-shadow: 2px 2px 0 #4a2f18;
+  background: #e8782f;
+  box-shadow: 0 3px 0 #8a5a32;
   color: #fff !important;
   font-size: 14px;
   font-weight: 800;
@@ -558,14 +559,14 @@
   line-height: 1;
 }
 .rv-write:not(:disabled):active {
-  transform: translate(2px, 2px);
-  box-shadow: none;
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #8a5a32;
 }
 /* 書けないとき（いちばん新しい訪問はもう書いた）: 灰色で押せない。理由は見出しの下に小さく */
 .rv-write:disabled {
   border-color: #b9ada0 !important;
   background: #ddd5cb !important;
-  box-shadow: 2px 2px 0 #b9ada0;
+  box-shadow: 0 3px 0 #b9ada0;
   color: #fff !important;
   cursor: default;
 }
@@ -590,19 +591,19 @@
   position: absolute;
   top: 10px;
   right: 10px;
-  height: 32px;
+  height: 40px;
   padding: 0 14px !important;
-  border: 2.5px solid #4a2f18 !important;
+  border: 2.5px solid #8a5a32;
   border-radius: 99px;
-  background: #e8782f !important;
-  box-shadow: 2px 2px 0 #4a2f18;
+  background: #e8782f;
+  box-shadow: 0 3px 0 #8a5a32;
   color: #fff !important;
   font-size: 13px;
   font-weight: 800;
 }
 .rv-mine__edit:active {
-  transform: translate(2px, 2px);
-  box-shadow: none;
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #8a5a32;
 }
 .rv-mine .rv-mine__row {
   flex-wrap: wrap;
