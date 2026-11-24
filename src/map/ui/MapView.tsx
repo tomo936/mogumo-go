@@ -303,15 +303,19 @@ export function MapView({ onStatus, home, onShopsError, onSelectShop, onSelectBu
         el.style.opacity = ''
       }
     }
+    let pinCenter: { lat: number; lng: number } | null = null // ピンの円を最後に作った真ん中
     const limitPins = (cutY: number) => {
-      // 1 軒のピン（地図の層）: 主人公から drawM の円の中だけ
+      // 1 軒のピン（地図の層）: 主人公から drawM の円の中だけ。円と濃さの式は、真ん中が 20m 動いたときだけ作り直す
+      // （毎コマ作り直すと地図の仕組みが層を計算し直して重くなる。2026-11-24 テスト役の指摘）
       const c = map.getCenter()
+      const moved = !pinCenter || !pinsLimited || distanceMeters(pinCenter, { lat: c.lat, lng: c.lng }) > 20
+      if (moved) pinCenter = { lat: c.lat, lng: c.lng }
       const ring: [number, number][] = []
       for (let i = 0; i <= 32; i++) {
         const a = (i / 32) * Math.PI * 2
         ring.push([c.lng + (drawM * Math.sin(a)) / (111_320 * Math.cos((c.lat * Math.PI) / 180)), c.lat + (drawM * Math.cos(a)) / 111_320])
       }
-      if (map.getLayer(PIN_LAYER)) {
+      if (moved && map.getLayer(PIN_LAYER)) {
         map.setFilter(PIN_LAYER, ['within', { type: 'Polygon', coordinates: [ring] }])
         // 霧と同じ距離でうすくしてから消す（主人公からの距離。描画距離の 60% から 95% で 1 → 0）
         try {

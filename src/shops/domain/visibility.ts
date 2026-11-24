@@ -23,3 +23,18 @@ export function modelPlace(center: LatLng, members: LatLng[], me: LatLng, cleare
   if (members.some((m) => !isClearedAt(cleared, m) && distanceMeters(me, m) <= IN_FOG_VISIBLE_M)) return 'fog'
   return isClearedAt(cleared, center) ? 'clear' : null
 }
+
+// 見ている所 from から to までの地面の間に、まだ晴れていない所があるか（霧の向こうか）。
+// STEP_M ごとに調べる。両端の近く（from のまわり・to のお店のセル）は除く
+const STEP_M = 20
+export function behindFog(from: LatLng, to: LatLng, cleared: Cleared): boolean {
+  const d = distanceMeters(from, to)
+  const n = Math.floor(d / STEP_M)
+  for (let i = 1; i < n; i++) {
+    const t = (i * STEP_M) / d
+    if (d - i * STEP_M < STEP_M) break // お店のすぐ手前（お店のセル）は見ない
+    const p = { lat: from.lat + (to.lat - from.lat) * t, lng: from.lng + (to.lng - from.lng) * t }
+    if (!isClearedAt(cleared, p)) return true
+  }
+  return false
+}

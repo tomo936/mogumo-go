@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { modelPlace, visibleShops } from './visibility.ts'
+import { behindFog, modelPlace, visibleShops } from './visibility.ts'
 import { distanceMeters } from '../../map/domain/geo.ts'
 import { clearedFromHome } from '../../fog/domain/clearing.ts'
 import type { Shop } from './shop.ts'
@@ -100,5 +100,23 @@ describe('modelPlace（模型をどの層に出すか）', () => {
   it('ビルは誰か1軒が霧の中の近い店なら fog', () => {
     // 自分は 10m 北。1軒は 20m 先（霧の中の近い店）、もう1軒は 200m 先
     expect(modelPlace(at(30), [at(30), at(210)], at(10), new Set<string>())).toBe('fog')
+  })
+})
+
+describe('霧の向こうのお店（2026-11-24）', () => {
+  const me = { lat: 35.65, lng: 139.63 }
+  const far = { lat: 35.65 + 0.0018, lng: 139.63 } // 北へ約 200m
+  const keysAlong = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+    const s = new Set<string>()
+    for (let i = 0; i <= 100; i++) s.add(cellKey(cellOf({ lat: a.lat + (b.lat - a.lat) * (i / 100), lng: a.lng + (b.lng - a.lng) * (i / 100) })))
+    return s
+  }
+  it('間がずっと晴れていれば、霧の向こうではない', () => {
+    expect(behindFog(me, far, keysAlong(me, far))).toBe(false)
+  })
+  it('間に晴れていない所があれば、霧の向こう（お店は出さない）', () => {
+    const c = keysAlong(me, far)
+    c.delete(cellKey(cellOf({ lat: 35.65 + 0.0009, lng: 139.63 }))) // 真ん中のセルだけ霧
+    expect(behindFog(me, far, c)).toBe(true)
   })
 })
