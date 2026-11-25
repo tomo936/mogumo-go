@@ -1,12 +1,14 @@
 # 参考画像の白い背景を消して、透明な 1024x1024 の PNG にする（Blender に入っている numpy だけで動く）。
 # 使い方: blender -b -P prep-ref.py -- 入力.png 出力.png [shadow] [mirror]
 #   shadow: 床のうすい影（明るい灰色）も背景として消す（横の絵で使う）。mirror: 左右を返す
+#   holes: 体に囲まれた背景（しっぽの輪の内側など）も消す。ふちとつながっていない「真っ白で平らな」かたまりのうち、大きいものだけ（白い毛は陰があるので残る。2026-11-25 ねこ）
 import bpy, sys
 import numpy as np
 args = sys.argv[sys.argv.index('--') + 1:]
 src, dst = args[:2]
 SHADOW = 'shadow' in args
 MIRROR = 'mirror' in args
+HOLES = 'holes' in args
 img = bpy.data.images.load(src)
 W, H = img.size
 px = np.array(img.pixels[:], dtype=np.float32).reshape(H, W, 4)
@@ -24,6 +26,23 @@ while True:
     if (g == bg).all():
         break
     bg = g
+if HOLES:
+    # 真っ白で平らな画素のかたまりに番号を付ける（となりの小さい番号へ寄せていき、変わらなくなるまで）
+    pure = (rgb.min(2) > 247) & ((rgb.max(2) - rgb.min(2)) < 6) & ~bg
+    lab = np.where(pure, np.arange(H * W).reshape(H, W), H * W)
+    while True:
+        m = lab.copy()
+        m[1:, :] = np.minimum(m[1:, :], lab[:-1, :]); m[:-1, :] = np.minimum(m[:-1, :], lab[1:, :])
+        m[:, 1:] = np.minimum(m[:, 1:], lab[:, :-1]); m[:, :-1] = np.minimum(m[:, :-1], lab[:, 1:])
+        m = np.where(pure, m, H * W)
+        if (m == lab).all():
+            break
+        lab = m
+    ids, counts = np.unique(lab[pure], return_counts=True)
+    big = ids[counts >= 2500]
+    hole = np.isin(lab, big) & pure
+    print('holes', len(big), 'px', int(hole.sum()), 'sizes', sorted(counts[counts >= 2500].tolist())[-5:])
+    bg |= hole
 fg = ~bg
 ys, xs = np.where(fg)
 y0, y1, x0, x1 = ys.min(), ys.max(), xs.min(), xs.max()
