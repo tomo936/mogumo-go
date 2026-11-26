@@ -18,21 +18,29 @@ from collections import deque
 bpy.ops.wm.open_mainfile(filepath=wpath('stage3.blend'))
 ob = bpy.data.objects['avatar']; me = ob.data; FC = CFG['face']; LOG = {}
 X0, X1, Z0, Z1 = FC['box']; CW = FC['cell_w']; CH_ = int(round(CW * (Z1 - Z0) / (X1 - X0)))
-# 目のくぼみをならす（face.flatten = [[cx, cz, rx, rz], ...] m。くま 2026-11-26「目元がえぐれてる」）: 生成の形は目の所がくぼんでいて、
-# 平らな目を描くとえぐれて見えた。だ円の中の前向きの点の奥行き（y）だけを、外の点を固定して何度もならし、まわりの面から張った膜にする。
+# 顔の面をならす（face.flatten = [[cx, cz, rx, rz], ...] m。くま 2026-11-26「目のまわりがえぐれて目と合っていない・鼻の凹凸」）:
+# 生成の形は目の所がくぼみ・鼻がふくらんでいて、平らに描いた目と鼻が合わずにでこぼこに見えた。だ円の外の輪（1〜1.6 倍）の前向きの点に
+# なめらかな 2 次の曲面 y = f(x, z) を当てはめ、だ円の中の点の奥行き（y）をその曲面にそろえる。1〜flatten_blend 倍は元の面へ少しずつ戻す。
 # 面は足さない・切らない（点の奥行きを動かすだけ）。骨と重みは変わらない
 if FC.get('flatten'):
     Vf = np.array([v.co for v in me.vertices]); Nf = np.array([v.normal for v in me.vertices])
-    inside = np.zeros(len(Vf), bool)
+    front = (Nf[:, 1] < -0.2) & (Vf[:, 1] < 0)
+    Y = Vf[:, 1].copy(); moved = []
+    BL = FC.get('flatten_blend', 1.3)
     for cx_, cz_, rx_, rz_ in FC['flatten']:
-        inside |= (((Vf[:, 0] - cx_) / rx_) ** 2 + ((Vf[:, 2] - cz_) / rz_) ** 2 < 1) & (Nf[:, 1] < -0.2) & (Vf[:, 1] < 0)
-    E_ = np.array([e.vertices[:] for e in me.edges]); nb = [[] for _ in Vf]
-    for a_, b_ in E_: nb[a_].append(b_); nb[b_].append(a_)
-    idx = np.nonzero(inside)[0]; Y = Vf[:, 1].copy()
-    for _ in range(FC.get('flatten_iter', 200)):
-        Y[idx] = np.array([Y[nb[i]].mean() for i in idx])
-    LOG['flatten_moved_mm'] = round(float(np.abs(Y[idx] - Vf[idx, 1]).max()) * 1000, 2); LOG['flatten_verts'] = int(len(idx))
-    for i in idx: me.vertices[int(i)].co.y = float(Y[i])
+        r = np.sqrt(((Vf[:, 0] - cx_) / rx_) ** 2 + ((Vf[:, 2] - cz_) / rz_) ** 2)
+        ring = front & (r > BL) & (r < BL + 0.6)
+        u, w = Vf[ring, 0] - cx_, Vf[ring, 2] - cz_
+        A = np.stack([np.ones_like(u), u, w, u * u, u * w, w * w], 1)
+        co, *_ = np.linalg.lstsq(A, Vf[ring, 1], rcond=None)
+        sel_ = front & (r < BL)
+        u, w = Vf[sel_, 0] - cx_, Vf[sel_, 2] - cz_
+        fit = np.stack([np.ones_like(u), u, w, u * u, u * w, w * w], 1) @ co
+        t = np.clip((r[sel_] - 1) / (BL - 1), 0, 1); t = t * t * (3 - 2 * t)
+        Y[sel_] = fit * (1 - t) + Vf[sel_, 1] * t
+        moved.append(round(float(np.abs(Y[sel_] - Vf[sel_, 1]).max()) * 1000, 1))
+    LOG['flatten_moved_mm'] = moved
+    for i in np.nonzero(Y != Vf[:, 1])[0]: me.vertices[int(i)].co.y = float(Y[i])
     me.update()
 V, _, TRI = mesh_arrays(me)
 names = [g.name for g in ob.vertex_groups]; hw = np.zeros(len(V))
