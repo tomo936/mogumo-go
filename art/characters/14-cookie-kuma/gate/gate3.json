@@ -1,0 +1,1250 @@
+{
+ "summary": {
+  "median_edge": 0.01176,
+  "arm_down_deg": -10.4,
+  "arm_open_deg": 33.6,
+  "tail_join_edges": 83,
+  "worst_stretch": 10.083,
+  "worst_shrink": 0.095,
+  "folds_total": 837,
+  "tail_join_worst": [
+   0.708,
+   1.506
+  ],
+  "check": {
+   "stretch": false,
+   "shrink": false,
+   "folds": false,
+   "tail_join": false
+  },
+  "pass": false
+ },
+ "poses": [
+  {
+   "pose": "A ポーズ",
+   "stretch_max": 1.0,
+   "stretch_p999": 1.0,
+   "shrink_min": 1.0,
+   "stretch_top": [
+    [
+     1.0,
+     "upperarmR-chest",
+     [
+      -0.244,
+      0.063,
+      0.377
+     ]
+    ],
+    [
+     1.0,
+     "chest-upperarmL",
+     [
+      0.238,
+      -0.008,
+      0.418
+     ]
+    ],
+    [
+     1.0,
+     "chest-upperarmR",
+     [
+      -0.199,
+      -0.038,
+      0.324
+     ]
+    ]
+   ],
+   "shrink_top": [
+    [
+     1.0,
+     "chest-upperarmR"
+    ],
+    [
+     1.0,
+     "upperarmR-chest"
+    ]
+   ],
+   "folds": 0,
+   "fold_bones": [],
+   "fold_at": [],
+   "tail_join_stretch": [
+    1.0,
+    1.0
+   ],
+   "overlap_pairs": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   },
+   "overlap_new": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   }
+  },
+  {
+   "pose": "立ち（腕を下ろす）",
+   "stretch_max": 1.836,
+   "stretch_p999": 1.356,
+   "shrink_min": 0.106,
+   "stretch_top": [
+    [
+     1.836,
+     "chest-upperarmL",
+     [
+      0.219,
+      0.007,
+      0.281
+     ]
+    ],
+    [
+     1.809,
+     "upperarmL-chest",
+     [
+      0.237,
+      0.009,
+      0.282
+     ]
+    ],
+    [
+     1.746,
+     "upperarmR-chest",
+     [
+      -0.236,
+      -0.002,
+      0.286
+     ]
+    ]
+   ],
+   "shrink_top": [
+    [
+     0.106,
+     "upperarmR-chest"
+    ],
+    [
+     0.336,
+     "upperarmR-chest"
+    ]
+   ],
+   "folds": 20,
+   "fold_bones": [
+    "chest/chest",
+    "upperarmL/chest",
+    "upperarmL/upperarmL",
+    "upperarmR/chest",
+    "upperarmR/upperarmR"
+   ],
+   "fold_at": [
+    [
+     -0.25,
+     -0.0,
+     0.4
+    ],
+    [
+     -0.25,
+     0.0,
+     0.45
+    ],
+    [
+     -0.25,
+     0.05,
+     0.4
+    ],
+    [
+     -0.2,
+     -0.05,
+     0.30000000000000004
+    ],
+    [
+     -0.2,
+     0.1,
+     0.30000000000000004
+    ],
+    [
+     0.2,
+     0.05,
+     0.30000000000000004
+    ],
+    [
+     0.25,
+     -0.0,
+     0.4
+    ],
+    [
+     0.25,
+     0.05,
+     0.45
+    ]
+   ],
+   "tail_join_stretch": [
+    1.0,
+    1.0
+   ],
+   "overlap_pairs": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   },
+   "overlap_new": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   }
+  },
+  {
+   "pose": "左腕 前60・右腕 後40",
+   "stretch_max": 7.834,
+   "stretch_p999": 4.957,
+   "shrink_min": 0.283,
+   "stretch_top": [
+    [
+     7.834,
+     "upperarmR-chest",
+     [
+      -0.238,
+      0.014,
+      0.45
+     ]
+    ],
+    [
+     7.545,
+     "chest-upperarmR",
+     [
+      -0.239,
+      0.06,
+      0.392
+     ]
+    ],
+    [
+     6.775,
+     "upperarmL-chest",
+     [
+      0.237,
+      -0.061,
+      0.294
+     ]
+    ]
+   ],
+   "shrink_top": [
+    [
+     0.283,
+     "upperarmR-upperarmR"
+    ],
+    [
+     0.315,
+     "chest-chest"
+    ]
+   ],
+   "folds": 147,
+   "fold_bones": [
+    "chest/chest",
+    "chest/upperarmL",
+    "chest/upperarmR",
+    "pack/pack",
+    "upperarmL/chest",
+    "upperarmL/upperarmL"
+   ],
+   "fold_at": [
+    [
+     -0.25,
+     -0.05,
+     0.4
+    ],
+    [
+     -0.25,
+     0.0,
+     0.25
+    ],
+    [
+     -0.25,
+     0.0,
+     0.30000000000000004
+    ],
+    [
+     -0.25,
+     -0.0,
+     0.4
+    ],
+    [
+     -0.25,
+     0.0,
+     0.45
+    ],
+    [
+     -0.25,
+     0.05,
+     0.35000000000000003
+    ],
+    [
+     -0.25,
+     0.05,
+     0.4
+    ],
+    [
+     -0.25,
+     0.05,
+     0.45
+    ]
+   ],
+   "tail_join_stretch": [
+    1.0,
+    1.0
+   ],
+   "overlap_pairs": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   },
+   "overlap_new": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   }
+  },
+  {
+   "pose": "左腕 後40・右腕 前60・ひじ90",
+   "stretch_max": 10.083,
+   "stretch_p999": 6.058,
+   "shrink_min": 0.268,
+   "stretch_top": [
+    [
+     10.083,
+     "chest-upperarmR",
+     [
+      -0.24,
+      0.028,
+      0.426
+     ]
+    ],
+    [
+     9.73,
+     "upperarmR-chest",
+     [
+      -0.231,
+      0.053,
+      0.317
+     ]
+    ],
+    [
+     9.444,
+     "upperarmR-chest",
+     [
+      -0.231,
+      0.053,
+      0.317
+     ]
+    ]
+   ],
+   "shrink_top": [
+    [
+     0.268,
+     "forearmL-forearmL"
+    ],
+    [
+     0.314,
+     "chest-chest"
+    ]
+   ],
+   "folds": 178,
+   "fold_bones": [
+    "chest/chest",
+    "chest/pack",
+    "chest/upperarmL",
+    "chest/upperarmR",
+    "forearmL/forearmL",
+    "forearmR/forearmR"
+   ],
+   "fold_at": [
+    [
+     -0.25,
+     -0.1,
+     0.25
+    ],
+    [
+     -0.25,
+     0.0,
+     0.25
+    ],
+    [
+     -0.25,
+     -0.0,
+     0.4
+    ],
+    [
+     -0.25,
+     0.05,
+     0.30000000000000004
+    ],
+    [
+     -0.25,
+     0.05,
+     0.35000000000000003
+    ],
+    [
+     -0.25,
+     0.05,
+     0.4
+    ],
+    [
+     -0.2,
+     -0.05,
+     0.30000000000000004
+    ],
+    [
+     -0.2,
+     -0.05,
+     0.35000000000000003
+    ]
+   ],
+   "tail_join_stretch": [
+    1.0,
+    1.0
+   ],
+   "overlap_pairs": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   },
+   "overlap_new": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   }
+  },
+  {
+   "pose": "腕 横90",
+   "stretch_max": 7.482,
+   "stretch_p999": 4.11,
+   "shrink_min": 0.095,
+   "stretch_top": [
+    [
+     7.482,
+     "chest-upperarmR",
+     [
+      -0.247,
+      0.01,
+      0.423
+     ]
+    ],
+    [
+     7.38,
+     "upperarmR-chest",
+     [
+      -0.163,
+      0.019,
+      0.434
+     ]
+    ],
+    [
+     7.068,
+     "upperarmR-chest",
+     [
+      -0.167,
+      0.002,
+      0.434
+     ]
+    ]
+   ],
+   "shrink_top": [
+    [
+     0.095,
+     "upperarmR-chest"
+    ],
+    [
+     0.165,
+     "upperarmL-chest"
+    ]
+   ],
+   "folds": 166,
+   "fold_bones": [
+    "chest/chest",
+    "chest/pack",
+    "chest/upperarmL",
+    "chest/upperarmR",
+    "pack/pack",
+    "upperarmL/upperarmL"
+   ],
+   "fold_at": [
+    [
+     -0.25,
+     -0.05,
+     0.35000000000000003
+    ],
+    [
+     -0.25,
+     -0.05,
+     0.4
+    ],
+    [
+     -0.25,
+     -0.0,
+     0.4
+    ],
+    [
+     -0.25,
+     0.0,
+     0.45
+    ],
+    [
+     -0.25,
+     0.05,
+     0.35000000000000003
+    ],
+    [
+     -0.25,
+     0.05,
+     0.4
+    ],
+    [
+     -0.25,
+     0.05,
+     0.45
+    ],
+    [
+     -0.2,
+     -0.05,
+     0.30000000000000004
+    ]
+   ],
+   "tail_join_stretch": [
+    1.0,
+    1.0
+   ],
+   "overlap_pairs": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   },
+   "overlap_new": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   }
+  },
+  {
+   "pose": "ひじ90（下ろした腕）",
+   "stretch_max": 2.626,
+   "stretch_p999": 1.573,
+   "shrink_min": 0.242,
+   "stretch_top": [
+    [
+     2.626,
+     "upperarmR-chest",
+     [
+      -0.236,
+      -0.01,
+      0.264
+     ]
+    ],
+    [
+     2.323,
+     "upperarmR-chest",
+     [
+      -0.242,
+      0.025,
+      0.265
+     ]
+    ],
+    [
+     2.311,
+     "upperarmR-chest",
+     [
+      -0.235,
+      -0.022,
+      0.271
+     ]
+    ]
+   ],
+   "shrink_top": [
+    [
+     0.242,
+     "chest-upperarmR"
+    ],
+    [
+     0.268,
+     "forearmL-forearmL"
+    ]
+   ],
+   "folds": 43,
+   "fold_bones": [
+    "chest/chest",
+    "chest/pack",
+    "chest/upperarmR",
+    "forearmL/forearmL",
+    "forearmR/forearmR",
+    "pack/pack"
+   ],
+   "fold_at": [
+    [
+     -0.25,
+     -0.1,
+     0.25
+    ],
+    [
+     -0.25,
+     0.05,
+     0.4
+    ],
+    [
+     -0.2,
+     -0.05,
+     0.30000000000000004
+    ],
+    [
+     -0.2,
+     -0.0,
+     0.30000000000000004
+    ],
+    [
+     -0.2,
+     0.05,
+     0.30000000000000004
+    ],
+    [
+     -0.2,
+     0.1,
+     0.30000000000000004
+    ],
+    [
+     0.2,
+     0.05,
+     0.30000000000000004
+    ],
+    [
+     0.25,
+     -0.05,
+     0.30000000000000004
+    ]
+   ],
+   "tail_join_stretch": [
+    1.0,
+    1.0
+   ],
+   "overlap_pairs": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   },
+   "overlap_new": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   }
+  },
+  {
+   "pose": "左股 前60＋ひざ110・右股 後30",
+   "stretch_max": 2.392,
+   "stretch_p999": 1.995,
+   "shrink_min": 0.106,
+   "stretch_top": [
+    [
+     2.392,
+     "hips-hips",
+     [
+      0.11,
+      0.095,
+      0.101
+     ]
+    ],
+    [
+     2.376,
+     "thighL-hips",
+     [
+      0.15,
+      0.052,
+      0.097
+     ]
+    ],
+    [
+     2.358,
+     "hips-hips",
+     [
+      0.119,
+      0.115,
+      0.12
+     ]
+    ]
+   ],
+   "shrink_top": [
+    [
+     0.106,
+     "upperarmR-chest"
+    ],
+    [
+     0.124,
+     "hips-thighL"
+    ]
+   ],
+   "folds": 38,
+   "fold_bones": [
+    "chest/chest",
+    "shinL/shinL",
+    "shinL/thighL",
+    "thighL/thighL",
+    "upperarmL/chest",
+    "upperarmL/upperarmL"
+   ],
+   "fold_at": [
+    [
+     -0.25,
+     -0.0,
+     0.4
+    ],
+    [
+     -0.25,
+     0.0,
+     0.45
+    ],
+    [
+     -0.25,
+     0.05,
+     0.4
+    ],
+    [
+     -0.2,
+     -0.05,
+     0.30000000000000004
+    ],
+    [
+     -0.2,
+     0.1,
+     0.30000000000000004
+    ],
+    [
+     0.05,
+     0.05,
+     0.05
+    ],
+    [
+     0.05,
+     0.1,
+     0.1
+    ],
+    [
+     0.1,
+     -0.1,
+     0.1
+    ]
+   ],
+   "tail_join_stretch": [
+    0.916,
+    1.401
+   ],
+   "overlap_pairs": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 26,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 54,
+    "legR/torso": 0
+   },
+   "overlap_new": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 26,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 54,
+    "legR/torso": 0
+   }
+  },
+  {
+   "pose": "左股 後30＋ひざ110・右股 前60",
+   "stretch_max": 3.263,
+   "stretch_p999": 2.402,
+   "shrink_min": 0.106,
+   "stretch_top": [
+    [
+     3.263,
+     "hips-thighL",
+     [
+      0.134,
+      -0.084,
+      0.116
+     ]
+    ],
+    [
+     3.004,
+     "thighL-thighL",
+     [
+      0.121,
+      -0.032,
+      0.062
+     ]
+    ],
+    [
+     2.974,
+     "hips-thighL",
+     [
+      0.165,
+      -0.064,
+      0.12
+     ]
+    ]
+   ],
+   "shrink_top": [
+    [
+     0.106,
+     "upperarmR-chest"
+    ],
+    [
+     0.108,
+     "thighR-thighR"
+    ]
+   ],
+   "folds": 45,
+   "fold_bones": [
+    "chest/chest",
+    "hips/hips",
+    "shinL/hips",
+    "shinL/shinL",
+    "shinL/thighL",
+    "thighL/thighL"
+   ],
+   "fold_at": [
+    [
+     -0.25,
+     -0.0,
+     0.4
+    ],
+    [
+     -0.25,
+     0.0,
+     0.45
+    ],
+    [
+     -0.25,
+     0.05,
+     0.4
+    ],
+    [
+     -0.2,
+     -0.05,
+     0.15000000000000002
+    ],
+    [
+     -0.2,
+     -0.05,
+     0.30000000000000004
+    ],
+    [
+     -0.2,
+     -0.0,
+     0.15000000000000002
+    ],
+    [
+     -0.2,
+     0.1,
+     0.30000000000000004
+    ],
+    [
+     -0.15000000000000002,
+     -0.1,
+     0.1
+    ]
+   ],
+   "tail_join_stretch": [
+    0.94,
+    1.246
+   ],
+   "overlap_pairs": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 13,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 81,
+    "legR/torso": 62
+   },
+   "overlap_new": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 13,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 81,
+    "legR/torso": 62
+   }
+  },
+  {
+   "pose": "胸 ひねり5・前傾5",
+   "stretch_max": 2.036,
+   "stretch_p999": 1.637,
+   "shrink_min": 0.097,
+   "stretch_top": [
+    [
+     2.036,
+     "pack-hips",
+     [
+      0.005,
+      0.176,
+      0.258
+     ]
+    ],
+    [
+     2.03,
+     "hips-pack",
+     [
+      -0.078,
+      0.166,
+      0.247
+     ]
+    ],
+    [
+     2.012,
+     "hips-pack",
+     [
+      0.038,
+      0.176,
+      0.245
+     ]
+    ]
+   ],
+   "shrink_top": [
+    [
+     0.097,
+     "upperarmR-chest"
+    ],
+    [
+     0.261,
+     "hips-pack"
+    ]
+   ],
+   "folds": 58,
+   "fold_bones": [
+    "chest/chest",
+    "chest/pack",
+    "chest/upperarmR",
+    "hips/chest",
+    "hips/hips",
+    "hips/pack"
+   ],
+   "fold_at": [
+    [
+     -0.25,
+     -0.0,
+     0.4
+    ],
+    [
+     -0.25,
+     0.0,
+     0.45
+    ],
+    [
+     -0.25,
+     0.05,
+     0.4
+    ],
+    [
+     -0.2,
+     -0.05,
+     0.30000000000000004
+    ],
+    [
+     -0.2,
+     -0.0,
+     0.30000000000000004
+    ],
+    [
+     -0.2,
+     0.1,
+     0.30000000000000004
+    ],
+    [
+     -0.2,
+     0.15000000000000002,
+     0.30000000000000004
+    ],
+    [
+     -0.15000000000000002,
+     0.15000000000000002,
+     0.30000000000000004
+    ]
+   ],
+   "tail_join_stretch": [
+    0.893,
+    1.192
+   ],
+   "overlap_pairs": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   },
+   "overlap_new": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   }
+  },
+  {
+   "pose": "胸 ひねり15・前傾10",
+   "stretch_max": 3.732,
+   "stretch_p999": 2.732,
+   "shrink_min": 0.096,
+   "stretch_top": [
+    [
+     3.732,
+     "hips-pack",
+     [
+      -0.083,
+      0.161,
+      0.25
+     ]
+    ],
+    [
+     3.704,
+     "hips-pack",
+     [
+      -0.084,
+      0.16,
+      0.253
+     ]
+    ],
+    [
+     3.673,
+     "hips-pack",
+     [
+      -0.084,
+      0.16,
+      0.253
+     ]
+    ]
+   ],
+   "shrink_top": [
+    [
+     0.096,
+     "upperarmR-chest"
+    ],
+    [
+     0.277,
+     "chest-upperarmL"
+    ]
+   ],
+   "folds": 112,
+   "fold_bones": [
+    "chest/chest",
+    "chest/pack",
+    "chest/upperarmL",
+    "chest/upperarmR",
+    "hips/chest",
+    "hips/hips"
+   ],
+   "fold_at": [
+    [
+     -0.25,
+     -0.05,
+     0.4
+    ],
+    [
+     -0.25,
+     0.0,
+     0.25
+    ],
+    [
+     -0.25,
+     -0.0,
+     0.4
+    ],
+    [
+     -0.25,
+     0.0,
+     0.45
+    ],
+    [
+     -0.25,
+     0.05,
+     0.4
+    ],
+    [
+     -0.25,
+     0.05,
+     0.45
+    ],
+    [
+     -0.2,
+     -0.05,
+     0.30000000000000004
+    ],
+    [
+     -0.2,
+     0.0,
+     0.30000000000000004
+    ]
+   ],
+   "tail_join_stretch": [
+    0.708,
+    1.506
+   ],
+   "overlap_pairs": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   },
+   "overlap_new": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   }
+  },
+  {
+   "pose": "立ち 腕の開き25（5 体の決まりの角度）",
+   "stretch_max": 2.101,
+   "stretch_p999": 1.412,
+   "shrink_min": 0.701,
+   "stretch_top": [
+    [
+     2.101,
+     "upperarmR-chest",
+     [
+      -0.256,
+      0.002,
+      0.407
+     ]
+    ],
+    [
+     2.097,
+     "chest-upperarmR",
+     [
+      -0.247,
+      0.01,
+      0.423
+     ]
+    ],
+    [
+     2.085,
+     "upperarmR-chest",
+     [
+      -0.254,
+      0.029,
+      0.409
+     ]
+    ]
+   ],
+   "shrink_top": [
+    [
+     0.701,
+     "upperarmL-chest"
+    ],
+    [
+     0.78,
+     "chest-upperarmR"
+    ]
+   ],
+   "folds": 30,
+   "fold_bones": [
+    "chest/chest",
+    "chest/upperarmL",
+    "upperarmL/upperarmL",
+    "upperarmR/chest",
+    "upperarmR/upperarmR"
+   ],
+   "fold_at": [
+    [
+     -0.2,
+     -0.05,
+     0.30000000000000004
+    ],
+    [
+     -0.2,
+     -0.05,
+     0.35000000000000003
+    ],
+    [
+     -0.2,
+     0.0,
+     0.30000000000000004
+    ],
+    [
+     -0.2,
+     0.05,
+     0.30000000000000004
+    ],
+    [
+     0.2,
+     -0.05,
+     0.30000000000000004
+    ],
+    [
+     0.2,
+     -0.05,
+     0.35000000000000003
+    ],
+    [
+     0.2,
+     -0.0,
+     0.30000000000000004
+    ],
+    [
+     0.2,
+     0.05,
+     0.30000000000000004
+    ]
+   ],
+   "tail_join_stretch": [
+    1.0,
+    1.0
+   ],
+   "overlap_pairs": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   },
+   "overlap_new": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   }
+  }
+ ]
+}

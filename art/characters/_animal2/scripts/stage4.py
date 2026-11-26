@@ -144,6 +144,10 @@ bl = sorted([b for b in blobs(fat) if (dark[b[:, 0], b[:, 1]]).sum() > 30], key=
 def bbox(b):
     b = b[dark[b[:, 0], b[:, 1]]]; return [int(b[:, 0].min()), int(b[:, 1].min()), int(b[:, 0].max()), int(b[:, 1].max())]
 NB, MB = bbox(bl[0]), bbox(bl[-1]); LOG['nose_old'] = NB; LOG['mouth'] = MB; LOG['nose_mouth_blobs'] = len(bl)
+# 口の箱を設定で決める（生成の絵で口が薄く、暗いかたまりが鼻だけのキャラ。くま 2026-11-26）: face.mouth_box = [上の z, 下の z, 半幅 x]（m、中心は鼻の cx）
+if 'mouth_box' in FC:
+    mzt, mzb, mhw = FC['mouth_box']; mcx = to_px(FC['nose']['cx'], 0)[0]; mhp = mhw * CW / (X1 - X0)
+    MB = [int(to_px(0, mzt)[1]), int(mcx - mhp), int(to_px(0, mzb)[1]), int(mcx + mhp)]; LOG['mouth'] = MB
 # 描く鼻の形 = 形（メッシュ）の鼻の盛り上がり（上と横の壁まで含めて覆う。壁が明るいと斜めから輪に見えるため）。config face.nose（模型の x・z、m）
 ncx = to_px(NS['cx'], 0)[0]
 NPOLY = [(to_px(0, NS['top_z'])[1], ncx - NS['top_hw'] * CW / (X1 - X0)), (to_px(0, NS['top_z'])[1], ncx + NS['top_hw'] * CW / (X1 - X0)),
