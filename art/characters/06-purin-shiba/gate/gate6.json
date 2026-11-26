@@ -1,0 +1,183 @@
+{
+ "summary": {
+  "idle": {
+   "stretch_max": 1.068,
+   "shrink_min": 0.873,
+   "folds_max": 0,
+   "overlap_frames": 0,
+   "tail_join": [
+    0.999,
+    1.001
+   ],
+   "sole_mm": [
+    0.0,
+    0.06
+   ],
+   "stance_sole_mm": [
+    0.0,
+    0.06
+   ],
+   "slip_mm_per_frame": [
+    0.0,
+    0.0
+   ],
+   "thigh": [
+    2.8,
+    2.8
+   ],
+   "knee_max": 5.2
+  },
+  "walk": {
+   "stretch_max": 1.205,
+   "shrink_min": 0.77,
+   "folds_max": 0,
+   "overlap_frames": 0,
+   "tail_join": [
+    0.998,
+    1.002
+   ],
+   "sole_mm": [
+    0.0,
+    12.57
+   ],
+   "stance_sole_mm": [
+    0.0,
+    0.06
+   ],
+   "slip_mm_per_frame": [
+    0.78,
+    0.78
+   ],
+   "thigh": [
+    -2.3,
+    8.0
+   ],
+   "knee_max": 14.3
+  },
+  "run": {
+   "stretch_max": 1.261,
+   "shrink_min": 0.649,
+   "folds_max": 0,
+   "overlap_frames": 0,
+   "tail_join": [
+    0.998,
+    1.002
+   ],
+   "sole_mm": [
+    0.0,
+    12.21
+   ],
+   "stance_sole_mm": [
+    -0.0,
+    0.06
+   ],
+   "slip_mm_per_frame": [
+    1.81,
+    1.81
+   ],
+   "thigh": [
+    -2.1,
+    8.0
+   ],
+   "knee_max": 6.7
+  },
+  "joy": {
+   "stretch_max": 1.285,
+   "shrink_min": 0.685,
+   "folds_max": 0,
+   "overlap_frames": 0,
+   "tail_join": [
+    0.997,
+    1.003
+   ],
+   "sole_mm": [
+    -0.0,
+    20.02
+   ],
+   "stance_sole_mm": [
+    -0.0,
+    0.06
+   ],
+   "slip_mm_per_frame": [
+    -0.0,
+    -0.0
+   ],
+   "thigh": [
+    2.8,
+    12.6
+   ],
+   "knee_max": 22.9
+  }
+ },
+ "loop_diff": {
+  "idle": 0.0,
+  "joy": 0.0,
+  "run": 0.0,
+  "walk": 0.0
+ },
+ "speed": {
+  "walk": {
+   "stride_per_cycle": 0.0233,
+   "speed_per_s": 0.0233
+  },
+  "run": {
+   "stride_per_cycle": 0.0325,
+   "speed_per_s": 0.0542
+  }
+ },
+ "export": {
+  "bytes": 1345496,
+  "tris": 30000,
+  "bones": 18,
+  "actions": [
+   "idle",
+   "joy",
+   "run",
+   "walk"
+  ]
+ },
+ "check": {
+  "idle": {
+   "stretch": true,
+   "shrink": true,
+   "folds": true,
+   "overlap": true,
+   "tail": true,
+   "sole": true,
+   "slip": true,
+   "loop": true
+  },
+  "walk": {
+   "stretch": true,
+   "shrink": true,
+   "folds": true,
+   "overlap": true,
+   "tail": true,
+   "sole": true,
+   "slip": true,
+   "loop": true
+  },
+  "run": {
+   "stretch": true,
+   "shrink": true,
+   "folds": true,
+   "overlap": true,
+   "tail": true,
+   "sole": true,
+   "slip": true,
+   "loop": true
+  },
+  "joy": {
+   "stretch": true,
+   "shrink": true,
+   "folds": true,
+   "overlap": true,
+   "tail": true,
+   "sole": true,
+   "slip": true,
+   "loop": true
+  }
+ },
+ "pass_": true,
+ "note": "伸び・縮み・折り返し・めりこみ・しっぽのつなぎ目は立ち姿（腕の開き 44°）に対して。sole_mm = 足の裏の高さ（全コマ、mm・身長 1000）、stance_sole_mm = 着いている足だけ。slip = 着いている足首の 1 コマの前後の動き（一定 = すべらない。体が進む速さに当たる）"
+}

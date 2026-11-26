@@ -1,0 +1,1183 @@
+{
+ "stand": {
+  "arm_open_deg": 44,
+  "arm_down_deg": 14.9,
+  "vs_apose": {
+   "stretch_max": 2.158,
+   "shrink_min": 0.743,
+   "stretch_at": "upperarmL-chest",
+   "folds": 26,
+   "fold_bones": [
+    "chest/chest",
+    "upperarmL/upperarmL",
+    "upperarmR/chest",
+    "upperarmR/upperarmR"
+   ],
+   "tail_join": [
+    1.0,
+    1.0
+   ],
+   "overlap": {
+    "arm_tip/torso": 0,
+    "shinL/thighL": 0,
+    "shinR/thighR": 0,
+    "legL/legR": 0,
+    "legL/torso": 0,
+    "legR/torso": 0
+   }
+  }
+ },
+ "tests": {
+  "armFwd": [
+   {
+    "deg": 2.5,
+    "stretch_max": 1.163,
+    "shrink_min": 0.853,
+    "stretch_at": "upperarmR-chest",
+    "folds": 2,
+    "fold_bones": [
+     "chest/chest"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 5,
+    "stretch_max": 1.339,
+    "shrink_min": 0.713,
+    "stretch_at": "upperarmR-chest",
+    "folds": 2,
+    "fold_bones": [
+     "chest/chest"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 7.5,
+    "stretch_max": 1.522,
+    "shrink_min": 0.584,
+    "stretch_at": "upperarmR-chest",
+    "folds": 8,
+    "fold_bones": [
+     "chest/chest",
+     "chest/upperarmL",
+     "hips/chest"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 10,
+    "stretch_max": 1.71,
+    "shrink_min": 0.458,
+    "stretch_at": "upperarmR-chest",
+    "folds": 16,
+    "fold_bones": [
+     "chest/chest",
+     "chest/upperarmL",
+     "hips/chest",
+     "hips/hips"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 20,
+    "stretch_max": 2.478,
+    "shrink_min": 0.337,
+    "stretch_at": "upperarmR-chest",
+    "folds": 38,
+    "fold_bones": [
+     "chest/chest",
+     "chest/forearmL",
+     "chest/upperarmL",
+     "chest/upperarmR"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 30,
+    "stretch_max": 3.25,
+    "shrink_min": 0.399,
+    "stretch_at": "chest-upperarmR",
+    "folds": 50,
+    "fold_bones": [
+     "chest/chest",
+     "chest/forearmL",
+     "chest/upperarmL",
+     "chest/upperarmR"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 40,
+    "stretch_max": 4.136,
+    "shrink_min": 0.311,
+    "stretch_at": "chest-upperarmR",
+    "folds": 66,
+    "fold_bones": [
+     "chest/chest",
+     "chest/forearmL",
+     "chest/upperarmL",
+     "chest/upperarmR"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   }
+  ],
+  "armBack": [
+   {
+    "deg": 2.5,
+    "stretch_max": 1.151,
+    "shrink_min": 0.845,
+    "stretch_at": "upperarmR-chest",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 5,
+    "stretch_max": 1.306,
+    "shrink_min": 0.702,
+    "stretch_at": "chest-upperarmL",
+    "folds": 1,
+    "fold_bones": [
+     "hips/hips"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 7.5,
+    "stretch_max": 1.476,
+    "shrink_min": 0.579,
+    "stretch_at": "chest-upperarmL",
+    "folds": 4,
+    "fold_bones": [
+     "hips/hips"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 10,
+    "stretch_max": 1.651,
+    "shrink_min": 0.494,
+    "stretch_at": "chest-upperarmL",
+    "folds": 8,
+    "fold_bones": [
+     "chest/chest",
+     "hips/hips",
+     "upperarmL/upperarmL",
+     "upperarmR/upperarmR"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 20,
+    "stretch_max": 2.372,
+    "shrink_min": 0.463,
+    "stretch_at": "upperarmL-chest",
+    "folds": 29,
+    "fold_bones": [
+     "chest/chest",
+     "chest/upperarmL",
+     "hips/hips",
+     "upperarmL/chest"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 30,
+    "stretch_max": 3.134,
+    "shrink_min": 0.407,
+    "stretch_at": "upperarmL-chest",
+    "folds": 47,
+    "fold_bones": [
+     "chest/chest",
+     "chest/upperarmL",
+     "chest/upperarmR",
+     "hips/hips"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 40,
+    "stretch_max": 3.937,
+    "shrink_min": 0.281,
+    "stretch_at": "upperarmL-chest",
+    "folds": 56,
+    "fold_bones": [
+     "chest/chest",
+     "chest/forearmL",
+     "chest/hips",
+     "chest/upperarmL"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 1,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   }
+  ],
+  "armOut": [
+   {
+    "deg": 2.5,
+    "stretch_max": 1.027,
+    "shrink_min": 0.807,
+    "stretch_at": "chest-chest",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 5,
+    "stretch_max": 1.053,
+    "shrink_min": 0.621,
+    "stretch_at": "chest-chest",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 7.5,
+    "stretch_max": 1.105,
+    "shrink_min": 0.446,
+    "stretch_at": "upperarmL-chest",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 10,
+    "stretch_max": 1.174,
+    "shrink_min": 0.306,
+    "stretch_at": "upperarmL-chest",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   }
+  ],
+  "armIn": [
+   {
+    "deg": -2.5,
+    "stretch_max": 1.197,
+    "shrink_min": 0.973,
+    "stretch_at": "chest-upperarmR",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 19,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": -5,
+    "stretch_max": 1.397,
+    "shrink_min": 0.947,
+    "stretch_at": "chest-upperarmR",
+    "folds": 2,
+    "fold_bones": [
+     "chest/chest"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 46,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": -10,
+    "stretch_max": 1.798,
+    "shrink_min": 0.895,
+    "stretch_at": "chest-upperarmR",
+    "folds": 2,
+    "fold_bones": [
+     "chest/chest"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 88,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   }
+  ],
+  "elbow": [
+   {
+    "deg": 10,
+    "stretch_max": 1.112,
+    "shrink_min": 0.87,
+    "stretch_at": "forearmL-upperarmL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 20,
+    "stretch_max": 1.224,
+    "shrink_min": 0.736,
+    "stretch_at": "forearmL-upperarmL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 30,
+    "stretch_max": 1.334,
+    "shrink_min": 0.596,
+    "stretch_at": "forearmL-upperarmL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 40,
+    "stretch_max": 1.438,
+    "shrink_min": 0.451,
+    "stretch_at": "forearmL-upperarmL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   }
+  ],
+  "thighFwd": [
+   {
+    "deg": 5,
+    "stretch_max": 1.139,
+    "shrink_min": 0.823,
+    "stretch_at": "thighR-hips",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.999,
+     1.001
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 10,
+    "stretch_max": 1.277,
+    "shrink_min": 0.648,
+    "stretch_at": "thighR-hips",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.998,
+     1.002
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 15,
+    "stretch_max": 1.415,
+    "shrink_min": 0.48,
+    "stretch_at": "thighR-hips",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.997,
+     1.004
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 20,
+    "stretch_max": 1.551,
+    "shrink_min": 0.331,
+    "stretch_at": "thighR-hips",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.996,
+     1.005
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 30,
+    "stretch_max": 1.82,
+    "shrink_min": 0.131,
+    "stretch_at": "hips-hips",
+    "folds": 6,
+    "fold_bones": [
+     "hips/hips",
+     "thighL/hips",
+     "thighL/thighL",
+     "thighR/thighR"
+    ],
+    "tail_join": [
+     0.995,
+     1.007
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   }
+  ],
+  "thighBack": [
+   {
+    "deg": 5,
+    "stretch_max": 1.177,
+    "shrink_min": 0.862,
+    "stretch_at": "hips-thighL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.999,
+     1.001
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 10,
+    "stretch_max": 1.353,
+    "shrink_min": 0.727,
+    "stretch_at": "hips-thighL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.998,
+     1.002
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 15,
+    "stretch_max": 1.527,
+    "shrink_min": 0.597,
+    "stretch_at": "hips-thighL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.997,
+     1.004
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 20,
+    "stretch_max": 1.699,
+    "shrink_min": 0.475,
+    "stretch_at": "hips-thighL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.996,
+     1.005
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   }
+  ],
+  "knee": [
+   {
+    "deg": 10,
+    "stretch_max": 1.169,
+    "shrink_min": 0.833,
+    "stretch_at": "thighL-thighL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 20,
+    "stretch_max": 1.33,
+    "shrink_min": 0.661,
+    "stretch_at": "thighL-thighL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 30,
+    "stretch_max": 1.482,
+    "shrink_min": 0.491,
+    "stretch_at": "thighL-thighL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 40,
+    "stretch_max": 1.622,
+    "shrink_min": 0.329,
+    "stretch_at": "thighL-thighL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 60,
+    "stretch_max": 1.866,
+    "shrink_min": 0.094,
+    "stretch_at": "thighL-thighL",
+    "folds": 13,
+    "fold_bones": [
+     "shinL/shinL",
+     "shinL/thighL",
+     "shinR/shinR",
+     "shinR/thighR"
+    ],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 14,
+     "shinR/thighR": 13,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   }
+  ],
+  "crouch": [
+   {
+    "deg": 10,
+    "stretch_max": 1.126,
+    "shrink_min": 0.869,
+    "stretch_at": "thighL-thighL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.999,
+     1.001
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 20,
+    "stretch_max": 1.243,
+    "shrink_min": 0.732,
+    "stretch_at": "thighL-thighL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.998,
+     1.002
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 30,
+    "stretch_max": 1.35,
+    "shrink_min": 0.592,
+    "stretch_at": "thighL-thighL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.997,
+     1.004
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 40,
+    "stretch_max": 1.445,
+    "shrink_min": 0.452,
+    "stretch_at": "thighL-thighL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.996,
+     1.005
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   },
+   {
+    "deg": 60,
+    "stretch_max": 1.599,
+    "shrink_min": 0.187,
+    "stretch_at": "thighL-thighL",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.995,
+     1.007
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": false
+   }
+  ],
+  "hipRoll": [
+   {
+    "deg": 2,
+    "stretch_max": 1.072,
+    "shrink_min": 0.931,
+    "stretch_at": "hips-thighR",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 4,
+    "stretch_max": 1.145,
+    "shrink_min": 0.862,
+    "stretch_at": "hips-thighR",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     1.0,
+     1.0
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 6,
+    "stretch_max": 1.216,
+    "shrink_min": 0.793,
+    "stretch_at": "hips-thighR",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.999,
+     1.001
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   }
+  ],
+  "hipLean": [
+   {
+    "deg": 3,
+    "stretch_max": 1.083,
+    "shrink_min": 0.894,
+    "stretch_at": "thighR-hips",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.999,
+     1.001
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 6,
+    "stretch_max": 1.167,
+    "shrink_min": 0.788,
+    "stretch_at": "thighR-hips",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.999,
+     1.001
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   },
+   {
+    "deg": 10,
+    "stretch_max": 1.277,
+    "shrink_min": 0.648,
+    "stretch_at": "thighR-hips",
+    "folds": 0,
+    "fold_bones": [],
+    "tail_join": [
+     0.998,
+     1.002
+    ],
+    "overlap": {
+     "arm_tip/torso": 0,
+     "shinL/thighL": 0,
+     "shinR/thighR": 0,
+     "legL/legR": 0,
+     "legL/torso": 0,
+     "legR/torso": 0
+    },
+    "ok": true
+   }
+  ]
+ },
+ "limits": {
+  "armFwd": 0,
+  "armBack": 2.5,
+  "armOut": 5,
+  "armIn": 0,
+  "elbow": 30,
+  "thighFwd": 10,
+  "thighBack": 15,
+  "knee": 20,
+  "crouch": 30,
+  "hipRoll": 6,
+  "hipLean": 10
+ }
+}

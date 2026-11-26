@@ -1,0 +1,36 @@
+{
+ "face": {
+  "faces": 3421,
+  "cover": 0.861,
+  "eyes": [
+   [
+    100,
+    97,
+    141,
+    139
+   ],
+   [
+    100,
+    244,
+    141,
+    288
+   ]
+  ],
+  "mouth": [
+   161,
+   151,
+   182,
+   232
+  ],
+  "mouth_open": [
+   171,
+   173,
+   193,
+   210
+  ],
+  "cell1_changed_outside": 0,
+  "cell2_changed_outside": 0,
+  "cell3_changed_outside": 0
+ },
+ "pass_": true
+}
