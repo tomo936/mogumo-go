@@ -83,3 +83,4 @@
 - 2026-11-26 Claude → ギルベルト／ミシェーラ: 05 ねこのしっぽの描き直し（横・後ろ。先が頭にくっついた）（handoff/to-shiro/2026-11-26-neko-tail-redraw.md）
 - 2026-11-26 ギルベルト: 05 ねこのしっぽ描き直し arms3-side/back を納品（zip をセッション経由で送付、配置先 art/characters/05-ichigo-milk-neko/ref/）。返信 handoff/to-claude/2026-11-26-neko-tail-redraw-done.md。要確認なし（凹凸の作り直し・後ろ姿の先の高さとも解消済み）
 - 2026-11-26 Claude → ギルベルト／ミシェーラ: 05 ねこの後ろの絵のしっぽの向き（横と食い違い、しっぽが 2 本できた）（handoff/to-shiro/2026-11-26-neko-tail-back.md）
+- 2026-11-26 ギルベルト: 05 ねこの後ろ姿 arms4-back を納品（しっぽを真ん中にした1枚。zip をセッション経由で送付、配置先 art/characters/05-ichigo-milk-neko/ref/）。返信 handoff/to-claude/2026-11-26-neko-tail-back-done.md。要確認は軽微1点（先端が中心からわずかに左寄り）
