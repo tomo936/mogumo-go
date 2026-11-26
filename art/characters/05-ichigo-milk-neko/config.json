@@ -1,0 +1,21 @@
+{
+ "id": 5,
+ "name": "neko",
+ "type": "animal2",
+ "generate": {
+  "file": "neko_n123_textured_00001_.glb",
+  "shape": "neko_n123_shape_00001_.glb",
+  "seed": 123,
+  "gate1": "gate1/n123.json"
+ },
+ "segments": {
+  "names": [
+   "fur",
+   "white"
+  ]
+ },
+ "tail_probe_z": 0.38,
+ "notes_2026_11_26": {
+  "tail": "しっぽは上の端（先）が頭の下・首の後ろ（z 0.50〜0.64・y 0.17〜0.26）に、根元がリュックの下の端（z 0.15〜0.26・y 0.15〜0.17、生成の色は黄土）にくっついている（形の上の道のりで確かめた。probe.json の tail_join）。真ん中の縦の部分はリュックから 0.10 以上離れている。種 456・789 も先が頭の下にくっつく。段 3 の前で止めた"
+ }
+}
