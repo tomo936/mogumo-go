@@ -1,0 +1,21 @@
+{
+ "id": 6,
+ "name": "shiba",
+ "type": "animal2",
+ "generate": {
+  "file": "shiba_s123_textured_00001_.glb",
+  "shape": "shiba_s123_shape_00001_.glb",
+  "seed": 123,
+  "gate1": "gate1/s123.json"
+ },
+ "segments": {
+  "names": [
+   "fur",
+   "white"
+  ]
+ },
+ "tail_probe_z": 0.22,
+ "notes_2026_11_26": {
+  "gate1": "種 123 を採用（形の項目は全部合格。腕の内側の色・首の細さは人型向けの決まりで対象外）。しっぽは短く、リュックの下の端にくっついている（3 種とも）→ しっぽはリュックと同じ骨に 100%（リーダー決定。お尻とのつなぎ目は関門 3 の試しの姿勢で確かめる）"
+ }
+}

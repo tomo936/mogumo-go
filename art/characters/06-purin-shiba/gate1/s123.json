@@ -1,0 +1,267 @@
+{
+ "src": "shiba_s123_shape_00001_.glb",
+ "flipped_to_front": false,
+ "tris": 30000,
+ "nonmanifold_edges": 0,
+ "islands": 1,
+ "fragments": 0,
+ "crotch": 0.095,
+ "legs_separate": true,
+ "arm": {
+  "L": {
+   "found": true,
+   "hand": 0.225,
+   "armpit": 0.275,
+   "gap_min": 0.0175,
+   "holes": [],
+   "gap_rows": [
+    [
+     0.225,
+     0.072
+    ],
+    [
+     0.235,
+     0.0543
+    ],
+    [
+     0.245,
+     0.0387
+    ],
+    [
+     0.255,
+     0.0344
+    ],
+    [
+     0.265,
+     0.0175
+    ]
+   ]
+  },
+  "R": {
+   "found": true,
+   "hand": 0.225,
+   "armpit": 0.275,
+   "gap_min": 0.0182,
+   "holes": [],
+   "gap_rows": [
+    [
+     0.225,
+     0.0709
+    ],
+    [
+     0.235,
+     0.0539
+    ],
+    [
+     0.245,
+     0.0388
+    ],
+    [
+     0.255,
+     0.0355
+    ],
+    [
+     0.265,
+     0.0182
+    ]
+   ]
+  }
+ },
+ "neck": {
+  "z": 0.425,
+  "area": 0.0699,
+  "loops": 2,
+  "head_max": 0.1926,
+  "torso_top": 0.1282,
+  "ratio": 0.3629,
+  "prof": [
+   [
+    0.365,
+    0.0978,
+    1
+   ],
+   [
+    0.375,
+    0.0919,
+    1
+   ],
+   [
+    0.385,
+    0.0858,
+    1
+   ],
+   [
+    0.395,
+    0.0803,
+    1
+   ],
+   [
+    0.405,
+    0.0773,
+    2
+   ],
+   [
+    0.415,
+    0.0784,
+    2
+   ],
+   [
+    0.425,
+    0.0699,
+    2
+   ],
+   [
+    0.435,
+    0.0769,
+    2
+   ],
+   [
+    0.445,
+    0.0899,
+    1
+   ],
+   [
+    0.455,
+    0.1006,
+    1
+   ],
+   [
+    0.465,
+    0.1167,
+    1
+   ],
+   [
+    0.475,
+    0.1316,
+    1
+   ],
+   [
+    0.485,
+    0.1448,
+    1
+   ]
+  ]
+ },
+ "inner": {
+  "L": {
+   "sleeve_top": 0.0,
+   "sleeve_skin": 0.0,
+   "hand_skin": 0.0,
+   "hand_t": 1.0,
+   "n_sleeve": 10,
+   "n_hand": 0
+  },
+  "R": {
+   "sleeve_top": 0.0,
+   "sleeve_skin": 0.0,
+   "hand_skin": 0.0,
+   "hand_t": 1.0,
+   "n_sleeve": 4,
+   "n_hand": 0
+  }
+ },
+ "sil": {
+  "front": [
+   0.0028,
+   0.965
+  ],
+  "side_right": [
+   0.0467,
+   0.8956
+  ],
+  "side_if_left": [
+   0.3111,
+   0.6376
+  ],
+  "back": [
+   0.005,
+   0.9478
+  ],
+  "armpit_ref": {
+   "L": 0.2832,
+   "R": 0.2832
+  },
+  "armpit_mesh2d": {
+   "L": 0.2607,
+   "R": 0.2632
+  },
+  "neck_ref": 0.4511,
+  "neck_mesh2d": 0.4511
+ },
+ "sym_front_iou": 0.9915,
+ "tail": {
+  "rows": 1,
+  "z": [
+   0.125,
+   0.125
+  ],
+  "gap_min": 0.0416,
+  "thin_min": 0.0824,
+  "by_z": {
+   "0.125": [
+    0.177,
+    0.0416,
+    0.0824
+   ]
+  }
+ },
+ "ears": {
+  "rows": 8,
+  "L": [
+   0.875,
+   0.885,
+   0.895,
+   0.905
+  ],
+  "R": [
+   0.875,
+   0.885,
+   0.895,
+   0.905
+  ],
+  "thin_min": 0.0329
+ },
+ "horns": {
+  "crown": 0.995,
+  "rows": 0,
+  "not_two": [],
+  "thin_min": null
+ },
+ "checks": {
+  "armL_separate": true,
+  "armL_connected_at_shoulder": true,
+  "armL_gap": true,
+  "armL_armpit_vs_ref": true,
+  "armL_inner_sleeve_top": false,
+  "armL_inner_hand_skin": false,
+  "armR_separate": true,
+  "armR_connected_at_shoulder": true,
+  "armR_gap": true,
+  "armR_armpit_vs_ref": true,
+  "armR_inner_sleeve_top": false,
+  "armR_inner_hand_skin": false,
+  "legs_separate": true,
+  "neck_narrow": false,
+  "no_fragments": true,
+  "sil_front": true,
+  "sil_side": true,
+  "sil_back": true,
+  "head_height": true,
+  "symmetry": true,
+  "tail_found": true,
+  "horns_two_each_z": true,
+  "ears_found": true
+ },
+ "pass": false,
+ "thresholds": {
+  "gap_min": 0.008,
+  "armpit_tol": 0.03,
+  "inner_top": 0.9,
+  "inner_skin": 0.9,
+  "neck_ratio": 0.35,
+  "sil_miss": 0.05,
+  "sym_iou": 0.9,
+  "frag": 0.005,
+  "head_tol": 0.05
+ }
+}
