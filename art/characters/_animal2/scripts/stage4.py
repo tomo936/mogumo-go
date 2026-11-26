@@ -2,6 +2,7 @@
 # 頭の前の面（頭の骨に 100%・前向き・face.box の中）だけを材質 face にし、前から平らに写した絵（4 こまを横に並べる）を貼る。
 # こま 0 = 体の絵を、同じ面の同じ場所から写したもの（だから毛との境で色が変わらない）に、目（ふつう）・鼻・口を描き直したもの
 #   （生成の絵の目・鼻・口は線が切れて白い点が混ざるので写さない: 箱の中を地の色でならしてから、だ円・角の丸い逆三角・ω の線で描く。2026-11-26）。
+#   鼻は形（メッシュ）の盛り上がりに合わせた角の丸い逆の五角形（config face.nose）。生成の鼻は暗いところだけを形に沿ってならす（2026-11-26 午後）
 # こま 1〜3 は こま 0 から目と口だけを描き替える:
 #   1 半分とじ（目の上半分を消して、まぶたの線）・2 とじ（目を消して下向きの弧）・3 うれしい（目を消して上向きの弧 ∩ ＋口を少し開ける。仮）
 # 目を消すのは、目の箱のまわり 1 画素を元の色に固定して中をならす（ラプラスの式）。目・口の箱の外は 1 画素も変えない（数えて確かめる）。
@@ -27,6 +28,11 @@ FN = np.cross(V[TRI[:, 1]] - V[TRI[:, 0]], V[TRI[:, 2]] - V[TRI[:, 0]]); FN /= n
 FCn = V[TRI].mean(1)
 inbox = lambda P: (P[..., 0] > X0) & (P[..., 0] < X1) & (P[..., 2] > Z0) & (P[..., 2] < Z1)
 sel = (hw[TRI] > 0.999).all(1) & (FN[:, 1] < -FC['front_dot']) & inbox(V[TRI]).all(1) & (FCn[:, 1] < 0)
+# 鼻の盛り上がりの上と横の壁（上や横を向くので前向きの決まりから外れ、体の絵 = 毛の色のまま残って、斜めから輪に見えた）も顔の材質に入れる。2026-11-26 午後
+NS = FC['nose']
+nsel = (hw[TRI] > 0.999).all(1) & (np.abs(FCn[:, 0] - NS['cx']) < NS['top_hw']) & (FCn[:, 2] > NS['tip_z']) & (FCn[:, 2] < NS['top_z']) \
+    & (FCn[:, 1] < V[:, 1].min() + NS['depth']) & (FN[:, 1] < NS['wall_ny'])
+LOG['nose_wall_faces'] = int((nsel & ~sel).sum()); sel |= nsel
 LOG['faces'] = int(sel.sum())
 # 体の絵と UV
 timg = tex_of(ob); TW, TH = timg.size; tex = pixels(timg)[:, :, :3]
@@ -137,7 +143,14 @@ for dy in range(-R_, R_ + 1):
 bl = sorted([b for b in blobs(fat) if (dark[b[:, 0], b[:, 1]]).sum() > 30], key=lambda b: b[:, 0].mean())
 def bbox(b):
     b = b[dark[b[:, 0], b[:, 1]]]; return [int(b[:, 0].min()), int(b[:, 1].min()), int(b[:, 0].max()), int(b[:, 1].max())]
-NB, MB = bbox(bl[0]), bbox(bl[-1]); NB[0] = min(NB[0], int(NB[2] + 1 - (NB[3] - NB[1] + 1) * FC['nose_hw'])); LOG['nose'] = NB; LOG['mouth'] = MB; LOG['nose_mouth_blobs'] = len(bl)   # 鼻の箱の上は描く鼻の高さまで広げる
+NB, MB = bbox(bl[0]), bbox(bl[-1]); LOG['nose_old'] = NB; LOG['mouth'] = MB; LOG['nose_mouth_blobs'] = len(bl)
+# 描く鼻の形 = 形（メッシュ）の鼻の盛り上がり（上と横の壁まで含めて覆う。壁が明るいと斜めから輪に見えるため）。config face.nose（模型の x・z、m）
+ncx = to_px(NS['cx'], 0)[0]
+NPOLY = [(to_px(0, NS['top_z'])[1], ncx - NS['top_hw'] * CW / (X1 - X0)), (to_px(0, NS['top_z'])[1], ncx + NS['top_hw'] * CW / (X1 - X0)),
+         (to_px(0, NS['mid_z'])[1], ncx + NS['mid_hw'] * CW / (X1 - X0)), (to_px(0, NS['tip_z'])[1], ncx),
+         (to_px(0, NS['mid_z'])[1], ncx - NS['mid_hw'] * CW / (X1 - X0))]
+NBOX = [int(min(p[0] for p in NPOLY)) - 1, int(min(p[1] for p in NPOLY)) - 1, int(max(p[0] for p in NPOLY)) + 1, int(max(p[1] for p in NPOLY)) + 1]
+LOG['nose'] = NBOX
 
 
 def fill(img, cov, col):
@@ -151,6 +164,37 @@ def ellipse(cy, cx, ay, ax):
 def seg_d(P, A, B):
     v = B - A; t_ = np.clip(((P[..., 0] - A[0]) * v[0] + (P[..., 1] - A[1]) * v[1]) / (v @ v), 0, 1)
     return np.hypot(P[..., 0] - A[0] - t_ * v[0], P[..., 1] - A[1] - t_ * v[1])
+
+
+def erase_mask(img, mask, n=3000):
+    """mask の画素だけを、まわり（mask の外）の色からならす（ラプラスの式）。箱の角や切り口ができないので、まわりへ滑らかにつながる"""
+    out = img.copy(); m = mask.copy(); m[0] = m[-1] = m[:, 0] = m[:, -1] = False
+    ring = np.zeros_like(m)
+    for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)): ring |= np.roll(np.roll(m, dy, 0), dx, 1)
+    out[m] = out[ring & ~m].mean(0)
+    for _ in range(n):
+        avg = (np.roll(out, 1, 0) + np.roll(out, -1, 0) + np.roll(out, 1, 1) + np.roll(out, -1, 1)) / 4; out[m] = avg[m]
+    return out
+
+
+def round_poly(T, r):
+    """角の丸い凸の多角形（T: 点 (行, 列) の並び、r: 角の丸みの半径）。辺を r だけ内へ寄せた多角形から r の距離までを塗る"""
+    T = np.array(T, np.float64); n = len(T); c = T.mean(0); L = []
+    for i in range(n):
+        a, b = T[i], T[(i + 1) % n]; d = (b - a) / np.linalg.norm(b - a); nn = np.array([-d[1], d[0]])
+        if (c - a) @ nn < 0: nn = -nn
+        L.append((a + nn * r, d))
+    Ti = []
+    for i in range(n):
+        (p1, d1), (p2, d2) = L[i - 1], L[i]
+        t = np.linalg.solve(np.array([d1, -d2]).T, p2 - p1)[0]; Ti.append(p1 + d1 * t)
+    Ti = np.array(Ti); P = np.dstack([yy + 0.5, xx + 0.5])
+    d = np.min([seg_d(P, Ti[i], Ti[(i + 1) % n]) for i in range(n)], 0)
+    cc = Ti.mean(0); ins = np.ones(d.shape, bool)
+    for i in range(n):
+        a, b = Ti[i], Ti[(i + 1) % n]; cr = lambda q0, q1: (b[1] - a[1]) * (q0 - a[0]) - (b[0] - a[0]) * (q1 - a[1])
+        ins &= np.sign(cr(P[..., 0], P[..., 1])) == np.sign(cr(cc[0], cc[1]))
+    d = np.where(ins, 0, d); return np.clip(r - d + 0.5, 0, 1)
 
 
 def round_tri(T, r):
@@ -167,10 +211,15 @@ def round_tri(T, r):
 # 地: 目・鼻・口の跡を消す（箱のまわりの色から中をならす）
 bare = cell
 for b in EB: bare = erase(bare, b, PAD)
-bare = erase(bare, [min(NB[0], MB[0]), min(NB[1], MB[1]), max(NB[2], MB[2]), max(NB[3], MB[3])], PAD)
-# 鼻（角の丸い逆三角）と口（ω の滑らかな線）を描く。どのこまも同じ
-nw = NB[3] - NB[1] + 1; nh = nw * FC['nose_hw']; nb_ = NB[2] + 1; ncx = (NB[1] + NB[3] + 1) / 2   # 鼻の上は生成の絵で明るい帯に切られるので、高さは幅から（nose_hw）
-face = fill(bare, round_tri([(nb_ - nh, ncx - nw / 2), (nb_ - nh, ncx + nw / 2), (nb_, ncx)], nh * FC['nose_round']), nose_c)
+bare = erase(bare, MB, PAD)
+# 生成の絵の鼻は、暗いところを太らせた形だけをまわりの色からならす（箱でならすと、箱の上の明るい帯が中へ広がって輪に見えた。2026-11-26）
+nmask = np.zeros((CH_, CW), bool); nmask[bl[0][:, 0], bl[0][:, 1]] = True; nm0 = nmask.copy()
+for dy in range(-PAD, PAD + 1):
+    for dx in range(-PAD, PAD + 1):
+        if dy * dy + dx * dx <= PAD * PAD: nmask |= np.roll(np.roll(nm0, dy, 0), dx, 1)
+bare = erase_mask(bare, nmask)
+# 鼻（形の盛り上がりに合わせた、角の丸い逆の五角形）と口（ω の滑らかな線）を描く。どのこまも同じ
+face = fill(bare, round_poly(NPOLY, NS['round'] * CW / (X1 - X0)), nose_c)
 mh_, mw_ = MB[2] - MB[0] + 1, MB[3] - MB[1] + 1; tm = th * FC['mouth_w']
 us = np.linspace(0, 1, 49); mxs = MB[1] + tm / 2 + (mw_ - tm) * us; mys = MB[0] + tm / 2 + (mh_ - tm) * np.abs(np.sin(2 * np.pi * us))
 face = stroke(face, list(zip(mys, mxs)), tm, nose_c)
@@ -207,8 +256,8 @@ for r0, c0, r1, c1 in EB: keep[r0 - PAD - 1:r1 + PAD + 2, c0 - PAD - 1:c1 + PAD 
 keep3 = keep.copy(); keep3[OPEN[0]:OPEN[2] + 1, OPEN[1]:OPEN[3] + 1] = False
 for i, (img, k) in enumerate(((half, keep), (closed, keep), (happy, keep3)), 1):
     LOG[f'cell{i}_changed_outside'] = int((np.abs(img - cell0).max(2)[k] > 0).sum())
-keep0 = keep.copy(); nm = [min(NB[0], MB[0]), min(NB[1], MB[1]), max(NB[2], MB[2]), max(NB[3], MB[3])]
-keep0[nm[0] - PAD - 1:nm[2] + PAD + 2, nm[1] - PAD - 1:nm[3] + PAD + 2] = False
+keep0 = keep.copy(); keep0 &= ~nmask
+for b in (NBOX, MB): keep0[b[0] - PAD - 1:b[2] + PAD + 2, b[1] - PAD - 1:b[3] + PAD + 2] = False
 LOG['cell0_changed_outside_vs_body'] = int((np.abs(cell0 - cell).max(2)[keep0] > 0).sum())
 atlas = np.clip(np.concatenate([cell0, half, closed, happy], 1), 0, 1)
 aimg = bpy.data.images.new('face4', CW * 4, CH_, alpha=False)
