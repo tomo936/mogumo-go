@@ -1,0 +1,340 @@
+{
+ "src": "kuma_k123_shape_00001_.glb",
+ "flipped_to_front": false,
+ "tris": 30000,
+ "nonmanifold_edges": 0,
+ "islands": 1,
+ "fragments": 0,
+ "crotch": 0.105,
+ "legs_separate": true,
+ "arm": {
+  "L": {
+   "found": true,
+   "hand": 0.215,
+   "armpit": 0.295,
+   "gap_min": 0.0178,
+   "holes": [],
+   "gap_rows": [
+    [
+     0.215,
+     0.1005
+    ],
+    [
+     0.225,
+     0.0905
+    ],
+    [
+     0.235,
+     0.0797
+    ],
+    [
+     0.245,
+     0.066
+    ],
+    [
+     0.255,
+     0.0487
+    ],
+    [
+     0.265,
+     0.0364
+    ],
+    [
+     0.275,
+     0.0266
+    ],
+    [
+     0.285,
+     0.0178
+    ]
+   ]
+  },
+  "R": {
+   "found": true,
+   "hand": 0.135,
+   "armpit": 0.305,
+   "gap_min": 0.0058,
+   "holes": [],
+   "gap_rows": [
+    [
+     0.135,
+     0.1065
+    ],
+    [
+     0.145,
+     0.0944
+    ],
+    [
+     0.155,
+     0.0888
+    ],
+    [
+     0.165,
+     0.0853
+    ],
+    [
+     0.175,
+     0.0825
+    ],
+    [
+     0.185,
+     0.0793
+    ],
+    [
+     0.195,
+     0.0777
+    ],
+    [
+     0.205,
+     0.0772
+    ],
+    [
+     0.215,
+     0.0766
+    ],
+    [
+     0.225,
+     0.0767
+    ],
+    [
+     0.235,
+     0.0776
+    ],
+    [
+     0.245,
+     0.0628
+    ],
+    [
+     0.255,
+     0.0436
+    ],
+    [
+     0.265,
+     0.038
+    ],
+    [
+     0.275,
+     0.0272
+    ],
+    [
+     0.285,
+     0.0196
+    ],
+    [
+     0.295,
+     0.0058
+    ]
+   ]
+  }
+ },
+ "neck": {
+  "z": 0.515,
+  "area": 0.0768,
+  "loops": 2,
+  "head_max": 0.1832,
+  "torso_top": 0.1722,
+  "ratio": 0.4194,
+  "prof": [
+   [
+    0.455,
+    0.1123,
+    1
+   ],
+   [
+    0.465,
+    0.1066,
+    1
+   ],
+   [
+    0.475,
+    0.1005,
+    1
+   ],
+   [
+    0.485,
+    0.0966,
+    3
+   ],
+   [
+    0.495,
+    0.091,
+    3
+   ],
+   [
+    0.505,
+    0.081,
+    1
+   ],
+   [
+    0.515,
+    0.0768,
+    2
+   ],
+   [
+    0.525,
+    0.0806,
+    1
+   ],
+   [
+    0.535,
+    0.091,
+    2
+   ],
+   [
+    0.545,
+    0.1028,
+    1
+   ],
+   [
+    0.555,
+    0.1197,
+    1
+   ],
+   [
+    0.565,
+    0.1362,
+    1
+   ],
+   [
+    0.575,
+    0.1487,
+    1
+   ]
+  ]
+ },
+ "inner": {
+  "L": {
+   "sleeve_top": 0.0,
+   "sleeve_skin": 0.0,
+   "hand_skin": 0.0,
+   "hand_t": 1.0,
+   "n_sleeve": 183,
+   "n_hand": 0
+  },
+  "R": {
+   "sleeve_top": 0.0,
+   "sleeve_skin": 0.0,
+   "hand_skin": 0.0,
+   "hand_t": 1.0,
+   "n_sleeve": 467,
+   "n_hand": 0
+  }
+ },
+ "sil": {
+  "front": [
+   0.0047,
+   0.9485
+  ],
+  "side_right": [
+   0.0376,
+   0.9071
+  ],
+  "side_if_left": [
+   0.1226,
+   0.8155
+  ],
+  "back": [
+   0.005,
+   0.9483
+  ],
+  "armpit_ref": {
+   "L": 0.2932,
+   "R": 0.2932
+  },
+  "armpit_mesh2d": {
+   "L": 0.2932,
+   "R": 0.2932
+  },
+  "neck_ref": 0.5188,
+  "neck_mesh2d": 0.5213
+ },
+ "sym_front_iou": 0.9559,
+ "tail": {
+  "rows": 4,
+  "z": [
+   0.135,
+   0.225
+  ],
+  "gap_min": 0.0028,
+  "thin_min": 0.0128,
+  "by_z": {
+   "0.135": [
+    0.199,
+    0.0491,
+    0.0178
+   ],
+   "0.145": [
+    0.194,
+    0.0153,
+    0.0659
+   ],
+   "0.225": [
+    0.203,
+    0.0028,
+    0.0589
+   ]
+  }
+ },
+ "ears": {
+  "rows": 11,
+  "L": [
+   0.555,
+   0.965,
+   0.975,
+   0.985,
+   0.995
+  ],
+  "R": [
+   0.555,
+   0.955,
+   0.965,
+   0.975,
+   0.985,
+   0.995
+  ],
+  "thin_min": 0.0115
+ },
+ "horns": {
+  "crown": 0.985,
+  "rows": 1,
+  "not_two": [],
+  "thin_min": 0.0411
+ },
+ "checks": {
+  "armL_separate": true,
+  "armL_connected_at_shoulder": true,
+  "armL_gap": true,
+  "armL_armpit_vs_ref": true,
+  "armL_inner_sleeve_top": false,
+  "armL_inner_hand_skin": false,
+  "armR_separate": true,
+  "armR_connected_at_shoulder": true,
+  "armR_gap": false,
+  "armR_armpit_vs_ref": true,
+  "armR_inner_sleeve_top": false,
+  "armR_inner_hand_skin": false,
+  "legs_separate": true,
+  "neck_narrow": false,
+  "no_fragments": true,
+  "sil_front": true,
+  "sil_side": true,
+  "sil_back": true,
+  "head_height": true,
+  "symmetry": true,
+  "tail_found": true,
+  "horns_two_each_z": true,
+  "ears_found": true
+ },
+ "pass": false,
+ "thresholds": {
+  "gap_min": 0.008,
+  "armpit_tol": 0.03,
+  "inner_top": 0.9,
+  "inner_skin": 0.9,
+  "neck_ratio": 0.35,
+  "sil_miss": 0.05,
+  "sym_iou": 0.9,
+  "frag": 0.005,
+  "head_tol": 0.05
+ }
+}
