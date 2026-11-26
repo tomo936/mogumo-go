@@ -223,10 +223,23 @@ for dy in range(-PAD, PAD + 1):
         if dy * dy + dx * dx <= PAD * PAD: nmask |= np.roll(np.roll(nm0, dy, 0), dx, 1)
 bare = erase_mask(bare, nmask)
 # 鼻（形の盛り上がりに合わせた、角の丸い逆の五角形）と口（ω の滑らかな線）を描く。どのこまも同じ
-face = fill(bare, round_poly(NPOLY, NS['round'] * CW / (X1 - X0)), nose_c)
+# 鼻の形: 既定は角の丸い逆の五角形（しば）。face.nose.shape = 'oval' なら横長のだ円（くま: 元の絵の鼻。2026-11-26）。色は face.nose_color（無ければ区分けの鼻の色）
+k_ = CW / (X1 - X0)
+nose_draw = np.array(FC.get('nose_color', CFG['repaint']['colors']['nose']), np.float32) / 255
+mouth_c = np.array(FC.get('mouth_color', CFG['repaint']['colors']['nose']), np.float32) / 255
+# 口元の明るい所（face.muzzle があれば）: ふちをぼかしただ円を、鼻と口の下に敷く（くま 2026-11-26）
+if 'muzzle' in FC:
+    M_ = FC['muzzle']
+    e_ = np.sqrt(((xx + 0.5 - to_px(NS['cx'], 0)[0]) / (M_['hw'] * k_)) ** 2 + ((yy + 0.5 - to_px(0, M_['cz'])[1]) / (M_['hh'] * k_)) ** 2)
+    bare = fill(bare, np.clip((1 - e_) / M_.get('soft', 0.35), 0, 1) * M_.get('alpha', 0.8), np.array(M_['color'], np.float32) / 255)
+if NS.get('shape') == 'oval':
+    ncov = ellipse(to_px(0, NS['cz'])[1], to_px(NS['cx'], 0)[0], NS['hh'] * k_, NS['hw'] * k_)
+else:
+    ncov = round_poly(NPOLY, NS['round'] * k_)
+face = fill(bare, ncov, nose_draw)
 mh_, mw_ = MB[2] - MB[0] + 1, MB[3] - MB[1] + 1; tm = th * FC['mouth_w']
 us = np.linspace(0, 1, 49); mxs = MB[1] + tm / 2 + (mw_ - tm) * us; mys = MB[0] + tm / 2 + (mh_ - tm) * np.abs(np.sin(2 * np.pi * us))
-face = stroke(face, list(zip(mys, mxs)), tm, nose_c)
+face = stroke(face, list(zip(mys, mxs)), tm, mouth_c)
 # 目（ふつう）: こげ茶のだ円＋白い丸の光（config face.shine = [右へ, 下へ, 半径]、目の幅に対する割合。両目で同じ向き）
 shine_c = np.array(CFG['repaint']['colors']['shine'], np.float32) / 255
 cell0 = face.copy()
@@ -251,7 +264,7 @@ e = ((xx + 0.5 - mcx) / (mw / 2)) ** 2 + ((yy + 0.5 - mtop) / mh) ** 2
 inside = np.clip((1 - e) * mh / 2, 0, 1) * (yy + 0.5 >= mtop)
 tongue = np.array(FC['tongue'], np.float32) / 255
 et = ((xx + 0.5 - mcx) / (mw * 0.3)) ** 2 + ((yy + 0.5 - (mtop + mh)) / (mh * 0.55)) ** 2
-mcol = np.where((et < 1)[:, :, None], tongue, nose_c)
+mcol = np.where((et < 1)[:, :, None], tongue, mouth_c)
 happy = happy * (1 - inside[:, :, None]) + mcol * inside[:, :, None]
 OPEN = [int(mtop) - 1, int(mcx - mw / 2) - 1, int(mtop + mh) + 2, int(mcx + mw / 2) + 2]; LOG['mouth_open'] = OPEN
 # 目・口の箱の外が こま 0 と同じか（1 画素も違わない）
