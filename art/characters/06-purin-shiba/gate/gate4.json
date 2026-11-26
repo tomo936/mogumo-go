@@ -1,41 +1,44 @@
 {
- "faces": 3421,
- "cover": 0.861,
- "eyes": [
-  [
-   100,
-   97,
-   141,
-   139
+ "face": {
+  "faces": 3421,
+  "cover": 0.861,
+  "eyes": [
+   [
+    100,
+    97,
+    141,
+    139
+   ],
+   [
+    100,
+    244,
+    141,
+    288
+   ]
   ],
-  [
-   100,
-   244,
-   141,
-   288
-  ]
- ],
- "nose": [
-  125,
-  169,
-  152,
-  213
- ],
- "mouth": [
-  161,
-  151,
-  182,
-  232
- ],
- "nose_mouth_blobs": 2,
- "mouth_open": [
-  171,
-  173,
-  193,
-  210
- ],
- "cell1_changed_outside": 0,
- "cell2_changed_outside": 0,
- "cell3_changed_outside": 0,
- "cell0_changed_outside_vs_body": 0
+  "nose": [
+   125,
+   169,
+   152,
+   213
+  ],
+  "mouth": [
+   161,
+   151,
+   182,
+   232
+  ],
+  "nose_mouth_blobs": 2,
+  "mouth_open": [
+   171,
+   173,
+   193,
+   210
+  ],
+  "cell1_changed_outside": 0,
+  "cell2_changed_outside": 0,
+  "cell3_changed_outside": 0,
+  "cell0_changed_outside_vs_body": 0
+ },
+ "pass_": true
 }
