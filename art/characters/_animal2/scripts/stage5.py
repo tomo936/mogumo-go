@@ -1,7 +1,7 @@
 # 段 5: 動き（「動物の二本足」型の共通の台本。キャラ固有の数字は config.json の motion。範囲は range5.py で測った limits の 8 割まで）。
 # 足は「足首の通り道」から 2 本の骨の IK で決める（足が地面に着いている間は、足首が地面の上を一定の速さで後ろへ動く = すべらない。
 # 体の高さは、着いている足が届く高さから毎コマ計算する = 浮かない・沈まない）。足の裏はいつも水平（足の骨を元の向きに戻す）。
-# 腕・頭・腰の揺れは apply_pose の値。胸はひねらない・前に倒さない。持ち物は揺らさない。
+# 腕・頭・腰の揺れは apply_pose の値（rollPow = 揺れの形: 3 は着く時に平ら、1 はなめらかな sin）。bob = ひざで沈む弾み（関数 bob）。胸はひねらない・前に倒さない。持ち物は揺らさない。
 # 動き: idle（3 秒）・walk（1.0 秒）・run（0.6 秒）・joy（0.8 秒）。各動きのコマ 1 と 最後のコマは同じ姿勢（1 周でつながる）。
 # 使い方: blender -b -P stage5.py -- <config.json>   （work/stage4.blend を読む）
 #   出力: work/stage5.blend・work/avatar.glb（4 つの動き）・work/stage5-log.json（コマごとの角度と、伸び・折り返し・めりこみ・足の裏・すべり・つなぎ目の数字）
@@ -68,13 +68,14 @@ def need_y(p, tg, stance):
     return best
 
 
-def roll(ph, R, c=0.55): return -R * math.sin(TAU * (ph - c)) ** 3   # 左の足を振り出す時（0.6〜1.0）に左の腰が上がる（hipRoll は + で左が下がる）。両足が着く時（0.05・0.55）は 0 のまわりで平ら
+def roll(ph, R, c=0.55, pw=3):
+    v = math.sin(TAU * (ph - c)); return -R * math.copysign(abs(v) ** pw, v)   # 左の足を振り出す時（0.6〜1.0）に左の腰が上がる（hipRoll は + で左が下がる）。両足が着く時（0.05・0.55）は 0 のまわりで平ら
 
 
 def gait(name):
     G = MO[name]; N = G['frames']
     def f(ph):
-        p = {'hipRoll': D(roll(ph, G['roll'], G['rollPhase'])), 'lean': D(G.get('lean', 0)), 'headPitch': D(G['headPitch'] + G['nod'] * math.sin(2 * TAU * (ph - 0.1))),
+        p = {'hipRoll': D(roll(ph, G['roll'], G['rollPhase'], G.get('rollPow', 3))), 'lean': D(G.get('lean', 0)), 'headPitch': D(G['headPitch'] + G['nod'] * math.sin(2 * TAU * (ph - 0.1))),
              'armOut': D(G['armOut'])}
         tg = {}; st = {}
         for s, o in (('L', 0.0), ('R', 0.5)):
@@ -106,6 +107,14 @@ def idle_fn():
     return N, f
 
 
+def bob(name, ph):
+    """体の高さから引く分（ひざで沈む）。歩き・走り: 1 歩に 1 回（bobShift 0 = 両足が着く時に一番低い、0.25 = 着いている足のまん中で一番低い）。待機: 息（3 秒に 2 回）"""
+    G = MO[name]; b = G.get('bob', 0.0)
+    if not b: return 0.0
+    if name == 'idle': return b * (0.5 - 0.5 * math.cos(2 * TAU * ph))
+    return b * (0.5 + 0.5 * math.cos(2 * TAU * (ph - G['rollPhase'] - G.get('bobShift', 0.0))))
+
+
 def hop(ph, G):   # うれしい: しゃがむ → 跳ぶ（放物線）→ 着く。体の高さに足す分
     t0, t1 = G['air']
     if t0 <= ph < t1: u = (ph - t0) / (t1 - t0); return G['jump'] * 4 * u * (1 - u)
@@ -120,7 +129,7 @@ for name, (N, fn) in ACTS.items():
     # 体の高さ: 着いている足が届く高さ。足が全部浮く時（走りの宙）は前後の高さを放物線でつなぎ、上げ分を足す
     ys = []; frames = []
     for i in range(N):
-        p, tg, st = fn(i / N); frames.append((p, tg, st)); ys.append(need_y(p, tg, st))
+        p, tg, st = fn(i / N); frames.append((p, tg, st)); y_ = need_y(p, tg, st); ys.append(None if y_ is None else y_ - bob(name, i / N))
     if name == 'run':
         G = MO['run']; idx = [i for i in range(N) if ys[i] is None]
         for i in idx:

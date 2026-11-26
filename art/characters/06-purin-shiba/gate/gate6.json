@@ -1,16 +1,16 @@
 {
  "summary": {
   "idle": {
-   "stretch_max": 1.068,
-   "shrink_min": 0.873,
+   "stretch_max": 1.193,
+   "shrink_min": 0.794,
    "folds_max": 0,
    "overlap_frames": 0,
    "tail_join": [
-    0.999,
-    1.001
+    0.998,
+    1.002
    ],
    "sole_mm": [
-    0.0,
+    -0.0,
     0.06
    ],
    "stance_sole_mm": [
@@ -18,18 +18,18 @@
     0.06
    ],
    "slip_mm_per_frame": [
-    0.0,
-    0.0
+    -0.0,
+    -0.0
    ],
    "thigh": [
     2.8,
-    2.8
+    8.3
    ],
-   "knee_max": 5.2
+   "knee_max": 15.0
   },
   "walk": {
-   "stretch_max": 1.205,
-   "shrink_min": 0.77,
+   "stretch_max": 1.292,
+   "shrink_min": 0.701,
    "folds_max": 0,
    "overlap_frames": 0,
    "tail_join": [
@@ -38,48 +38,48 @@
    ],
    "sole_mm": [
     0.0,
-    12.57
-   ],
-   "stance_sole_mm": [
-    0.0,
-    0.06
-   ],
-   "slip_mm_per_frame": [
-    0.78,
-    0.78
-   ],
-   "thigh": [
-    -2.3,
-    8.0
-   ],
-   "knee_max": 14.3
-  },
-  "run": {
-   "stretch_max": 1.261,
-   "shrink_min": 0.649,
-   "folds_max": 0,
-   "overlap_frames": 0,
-   "tail_join": [
-    0.998,
-    1.002
-   ],
-   "sole_mm": [
-    0.0,
-    12.21
+    14.97
    ],
    "stance_sole_mm": [
     -0.0,
     0.06
    ],
    "slip_mm_per_frame": [
-    1.81,
-    1.81
+    1.19,
+    1.19
    ],
    "thigh": [
-    -2.1,
-    8.0
+    -4.5,
+    10.2
    ],
-   "knee_max": 6.7
+   "knee_max": 16.8
+  },
+  "run": {
+   "stretch_max": 1.354,
+   "shrink_min": 0.685,
+   "folds_max": 0,
+   "overlap_frames": 0,
+   "tail_join": [
+    0.998,
+    1.003
+   ],
+   "sole_mm": [
+    0.0,
+    13.73
+   ],
+   "stance_sole_mm": [
+    0.0,
+    0.06
+   ],
+   "slip_mm_per_frame": [
+    2.78,
+    2.78
+   ],
+   "thigh": [
+    -6.6,
+    10.8
+   ],
+   "knee_max": 18.8
   },
   "joy": {
    "stretch_max": 1.285,
@@ -92,7 +92,7 @@
    ],
    "sole_mm": [
     -0.0,
-    20.02
+    28.0
    ],
    "stance_sole_mm": [
     -0.0,
@@ -117,16 +117,16 @@
  },
  "speed": {
   "walk": {
-   "stride_per_cycle": 0.0233,
-   "speed_per_s": 0.0233
+   "stride_per_cycle": 0.0357,
+   "speed_per_s": 0.0357
   },
   "run": {
-   "stride_per_cycle": 0.0325,
-   "speed_per_s": 0.0542
+   "stride_per_cycle": 0.05,
+   "speed_per_s": 0.0833
   }
  },
  "export": {
-  "bytes": 1345496,
+  "bytes": 1352584,
   "tris": 30000,
   "bones": 18,
   "actions": [
@@ -135,6 +135,13 @@
    "run",
    "walk"
   ]
+ },
+ "limits_band": {
+  "thigh": [
+   -9.2,
+   10.8
+  ],
+  "knee_max": 21.2
  },
  "check": {
   "idle": {
@@ -155,7 +162,8 @@
    "tail": true,
    "sole": true,
    "slip": true,
-   "loop": true
+   "loop": true,
+   "limits": true
   },
   "run": {
    "stretch": true,
@@ -165,7 +173,8 @@
    "tail": true,
    "sole": true,
    "slip": true,
-   "loop": true
+   "loop": true,
+   "limits": true
   },
   "joy": {
    "stretch": true,
@@ -179,5 +188,5 @@
   }
  },
  "pass_": true,
- "note": "伸び・縮み・折り返し・めりこみ・しっぽのつなぎ目は立ち姿（腕の開き 44°）に対して。sole_mm = 足の裏の高さ（全コマ、mm・身長 1000）、stance_sole_mm = 着いている足だけ。slip = 着いている足首の 1 コマの前後の動き（一定 = すべらない。体が進む速さに当たる）"
+ "note": "伸び・縮み・折り返し・めりこみ・しっぽのつなぎ目は立ち姿に対して。sole_mm = 足の裏の高さ（全コマ、mm・身長 1000）、stance_sole_mm = 着いている足だけ。slip = 着いている足首の 1 コマの前後の動き（一定 = すべらない）。limits_band = 歩き・走りの股（度。+ が前）・ひざの許す範囲（立ち姿 ＋ limits の 8 割）"
 }

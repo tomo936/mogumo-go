@@ -1,6 +1,8 @@
 # 段 4: 顔（「動物の二本足」型の共通の台本。キャラ固有の数字は config.json の face）。
 # 頭の前の面（頭の骨に 100%・前向き・face.box の中）だけを材質 face にし、前から平らに写した絵（4 こまを横に並べる）を貼る。
-# こま 0 = 体の絵を、同じ面の同じ場所から写したもの（だから毛との境で色が変わらない）。こま 1〜3 は こま 0 から目と口だけを描き替える:
+# こま 0 = 体の絵を、同じ面の同じ場所から写したもの（だから毛との境で色が変わらない）に、目（ふつう）・鼻・口を描き直したもの
+#   （生成の絵の目・鼻・口は線が切れて白い点が混ざるので写さない: 箱の中を地の色でならしてから、だ円・角の丸い逆三角・ω の線で描く。2026-11-26）。
+# こま 1〜3 は こま 0 から目と口だけを描き替える:
 #   1 半分とじ（目の上半分を消して、まぶたの線）・2 とじ（目を消して下向きの弧）・3 うれしい（目を消して上向きの弧 ∩ ＋口を少し開ける。仮）
 # 目を消すのは、目の箱のまわり 1 画素を元の色に固定して中をならす（ラプラスの式）。目・口の箱の外は 1 画素も変えない（数えて確かめる）。
 # 使い方: blender -b -P stage4.py -- <config.json>   （work/stage3.blend を読む）
@@ -124,24 +126,73 @@ def arc(box, yfrac, hfrac, up):
 
 
 PAD = FC['erase_pad']; th = max(2.5, (EB[0][2] - EB[0][0]) * FC['line_w'])
-noeye = cell
-for b in EB: noeye = erase(noeye, b, PAD)
-# 1 半分とじ: 目の上半分を消して、切り口にまぶたの線
-half = noeye.copy()
+nose_c = np.array(CFG['repaint']['colors']['nose'], np.float32) / 255
+# 鼻と口の箱: 暗いところを少し太らせて（生成の絵の切れ目をつなぐ）かたまりにし、上 = 鼻・下 = 口
+mx0, mx1 = to_px(-FC['mouth_x'], 0)[0], to_px(FC['mouth_x'], 0)[0]; nz0 = to_px(0, FC['nose_z'])[1]; mz1 = to_px(0, FC['mouth_z'][0])[1]
+dark = (np.linalg.norm(cell - nose_c, axis=2) < FC['mouth_t']) & (xx > mx0) & (xx < mx1) & (yy > nz0) & (yy < mz1)
+R_ = FC['join_px']; fat = dark.copy()
+for dy in range(-R_, R_ + 1):
+    for dx in range(-R_, R_ + 1):
+        if dy * dy + dx * dx <= R_ * R_: fat |= np.roll(np.roll(dark, dy, 0), dx, 1)
+bl = sorted([b for b in blobs(fat) if (dark[b[:, 0], b[:, 1]]).sum() > 30], key=lambda b: b[:, 0].mean())
+def bbox(b):
+    b = b[dark[b[:, 0], b[:, 1]]]; return [int(b[:, 0].min()), int(b[:, 1].min()), int(b[:, 0].max()), int(b[:, 1].max())]
+NB, MB = bbox(bl[0]), bbox(bl[-1]); NB[0] = min(NB[0], int(NB[2] + 1 - (NB[3] - NB[1] + 1) * FC['nose_hw'])); LOG['nose'] = NB; LOG['mouth'] = MB; LOG['nose_mouth_blobs'] = len(bl)   # 鼻の箱の上は描く鼻の高さまで広げる
+
+
+def fill(img, cov, col):
+    return img * (1 - cov[:, :, None]) + col * cov[:, :, None]
+
+
+def ellipse(cy, cx, ay, ax):
+    e = np.sqrt(((xx + 0.5 - cx) / ax) ** 2 + ((yy + 0.5 - cy) / ay) ** 2); return np.clip((1 - e) * min(ax, ay) + 0.5, 0, 1)
+
+
+def seg_d(P, A, B):
+    v = B - A; t_ = np.clip(((P[..., 0] - A[0]) * v[0] + (P[..., 1] - A[1]) * v[1]) / (v @ v), 0, 1)
+    return np.hypot(P[..., 0] - A[0] - t_ * v[0], P[..., 1] - A[1] - t_ * v[1])
+
+
+def round_tri(T, r):
+    """角の丸い三角（T: 3 点 (行, 列)、r: 角の丸みの半径）。内心へ縮めた三角から r の距離までを塗る"""
+    T = np.array(T, np.float64); L = np.array([np.linalg.norm(T[(i + 1) % 3] - T[(i + 2) % 3]) for i in range(3)])
+    I = (L[:, None] * T).sum(0) / L.sum(); s_ = L.sum() / 2; area = abs(np.cross(T[1] - T[0], T[2] - T[0])) / 2; rho = area / s_
+    Ti = I + (T - I) * max(rho - r, 0.5) / rho
+    P = np.dstack([yy + 0.5, xx + 0.5]); d = np.minimum(np.minimum(seg_d(P, Ti[0], Ti[1]), seg_d(P, Ti[1], Ti[2])), seg_d(P, Ti[2], Ti[0]))
+    sg = [np.sign((Ti[(i + 1) % 3][1] - Ti[i][1]) * (P[..., 0] - Ti[i][0]) - (Ti[(i + 1) % 3][0] - Ti[i][0]) * (P[..., 1] - Ti[i][1])) for i in range(3)]
+    ins = ((sg[0] >= 0) & (sg[1] >= 0) & (sg[2] >= 0)) | ((sg[0] <= 0) & (sg[1] <= 0) & (sg[2] <= 0))
+    d = np.where(ins, 0, d); return np.clip(r - d + 0.5, 0, 1)
+
+
+# 地: 目・鼻・口の跡を消す（箱のまわりの色から中をならす）
+bare = cell
+for b in EB: bare = erase(bare, b, PAD)
+bare = erase(bare, [min(NB[0], MB[0]), min(NB[1], MB[1]), max(NB[2], MB[2]), max(NB[3], MB[3])], PAD)
+# 鼻（角の丸い逆三角）と口（ω の滑らかな線）を描く。どのこまも同じ
+nw = NB[3] - NB[1] + 1; nh = nw * FC['nose_hw']; nb_ = NB[2] + 1; ncx = (NB[1] + NB[3] + 1) / 2   # 鼻の上は生成の絵で明るい帯に切られるので、高さは幅から（nose_hw）
+face = fill(bare, round_tri([(nb_ - nh, ncx - nw / 2), (nb_ - nh, ncx + nw / 2), (nb_, ncx)], nh * FC['nose_round']), nose_c)
+mh_, mw_ = MB[2] - MB[0] + 1, MB[3] - MB[1] + 1; tm = th * FC['mouth_w']
+us = np.linspace(0, 1, 49); mxs = MB[1] + tm / 2 + (mw_ - tm) * us; mys = MB[0] + tm / 2 + (mh_ - tm) * np.abs(np.sin(2 * np.pi * us))
+face = stroke(face, list(zip(mys, mxs)), tm, nose_c)
+# 目（ふつう）: こげ茶のだ円＋白い丸の光（config face.shine = [右へ, 下へ, 半径]、目の幅に対する割合。両目で同じ向き）
+shine_c = np.array(CFG['repaint']['colors']['shine'], np.float32) / 255
+cell0 = face.copy()
 for r0, c0, r1, c1 in EB:
-    mid = int(r0 + (r1 - r0) * FC['half_cut']); half[mid:r1 + PAD + 1, c0 - PAD:c1 + PAD + 1] = cell[mid:r1 + PAD + 1, c0 - PAD:c1 + PAD + 1]
+    ay, ax = (r1 - r0 + 1) / 2, (c1 - c0 + 1) / 2; cy, cx = r0 + ay, c0 + ax
+    cell0 = fill(cell0, ellipse(cy, cx, ay, ax), ink)
+    for dx_, dy_, rr in FC['shine']:
+        cell0 = fill(cell0, ellipse(cy + dy_ * 2 * ax, cx + dx_ * 2 * ax, rr * 2 * ax, rr * 2 * ax), shine_c)
+# 1 半分とじ: 目の下半分だけ残して、切り口にまぶたの線
+half = face.copy()
+for r0, c0, r1, c1 in EB:
+    mid = int(r0 + (r1 - r0) * FC['half_cut']); half[mid:r1 + PAD + 1, c0 - PAD:c1 + PAD + 1] = cell0[mid:r1 + PAD + 1, c0 - PAD:c1 + PAD + 1]
     half = stroke(half, arc((r0, c0, r1, c1), FC['half_cut'], 0.06, True), th, ink)
 # 2 とじ: 下向きの弧
-closed = noeye.copy()
+closed = face.copy()
 for b in EB: closed = stroke(closed, arc(b, FC['closed_y'], FC['closed_h'], False), th, ink)
 # 3 うれしい: 上向きの弧 ∩ ＋口を少し開ける（仮）
-happy = noeye.copy()
+happy = face.copy()
 for b in EB: happy = stroke(happy, arc(b, FC['happy_y'], FC['happy_h'], True), th * 1.15, ink)
-nose_c = np.array(CFG['repaint']['colors']['nose'], np.float32) / 255
-mx0, mx1 = to_px(-FC['mouth_x'], 0)[0], to_px(FC['mouth_x'], 0)[0]; mz0 = to_px(0, FC['mouth_z'][1])[1]; mz1 = to_px(0, FC['mouth_z'][0])[1]
-dark = (np.linalg.norm(cell - nose_c, axis=2) < FC['mouth_t']) & (xx > mx0) & (xx < mx1) & (yy > mz0) & (yy < mz1)
-bl = [b for b in blobs(dark) if len(b) > 30]; mb = max(bl, key=lambda b: b[:, 0].mean())   # いちばん下の暗いかたまり = 口
-MB = [int(mb[:, 0].min()), int(mb[:, 1].min()), int(mb[:, 0].max()), int(mb[:, 1].max())]; LOG['mouth'] = MB
 mcx = (MB[1] + MB[3]) / 2; mw = (MB[3] - MB[1]) * FC['open_w']; mtop = MB[0] + (MB[2] - MB[0]) * FC['open_top']; mh = mw * FC['open_h']
 e = ((xx + 0.5 - mcx) / (mw / 2)) ** 2 + ((yy + 0.5 - mtop) / mh) ** 2
 inside = np.clip((1 - e) * mh / 2, 0, 1) * (yy + 0.5 >= mtop)
@@ -155,8 +206,11 @@ keep = np.ones((CH_, CW), bool)
 for r0, c0, r1, c1 in EB: keep[r0 - PAD - 1:r1 + PAD + 2, c0 - PAD - 1:c1 + PAD + 2] = False
 keep3 = keep.copy(); keep3[OPEN[0]:OPEN[2] + 1, OPEN[1]:OPEN[3] + 1] = False
 for i, (img, k) in enumerate(((half, keep), (closed, keep), (happy, keep3)), 1):
-    LOG[f'cell{i}_changed_outside'] = int((np.abs(img - cell).max(2)[k] > 0).sum())
-atlas = np.clip(np.concatenate([cell, half, closed, happy], 1), 0, 1)
+    LOG[f'cell{i}_changed_outside'] = int((np.abs(img - cell0).max(2)[k] > 0).sum())
+keep0 = keep.copy(); nm = [min(NB[0], MB[0]), min(NB[1], MB[1]), max(NB[2], MB[2]), max(NB[3], MB[3])]
+keep0[nm[0] - PAD - 1:nm[2] + PAD + 2, nm[1] - PAD - 1:nm[3] + PAD + 2] = False
+LOG['cell0_changed_outside_vs_body'] = int((np.abs(cell0 - cell).max(2)[keep0] > 0).sum())
+atlas = np.clip(np.concatenate([cell0, half, closed, happy], 1), 0, 1)
 aimg = bpy.data.images.new('face4', CW * 4, CH_, alpha=False)
 aimg.pixels.foreach_set(np.dstack([atlas, np.ones((CH_, CW * 4))])[::-1].astype(np.float32).ravel())
 aimg.filepath_raw = wpath('face4.png'); aimg.file_format = 'PNG'; aimg.save(); aimg.pack()
