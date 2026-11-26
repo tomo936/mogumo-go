@@ -8,7 +8,7 @@
 
 ## いまの状態
 
-- **【2026-11-26 夜（最新）】オーナー「トークンが無いので来週月曜（11-30）まで停止」。再開したらここから。**
+- **【2026-11-26 夜（最新）】オーナー「トークンが無いので来週月曜（11-30）まで停止」。再開したら、まず `docs/superpowers/specs/2026-11-26-gacha-3d-status.md`（ガチャ 3D の詳しいメモ）を読む。**
   - ガチャ 5 体の 3D（計画 `docs/superpowers/specs/2026-11-25-gacha-3d-five.md`、作り方 `2026-11-26-3d-pipeline-cost-design.md`）。共通の台本 `art/characters/_animal2/scripts/`（流す順: refcolors → stage2 → stage3 → pose3 → range5 → stage4 → stage5 → `cp work/avatar.glb avatar.glb`（撮影は avatar.glb を使う。写し忘れると古い模型を撮る）→ `python3 gate6.py <フォルダ>`（Blender ではない）→ cap.sh what=grid4/video4/shots → ffmpeg で mp4）。ComfyUI は WSL から `powershell.exe -NoProfile -Command "cd D:\mogumo-3d; venv\Scripts\python.exe tools\run_char_mv.py <名前> <種> <ラベル>"`（オーナーは起動だけ）。
   - **06 しば**: 済み（よちよち歩き・顔はきれいな形で描き直し）。鼻の端の小さなきずはオーナー了承で残す。目のくぼみの直し（face.flatten）は未適用 → くまと同じ直しを当てる。
   - **14 くま**: 動き・顔まで。オーナー指摘で直した: 鼻と口をくま自身の絵から（だ円の鼻・細い口・口元のクリーム）、ほほを丸く描く、目と鼻のまわりを曲面にならす（face.flatten、2 次曲面の当てはめ）。**オーナー「目のえぐれは直したい」→ まだ残っている**（目のまわりにうっすら輪・鼻の上に弧）。広げすぎると目と鼻の範囲が重なって筋が出た（2 回目で失敗）。次は目と鼻を別々に（範囲を重ねない）・目の範囲を形のくぼみの大きさに合わせて測ってから決める。元の絵との違い: 目の下半分の明るい茶のグラデーション・口のはしの巻き上がり（未対応、オーナーに聞いたまま）。
