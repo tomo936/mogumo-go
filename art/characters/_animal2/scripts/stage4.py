@@ -18,6 +18,22 @@ from collections import deque
 bpy.ops.wm.open_mainfile(filepath=wpath('stage3.blend'))
 ob = bpy.data.objects['avatar']; me = ob.data; FC = CFG['face']; LOG = {}
 X0, X1, Z0, Z1 = FC['box']; CW = FC['cell_w']; CH_ = int(round(CW * (Z1 - Z0) / (X1 - X0)))
+# 目のくぼみをならす（face.flatten = [[cx, cz, rx, rz], ...] m。くま 2026-11-26「目元がえぐれてる」）: 生成の形は目の所がくぼんでいて、
+# 平らな目を描くとえぐれて見えた。だ円の中の前向きの点の奥行き（y）だけを、外の点を固定して何度もならし、まわりの面から張った膜にする。
+# 面は足さない・切らない（点の奥行きを動かすだけ）。骨と重みは変わらない
+if FC.get('flatten'):
+    Vf = np.array([v.co for v in me.vertices]); Nf = np.array([v.normal for v in me.vertices])
+    inside = np.zeros(len(Vf), bool)
+    for cx_, cz_, rx_, rz_ in FC['flatten']:
+        inside |= (((Vf[:, 0] - cx_) / rx_) ** 2 + ((Vf[:, 2] - cz_) / rz_) ** 2 < 1) & (Nf[:, 1] < -0.2) & (Vf[:, 1] < 0)
+    E_ = np.array([e.vertices[:] for e in me.edges]); nb = [[] for _ in Vf]
+    for a_, b_ in E_: nb[a_].append(b_); nb[b_].append(a_)
+    idx = np.nonzero(inside)[0]; Y = Vf[:, 1].copy()
+    for _ in range(FC.get('flatten_iter', 200)):
+        Y[idx] = np.array([Y[nb[i]].mean() for i in idx])
+    LOG['flatten_moved_mm'] = round(float(np.abs(Y[idx] - Vf[idx, 1]).max()) * 1000, 2); LOG['flatten_verts'] = int(len(idx))
+    for i in idx: me.vertices[int(i)].co.y = float(Y[i])
+    me.update()
 V, _, TRI = mesh_arrays(me)
 names = [g.name for g in ob.vertex_groups]; hw = np.zeros(len(V))
 hi = names.index('head')
@@ -232,6 +248,12 @@ if 'muzzle' in FC:
     M_ = FC['muzzle']
     e_ = np.sqrt(((xx + 0.5 - to_px(NS['cx'], 0)[0]) / (M_['hw'] * k_)) ** 2 + ((yy + 0.5 - to_px(0, M_['cz'])[1]) / (M_['hh'] * k_)) ** 2)
     bare = fill(bare, np.clip((1 - e_) / M_.get('soft', 0.35), 0, 1) * M_.get('alpha', 0.8), np.array(M_['color'], np.float32) / 255)
+# ほほ（face.blush があれば）: ふちのぼけた丸いピンクを描く（生成の色のまだらな形を写さない。くま 2026-11-26）
+if 'blush' in FC:
+    B_ = FC['blush']
+    for cx_, cz_, rx_, rz_ in B_['spots']:
+        e_ = np.sqrt(((xx + 0.5 - to_px(cx_, 0)[0]) / (rx_ * k_)) ** 2 + ((yy + 0.5 - to_px(0, cz_)[1]) / (rz_ * k_)) ** 2)
+        bare = fill(bare, np.clip((1 - e_) / B_.get('soft', 0.6), 0, 1) * B_.get('alpha', 0.8), np.array(B_['color'], np.float32) / 255)
 if NS.get('shape') == 'oval':
     ncov = ellipse(to_px(0, NS['cz'])[1], to_px(NS['cx'], 0)[0], NS['hh'] * k_, NS['hw'] * k_)
 else:

@@ -10,18 +10,18 @@
    "L": 0.0293,
    "R": 0.0292
   },
-  "glb_mb": 0.897,
+  "glb_mb": 0.896,
   "tex": [
    2048,
    2048
   ],
   "labels": {
-   "fur": 11269,
-   "cheeks": 75,
-   "eyes": 122,
+   "fur": 11354,
+   "cheeks": 0,
+   "eyes": 113,
    "nose": 0,
    "pack": 1840,
-   "strap": 526,
+   "strap": 525,
    "cookie": 367,
    "deco": 344,
    "tail": 437
@@ -30,7 +30,6 @@
    "eyes": 12671,
    "shine": 57,
    "nose/nose_mouth": 454,
-   "cheeks": 11926,
    "choco": 5562,
    "deco": 279
   },
@@ -40,11 +39,6 @@
     162,
     138
    ],
-   "cheeks": [
-    215,
-    154,
-    161
-   ],
    "pack": [
     238,
     169,
@@ -52,8 +46,8 @@
    ],
    "strap": [
     160,
-    114,
-    157
+    115,
+    158
    ],
    "cookie": [
     188,
@@ -129,7 +123,7 @@
     1808
    ],
    [
-    "cheeks",
+    "fur",
     100
    ],
    [
@@ -150,8 +144,8 @@
    ]
   ],
   "labels_raw": {
-   "fur": 11280,
-   "cheeks": 100,
+   "fur": 11380,
+   "cheeks": 0,
    "eyes": 108,
    "nose": 4,
    "pack": 1808,
@@ -161,12 +155,12 @@
    "tail": 433
   },
   "labels": {
-   "fur": 11269,
-   "cheeks": 75,
-   "eyes": 122,
+   "fur": 11354,
+   "cheeks": 0,
+   "eyes": 113,
    "nose": 0,
    "pack": 1840,
-   "strap": 526,
+   "strap": 525,
    "cookie": 367,
    "deco": 344,
    "tail": 437
@@ -182,7 +176,6 @@
    "eyes": 12671,
    "shine": 57,
    "nose/nose_mouth": 454,
-   "cheeks": 11926,
    "choco": 5562,
    "deco": 279
   }
