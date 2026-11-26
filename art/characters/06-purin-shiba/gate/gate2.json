@@ -1,0 +1,176 @@
+{
+ "gate2": {
+  "tris": 30000,
+  "verts": 14996,
+  "islands": 1,
+  "small_islands_left": 0,
+  "foot_min_z": 0.0,
+  "height": 1.0,
+  "arm_gap": {
+   "L": 0.0188,
+   "R": 0.0181
+  },
+  "glb_mb": 0.879,
+  "tex": [
+   2048,
+   2048
+  ],
+  "labels": {
+   "fur": 7655,
+   "white": 2359,
+   "pudding": 388,
+   "caramel": 1726,
+   "pack": 1701,
+   "strap": 1030,
+   "eyes": 69,
+   "nose": 68
+  },
+  "details": {
+   "eyes": 7717,
+   "shine": 9,
+   "nose/nose_mouth": 3919,
+   "white/brow_dots": 275,
+   "blush": 10480
+  },
+  "painted_median": {
+   "fur": [
+    231,
+    174,
+    116
+   ],
+   "white": [
+    245,
+    226,
+    201
+   ],
+   "pudding": [
+    243,
+    200,
+    129
+   ],
+   "caramel": [
+    199,
+    114,
+    47
+   ],
+   "pack": [
+    196,
+    220,
+    195
+   ],
+   "strap": [
+    166,
+    189,
+    155
+   ]
+  },
+  "ao": [
+   0.334,
+   0.653,
+   0.977,
+   1.0
+  ],
+  "check": {
+   "tris": true,
+   "islands": true,
+   "small_islands": true,
+   "foot_z0": true,
+   "arm_gap": true,
+   "glb_mb": true,
+   "tex": true
+  },
+  "pass": true
+ },
+ "log": {
+  "norm": {
+   "src": "shiba_s123_textured_00001_.glb",
+   "merged_verts": 3383,
+   "verts": 14996,
+   "tris": 30000,
+   "flipped": false,
+   "scale": 0.50657,
+   "bbox": [
+    [
+     -0.3099,
+     0.3099
+    ],
+    [
+     -0.2555,
+     0.3511
+    ],
+    [
+     0.0,
+     1.0
+    ]
+   ],
+   "tex": [
+    2048,
+    2048
+   ]
+  },
+  "rules": [
+   [
+    "white",
+    2432
+   ],
+   [
+    "strap",
+    2741
+   ],
+   [
+    "pack",
+    1688
+   ],
+   [
+    "caramel",
+    1695
+   ],
+   [
+    "pudding",
+    370
+   ],
+   [
+    "eyes",
+    72
+   ],
+   [
+    "nose",
+    71
+   ]
+  ],
+  "labels_raw": {
+   "fur": 7684,
+   "white": 2363,
+   "pudding": 370,
+   "caramel": 1695,
+   "pack": 1688,
+   "strap": 1053,
+   "eyes": 72,
+   "nose": 71
+  },
+  "labels": {
+   "fur": 7655,
+   "white": 2359,
+   "pudding": 388,
+   "caramel": 1726,
+   "pack": 1701,
+   "strap": 1030,
+   "eyes": 69,
+   "nose": 68
+  },
+  "small_islands_left": 0,
+  "ao_pct_1_10_50_90": [
+   0.334,
+   0.653,
+   0.977,
+   1.0
+  ],
+  "details": {
+   "eyes": 7717,
+   "shine": 9,
+   "nose/nose_mouth": 3919,
+   "white/brow_dots": 275,
+   "blush": 10480
+  }
+ }
+}
