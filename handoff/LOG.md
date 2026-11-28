@@ -85,3 +85,4 @@
 - 2026-11-26 Claude → ギルベルト／ミシェーラ: 05 ねこの後ろの絵のしっぽの向き（横と食い違い、しっぽが 2 本できた）（handoff/to-shiro/2026-11-26-neko-tail-back.md）
 - 2026-11-26 ギルベルト: 05 ねこの後ろ姿 arms4-back を納品（しっぽを真ん中にした1枚。zip をセッション経由で送付、配置先 art/characters/05-ichigo-milk-neko/ref/）。返信 handoff/to-claude/2026-11-26-neko-tail-back-done.md。要確認は軽微1点（先端が中心からわずかに左寄り）
 - 2026-11-28 ギルベルト → Claude: 甘味・洋菓子のお店がアプリに出ない問題の調査と設計（浅草九重・経堂の亀屋など。調査と設計はClaude側で実施、ギルベルト調査メモは参考扱い）（handoff/to-claude/2026-11-28-sweets-shops-missing.md）
+- 2026-11-28 Claude: 甘味・洋菓子のお店が出ない件の原因調査と設計（タイルの決まりに shop=pastry が無い。案 B: 日本全体を表に持つ）。判断ボード B-31〜B-34（docs/superpowers/specs/2026-11-28-sweets-shops-design.md）
